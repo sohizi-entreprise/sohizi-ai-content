@@ -1,0 +1,516 @@
+{
+    "meta": {
+      "name": "Phase1.1 Builder Prompt",
+      "version": "1.0.0",
+      "goal": "Build Phase 1.1 end-to-end: Project creation → brief+outline (with scenes) → user edits → generate scenes+shots → extract/store entities → storyboard UI → generate per-shot images via fal.ai with consistency."
+    },
+  
+    "role": {
+      "title": "Senior full-stack engineer + product-minded architect",
+      "behavior": [
+        "Build a production-lean MVP with clean architecture.",
+        "Prefer deterministic, structured AI outputs (strict JSON, validated server-side).",
+        "Optimize for creator-grade UX: fast, modern, beautiful, minimal friction.",
+        "No scope creep beyond Phase 1.1."
+      ]
+    },
+  
+    "stack": {
+      "frontend": {
+        "framework": "React (TanStack Start)",
+        "ui": "shadcn/ui (already in components/ui)",
+        "data": "TanStack Query",
+        "styling": "Tailwind (shadcn defaults)"
+      },
+      "backend": {
+        "db": "Postgres",
+        "orm": "Drizzle",
+        "api": "TanStack Start server routes"
+      },
+      "ai": {
+        "sdk": "Vercel AI SDK",
+        "pattern": "single LLM used in a write"
+      },
+      "images": {
+        "provider": "fal.ai",
+        "requirement": "Generate one image per shot using entity bibles + camera specs to keep consistency"
+      }
+    },
+  
+    "phase_1_1_scope": {
+      "end_to_end_flow": [
+        "1) User creates a project",
+        "2) User chooses name + format (storytime/explainer/documentary/presenter)",
+        "3) AI generates project brief + outline (includes scenes skeleton)",
+        "4) User edits brief/outline/scenes on a markdown editor and confirms",
+        "5) AI generates scenes with shots (list of shots per scene)",
+        "6) Extract and store entities: characters, locations, props, costumes, camera metadata",
+        "7) Display shots as storyboard",
+        "8) Generate images for each shot via fal.ai using entities for consistency"
+      ],
+      "non_goals": [
+        "No video rendering/export",
+        "No animations/motion video generation",
+        "No team collaboration",
+        "No mobile app (responsive web is OK)"
+      ]
+    },
+  
+    "data_contracts": {
+      // The LLM MUST output strict JSON matching these shapes.
+      // These are server-validated, saved to DB, and drive the UI.
+  
+      "ProjectBriefAndOutlineJSON": {
+        "description": "Initial generation: project brief + outline + scenes skeleton (no shots yet).",
+        "shape": {
+          "project_brief": {
+            "title": "string",
+            "logline": "string",
+            "audience": "general|kids|teens|adult",
+            "tone": "string",
+            "genre": "string",
+            "style_pack_id": "string|null",
+            "constraints": {
+              "must_include": "string[]",
+              "must_avoid": "string[]",
+              "forbidden_phrases": "string[]"
+            }
+          },
+          "outline": {
+            "hook_options": "string[]",
+            "selected_hook": "string",
+            "acts": [
+              {
+                "act_id": "string",
+                "title": "string",
+                "summary": "string",
+                "goals": "string[]",
+                "turning_points": "string[]",
+                "scene_ids": "string[]"
+              }
+            ]
+          },
+          "scenes": [
+            {
+              "scene_id": "string",
+              "act_id": "string|null",
+              "order": "number",
+              "title": "string",
+              "summary": "string",
+              "location_hint": "string",
+              "time_of_day": "dawn|day|sunset|night|unspecified",
+              "mood": "string"
+            }
+          ]
+        }
+      },
+  
+      "SceneShotsAndEntitiesJSON": {
+        "description": "Expanded generation: entities + scenes with shot lists. Shots are storyboard frames.",
+        "shape": {
+          "entities": {
+            "characters": [
+              {
+                "character_id": "string",
+                "name": "string",
+                "role": "protagonist|antagonist|supporting|narrator|unknown",
+                "description": "string",
+                "locked_traits": "string[]",
+                "default_costume_id": "string|null"
+              }
+            ],
+            "locations": [
+              {
+                "location_id": "string",
+                "name": "string",
+                "description": "string",
+                "time_of_day_default": "dawn|day|sunset|night|unspecified",
+                "lighting": "string",
+                "palette": "string[]",
+                "must_include": "string[]",
+                "must_avoid": "string[]"
+              }
+            ],
+            "props": [
+              {
+                "prop_id": "string",
+                "name": "string",
+                "description": "string",
+                "is_recurring": "boolean"
+              }
+            ],
+            "costumes": [
+              {
+                "costume_id": "string",
+                "character_id": "string",
+                "name": "string",
+                "description": "string",
+                "is_default": "boolean"
+              }
+            ]
+          },
+          "scenes": [
+            {
+              "scene_id": "string",
+              "order": "number",
+              "title": "string",
+              "summary": "string",
+              "location_id": "string",
+              "time_of_day": "dawn|day|sunset|night|unspecified",
+              "mood": "string",
+              "shots": [
+                {
+                  "shot_id": "string",
+                  "scene_id": "string",
+                  "order": "number",
+  
+                  "shot_type": "establishing|wide|medium|closeup|insert",
+                  "angle": "eye_level|low|high|over_shoulder|top_down",
+                  "lens": "string",
+                  "movement": "static|slow_zoom_in|slow_zoom_out|pan_left|pan_right|tilt_up|tilt_down",
+  
+                  "visual_summary": "string",
+                  "composition": "string",
+                  "action": "string",
+                  "mood_keywords": "string[]",
+  
+                  "entities_in_shot": {
+                    "character_ids": "string[]",
+                    "location_id": "string",
+                    "prop_ids": "string[]",
+                    "costume_ids": "string[]"
+                  },
+  
+                  "spoken": [
+                    {
+                      "utterance_id": "string",
+                      "kind": "narration|dialogue",
+                      "speaker_id": "string",
+                      "text": "string"
+                    }
+                  ],
+  
+                  "constraints": {
+                    "must_keep": "string[]",
+                    "must_avoid": "string[]",
+                    "allow_variation": "string[]"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+  
+    "database": {
+      "notes": [
+        "Use UUID primary keys.",
+        "Store raw LLM JSON outputs for traceability.",
+        "Store per-shot prompt, seed, model, and metadata for reproducible images."
+      ],
+      "tables": [
+        {
+          "name": "projects",
+          "fields": [
+            "id uuid pk",
+            "name text",
+            "format text",
+            "status text (DRAFT|OUTLINE_GENERATED|OUTLINE_CONFIRMED|SHOTS_GENERATED)",
+            "created_at timestamp",
+            "updated_at timestamp"
+          ]
+        },
+        {
+          "name": "project_briefs",
+          "fields": [
+            "id uuid pk",
+            "project_id uuid fk -> projects.id",
+            "title text",
+            "logline text",
+            "audience text",
+            "tone text",
+            "genre text",
+            "style_pack_id text null",
+            "constraints jsonb",
+            "raw_llm_json jsonb"
+          ]
+        },
+        {
+          "name": "outline_acts",
+          "fields": [
+            "id uuid pk",
+            "project_id uuid fk -> projects.id",
+            "act_id text",
+            "order int",
+            "title text",
+            "summary text",
+            "goals jsonb",
+            "turning_points jsonb",
+            "scene_ids jsonb"
+          ]
+        },
+        {
+          "name": "scenes",
+          "fields": [
+            "id uuid pk",
+            "project_id uuid fk -> projects.id",
+            "scene_id text",
+            "act_id text null",
+            "order int",
+            "title text",
+            "summary text",
+            "mood text",
+            "time_of_day text",
+            "location_ref text null",
+            "raw_llm_json jsonb"
+          ]
+        },
+        {
+          "name": "characters",
+          "fields": [
+            "id uuid pk",
+            "project_id uuid fk -> projects.id",
+            "character_id text",
+            "name text",
+            "role text",
+            "description text",
+            "locked_traits jsonb"
+          ]
+        },
+        {
+          "name": "locations",
+          "fields": [
+            "id uuid pk",
+            "project_id uuid fk -> projects.id",
+            "location_id text",
+            "name text",
+            "description text",
+            "time_of_day_default text",
+            "lighting text",
+            "palette jsonb",
+            "must_include jsonb",
+            "must_avoid jsonb"
+          ]
+        },
+        {
+          "name": "props",
+          "fields": [
+            "id uuid pk",
+            "project_id uuid fk -> projects.id",
+            "prop_id text",
+            "name text",
+            "description text",
+            "is_recurring boolean"
+          ]
+        },
+        {
+          "name": "costumes",
+          "fields": [
+            "id uuid pk",
+            "project_id uuid fk -> projects.id",
+            "costume_id text",
+            "character_ref text",
+            "name text",
+            "description text",
+            "is_default boolean"
+          ]
+        },
+        {
+          "name": "shots",
+          "fields": [
+            "id uuid pk",
+            "project_id uuid fk -> projects.id",
+            "scene_db_id uuid fk -> scenes.id",
+            "shot_id text",
+            "order int",
+            "shot_type text",
+            "angle text",
+            "lens text",
+            "movement text",
+            "visual_summary text",
+            "composition text",
+            "action text",
+            "mood_keywords jsonb",
+            "entities_in_shot jsonb",
+            "spoken jsonb",
+            "constraints jsonb",
+            "raw_llm_json jsonb"
+          ]
+        },
+        {
+          "name": "shot_images",
+          "fields": [
+            "id uuid pk",
+            "shot_db_id uuid fk -> shots.id",
+            "provider text (fal)",
+            "model text",
+            "prompt text",
+            "negative_prompt text null",
+            "seed int null",
+            "image_url text",
+            "width int",
+            "height int",
+            "created_at timestamp",
+            "meta jsonb"
+          ]
+        }
+      ]
+    },
+  
+    "api_routes": [
+      {
+        "method": "POST",
+        "path": "/api/projects",
+        "purpose": "Create project",
+        "body": { "name": "string", "format": "string" },
+        "returns": { "projectId": "uuid" }
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/:projectId/generate-outline",
+        "purpose": "Generate project brief + outline + scenes skeleton (Phase 1.1 step 3)",
+        "body": {
+          "sourceStory": "string",
+          "tone": "string|null",
+          "genre": "string|null",
+          "targetLengthSec": "number|null",
+          "stylePackId": "string|null"
+        },
+        "returns": { "ok": true }
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/:projectId/outline",
+        "purpose": "Persist user edits to brief/outline/scenes (Phase 1.1 step 4)",
+        "body": {
+          "projectBrief": "object",
+          "acts": "array",
+          "scenes": "array"
+        },
+        "returns": { "ok": true }
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/:projectId/generate-shots",
+        "purpose": "Generate shots + entities (Phase 1.1 step 5/6)",
+        "body": {
+          "scope": "all|scene",
+          "sceneId": "string|null"
+        },
+        "returns": { "ok": true }
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/:projectId/generate-images",
+        "purpose": "Generate images for shots via fal.ai (Phase 1.1 step 8)",
+        "body": {
+          "shotIds": "uuid[]",
+          "quality": "draft|final",
+          "model": "string|null"
+        },
+        "returns": { "ok": true }
+      }
+    ],
+  
+    "image_generation": {
+      "prompting_rules": [
+        "Always inject style pack guidance (visual identity).",
+        "Always inject character locked traits + costume details when the character is present.",
+        "Always inject location continuity rules (lighting, palette, must_include/must_avoid).",
+        "Always inject camera specs (shot_type, angle, lens, movement) into prompt text.",
+        "Use a deterministic seed per shot; store it in shot_images."
+      ],
+      "prompt_template": {
+        "positive_lines": [
+          "STYLE: {STYLE_PACK_NOTES}",
+          "LOCATION: {LOCATION_DESCRIPTION}; lighting={LIGHTING}; palette={PALETTE}; must_include={LOC_MUST_INCLUDE}",
+          "CHARACTERS: {CHARACTER_TRAITS_AND_COSTUMES}",
+          "SHOT: {SHOT_TYPE}, angle={ANGLE}, lens={LENS}, movement={MOVEMENT}",
+          "ACTION: {ACTION}",
+          "COMPOSITION: {COMPOSITION}",
+          "MOOD: {MOOD_KEYWORDS}"
+        ],
+        "negative_lines": [
+          "blurry, low quality, deformed hands, extra limbs, inconsistent character, distorted face",
+          "text, watermark, logo, captions"
+        ]
+      }
+    },
+  
+    "ui": {
+      "design_requirements": [
+        "Modern, beautiful, minimal, creator-grade.",
+        "Video/storyboard vibe: dark/neutral background with high-contrast cards and crisp typography.",
+        "Strong spacing, subtle borders/shadows, smooth loading states."
+      ],
+      "pages": [
+        {
+          "route": "/projects",
+          "name": "Projects",
+          "must_have": ["Project list", "Create project CTA"]
+        },
+        {
+          "route": "/projects/new",
+          "name": "New Project",
+          "must_have": [
+            "Name input",
+            "Format selector",
+            "Story input textarea",
+            "Optional tone/genre/length",
+            "Generate Outline button"
+          ]
+        },
+        {
+          "route": "/projects/:projectId/outline",
+          "name": "Outline Editor",
+          "must_have": [
+            "Editable brief (title/logline/tone/genre/constraints)",
+            "Editable outline (hook selection + acts list)",
+            "Editable scenes list (title/summary/mood/time_of_day/location_hint)",
+            "Confirm & Generate Shots button"
+          ]
+        },
+        {
+          "route": "/projects/:projectId/storyboard",
+          "name": "Storyboard",
+          "must_have": [
+            "Scene accordion or tabs",
+            "Storyboard grid of shot cards",
+            "Shot inspector panel (camera + entities + text)",
+            "Generate Images button",
+            "Per-shot image placeholders and final images"
+          ]
+        }
+      ],
+      "components": {
+        "shot_card": {
+          "must_show": [
+            "Shot order + scene",
+            "Shot type/angle/movement chips",
+            "Visual summary",
+            "Entity chips (characters/props/location/costume)",
+            "Image slot"
+          ],
+          "nice_to_have": ["Regenerate image (per shot)", "Copy prompt"]
+        }
+      }
+    },
+  
+    "builder_instructions": {
+      "output_format": [
+        "Produce implementation in steps: Drizzle schema + migrations, server routes, then UI pages/components.",
+        "Include code blocks for each file with correct paths.",
+        "Use shadcn/ui components from components/ui (do not re-install).",
+        "Add loading states, error toasts, and optimistic UX where safe.",
+        "Validate LLM JSON outputs on the server; on failure, perform one repair retry."
+      ],
+      "code_quality": [
+        "Use TypeScript.",
+        "Keep modules small and cohesive.",
+        "No unused abstractions.",
+        "Document only the tricky parts (AI validation, prompt builders, fal.ai integration)."
+      ]
+    }
+  }
+  
