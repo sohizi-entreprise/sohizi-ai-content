@@ -1,3 +1,5 @@
+TODOs
+
 - [ ] list projects
 - [ ] CRUD project
 - [ ] get / create / edit brief (generate brief with ai)
@@ -8,3 +10,9 @@
 - [ ] CRUD characters
 - [ ] CRUD elements (locations, props, costumes)
 - [ ] Generate images / structure output / text
+
+---
+
+TO Think about
+
+- [ ] How to save narration and dialogue if any (shot? scene?)

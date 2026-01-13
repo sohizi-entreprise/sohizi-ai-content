@@ -8,6 +8,7 @@ import {
     varchar,
     pgEnum
   } from 'drizzle-orm/pg-core'
+import { projectConstants } from '@/constants'
   
 const timestamps = {
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -58,7 +59,7 @@ export const generationRequests = pgTable('generation_requests', {
   export const projects = pgTable('projects', {
     id: uuid('id').defaultRandom().primaryKey(),
     name: text('name').notNull(),
-    format: varchar('format', {length: 100}).notNull(),
+    format: varchar('format', {length: 100}).notNull().$type<projectConstants.ProjectFormat>(),
     audience: varchar('audience', {length: 100}).default('general').notNull(),
     tone: text('tone').notNull(),
     genre: varchar('genre', {length: 100}).notNull(),
