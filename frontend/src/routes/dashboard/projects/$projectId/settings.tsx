@@ -44,7 +44,7 @@ const projectQueryOptions = (projectId: string) => ({
   queryFn: () => getProject({ data: { projectId } }),
 })
 
-export const Route = createFileRoute('/projects/$projectId/settings')({
+export const Route = createFileRoute('/dashboard/projects/$projectId/settings')({
   loader: ({ context, params }) => {
     context.queryClient.ensureQueryData(projectQueryOptions(params.projectId))
   },
@@ -154,9 +154,7 @@ function SettingsPage() {
           </div>
         </div>
       </header>
-
       <StoryboardSidebar activeNav="settings" />
-
       {/* Main content wrapper - offset for header and sidebar */}
       <div className="pl-[4.5rem] pt-14">
         {/* Main Content */}

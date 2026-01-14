@@ -29,7 +29,7 @@ import { AuroraBackground } from '@/components/ui/aurora-background'
 import { GlowingEffect } from '@/components/ui/glowing-effect'
 import { NoiseBackground } from '@/components/ui/noise-background'
 
-export const Route = createFileRoute('/projects/new')({
+export const Route = createFileRoute('/dashboard/projects/new')({
   component: NewProjectPage,
 })
 

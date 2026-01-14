@@ -47,7 +47,7 @@ const projectQueryOptions = (projectId: string) => ({
   queryFn: () => getProject({ data: { projectId } }),
 })
 
-export const Route = createFileRoute('/projects/$projectId/outline')({
+export const Route = createFileRoute('/dashboard/projects/$projectId/outline')({
   loader: ({ context, params }) => {
     context.queryClient.ensureQueryData(projectQueryOptions(params.projectId))
   },
@@ -270,7 +270,6 @@ function OutlineEditorPage() {
           </div>
         </div>
       </header>
-
       {/* Main Content */}
       <main className="mx-auto max-w-6xl px-6 py-8">
         <div className="grid gap-8 lg:grid-cols-[1fr,400px]">

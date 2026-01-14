@@ -54,7 +54,7 @@ const storyboardQueryOptions = (projectId: string) => ({
   queryFn: () => getStoryboard({ data: { projectId } }),
 })
 
-export const Route = createFileRoute('/projects/$projectId/storyboard')({
+export const Route = createFileRoute('/dashboard/projects/$projectId/storyboard')({
   loader: ({ context, params }) => {
     context.queryClient.ensureQueryData(projectQueryOptions(params.projectId))
     context.queryClient.ensureQueryData(storyboardQueryOptions(params.projectId))
@@ -624,7 +624,6 @@ function ShotInspector({
         <SheetTitle>Shot {shot.order + 1}</SheetTitle>
         <SheetDescription>{shot.visualSummary}</SheetDescription>
       </SheetHeader>
-
       <ScrollArea className="mt-6 h-[calc(100vh-12rem)]">
         <div className="space-y-6 pr-4">
           {/* Image */}

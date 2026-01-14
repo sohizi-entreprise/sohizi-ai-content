@@ -6,7 +6,7 @@
 /* Custom fonts */
 body {
   @apply m-0;
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -20,7 +20,7 @@ code,
 }
 
 .font-display {
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 600;
 }
 
@@ -60,6 +60,7 @@ code,
   --sidebar-border: oklch(0.25 0.02 270);
   --sidebar-ring: oklch(0.65 0.24 295);
   --font-geist: 'Geist', sans-serif;
+  --header-height: 4rem;
 }
 
 /* Light theme override */
@@ -133,6 +134,7 @@ code,
   --font-geist: var(--font-geist);
   --animate-spotlight: spotlight 2s ease 0.75s 1 forwards;
   --animate-aurora: aurora 60s linear infinite;
+  --spacing-header: var(--header-height);
   
   /* Gradient utilities */
   --gradient-violet: linear-gradient(135deg, oklch(0.6 0.25 280), oklch(0.65 0.25 310));
