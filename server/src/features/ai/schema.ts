@@ -26,3 +26,8 @@ export const BriefSchema = z.object({
     format: z.enum(["storytime", "explainer"]).describe("The format of the video"),
     segments: z.array(SegmentSchema).describe("List of main parts that structure the story. You can have 3-7 segments depending on the format and content."),
 })
+
+export const CorrectScriptSchema = z.object({
+    id: z.string().describe("Unique identifier for the part. The same id that will be sent from the user"),
+    content: z.string().describe("New corrected content of the part"),
+})

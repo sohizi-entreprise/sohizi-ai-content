@@ -3,7 +3,7 @@ import { NotFound } from "../error";
 import { streamLlmText, streamLlmJson } from "@/lib/llm";
 import { getWriterPrompt } from "./prompt";
 import { projectConstants } from "@/constants";
-import { BriefSchema } from "./schema";
+import { BriefSchema, CorrectScriptSchema } from "./schema";
 
 
 export const generateBrief = async (projectId: string) => {
@@ -56,24 +56,49 @@ export const generateBrief = async (projectId: string) => {
 
 }
 
+export const correctScript = async (payload: { brief: string, feedback: string, partsToEdit: string }) => {
+    
+    const systemPrompt = `
+    You are a professional scriptwriter.
+    Your job is to correct the script based on the user's feedback.
+    You will be given a brief, a feedback, and the parts of the script to edit.
+    You will need to correct the script based on the feedback and the parts of the script to edit.
 
-export const generateScenes = async() => {
+    IMPORTANT OUTPUT RULES:
+    - Keep the same id that will be sent to you in the <parts_to_edit> tag.
+    - You should only edit and return the content of the parts that are sent to you in the <parts_to_edit> tag.
+    - Do not write beyond the requested scope.
+    `
 
-}
+    const userPrompt = `
+    Correct the script based on the feedback and the parts of the script to edit.
+    <feedback>
+    ${payload.feedback}
+    </feedback>
+    <parts_to_edit>
+    ${payload.partsToEdit}
+    </parts_to_edit>
+    <brief>
+    ${payload.brief}
+    </brief>
+    `
 
-export const reviewBlock = async () => {
-
-}
-
-
-export const extractEntities = async () => {
-
-}
-
-export const generateShots = async () => {
-
-}
-
-export const generateImages = async () => {
-
+    return await streamLlmJson({
+        model: 'gpt-5.1',
+        systemPrompt: systemPrompt,
+        schema: CorrectScriptSchema,
+        userPrompt: userPrompt,
+        outputType: 'array',
+        modelSettings: {
+            // temperature: 0.6,
+            reasoningEffort: "low"
+        },
+        onFinish: ({totalTokens, json}) => {
+            console.log("token usage: ", totalTokens, '\n=======\n')
+            console.dir(json, { depth: 4, colors: true });
+        },
+        onError: (error) => {
+            console.error("error: ", error)
+        }
+    })
 }
