@@ -22,7 +22,7 @@ export function useStreamObject<T extends z.ZodSchema, TFunc>(
     object: TFunc | undefined;
     isLoading: boolean;
     error: Error | undefined;
-    startStream: () => Promise<void>;
+    startStream: (payload?: string) => Promise<void>;
 };
 
 // Overload when transformFunc is not provided
@@ -35,7 +35,7 @@ export function useStreamObject<T extends z.ZodSchema>(
     object: z.infer<T> | undefined;
     isLoading: boolean;
     error: Error | undefined;
-    startStream: () => Promise<void>;
+    startStream: (payload?: string) => Promise<void>;
 };
 
 // Implementation
@@ -69,7 +69,7 @@ export function useStreamObject<T extends z.ZodSchema, TFunc = z.infer<T>>(
         callbackRef.current = callback;
     }, [callback]);
 
-    const startStream = useCallback(async () => {
+    const startStream = useCallback(async (payload?: string) => {
         // Reset state
         setObject(undefined);
         setError(undefined);
@@ -143,7 +143,11 @@ export function useStreamObject<T extends z.ZodSchema, TFunc = z.infer<T>>(
         try {
             const res = await fetch(url, {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 signal: abortController.signal,
+                body: payload,
             });
             
             if (!res.ok) throw new Error("Failed to fetch brief");

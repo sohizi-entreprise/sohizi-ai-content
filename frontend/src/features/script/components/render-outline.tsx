@@ -61,7 +61,7 @@ export default function RenderOutline() {
             {error && <div className="text-red-500">Error: {error.message}</div>}
             {isLoading && <div>Loading...</div>}
             <BlockEditor />
-            <Button onClick={startStream} disabled={isLoading}>
+            <Button onClick={()=>startStream()} disabled={isLoading}>
                 Submit
             </Button>
         </div>

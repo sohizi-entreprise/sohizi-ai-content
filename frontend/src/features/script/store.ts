@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware'
 
 interface ScriptStore {
     blocks: Block[];
-    isStreamingBlocks: boolean;
+    isStreaming: boolean;
     readonly: boolean;
     aiBlockContext: Block[];
     setBlocks: (blocks: Block[]) => void;
@@ -14,11 +14,13 @@ interface ScriptStore {
     addOrRemoveAiBlockContext: (block: Block) => void;
     clearAiBlockContext: () => void;
     setReadonly: (readonly: boolean) => void;
+    bulkUpdateBlocks: (data: {id: string, content: string}[]) => void;
+    setStreaming: (isStreaming: boolean) => void;
 }
 
 export const useScriptStore = create<ScriptStore>()(persist((set) => ({
     blocks: [],
-    isStreamingBlocks: false,
+    isStreaming: false,
     readonly: false,
     aiBlockContext: [],
     setBlocks: (blocks) => set({ blocks }),
@@ -44,6 +46,14 @@ export const useScriptStore = create<ScriptStore>()(persist((set) => ({
     }),
     clearAiBlockContext: () => set({ aiBlockContext: [] }),
     setReadonly: (readonly) => set({ readonly }),
+    bulkUpdateBlocks: (data) => set((state) => {
+        const newContent = data.reduce((acc, d) => {
+            acc[d.id] = d.content;
+            return acc;
+        }, {} as Record<string, string>);
+        return { blocks: state.blocks.map(b => newContent[b.id] !== undefined ? { ...b, content: newContent[b.id] } : b) }
+    }),
+    setStreaming: (isStreaming) => set({ isStreaming }),
 }), {
     name: 'script-store',
 }));

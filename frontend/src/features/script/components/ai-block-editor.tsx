@@ -6,23 +6,55 @@ import { cn } from "@/lib/utils";
 import { useShallow } from "zustand/shallow";
 import { useScriptStore } from "../store";
 import { BlockType } from "../type";
+import { useStreamObject } from "@/hooks/use-stream-object";
+import { useParams } from "node_modules/@tanstack/react-router/dist/esm/useParams";
+import { z } from "zod";
 
 type Props = {
     className?: ClassValue;
 }
 
+export const correctScriptSchema = z.array(
+    z.object({
+        id: z.string().describe("Unique identifier for the part. The same id that will be sent from the user"),
+        content: z.string().describe("New corrected content of the part"),
+    })
+)
+
 export default function AiBlockEditor(props: Props){
 
     const {className} = props;
-
-    const {aiBlockContext, clearAiBlockContext} = useScriptStore(useShallow(state => ({aiBlockContext: state.aiBlockContext, clearAiBlockContext: state.clearAiBlockContext})))
-
     const [prompt, setPrompt] = useState('');
+
+    const {aiBlockContext, clearAiBlockContext, blocks} = useScriptStore(useShallow(state => ({aiBlockContext: state.aiBlockContext, clearAiBlockContext: state.clearAiBlockContext, blocks: state.blocks})))
+    const bulkUpdateBlocks = useScriptStore(state => state.bulkUpdateBlocks);
+    const setStreaming = useScriptStore(state => state.setStreaming);
+
+    // [{"id":"scene1768764483231","content":""}]
+
+    const {projectId} = useParams({from: '/dashboard/projects/$projectId/script'})
+    const url = `${import.meta.env.VITE_API_BASE_URL}/ai/correct/script`
+
+    const {startStream, isLoading} = useStreamObject(projectId, 
+                        correctScriptSchema, 
+                        url,
+                        {
+                        onEnd: () => {setStreaming(false)},
+                        onStart: () => {setStreaming(true)},
+                        onUpdate: bulkUpdateBlocks,
+                        }
+                )
 
     const handleSubmit = () => {
         if (!prompt.trim()) return;
-        console.log('submit to ai', prompt);
-        console.log('ai block context', aiBlockContext);
+        const payload = JSON.stringify({
+            brief: JSON.stringify(blocks),
+            feedback: prompt,
+            partsToEdit: JSON.stringify(aiBlockContext.map(block => block.id)),
+        })
+        startStream(payload);
+        setPrompt('');
+        // clearAiBlockContext();
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -40,7 +72,8 @@ export default function AiBlockEditor(props: Props){
         return acc;
     }, {} as Record<BlockType, number>);
 
-    const disableButton = !prompt.trim();
+    const disableButton = !prompt.trim() || isLoading;
+    const disableVoice = isLoading;
 
     if(aiBlockContext.length === 0) return null;
 
@@ -83,7 +116,8 @@ export default function AiBlockEditor(props: Props){
                         <X className='size-4' />
                     </button>
                     <button 
-                        className='size-8 flex items-center justify-center rounded-full bg-zinc-700/50 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition-colors'
+                        disabled={disableVoice}
+                        className='size-8 flex items-center justify-center rounded-full bg-zinc-700/50 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
                     >
                         <Mic className='size-4' />
                     </button>

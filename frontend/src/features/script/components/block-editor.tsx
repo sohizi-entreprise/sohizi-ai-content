@@ -9,6 +9,7 @@ import AiBlockEditor from './ai-block-editor';
 import { BlockType, type Block } from '../type';
 import { useScriptStore } from '../store';
 import { useShallow } from 'zustand/shallow';
+import { Spinner } from '@/components/ui/spinner';
 
 type BlockProps = Block & {
     onContentChange: (content: string) => void; 
@@ -118,9 +119,13 @@ function BaseBlock(props: BaseBlockProps){
 
     const isInAiContext = useScriptStore(state => state.aiBlockContext.some(b => b.id === id));
     const readonly = useScriptStore(state => state.readonly);
+    const isStreaming = useScriptStore(state => state.isStreaming);
 
     const showActionMenu = !readonly && !disableMenuBlock;
     const showAiEditButton = !readonly && isInAiContext;
+    const showAiBtnLoader = isStreaming && isInAiContext;
+
+
 
     const handleContentFocus = () => {
         setIsEditing(true);
@@ -138,9 +143,10 @@ function BaseBlock(props: BaseBlockProps){
             <div className={cn('self-end absolute -right-4 -top-4 hidden group-hover:flex', showAiEditButton && 'flex')}>
                 <Button size="icon" 
                         onClick={onOpenAiEdit}
+                        disabled={showAiBtnLoader}
                         className={cn('bg-green-500 rounded-full hover:bg-green-600', isInAiContext && 'bg-green-500')}
                 >
-                    <Sparkles className='h-4 w-4' />
+                    {showAiBtnLoader ? <Spinner /> : <Sparkles className='h-4 w-4' />}
                 </Button>
             </div>
 
