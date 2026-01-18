@@ -60,6 +60,7 @@ code,
   --sidebar-border: oklch(0.25 0.02 270);
   --sidebar-ring: oklch(0.65 0.24 295);
   --font-geist: 'Geist', sans-serif;
+  --font-courier: 'Courier Prime', monospace;
   --header-height: 4rem;
 }
 
@@ -132,6 +133,7 @@ code,
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --font-geist: var(--font-geist);
+  --font-courier: var(--font-courier);
   --animate-spotlight: spotlight 2s ease 0.75s 1 forwards;
   --animate-aurora: aurora 60s linear infinite;
   --spacing-header: var(--header-height);

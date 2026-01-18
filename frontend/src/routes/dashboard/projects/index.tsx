@@ -39,7 +39,7 @@ function ProjectsPage() {
             Create and manage your video storyboards
           </p>
         </div>
-        <ErrorBoundary fallbackRender={({resetErrorBoundary}) => <ListProjectsError msg="Failed to load projects" reset={resetErrorBoundary} />}>
+        <ErrorBoundary fallbackRender={({resetErrorBoundary, error}) => <ListProjectsError msg={error?.message} reset={resetErrorBoundary} />}>
           <Suspense fallback={<ListProjectsSkeleton />}>
             <ListProjects />
           </Suspense>

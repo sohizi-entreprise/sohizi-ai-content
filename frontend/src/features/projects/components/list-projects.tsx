@@ -29,7 +29,7 @@ export default function ListProjects() {
   return (
     <div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
       {[...projects, fakeProject].map((project) => (
-        <Link to="/dashboard/projects/$projectId/script" params={{ projectId: project.id }} key={project.id} className='block'>
+        <Link to="/dashboard/projects/$projectId/script" params={{ projectId: project.id }} key={project.id} className='block' preload={false}>
             <ProjectCard key={project.id} 
                         id={project.id}
                         name={project.name}

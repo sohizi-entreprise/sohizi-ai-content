@@ -1,4 +1,5 @@
 import api from '@/lib/axios'
+import { isAxiosError } from 'axios'
 import { CreateProjectInput, ProjectResponse, UpdateProjectInput } from './type'
 
 export const listProjects = async (): Promise<ProjectResponse[]> => {
@@ -7,8 +8,25 @@ export const listProjects = async (): Promise<ProjectResponse[]> => {
 }
 
 export const getProject = async (id: string): Promise<ProjectResponse> => {
-  const response = await api.get(`/projects/${id}`)
-  return response.data
+  try {
+    const response = await api.get(`/projects/${id}`)
+    return response.data
+    
+  } catch (error) {
+    switch (true) {
+      case isAxiosError(error) && error.response?.status === 404:
+        throw new Error('Project not found')
+        // throw notFound({routeId: '/dashboard/projects/$projectId'})
+      case isAxiosError(error) && error.response?.status && error.response.status >= 500:
+        throw new Error('Failed to get project: Internal Server Error')
+      case isAxiosError(error) && error.code === 'ERR_NETWORK':
+        throw new Error('Network Error: try later!')
+    
+      default:
+        throw new Error('Failed to get project: Unknown Error');
+    }
+    
+  }
 }
 
 export const deleteProject = async (id: string) => {

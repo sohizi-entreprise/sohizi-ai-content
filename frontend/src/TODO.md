@@ -1,0 +1,1 @@
+[ ] We can't add a segment between scenes (Think about it, maybe leave it for flexibility)

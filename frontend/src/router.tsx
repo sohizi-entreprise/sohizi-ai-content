@@ -16,6 +16,8 @@ export const getRouter = () => {
     },
 
     defaultPreload: 'intent',
+    defaultNotFoundComponent: () => <div>Not found</div>,
+    defaultErrorComponent: ({error}) => <div>Error: {error.message}</div>,
   })
 
   setupRouterSsrQueryIntegration({ router, queryClient: rqContext.queryClient })
