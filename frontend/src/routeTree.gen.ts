@@ -12,15 +12,17 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
-import { Route as DashboardProjectsIndexRouteImport } from './routes/dashboard/projects/index'
+import { Route as DashboardMainRouteImport } from './routes/dashboard/main'
 import { Route as DashboardProjectsNewRouteImport } from './routes/dashboard/projects/new'
 import { Route as DashboardProjectsProjectIdRouteImport } from './routes/dashboard/projects/$projectId'
-import { Route as DashboardProjectsProjectIdStoryboardRouteImport } from './routes/dashboard/projects/$projectId/storyboard'
-import { Route as DashboardProjectsProjectIdSettingsRouteImport } from './routes/dashboard/projects/$projectId/settings'
-import { Route as DashboardProjectsProjectIdScriptRouteImport } from './routes/dashboard/projects/$projectId/script'
-import { Route as DashboardProjectsProjectIdOutlineRouteImport } from './routes/dashboard/projects/$projectId/outline'
-import { Route as DashboardProjectsProjectIdElementsRouteImport } from './routes/dashboard/projects/$projectId/elements'
-import { Route as DashboardProjectsProjectIdCharactersRouteImport } from './routes/dashboard/projects/$projectId/characters'
+import { Route as DashboardMainProjectsRouteImport } from './routes/dashboard/main/projects'
+import { Route as DashboardProjectsProjectIdEditRouteImport } from './routes/dashboard/projects/$projectId/edit'
+import { Route as DashboardProjectsProjectIdConceptRouteImport } from './routes/dashboard/projects/$projectId/concept'
+import { Route as DashboardProjectsProjectIdEditStoryboardRouteImport } from './routes/dashboard/projects/$projectId/edit/storyboard'
+import { Route as DashboardProjectsProjectIdEditSettingsRouteImport } from './routes/dashboard/projects/$projectId/edit/settings'
+import { Route as DashboardProjectsProjectIdEditScriptRouteImport } from './routes/dashboard/projects/$projectId/edit/script'
+import { Route as DashboardProjectsProjectIdEditElementsRouteImport } from './routes/dashboard/projects/$projectId/edit/elements'
+import { Route as DashboardProjectsProjectIdEditCharactersRouteImport } from './routes/dashboard/projects/$projectId/edit/characters'
 
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
@@ -37,9 +39,9 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardProjectsIndexRoute = DashboardProjectsIndexRouteImport.update({
-  id: '/projects/',
-  path: '/projects/',
+const DashboardMainRoute = DashboardMainRouteImport.update({
+  id: '/main',
+  path: '/main',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardProjectsNewRoute = DashboardProjectsNewRouteImport.update({
@@ -53,127 +55,150 @@ const DashboardProjectsProjectIdRoute =
     path: '/projects/$projectId',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardProjectsProjectIdStoryboardRoute =
-  DashboardProjectsProjectIdStoryboardRouteImport.update({
+const DashboardMainProjectsRoute = DashboardMainProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => DashboardMainRoute,
+} as any)
+const DashboardProjectsProjectIdEditRoute =
+  DashboardProjectsProjectIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => DashboardProjectsProjectIdRoute,
+  } as any)
+const DashboardProjectsProjectIdConceptRoute =
+  DashboardProjectsProjectIdConceptRouteImport.update({
+    id: '/concept',
+    path: '/concept',
+    getParentRoute: () => DashboardProjectsProjectIdRoute,
+  } as any)
+const DashboardProjectsProjectIdEditStoryboardRoute =
+  DashboardProjectsProjectIdEditStoryboardRouteImport.update({
     id: '/storyboard',
     path: '/storyboard',
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+    getParentRoute: () => DashboardProjectsProjectIdEditRoute,
   } as any)
-const DashboardProjectsProjectIdSettingsRoute =
-  DashboardProjectsProjectIdSettingsRouteImport.update({
+const DashboardProjectsProjectIdEditSettingsRoute =
+  DashboardProjectsProjectIdEditSettingsRouteImport.update({
     id: '/settings',
     path: '/settings',
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+    getParentRoute: () => DashboardProjectsProjectIdEditRoute,
   } as any)
-const DashboardProjectsProjectIdScriptRoute =
-  DashboardProjectsProjectIdScriptRouteImport.update({
+const DashboardProjectsProjectIdEditScriptRoute =
+  DashboardProjectsProjectIdEditScriptRouteImport.update({
     id: '/script',
     path: '/script',
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+    getParentRoute: () => DashboardProjectsProjectIdEditRoute,
   } as any)
-const DashboardProjectsProjectIdOutlineRoute =
-  DashboardProjectsProjectIdOutlineRouteImport.update({
-    id: '/outline',
-    path: '/outline',
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
-  } as any)
-const DashboardProjectsProjectIdElementsRoute =
-  DashboardProjectsProjectIdElementsRouteImport.update({
+const DashboardProjectsProjectIdEditElementsRoute =
+  DashboardProjectsProjectIdEditElementsRouteImport.update({
     id: '/elements',
     path: '/elements',
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+    getParentRoute: () => DashboardProjectsProjectIdEditRoute,
   } as any)
-const DashboardProjectsProjectIdCharactersRoute =
-  DashboardProjectsProjectIdCharactersRouteImport.update({
+const DashboardProjectsProjectIdEditCharactersRoute =
+  DashboardProjectsProjectIdEditCharactersRouteImport.update({
     id: '/characters',
     path: '/characters',
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+    getParentRoute: () => DashboardProjectsProjectIdEditRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/main/projects': typeof DashboardMainProjectsRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
-  '/dashboard/projects': typeof DashboardProjectsIndexRoute
-  '/dashboard/projects/$projectId/characters': typeof DashboardProjectsProjectIdCharactersRoute
-  '/dashboard/projects/$projectId/elements': typeof DashboardProjectsProjectIdElementsRoute
-  '/dashboard/projects/$projectId/outline': typeof DashboardProjectsProjectIdOutlineRoute
-  '/dashboard/projects/$projectId/script': typeof DashboardProjectsProjectIdScriptRoute
-  '/dashboard/projects/$projectId/settings': typeof DashboardProjectsProjectIdSettingsRoute
-  '/dashboard/projects/$projectId/storyboard': typeof DashboardProjectsProjectIdStoryboardRoute
+  '/dashboard/projects/$projectId/concept': typeof DashboardProjectsProjectIdConceptRoute
+  '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
+  '/dashboard/projects/$projectId/edit/characters': typeof DashboardProjectsProjectIdEditCharactersRoute
+  '/dashboard/projects/$projectId/edit/elements': typeof DashboardProjectsProjectIdEditElementsRoute
+  '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
+  '/dashboard/projects/$projectId/edit/settings': typeof DashboardProjectsProjectIdEditSettingsRoute
+  '/dashboard/projects/$projectId/edit/storyboard': typeof DashboardProjectsProjectIdEditStoryboardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/main/projects': typeof DashboardMainProjectsRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
-  '/dashboard/projects': typeof DashboardProjectsIndexRoute
-  '/dashboard/projects/$projectId/characters': typeof DashboardProjectsProjectIdCharactersRoute
-  '/dashboard/projects/$projectId/elements': typeof DashboardProjectsProjectIdElementsRoute
-  '/dashboard/projects/$projectId/outline': typeof DashboardProjectsProjectIdOutlineRoute
-  '/dashboard/projects/$projectId/script': typeof DashboardProjectsProjectIdScriptRoute
-  '/dashboard/projects/$projectId/settings': typeof DashboardProjectsProjectIdSettingsRoute
-  '/dashboard/projects/$projectId/storyboard': typeof DashboardProjectsProjectIdStoryboardRoute
+  '/dashboard/projects/$projectId/concept': typeof DashboardProjectsProjectIdConceptRoute
+  '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
+  '/dashboard/projects/$projectId/edit/characters': typeof DashboardProjectsProjectIdEditCharactersRoute
+  '/dashboard/projects/$projectId/edit/elements': typeof DashboardProjectsProjectIdEditElementsRoute
+  '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
+  '/dashboard/projects/$projectId/edit/settings': typeof DashboardProjectsProjectIdEditSettingsRoute
+  '/dashboard/projects/$projectId/edit/storyboard': typeof DashboardProjectsProjectIdEditStoryboardRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/main/projects': typeof DashboardMainProjectsRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
-  '/dashboard/projects/': typeof DashboardProjectsIndexRoute
-  '/dashboard/projects/$projectId/characters': typeof DashboardProjectsProjectIdCharactersRoute
-  '/dashboard/projects/$projectId/elements': typeof DashboardProjectsProjectIdElementsRoute
-  '/dashboard/projects/$projectId/outline': typeof DashboardProjectsProjectIdOutlineRoute
-  '/dashboard/projects/$projectId/script': typeof DashboardProjectsProjectIdScriptRoute
-  '/dashboard/projects/$projectId/settings': typeof DashboardProjectsProjectIdSettingsRoute
-  '/dashboard/projects/$projectId/storyboard': typeof DashboardProjectsProjectIdStoryboardRoute
+  '/dashboard/projects/$projectId/concept': typeof DashboardProjectsProjectIdConceptRoute
+  '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
+  '/dashboard/projects/$projectId/edit/characters': typeof DashboardProjectsProjectIdEditCharactersRoute
+  '/dashboard/projects/$projectId/edit/elements': typeof DashboardProjectsProjectIdEditElementsRoute
+  '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
+  '/dashboard/projects/$projectId/edit/settings': typeof DashboardProjectsProjectIdEditSettingsRoute
+  '/dashboard/projects/$projectId/edit/storyboard': typeof DashboardProjectsProjectIdEditStoryboardRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/dashboard/main'
     | '/dashboard/'
+    | '/dashboard/main/projects'
     | '/dashboard/projects/$projectId'
     | '/dashboard/projects/new'
-    | '/dashboard/projects'
-    | '/dashboard/projects/$projectId/characters'
-    | '/dashboard/projects/$projectId/elements'
-    | '/dashboard/projects/$projectId/outline'
-    | '/dashboard/projects/$projectId/script'
-    | '/dashboard/projects/$projectId/settings'
-    | '/dashboard/projects/$projectId/storyboard'
+    | '/dashboard/projects/$projectId/concept'
+    | '/dashboard/projects/$projectId/edit'
+    | '/dashboard/projects/$projectId/edit/characters'
+    | '/dashboard/projects/$projectId/edit/elements'
+    | '/dashboard/projects/$projectId/edit/script'
+    | '/dashboard/projects/$projectId/edit/settings'
+    | '/dashboard/projects/$projectId/edit/storyboard'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dashboard/main'
     | '/dashboard'
+    | '/dashboard/main/projects'
     | '/dashboard/projects/$projectId'
     | '/dashboard/projects/new'
-    | '/dashboard/projects'
-    | '/dashboard/projects/$projectId/characters'
-    | '/dashboard/projects/$projectId/elements'
-    | '/dashboard/projects/$projectId/outline'
-    | '/dashboard/projects/$projectId/script'
-    | '/dashboard/projects/$projectId/settings'
-    | '/dashboard/projects/$projectId/storyboard'
+    | '/dashboard/projects/$projectId/concept'
+    | '/dashboard/projects/$projectId/edit'
+    | '/dashboard/projects/$projectId/edit/characters'
+    | '/dashboard/projects/$projectId/edit/elements'
+    | '/dashboard/projects/$projectId/edit/script'
+    | '/dashboard/projects/$projectId/edit/settings'
+    | '/dashboard/projects/$projectId/edit/storyboard'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/dashboard/main'
     | '/dashboard/'
+    | '/dashboard/main/projects'
     | '/dashboard/projects/$projectId'
     | '/dashboard/projects/new'
-    | '/dashboard/projects/'
-    | '/dashboard/projects/$projectId/characters'
-    | '/dashboard/projects/$projectId/elements'
-    | '/dashboard/projects/$projectId/outline'
-    | '/dashboard/projects/$projectId/script'
-    | '/dashboard/projects/$projectId/settings'
-    | '/dashboard/projects/$projectId/storyboard'
+    | '/dashboard/projects/$projectId/concept'
+    | '/dashboard/projects/$projectId/edit'
+    | '/dashboard/projects/$projectId/edit/characters'
+    | '/dashboard/projects/$projectId/edit/elements'
+    | '/dashboard/projects/$projectId/edit/script'
+    | '/dashboard/projects/$projectId/edit/settings'
+    | '/dashboard/projects/$projectId/edit/storyboard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -204,11 +229,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/dashboard/projects/': {
-      id: '/dashboard/projects/'
-      path: '/projects'
-      fullPath: '/dashboard/projects'
-      preLoaderRoute: typeof DashboardProjectsIndexRouteImport
+    '/dashboard/main': {
+      id: '/dashboard/main'
+      path: '/main'
+      fullPath: '/dashboard/main'
+      preLoaderRoute: typeof DashboardMainRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/projects/new': {
@@ -225,74 +250,115 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProjectsProjectIdRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/dashboard/projects/$projectId/storyboard': {
-      id: '/dashboard/projects/$projectId/storyboard'
+    '/dashboard/main/projects': {
+      id: '/dashboard/main/projects'
+      path: '/projects'
+      fullPath: '/dashboard/main/projects'
+      preLoaderRoute: typeof DashboardMainProjectsRouteImport
+      parentRoute: typeof DashboardMainRoute
+    }
+    '/dashboard/projects/$projectId/edit': {
+      id: '/dashboard/projects/$projectId/edit'
+      path: '/edit'
+      fullPath: '/dashboard/projects/$projectId/edit'
+      preLoaderRoute: typeof DashboardProjectsProjectIdEditRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdRoute
+    }
+    '/dashboard/projects/$projectId/concept': {
+      id: '/dashboard/projects/$projectId/concept'
+      path: '/concept'
+      fullPath: '/dashboard/projects/$projectId/concept'
+      preLoaderRoute: typeof DashboardProjectsProjectIdConceptRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdRoute
+    }
+    '/dashboard/projects/$projectId/edit/storyboard': {
+      id: '/dashboard/projects/$projectId/edit/storyboard'
       path: '/storyboard'
-      fullPath: '/dashboard/projects/$projectId/storyboard'
-      preLoaderRoute: typeof DashboardProjectsProjectIdStoryboardRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+      fullPath: '/dashboard/projects/$projectId/edit/storyboard'
+      preLoaderRoute: typeof DashboardProjectsProjectIdEditStoryboardRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdEditRoute
     }
-    '/dashboard/projects/$projectId/settings': {
-      id: '/dashboard/projects/$projectId/settings'
+    '/dashboard/projects/$projectId/edit/settings': {
+      id: '/dashboard/projects/$projectId/edit/settings'
       path: '/settings'
-      fullPath: '/dashboard/projects/$projectId/settings'
-      preLoaderRoute: typeof DashboardProjectsProjectIdSettingsRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+      fullPath: '/dashboard/projects/$projectId/edit/settings'
+      preLoaderRoute: typeof DashboardProjectsProjectIdEditSettingsRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdEditRoute
     }
-    '/dashboard/projects/$projectId/script': {
-      id: '/dashboard/projects/$projectId/script'
+    '/dashboard/projects/$projectId/edit/script': {
+      id: '/dashboard/projects/$projectId/edit/script'
       path: '/script'
-      fullPath: '/dashboard/projects/$projectId/script'
-      preLoaderRoute: typeof DashboardProjectsProjectIdScriptRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+      fullPath: '/dashboard/projects/$projectId/edit/script'
+      preLoaderRoute: typeof DashboardProjectsProjectIdEditScriptRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdEditRoute
     }
-    '/dashboard/projects/$projectId/outline': {
-      id: '/dashboard/projects/$projectId/outline'
-      path: '/outline'
-      fullPath: '/dashboard/projects/$projectId/outline'
-      preLoaderRoute: typeof DashboardProjectsProjectIdOutlineRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
-    }
-    '/dashboard/projects/$projectId/elements': {
-      id: '/dashboard/projects/$projectId/elements'
+    '/dashboard/projects/$projectId/edit/elements': {
+      id: '/dashboard/projects/$projectId/edit/elements'
       path: '/elements'
-      fullPath: '/dashboard/projects/$projectId/elements'
-      preLoaderRoute: typeof DashboardProjectsProjectIdElementsRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+      fullPath: '/dashboard/projects/$projectId/edit/elements'
+      preLoaderRoute: typeof DashboardProjectsProjectIdEditElementsRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdEditRoute
     }
-    '/dashboard/projects/$projectId/characters': {
-      id: '/dashboard/projects/$projectId/characters'
+    '/dashboard/projects/$projectId/edit/characters': {
+      id: '/dashboard/projects/$projectId/edit/characters'
       path: '/characters'
-      fullPath: '/dashboard/projects/$projectId/characters'
-      preLoaderRoute: typeof DashboardProjectsProjectIdCharactersRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+      fullPath: '/dashboard/projects/$projectId/edit/characters'
+      preLoaderRoute: typeof DashboardProjectsProjectIdEditCharactersRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdEditRoute
     }
   }
 }
 
+interface DashboardMainRouteChildren {
+  DashboardMainProjectsRoute: typeof DashboardMainProjectsRoute
+}
+
+const DashboardMainRouteChildren: DashboardMainRouteChildren = {
+  DashboardMainProjectsRoute: DashboardMainProjectsRoute,
+}
+
+const DashboardMainRouteWithChildren = DashboardMainRoute._addFileChildren(
+  DashboardMainRouteChildren,
+)
+
+interface DashboardProjectsProjectIdEditRouteChildren {
+  DashboardProjectsProjectIdEditCharactersRoute: typeof DashboardProjectsProjectIdEditCharactersRoute
+  DashboardProjectsProjectIdEditElementsRoute: typeof DashboardProjectsProjectIdEditElementsRoute
+  DashboardProjectsProjectIdEditScriptRoute: typeof DashboardProjectsProjectIdEditScriptRoute
+  DashboardProjectsProjectIdEditSettingsRoute: typeof DashboardProjectsProjectIdEditSettingsRoute
+  DashboardProjectsProjectIdEditStoryboardRoute: typeof DashboardProjectsProjectIdEditStoryboardRoute
+}
+
+const DashboardProjectsProjectIdEditRouteChildren: DashboardProjectsProjectIdEditRouteChildren =
+  {
+    DashboardProjectsProjectIdEditCharactersRoute:
+      DashboardProjectsProjectIdEditCharactersRoute,
+    DashboardProjectsProjectIdEditElementsRoute:
+      DashboardProjectsProjectIdEditElementsRoute,
+    DashboardProjectsProjectIdEditScriptRoute:
+      DashboardProjectsProjectIdEditScriptRoute,
+    DashboardProjectsProjectIdEditSettingsRoute:
+      DashboardProjectsProjectIdEditSettingsRoute,
+    DashboardProjectsProjectIdEditStoryboardRoute:
+      DashboardProjectsProjectIdEditStoryboardRoute,
+  }
+
+const DashboardProjectsProjectIdEditRouteWithChildren =
+  DashboardProjectsProjectIdEditRoute._addFileChildren(
+    DashboardProjectsProjectIdEditRouteChildren,
+  )
+
 interface DashboardProjectsProjectIdRouteChildren {
-  DashboardProjectsProjectIdCharactersRoute: typeof DashboardProjectsProjectIdCharactersRoute
-  DashboardProjectsProjectIdElementsRoute: typeof DashboardProjectsProjectIdElementsRoute
-  DashboardProjectsProjectIdOutlineRoute: typeof DashboardProjectsProjectIdOutlineRoute
-  DashboardProjectsProjectIdScriptRoute: typeof DashboardProjectsProjectIdScriptRoute
-  DashboardProjectsProjectIdSettingsRoute: typeof DashboardProjectsProjectIdSettingsRoute
-  DashboardProjectsProjectIdStoryboardRoute: typeof DashboardProjectsProjectIdStoryboardRoute
+  DashboardProjectsProjectIdConceptRoute: typeof DashboardProjectsProjectIdConceptRoute
+  DashboardProjectsProjectIdEditRoute: typeof DashboardProjectsProjectIdEditRouteWithChildren
 }
 
 const DashboardProjectsProjectIdRouteChildren: DashboardProjectsProjectIdRouteChildren =
   {
-    DashboardProjectsProjectIdCharactersRoute:
-      DashboardProjectsProjectIdCharactersRoute,
-    DashboardProjectsProjectIdElementsRoute:
-      DashboardProjectsProjectIdElementsRoute,
-    DashboardProjectsProjectIdOutlineRoute:
-      DashboardProjectsProjectIdOutlineRoute,
-    DashboardProjectsProjectIdScriptRoute:
-      DashboardProjectsProjectIdScriptRoute,
-    DashboardProjectsProjectIdSettingsRoute:
-      DashboardProjectsProjectIdSettingsRoute,
-    DashboardProjectsProjectIdStoryboardRoute:
-      DashboardProjectsProjectIdStoryboardRoute,
+    DashboardProjectsProjectIdConceptRoute:
+      DashboardProjectsProjectIdConceptRoute,
+    DashboardProjectsProjectIdEditRoute:
+      DashboardProjectsProjectIdEditRouteWithChildren,
   }
 
 const DashboardProjectsProjectIdRouteWithChildren =
@@ -301,17 +367,17 @@ const DashboardProjectsProjectIdRouteWithChildren =
   )
 
 interface DashboardRouteChildren {
+  DashboardMainRoute: typeof DashboardMainRouteWithChildren
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardProjectsProjectIdRoute: typeof DashboardProjectsProjectIdRouteWithChildren
   DashboardProjectsNewRoute: typeof DashboardProjectsNewRoute
-  DashboardProjectsIndexRoute: typeof DashboardProjectsIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardMainRoute: DashboardMainRouteWithChildren,
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardProjectsProjectIdRoute: DashboardProjectsProjectIdRouteWithChildren,
   DashboardProjectsNewRoute: DashboardProjectsNewRoute,
-  DashboardProjectsIndexRoute: DashboardProjectsIndexRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

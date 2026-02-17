@@ -1,0 +1,504 @@
+/* ============================================================================
+   SCRIPT EDITOR BASE STYLES
+   ============================================================================ */
+
+.script-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  /* background: var(--background); */
+}
+
+.script-editor-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+}
+
+.script-editor-content {
+  max-width: 8.5in; /* Standard US Letter width */
+  margin: 0 auto;
+  padding: 1in;
+  background: white;
+  border-radius: 0.5rem;
+  min-height: 11in; /* Standard US Letter height */
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: black;
+  outline: none;
+}
+
+.script-editor-content:focus {
+  outline: none;
+}
+
+/* ============================================================================
+   BLOCK TYPE STYLES
+   ============================================================================ */
+
+/* Scene Heading */
+.screenplay-scene-heading {
+  text-transform: uppercase;
+  font-weight: bold;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.screenplay-scene-heading:first-child {
+  margin-top: 0;
+}
+
+/* Action */
+.screenplay-action {
+  margin-bottom: 1em;
+}
+
+/* Character */
+.screenplay-character {
+  text-transform: uppercase;
+  text-align: center;
+  margin-top: 1em;
+  margin-bottom: 0;
+  margin-left: 2in;
+  margin-right: 2in;
+}
+
+/* Parenthetical */
+.screenplay-parenthetical {
+  text-align: center;
+  margin-left: 1.5in;
+  margin-right: 1.5in;
+  font-style: italic;
+  color: oklch(0.7 0.02 270);
+}
+
+.screenplay-parenthetical::before {
+  content: '(';
+}
+
+.screenplay-parenthetical::after {
+  content: ')';
+}
+
+/* Dialogue */
+.screenplay-dialogue {
+  margin-left: 1in;
+  margin-right: 1in;
+  margin-bottom: 1em;
+}
+
+/* Transition */
+.screenplay-transition {
+  text-transform: uppercase;
+  text-align: right;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+/* Shot */
+.screenplay-shot {
+  text-transform: uppercase;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+/* Note (Writer's note - not in final) */
+.screenplay-note {
+  background: oklch(0.3 0.1 60 / 0.2);
+  border-left: 3px solid oklch(0.7 0.15 60);
+  padding: 0.5em 1em;
+  margin: 1em 0;
+  font-style: italic;
+  color: oklch(0.7 0.05 60);
+}
+
+/* Page Break */
+.screenplay-page-break {
+  border: none;
+  border-top: 2px dashed oklch(0.4 0.02 270);
+  margin: 2em 0;
+  position: relative;
+  page-break-after: always;
+}
+
+.screenplay-page-break::after {
+  content: 'PAGE BREAK';
+  position: absolute;
+  top: -0.6em;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--background);
+  padding: 0 1em;
+  font-size: 10px;
+  color: oklch(0.5 0.02 270);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ============================================================================
+   AI DIFF STYLES
+   ============================================================================ */
+
+/* AI Diff - Addition (new content from AI, green) */
+.ai-diff-addition {
+  background: oklch(0.92 0.12 145 / 0.5);
+  color: oklch(0.35 0.15 145);
+  padding: 0.125em 0.25em;
+  border-radius: 3px;
+  text-decoration: none;
+}
+
+/* AI Diff - Deletion (old content before AI edit, red strikethrough) */
+.ai-diff-deletion {
+  background: oklch(0.92 0.1 25 / 0.4);
+  color: oklch(0.5 0.15 25);
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.55 0.2 25);
+  text-decoration-thickness: 2px;
+  padding: 0.125em 0.25em;
+  border-radius: 3px;
+}
+
+/* ============================================================================
+   PLACEHOLDER STYLES
+   ============================================================================ */
+
+.script-editor-content p.is-editor-empty:first-child::before,
+.screenplay-scene-heading.is-empty::before,
+.screenplay-action.is-empty::before,
+.screenplay-character.is-empty::before,
+.screenplay-dialogue.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: oklch(0.4 0.02 270);
+  pointer-events: none;
+  height: 0;
+}
+
+/* ============================================================================
+   SELECTION STYLES
+   ============================================================================ */
+
+.script-editor-content ::selection {
+  background: oklch(0.9 0.08 145 / 0.5);
+}
+
+/* ============================================================================
+   PAGINATION STYLES
+   ============================================================================ */
+
+.page-number {
+  position: absolute;
+  top: 0.5in;
+  right: 0.5in;
+  font-size: 10pt;
+  color: oklch(0.5 0.02 270);
+}
+
+.page-container {
+  position: relative;
+  min-height: 11in;
+  margin-bottom: 2rem;
+  background: oklch(0.12 0.01 270);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 20px oklch(0 0 0 / 0.3);
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .script-editor-content {
+    padding: 0.5in;
+    font-size: 11pt;
+  }
+
+  .screenplay-character {
+    margin-left: 1in;
+    margin-right: 1in;
+  }
+
+  .screenplay-dialogue {
+    margin-left: 0.5in;
+    margin-right: 0.5in;
+  }
+
+  .screenplay-parenthetical {
+    margin-left: 0.75in;
+    margin-right: 0.75in;
+  }
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+  .script-editor-wrapper {
+    padding: 0;
+  }
+
+  .script-editor-content {
+    background: white;
+    color: black;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .screenplay-note {
+    display: none;
+  }
+
+  .screenplay-page-break {
+    border: none;
+  }
+
+  .screenplay-page-break::after {
+    display: none;
+  }
+}
+
+/* ============================================================================
+   FLOATING MENU STYLES
+   ============================================================================ */
+
+.floating-menu {
+  display: flex;
+  background-color: gray;
+  padding: 0.1rem;
+  border-radius: 0.5rem;
+
+  button {
+    background-color: unset;
+    padding: 0.275rem 0.425rem;
+    border-radius: 0.3rem;
+
+    &:hover {
+      background-color: gray;
+    }
+
+    &.is-active {
+      background-color: white;
+      color: purple;
+
+      &:hover {
+        color: lightpink;
+      }
+    }
+  }
+}
+
+/* ============================================================================
+   BUBBLE MENU STYLES
+   ============================================================================ */
+
+.bubble-menu {
+  background-color: var(--primary);
+  border: 1px solid gray;
+  border-radius: 0.7rem;
+  box-shadow: var(--shadow-primary);
+  display: flex;
+  padding: 0.2rem;
+
+  button {
+    background-color: unset;
+
+    &:hover {
+      background-color: gray;
+    }
+
+    &.is-active {
+      background-color: purple;
+
+      &:hover {
+        background-color: lightpink;
+      }
+    }
+  }
+}
+/* ============================================================================
+   MENTION STYLES
+   ============================================================================ */
+.mention {
+  border-radius: 0.4rem;
+  box-decoration-break: clone;
+  padding: 0.1rem 0.3rem;
+  font-weight: 500;
+  &::after {
+    content: '\200B';
+  }
+}
+
+/* @ mentions - People (blue theme) */
+.mention-people {
+  background-color: oklch(0.9 0.1 250);
+  color: oklch(0.4 0.2 250);
+}
+
+/* # mentions - Tags (green theme) */
+.mention-tag {
+  background-color: oklch(0.9 0.1 145);
+  color: oklch(0.35 0.15 145);
+}
+
+[data-decoration-id] {
+  /* Reuse theme variables from demos setup for consistent look */
+  background-color: lightpink;
+  /* border-bottom: 2px dashed red; */
+  border-radius: 0.2rem;
+  padding: 0 0.18rem;
+  box-decoration-break: clone;
+}
+
+/* When the decoration is empty (no query), add a subtle hint */
+[data-decoration-id].is-empty::after {
+  content: '\00A0';
+  border-bottom: 1px dotted gray;
+}
+
+/* Make suggestion decoration visually match mention nodes */
+.suggestion {
+  background-color: var(--color-gray-200);
+  border-radius: 0.4rem;
+  box-decoration-break: clone;
+  color: black;
+  padding: 0.1rem 0.3rem;
+}
+
+.suggestion::after {
+  content: '\200B';
+}
+
+.suggestion.is-empty::after {
+  content: '\00A0';
+  border-bottom: 1px dotted rgba(31, 41, 55, 0.12);
+}
+
+/* .tiptap { */
+  /* Dropdown menu */
+  .dropdown-menu {
+    background: white;
+    border: 1px solid gray;
+    border-radius: 0.7rem;
+    box-shadow: var(--shadow-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    overflow: auto;
+    padding: 0.4rem;
+    position: relative;
+
+    button {
+      align-items: center;
+      background-color: transparent;
+      display: flex;
+      gap: 0.25rem;
+      text-align: left;
+      width: 100%;
+      color: black;
+
+      &:hover,
+      &:hover.is-selected {
+        background-color: lightgray;
+      }
+
+      &.is-selected {
+        background-color: gray;
+      }
+    }
+  }
+/* } */
+
+/* ============================================================================
+   SLASH COMMAND MENU STYLES
+   ============================================================================ */
+.slash-command-menu {
+  background: white;
+  border: 1px solid oklch(0.9 0.01 270);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 20px oklch(0 0 0 / 0.15);
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.25rem;
+  min-width: 280px;
+  width: max-content;
+}
+
+.slash-command-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.1s;
+}
+
+.slash-command-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.slash-command-content {
+  flex: 1;
+  min-width: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.slash-command-item:hover,
+.slash-command-item.is-selected {
+  background-color: oklch(0.95 0.01 270);
+}
+
+.slash-command-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: oklch(0.5 0.02 270);
+  flex-shrink: 0;
+}
+
+.slash-command-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: oklch(0.2 0.02 270);
+}
+
+.slash-command-description {
+  font-size: 0.75rem;
+  color: oklch(0.5 0.02 270);
+}
+
+.slash-command-shortcut {
+  font-size: 0.75rem;
+  color: oklch(0.55 0.02 270);
+  background: oklch(0.95 0.01 270);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  flex-shrink: 0;
+}
+
+.slash-command-empty {
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: oklch(0.5 0.02 270);
+}

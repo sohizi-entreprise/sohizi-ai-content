@@ -1,8 +1,8 @@
 import api from '@/lib/axios'
 import { isAxiosError } from 'axios'
-import { CreateProjectInput, ProjectResponse, UpdateProjectInput } from './type'
+import { CreateProjectInput, ProjectResponse, UpdateProjectInput, ProjectListItem } from './type'
 
-export const listProjects = async (): Promise<ProjectResponse[]> => {
+export const listProjects = async (): Promise<ProjectListItem[]> => {
   const response = await api.get('/projects')
   return response.data
 }

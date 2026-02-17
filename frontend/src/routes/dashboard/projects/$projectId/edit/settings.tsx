@@ -44,7 +44,7 @@ const projectQueryOptions = (projectId: string) => ({
   queryFn: () => getProject({ data: { projectId } }),
 })
 
-export const Route = createFileRoute('/dashboard/projects/$projectId/settings')({
+export const Route = createFileRoute('/dashboard/projects/$projectId/edit/settings')({
   loader: ({ context, params }) => {
     context.queryClient.ensureQueryData(projectQueryOptions(params.projectId))
   },

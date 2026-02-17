@@ -7,7 +7,7 @@ export const Route = createFileRoute('/dashboard')({
 
 function RouteComponent() {
   return (
-    <div>
+    <div className='h-full'>
         <Outlet />
     </div>
   )

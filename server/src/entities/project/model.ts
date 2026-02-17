@@ -59,6 +59,7 @@ export const ListProjectsResponseDTO = t.Object({
   format: t.String(),
   genre: t.String(),
   createdAt: t.Date(),
+  shotCount: t.Number(),
 })
 
 export const CreateProjectResponseDTO = t.Object({

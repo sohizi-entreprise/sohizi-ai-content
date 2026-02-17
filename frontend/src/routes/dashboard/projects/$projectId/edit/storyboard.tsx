@@ -54,7 +54,7 @@ const storyboardQueryOptions = (projectId: string) => ({
   queryFn: () => getStoryboard({ data: { projectId } }),
 })
 
-export const Route = createFileRoute('/dashboard/projects/$projectId/storyboard')({
+export const Route = createFileRoute('/dashboard/projects/$projectId/edit/storyboard')({
   loader: ({ context, params }) => {
     context.queryClient.ensureQueryData(projectQueryOptions(params.projectId))
     context.queryClient.ensureQueryData(storyboardQueryOptions(params.projectId))

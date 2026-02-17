@@ -1,7 +1,7 @@
 import { db } from "@/db";
-import { projects } from "@/db/schema";
+import { projects, shots } from "@/db/schema";
 import { CreateProject, UpdateProject } from "./model";
-import { eq } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 
 export const createProject = async (project: CreateProject) => {
   const result = await db.insert(projects).values(project).returning();
@@ -19,7 +19,20 @@ export const getProjectById = async (id: string) => {
 }
 
 export const listProjects = async () => {
-  const result = await db.select().from(projects).orderBy(projects.createdAt);
+  const result = await db
+    .select({
+      id: projects.id,
+      name: projects.name,
+      format: projects.format,
+      genre: projects.genre,
+      createdAt: projects.createdAt,
+      shotCount: sql<number>`CAST(COUNT(DISTINCT ${shots.id}) AS INTEGER)`,
+    })
+    .from(projects)
+    .leftJoin(shots, eq(projects.id, shots.projectId))
+    .groupBy(projects.id)
+    .orderBy(desc(projects.createdAt));
+  
   return result;
 }
 

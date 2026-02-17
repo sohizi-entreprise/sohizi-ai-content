@@ -1,11 +1,4 @@
-import { Button } from '@/components/ui/button';
-import { useParams } from '@tanstack/react-router';
-import { z } from 'zod';
-import { useStreamObject } from '@/hooks/use-stream-object';
-import { transformSchemaToBlock } from '../utils/transform-block';
-import BlockEditor from './block-editor';
-import PageContainer from './pageContainer';
-import { useScriptStore } from '../store';
+import { z } from "zod";
 
 export const SceneSchema = z.object({
     id: z.string().describe("Unique identifier for the scene. It combines the segment id and the scene number (e.g., 'seg1_scene1'). Stable across regenerations."),
@@ -33,38 +26,3 @@ export const BriefSchema = z.object({
     format: z.enum(["storytime", "explainer"]).describe("The format of the video"),
     segments: z.array(SegmentSchema).describe("List of main parts that structure the story. You can have 3-7 segments depending on the format and content."),
 })
-
-
-export default function RenderOutline() {
-
-    const {projectId} = useParams({from: '/dashboard/projects/$projectId/script'})
-    const url = `${import.meta.env.VITE_API_BASE_URL}/ai/brief/project/${projectId}`
-
-    const setBlocks = useScriptStore(state => state.setBlocks);
-    const setReadonly = useScriptStore(state => state.setReadonly);
-
-    const { error, isLoading, startStream } = useStreamObject(
-        projectId, 
-        BriefSchema, 
-        url, 
-        transformSchemaToBlock,
-        {
-            onEnd: () => {setReadonly(false)},
-            onStart: () => {setReadonly(true)},
-            onUpdate: (data: ReturnType<typeof transformSchemaToBlock>) => {setBlocks(data)},
-        }
-    )
-
-  return (
-    <PageContainer>
-        <div className='flex flex-col gap-8'>
-            {error && <div className="text-red-500">Error: {error.message}</div>}
-            {isLoading && <div>Loading...</div>}
-            <BlockEditor />
-            <Button onClick={()=>startStream()} disabled={isLoading}>
-                Submit
-            </Button>
-        </div>
-    </PageContainer>
-  )
-}

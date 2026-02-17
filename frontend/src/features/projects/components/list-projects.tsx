@@ -4,50 +4,52 @@ import { deleteProjectMutationOptions, listProjectsQueryOptions } from '../query
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
-import { Link } from '@tanstack/react-router'
-
-
-const fakeProject = {
-    id: '088f93d8-91cb-429b-8091-9385467679c9',
-    name: 'Project 1',
-    format: 'storytime',
-    createdAt: '2021-01-01',
-    updatedAt: '2021-01-01',
-    audience: 'general',
-    tone: 'tone',
-    genre: 'mystery',
-    language: 'language'
-} as const
+import { Link, useSearch } from '@tanstack/react-router'
+import { ProjectFormat } from '../type'
+import { cn } from '@/lib/utils'
 
 
 export default function ListProjects() {
     const { data: projects = [] } = useSuspenseQuery(listProjectsQueryOptions)
     const { mutate: deleteProject } = useMutation(deleteProjectMutationOptions)
+    const { display } = useSearch({ from: '/dashboard/main/projects' })
+    
     if (projects.length === 0) {
         return <ListProjectEmpty />
     }
-  return (
-    <div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
-      {[...projects, fakeProject].map((project) => (
-        <Link to="/dashboard/projects/$projectId/script" params={{ projectId: project.id }} key={project.id} className='block' preload={false}>
-            <ProjectCard key={project.id} 
+    
+    return (
+            <div className={cn('grid gap-6 grid-cols-1', {
+                'sm:grid-cols-2 lg:grid-cols-3': display === 'grid',
+            })}>
+            {projects.map((project) => (
+                <Link 
+                    to="/dashboard/projects/$projectId/edit/script" 
+                    params={{ projectId: project.id }} 
+                    key={project.id} 
+                    className='block' 
+                    preload={false}
+                >
+                    <ProjectCard 
                         id={project.id}
                         name={project.name}
-                        format={project.format}
-                        createdAt={project.createdAt}
+                        format={project.format as ProjectFormat}
+                        genre={project.genre}
+                        pageCount={1}
                         onDelete={() => deleteProject(project.id)}
-            />
-        </Link>
-      ))}
-    </div>
-  )
+                        display={display}
+                    />
+                </Link>
+            ))}
+        </div>
+    )
 }
 
 export const ListProjectsSkeleton = () => {
     return (
         <div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
             {Array.from({ length: 3 }).map((_, index) => (
-                <Skeleton key={index} className='h-48 w-full' />
+                <Skeleton key={index} className='h-[280px] w-full' />
             ))}
         </div>
     )

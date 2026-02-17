@@ -11,3 +11,15 @@ export type ProjectResponse = {
     createdAt: string
     updatedAt: string
 } & CreateProjectInput
+
+export type ProjectListItem = {
+    id: string
+    name: string
+    format: string
+    genre: string
+    createdAt: string
+    shotCount: number
+}
+
+
+export type ProjectStatusType = 'DRAFTING' | "COMPLETED" | "EDITING"

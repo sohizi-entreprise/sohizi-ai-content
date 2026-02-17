@@ -1,7 +1,7 @@
 import { FinishReason, streamText, Output, FlexibleSchema } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 
-type SupportedModels = 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4.1' | 'gpt-5.1';
+type SupportedModels = 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4.1' | 'gpt-5.1' | 'gpt-5-mini' | 'gpt-5-nano';
 
 type ModelSettings = {
     temperature?: number
@@ -17,6 +17,7 @@ type BaseStreamParams = {
     userPrompt: string
     modelSettings?: ModelSettings
     onError?: (error: string) => void
+    abortSignal?: AbortSignal
 }
 
 const openai = createOpenAI({
@@ -34,7 +35,7 @@ export type JsonStreamParams<TSchema> = {
 } & BaseStreamParams
 
 export const streamLlmText = async (params: TextStreamParams) => {
-    const {model, systemPrompt, userPrompt, onFinish, onError, modelSettings={}} = params
+    const {model, systemPrompt, userPrompt, onFinish, onError, modelSettings={}, abortSignal} = params
     const {temperature=0.5, maxRetries=1, reasoningEffort='minimal', maxOutputTokens, timeout} = modelSettings
     const result = streamText({
         model: openai(model),
@@ -44,6 +45,7 @@ export const streamLlmText = async (params: TextStreamParams) => {
         maxRetries,
         maxOutputTokens,
         timeout,
+        abortSignal,
         providerOptions: {
             openai:{
                 reasoningEffort
@@ -67,7 +69,7 @@ export const streamLlmText = async (params: TextStreamParams) => {
 }
 
 export async function streamLlmJson<TSchema>(params: JsonStreamParams<TSchema>){
-    const {model, systemPrompt, userPrompt, schema, outputType='object', onFinish, onError, modelSettings={}} = params
+    const {model, systemPrompt, userPrompt, schema, outputType='object', onFinish, onError, modelSettings={}, abortSignal} = params
     const {temperature=0.5, maxRetries=1, reasoningEffort='minimal', maxOutputTokens, timeout} = modelSettings
 
     const { partialOutputStream } = streamText({
@@ -79,6 +81,7 @@ export async function streamLlmJson<TSchema>(params: JsonStreamParams<TSchema>){
         maxRetries,
         maxOutputTokens,
         timeout,
+        abortSignal,
         providerOptions: {
             openai:{
                 reasoningEffort
