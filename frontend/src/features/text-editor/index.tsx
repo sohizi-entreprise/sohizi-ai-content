@@ -6,7 +6,6 @@
 export { ScriptEditor, type JSONContent } from './components/script-editor'
 export { EditorToolbar } from './components/editor-toolbar'
 export { BlockMenu } from './components/block-menu'
-export { PaginatedView } from './components/paginated-view'
 
 // AI Components
 export { DiffOverlay } from './components/ai/diff-overlay'

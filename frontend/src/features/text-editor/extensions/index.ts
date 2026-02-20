@@ -1,6 +1,6 @@
 export { SceneHeadingExtension } from './scene-heading'
 export { ActionExtension } from './action'
-export { CharacterExtension } from './character'
+export { CharacterExtension, CHARACTER_EXTENSIONS, type CharacterExtensionType } from './character'
 export { DialogueExtension } from './dialogue'
 export { ParentheticalExtension } from './parenthetical'
 export { TransitionExtension } from './transition'

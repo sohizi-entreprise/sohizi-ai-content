@@ -27,7 +27,7 @@ function ScriptPage() {
 
   return (
     <div className='flex h-full'>
-      <div className='flex-1 overflow-y-auto bg-white/5 transition-all duration-300 ease-in-out'>
+      <div className='flex-1 overflow-y-auto overscroll-none bg-white/5 transition-all duration-300 ease-in-out'>
         <ScriptHeader onTogglePanel={() => setOpenAiPanel(prev => !prev)} isPanelOpen={openAiPanel} />
         <RenderCanvas />
       </div>

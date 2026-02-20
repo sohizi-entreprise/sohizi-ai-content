@@ -197,6 +197,24 @@ export const peopleMentionSuggestion = {
       .filter(item => item.toLowerCase().startsWith(query.toLowerCase()))
       .slice(0, 5)
   },
+  // Custom command that preserves the current block type
+  command: ({ editor, range, props }: { editor: Editor; range: { from: number; to: number }; props: { id: string | null } }) => {
+    // Delete the trigger text (@query) and insert the mention node
+    editor
+      .chain()
+      .focus()
+      .deleteRange(range)
+      .insertContent([
+        {
+          type: 'peopleMention',
+          attrs: {
+            id: props.id,
+            label: props.id,
+          },
+        },
+      ])
+      .run()
+  },
   render: createRenderFunction(),
 }
 

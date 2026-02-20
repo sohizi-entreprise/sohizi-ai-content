@@ -21,6 +21,10 @@ import '../styles/editor.css'
 import ActionsBubbleMenu from './bubble-menu'
 import { peopleMentionSuggestion, tagMentionSuggestion } from './render-mentions'
 import Mention from '@tiptap/extension-mention'
+import { 
+  PaginationPlus,
+  PAGE_SIZES
+} from 'tiptap-pagination-plus'
 
 // Configuration for mention prefixes
 const MENTION_CONFIG = {
@@ -104,6 +108,22 @@ export function ScriptEditor({
         blockquote: false,
         codeBlock: false,
         horizontalRule: false,
+      }),
+      PaginationPlus.configure({
+        pageHeight: 800,        // Height of each page in pixels
+        pageWidth: 789,         // Width of each page in pixels
+        pageGap: 50,            // Gap between pages in pixels
+        pageGapBorderSize: 1,   // Border size for page gaps
+        pageGapBorderColor: "#e5e5e5", // Border color for page gaps
+        pageBreakBackground: "#ffffff",  // Background color for page gaps
+        footerRight: "",  // Custom HTML content to display in the footer right side
+        headerRight: "Page {page}",        // Custom HTML content to display in the header right side
+        marginTop: 40,          // Top margin for pages
+        marginBottom: 20,       // Bottom margin for pages
+        marginLeft: 50,
+        marginRight: 50,
+        contentMarginTop: 10,   // Top margin for content within pages
+        contentMarginBottom: 10, // Bottom margin for content within pages
       }),
       Placeholder.configure({
         placeholder: ({ node }) => {

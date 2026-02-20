@@ -49,11 +49,12 @@ const BLOCKS: BlockItem[] = [
   },
   {
     title: 'Character',
-    description: 'Character name',
+    description: 'Character name (@ mention)',
     shortcut: '⌘3',
     icon: <IconUser className="size-4" />,
     command: (editor, range) => {
-      editor.chain().focus().deleteRange(range).setNode('character').run()
+      // Use setCharacter which auto-triggers @ mention
+      editor.chain().focus().deleteRange(range).setCharacter().run()
     },
   },
   {
