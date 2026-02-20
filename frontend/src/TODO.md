@@ -3,12 +3,12 @@
 [ ] Think about how to solve the sync state problem - the content keeps the old data
 
 ---
-[ ] inline menu on the text editor
-[ ] floating menu
-[ ] handle llm diff changes
+[x] inline menu on the text editor
+[x] floating menu
+[x] handle llm diff changes
+[x] character tagging
+[x] location tagging
+[x] object tagging
 [ ] highligh known entities
-[ ] character tagging
-[ ] location tagging
-[ ] object tagging
 [ ] handle llm suggestions
 [ ] handle quick actions (summarize, polish, etc...)

@@ -72,7 +72,8 @@ const BLOCKS: BlockItem[] = [
     shortcut: '⌘5',
     icon: <IconMoodSmile className="size-4" />,
     command: (editor, range) => {
-      editor.chain().focus().deleteRange(range).setNode('parenthetical').run()
+      // Use setParenthetical which inserts () and positions cursor
+      editor.chain().focus().deleteRange(range).setParenthetical().run()
     },
   },
   {
