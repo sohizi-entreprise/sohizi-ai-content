@@ -1,104 +1,59 @@
 import { projectRepo } from "@/entities/project";
-import { NotFound } from "../error";
-import { streamLlmText, streamLlmJson } from "@/lib/llm";
-import { getWriterPrompt } from "./prompt";
-import { projectConstants } from "@/constants";
-import { BriefSchema, CorrectScriptSchema } from "./schema";
+import { NotFound, BadRequest } from "../error";
+import { ResumableStream, redis } from "@/lib";
+import { conceptGenerator } from "./script-engine/concept-generator";
+import { NarrativeArcList } from "zSchemas";
 
+export const supportedScriptComponentTypes = ['concept', 'synopsis', 'outline', 'script', 'world_bible'] as const;
+export type ScriptComponentType = (typeof supportedScriptComponentTypes)[number];
 
-export const generateBrief = async (projectId: string) => {
+export const generateScriptComponents = async (projectId: string, componentType: ScriptComponentType, _prompt?: string) => {
     const project = await projectRepo.getProjectById(projectId);
     if (!project) {
         throw new NotFound('Project not found');
     }
 
-    const systemPrompt = getWriterPrompt({
-        action: "WRITE",
-        target: "brief",
-        format: project.format as projectConstants.ProjectFormat
-    })
+    if (!supportedScriptComponentTypes.includes(componentType)) {
+        throw new BadRequest('Invalid script component type');
+    }
 
-    const userPrompt = `
-    Project: ${project.name}
-    ---
-    Format: ${project.format}
-    ---
-    Tone: ${project.tone}
-    ---
-    Genre: ${project.genre}
-    ---
-    Audience: ${project.audience}
-    ---
-    Constraints: ${project.constraints || "None"}
-    ---
-    Idea to develop: ${project.initialInput?.content}
-    `
+    const stream = new ResumableStream(redis, projectId);
 
-    // Call the llm
-
-    return await streamLlmJson({
-        model: 'gpt-5.1',
-        systemPrompt: systemPrompt,
-        schema: BriefSchema,
-        userPrompt: userPrompt,
-        modelSettings: {
-            temperature: 0.6,
-            reasoningEffort: "low"
-        },
-        onFinish: ({totalTokens, json}) => {
-            console.log("token usage: ", totalTokens, '\n=======\n')
-            console.dir(json, { depth: 4, colors: true });
-        },
-        onError: (error) => {
-            console.error("error: ", error)
-        }
-    })
-
-}
-
-export const correctScript = async (payload: { brief: string, feedback: string, partsToEdit: string }) => {
+    // Fire and forget - run the job in the background
+    switch (componentType) {
+        case 'concept':
+            generateConcepts(projectId, stream);
+            break;
     
-    const systemPrompt = `
-    You are a professional scriptwriter.
-    Your job is to correct the script based on the user's feedback.
-    You will be given a brief, a feedback, and the parts of the script to edit.
-    You will need to correct the script based on the feedback and the parts of the script to edit.
+        default:
+            break;
+    }
 
-    IMPORTANT OUTPUT RULES:
-    - Keep the same id that will be sent to you in the <parts_to_edit> tag.
-    - You should only edit and return the content of the parts that are sent to you in the <parts_to_edit> tag.
-    - Do not write beyond the requested scope.
-    `
-
-    const userPrompt = `
-    Correct the script based on the feedback and the parts of the script to edit.
-    <feedback>
-    ${payload.feedback}
-    </feedback>
-    <parts_to_edit>
-    ${payload.partsToEdit}
-    </parts_to_edit>
-    <brief>
-    ${payload.brief}
-    </brief>
-    `
-
-    return await streamLlmJson({
-        model: 'gpt-5.1',
-        systemPrompt: systemPrompt,
-        schema: CorrectScriptSchema,
-        userPrompt: userPrompt,
-        outputType: 'array',
-        modelSettings: {
-            // temperature: 0.6,
-            reasoningEffort: "low"
-        },
-        onFinish: ({totalTokens, json}) => {
-            console.log("token usage: ", totalTokens, '\n=======\n')
-            console.dir(json, { depth: 4, colors: true });
-        },
-        onError: (error) => {
-            console.error("error: ", error)
-        }
-    })
+    return {ok: true, projectId}
 }
+
+
+export const generateConcepts = async (projectId: string, stream: ResumableStream) => {
+    const project = await projectRepo.getProjectById(projectId);
+
+    const onStart = async() => {
+        await projectRepo.updateProject(projectId, { status: 'CONCEPT_GENERATION_IN_PROGRESS' });
+
+    }
+
+    const onFinish = async(narrativeArcs: NarrativeArcList, totalUsage: number) => {
+        await projectRepo.updateProject(projectId, { status: 'CONCEPT_GENERATION_COMPLETED', narrative_arcs: narrativeArcs });
+    }
+
+    const onError = async(error: Error) => {
+        // TODO save the error to the database
+        await projectRepo.updateProject(projectId, { status: 'CONCEPT_GENERATION_FAILED'});
+    }
+
+    const onAbort = async() => {
+        await projectRepo.updateProject(projectId, { status: 'CONCEPT_GENERATION_ABORTED'});
+    }
+
+    await conceptGenerator({ project, onStart, onFinish, onError, onAbort, stream });
+
+} 

@@ -1,26 +1,16 @@
 import { projectModel, projectRepo } from "@/entities/project"
-import { generationRequestModel, generationRequestRepo } from "@/entities/requests";
 import * as error from '../error'
+import * as aiService from "../ai/service";
 
 export const startProject = async (data: projectModel.CreateProject) => {
-
     // Save the project in db
     const project = await projectRepo.createProject(data);
 
-    // Create a request to generate the brief
-    const payload: generationRequestModel.GenerationRequest = {
-        projectId: project.id,
-        type: "GENERATE_BRIEF",
-        prompt: (data.initialInput.type === "prompt")? data.initialInput.content : null,
-    }
-    const request = await generationRequestRepo.createGenerationRequest(payload);
-
-    // Enqueue the request
-
-    // Return the data along with the request id
+    // Fire and forget - generate concepts
+    aiService.generateScriptComponents(project.id, 'concept');
+    // Return the created project
     return {
         project,
-        requestId: request.id,
     }
 }
 
@@ -38,6 +28,10 @@ export const deleteProject = async (id: string) => {
 }
 
 export const updateProject = async (id: string, data: projectModel.UpdateProject) => {
+    const existingProject = await projectRepo.getProjectById(id);
+    if (!existingProject) {
+        throw new error.NotFound('Project not found');
+    }
     const project = await projectRepo.updateProject(id, data);
     return project;
 }

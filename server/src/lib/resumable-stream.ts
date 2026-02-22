@@ -1,6 +1,11 @@
 import type Redis from 'ioredis'
 
-export type StreamEventType = 'chunk' | 'done' | 'cancelled' | 'error'
+type ConceptEventType = 'concept_start' | 'concept_delta' | 'concept_end' | 'concept_error' | 'concept_reasoning'
+type SynopsisEventType = 'synopsis_start' | 'synopsis_delta' | 'synopsis_end' | 'synopsis_error' | 'synopsis_reasoning'
+
+export type StreamEventType = ConceptEventType | SynopsisEventType
+
+// DOMAIN_EVENT = CONCEPT_CHUNK, CONCEPT_FINISH, CONCEPT_ERROR
 
 export type StreamEvent<T = unknown> = {
   type: StreamEventType
@@ -12,7 +17,7 @@ export type StreamEntry<T = unknown> = {
   event: StreamEvent<T>
 }
 
-const STREAM_TTL_SECONDS = 60 // Keep stream for 60s after completion for late subscribers
+const STREAM_TTL_SECONDS = 5 // Keep stream for 5s after completion for late subscribers
 const CANCEL_FLAG_TTL_SECONDS = 300 // Cancel flag expires after 5 minutes
 
 export class ResumableStream<T = unknown> {
@@ -42,25 +47,9 @@ export class ResumableStream<T = unknown> {
   }
 
   /**
-   * Push a chunk event (convenience method)
-   */
-  async pushChunk(data: T): Promise<string> {
-    return this.push({ type: 'chunk', data })
-  }
-
-  /**
-   * Push an error event
-   */
-  async pushError(message: string): Promise<string> {
-    return this.push({ type: 'error', data: { message } as unknown as T })
-  }
-
-  /**
    * Close the stream with a done event and schedule cleanup
    */
-  async close(reason: 'done' | 'cancelled' | 'error' = 'done'): Promise<void> {
-    // Push terminal event
-    await this.push({ type: reason, data: null as unknown as T })
+  async close(): Promise<void> {
     
     // Schedule stream deletion after TTL
     await this.redis.expire(this.streamKey, STREAM_TTL_SECONDS)
@@ -134,7 +123,7 @@ export class ResumableStream<T = unknown> {
         currentId = id
 
         // If this is a terminal event, stop
-        if (event.type === 'done' || event.type === 'cancelled' || event.type === 'error') {
+        if (event.type.endsWith('_end') || event.type.endsWith('_error')) {
           return
         }
       }

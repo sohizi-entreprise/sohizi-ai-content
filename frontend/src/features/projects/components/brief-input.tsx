@@ -1,15 +1,16 @@
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { IconArrowRight } from '@tabler/icons-react'
+import { IconArrowRight, IconLoader2 } from '@tabler/icons-react'
 import { MicOff, Mic } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 type Props = {
     onSubmit: (text: string) => void
+    isLoading?: boolean
 }
 
-export default function BriefInput( { onSubmit }: Props ) {
+export default function BriefInput( { onSubmit, isLoading = false }: Props ) {
 
     const recognitionRef = useRef<SpeechRecognition | null>(null)
     const [isListening, setIsListening] = useState(false)
@@ -109,9 +110,18 @@ export default function BriefInput( { onSubmit }: Props ) {
             )}
         </button>
 
-        <Button className='rounded-full font-bold' onClick={handleSubmit} disabled={!sourceStory.trim()}>
-            Continue
-            <IconArrowRight />
+        <Button className='rounded-full font-bold' onClick={handleSubmit} disabled={!sourceStory.trim() || isLoading}>
+            {isLoading ? (
+                <>
+                    Creating...
+                    <IconLoader2 className="animate-spin" />
+                </>
+            ) : (
+                <>
+                    Continue
+                    <IconArrowRight />
+                </>
+            )}
         </Button>
         </div>
     </div>

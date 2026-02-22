@@ -2,14 +2,24 @@ import { Elysia, t } from 'elysia'
 import { z } from 'zod'
 import { projectModel } from '@/entities/project'
 import * as projectService from './service'
+import * as projectOptions from '@/constants/project-options'
 
 export const projectRoutes = new Elysia({ prefix: '/projects' })
+  .get('/options', () => {
+    return {
+      formats: projectOptions.projectFormats,
+      genres: projectOptions.projectGenres,
+      duration: projectOptions.projectDuration,
+      tones: projectOptions.projectTones,
+      audiences: projectOptions.projectAudiences,
+    }
+  })
   .post('', ({ body }) => {
     return projectService.startProject(body);
   }, {
     body: projectModel.CreateProjectDTO,
     response: {
-      200: projectModel.CreateProjectResponseDTO,
+      200: t.Object({ project: projectModel.ProjectResponseDTO }),
     },
   })
   .get('', () => {

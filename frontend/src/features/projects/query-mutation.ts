@@ -5,6 +5,7 @@ import { CreateProjectInput, UpdateProjectInput } from './type'
 const keysFactory = {
     projects: () => ['projects'],
     project: (id: string) => ['project', id],
+    projectOptions: () => ['projectOptions'],
 }
 
 export const listProjectsQueryOptions = queryOptions({
@@ -36,4 +37,13 @@ export const deleteProjectMutationOptions = mutationOptions({
     meta: {
         invalidateQueries: [keysFactory.projects()],
     },
+})
+
+export const getProjectOptionsQueryOptions = queryOptions({
+    queryKey: keysFactory.projectOptions(),
+    queryFn: () => requests.getProjectOptions(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
 })

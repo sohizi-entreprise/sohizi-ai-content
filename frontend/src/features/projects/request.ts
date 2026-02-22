@@ -1,6 +1,6 @@
 import api from '@/lib/axios'
 import { isAxiosError } from 'axios'
-import { CreateProjectInput, ProjectResponse, UpdateProjectInput, ProjectListItem } from './type'
+import { CreateProjectInput, ProjectResponse, UpdateProjectInput, ProjectListItem, ProjectOptions } from './type'
 
 export const listProjects = async (): Promise<ProjectListItem[]> => {
   const response = await api.get('/projects')
@@ -34,12 +34,17 @@ export const deleteProject = async (id: string) => {
   return response.data
 }
 
-export const createProject = async (data: CreateProjectInput): Promise<ProjectResponse> => {
+export const createProject = async (data: CreateProjectInput): Promise<{ project: ProjectResponse }> => {
   const response = await api.post('/projects', data)
   return response.data
 }
 
 export const updateProject = async (id: string, data: UpdateProjectInput): Promise<ProjectResponse> => {
   const response = await api.put(`/projects/${id}`, data)
+  return response.data
+}
+
+export const getProjectOptions = async (): Promise<ProjectOptions> => {
+  const response = await api.get('/projects/options')
   return response.data
 }
