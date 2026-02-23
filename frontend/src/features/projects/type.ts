@@ -99,11 +99,13 @@ export type ProjectResponse = {
 
 export type ProjectListItem = {
     id: string
-    name: string
+    title: string
     format: string
     genre: string
+    durationMin: string
+    status: string
     createdAt: string
-    shotCount: number
+    updatedAt: string
 }
 
 export type ProjectFormatOption = {
@@ -154,4 +156,4 @@ export type ProjectOptions = {
 }
 
 
-export type ProjectStatusType = 'DRAFTING' | "COMPLETED" | "EDITING"
+export type ProjectStatusType = 'DRAFT' | "COMPLETED" | "EDITING"

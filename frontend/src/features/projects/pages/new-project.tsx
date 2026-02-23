@@ -10,7 +10,7 @@ import { createProjectMutationOptions, getProjectOptionsQueryOptions } from '../
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { useNewProjectStore } from '../store/new-project-store';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { CreateProjectInput } from '../type';
 
 export default function NewProject() {
@@ -27,9 +27,9 @@ export default function NewProject() {
 
         <Container className='pt-8 pb-16 space-y-8'>
             <StepMarker step="01" title="Let's start" description="Every masterpiece begins with a simple thought. Describe yours in detail or just a few sentences." />
-
-            <RenderProjectOptions />
-
+            <Suspense fallback={<div>Loading...</div>}>
+                <RenderProjectOptions />
+            </Suspense>
         </Container>
     </div>
   )

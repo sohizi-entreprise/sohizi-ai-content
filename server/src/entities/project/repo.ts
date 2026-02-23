@@ -1,12 +1,12 @@
 import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { CreateProject, UpdateProject } from "./model";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export const createProject = async (data: CreateProject) => {
   const result = await db.insert(projects).values({
     title: data.title,
-    brief: data.brief ?? null,
+    brief: data.brief!,
   }).returning();
   return result[0];
 }
@@ -28,6 +28,10 @@ export const listProjects = async () => {
       title: projects.title,
       status: projects.status,
       createdAt: projects.createdAt,
+      updatedAt: projects.updatedAt,
+      format: sql<string>`${projects.brief}->>'format'`,
+      durationMin: sql<string>`${projects.brief}->>'durationMin'`,
+      genre: sql<string>`${projects.brief}->>'genre'`,
     })
     .from(projects)
     .orderBy(desc(projects.createdAt));

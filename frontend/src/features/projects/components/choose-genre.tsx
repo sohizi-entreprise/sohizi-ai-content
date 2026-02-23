@@ -9,7 +9,6 @@ import {
     IconSearch,
     IconMovie,
     IconProps,
-    IconCheck
 } from '@tabler/icons-react'
 import { ForwardRefExoticComponent, RefAttributes, useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -86,9 +85,9 @@ function GenreItem(props: GenreItemType){
         <button 
             onClick={onClick} 
             className={cn(
-                "group shrink-0 relative w-40 aspect-3/4 rounded-2xl overflow-hidden border transition-all bg-surface-dark",
+                "group shrink-0 relative w-40 aspect-3/4 rounded-xl overflow-hidden border transition-all bg-surface-dark",
                 isSelected 
-                    ? "border-primary ring-2 ring-primary ring-offset-2 ring-offset-background-dark" 
+                    ? "border-primary" 
                     : "border-white/10 hover:border-primary/50"
             )}
         >
@@ -102,13 +101,11 @@ function GenreItem(props: GenreItemType){
                 <h3 className="font-semibold text-white">{name}</h3>
             </div>
             <div className={cn(
-                "absolute top-3 right-3 z-20 transition-opacity",
+                "absolute top-2 right-2 size-2 bg-primary rounded-full transition-opacity",
                 isSelected ? "opacity-100" : "opacity-0"
-            )}>
-                <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                    <IconCheck className="size-4 text-white" />
-                </div>
-            </div>
+            )} 
+            />
+                
         </button>
     )
 }

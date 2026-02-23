@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 import { ClassValue } from "clsx"
 import { ForwardRefExoticComponent, RefAttributes } from "react"
-import { IconBook, IconBulb, IconSwipe, IconPresentation, IconProps, IconCheck } from "@tabler/icons-react"
+import { IconBook, IconBulb, IconSwipe, IconPresentation, IconProps } from "@tabler/icons-react"
 
 
 type ItemType = {
@@ -46,13 +46,11 @@ function FormatItem(props: ItemType){
                 className={cn(
                     "p-3 gap-1 rounded-xl backdrop-blur-md border transition-all group flex flex-col items-center justify-center text-center h-30 aspect-square relative",
                     isSelected 
-                        ? "bg-primary/20 border-primary" 
+                        ? "bg-primary/5 border-primary" 
                         : "bg-white/5 border-white/5 hover:border-primary/50 hover:bg-white/5"
                 )}>
             {isSelected && (
-                <div className="absolute top-2 right-2 size-5 bg-primary rounded-full flex items-center justify-center">
-                    <IconCheck className="size-3 text-white" />
-                </div>
+                <div className="absolute top-2 right-2 size-2 bg-primary rounded-full flex items-center justify-center" />
             )}
             <Icon className={cn('size-5 transition-colors', isSelected ? 'text-primary' : 'group-hover:text-primary')} />
             <span className={cn("text-sm font-medium", isSelected ? 'text-white' : 'text-gray-300 group-hover:text-white')}>{name}</span>

@@ -1,19 +1,5 @@
 import { projectConstants } from '@/constants'
 import { t } from 'elysia'
-import { 
-  projectBriefSchema, 
-  narrativeArcSchema, 
-  synopsisSchema, 
-  outlineSchema, 
-  storyBibleSchema,
-  proseDocumentSchema,
-  type ProjectBrief,
-  type NarrativeArc,
-  type Synopsis,
-  type Outline,
-  type StoryBible,
-  type ProseDocument,
-} from 'zSchemas'
 
 // Elysia type definitions for JSONB fields
 const ProjectBriefDTO = t.Object({
@@ -105,7 +91,6 @@ export const CreateProjectDTO = t.Object({
 // DTO to update a project (all fields optional)
 export const UpdateProjectDTO = t.Partial(t.Object({
   title: t.String({ minLength: 1 }),
-  brief: t.Union([ProjectBriefDTO, t.Null()]),
   narrative_arcs: t.Union([t.Array(NarrativeArcItemDTO), t.Null()]),
   synopsis: t.Union([SynopsisDTO, t.Null()]),
   outline: t.Union([t.Array(OutlineActDTO), t.Null()]),
@@ -135,6 +120,10 @@ export const ListProjectsResponseDTO = t.Object({
   title: t.String(),
   status: t.String(),
   createdAt: t.Date(),
+  updatedAt: t.Date(),
+  format: t.String(),
+  durationMin: t.String(),
+  genre: t.String(),
 })
 
 // Create project response

@@ -1,6 +1,6 @@
 import { ProjectToneOption, ProjectAudienceOption, ProjectDurationOption } from '../type'
 import { useNewProjectStore } from '../store/new-project-store'
-import { IconCheck } from '@tabler/icons-react'
+import { Slider } from '@/components/ui/slider'
 
 type ProjectSettingsProps = {
     duration: ProjectDurationOption
@@ -46,18 +46,17 @@ function DurationSelector({ duration }: { duration: ProjectDurationOption }) {
                     <span>{duration.max} MIN</span>
                 </div>
                 <div className="relative">
-                    <input 
+                    <Slider 
                         className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary" 
                         max={duration.max} 
                         min={duration.min} 
-                        step="1" 
-                        type="range" 
-                        value={selectedDuration}
-                        onChange={(e) => setDuration(Number(e.target.value))}
+                        step={1}
+                        value={[selectedDuration]}
+                        onValueChange={(value) => setDuration(value[0])}
                     />
                     <div className="mt-4 flex justify-between items-center">
-                        <span className="text-sm text-white font-medium">{selectedDuration} minutes</span>
-                        <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded">~{Math.round(selectedDuration * 1.5)} pages</span>
+                        <span className="text-sm text-gray-500 font-medium">{selectedDuration} minutes</span>
+                        <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded">~{Math.round(selectedDuration * 1)} pages</span>
                     </div>
                 </div>
             </div>
@@ -70,7 +69,7 @@ function ToneSelector({ tones }: { tones: ProjectToneOption[] }) {
 
     return (
         <div className='glass-panel p-6 rounded-2xl space-y-4'>
-            <SectionTitle number={4} label="Atmospheric tone" subtitle="(select multiple)" />
+            <SectionTitle number={4} label="Atmospheric tone" subtitle="( select multiple )" />
             <div className='grid grid-cols-3 gap-2'>
                 {tones.map((tone) => {
                     const isSelected = selectedTones.includes(tone.id)
@@ -80,16 +79,16 @@ function ToneSelector({ tones }: { tones: ProjectToneOption[] }) {
                             onClick={() => toggleTone(tone.id)}
                             className={`relative group p-2 rounded-lg backdrop-blur-md border transition-all flex items-center justify-between ${
                                 isSelected 
-                                    ? 'bg-primary/20 border-primary text-white' 
+                                    ? 'bg-primary/5 border-primary text-white' 
                                     : 'bg-white/5 border-white/10 hover:border-primary/50 hover:bg-white/5'
                             }`}
                         >
-                            <span className={`size-3 inline-block rounded-[2px] border transition-colors flex items-center justify-center ${
+                            <span className={`size-3 rounded-[2px] border transition-colors flex items-center justify-center ${
                                 isSelected 
                                     ? 'bg-primary border-primary' 
                                     : 'border-white/20'
                             }`}>
-                                {isSelected && <IconCheck className="size-2 text-white" />}
+                                
                             </span>
                             <span className={`text-sm capitalize transition-colors mx-auto ${
                                 isSelected 
@@ -109,7 +108,7 @@ function AudienceSelector({ audiences }: { audiences: ProjectAudienceOption[] })
 
     return (
         <div className='glass-panel p-6 rounded-2xl space-y-4'>
-            <SectionTitle number={5} label="Target audience" />
+            <SectionTitle number={5} label="Target audience" subtitle="( select one )" />
             <div className='grid grid-cols-3 gap-2'>
                 {audiences.map((audience) => {
                     const isSelected = selectedAudience === audience.id
@@ -119,7 +118,7 @@ function AudienceSelector({ audiences }: { audiences: ProjectAudienceOption[] })
                             onClick={() => setAudience(audience.id)}
                             className={`group flex items-center justify-between p-2 rounded-lg backdrop-blur-md border transition-all ${
                                 isSelected 
-                                    ? 'bg-primary/20 border-primary text-white' 
+                                    ? 'bg-primary/5 border-primary text-white' 
                                     : 'bg-white/5 border-white/10 hover:border-primary/50 hover:bg-white/5'
                             }`}
                         >

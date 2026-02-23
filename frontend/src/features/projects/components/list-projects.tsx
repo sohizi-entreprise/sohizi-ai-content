@@ -5,7 +5,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
 import { Link, useSearch } from '@tanstack/react-router'
-import { ProjectFormat } from '../type'
 import { cn } from '@/lib/utils'
 
 
@@ -24,18 +23,14 @@ export default function ListProjects() {
             })}>
             {projects.map((project) => (
                 <Link 
-                    to="/dashboard/projects/$projectId/edit/script" 
+                    to={getRedirectLink(project.status)} 
                     params={{ projectId: project.id }} 
                     key={project.id} 
                     className='block' 
                     preload={false}
                 >
                     <ProjectCard 
-                        id={project.id}
-                        name={project.name}
-                        format={project.format as ProjectFormat}
-                        genre={project.genre}
-                        pageCount={1}
+                        {...project}
                         onDelete={() => deleteProject(project.id)}
                         display={display}
                     />
@@ -78,4 +73,17 @@ function ListProjectEmpty() {
             </EmptyContent>
         </Empty>
     )
+}
+
+function getRedirectLink(status: string) {
+    switch (true) {
+        case status.startsWith('CONCEPT_'):
+            return '/dashboard/projects/$projectId/concept'
+        // case status.startsWith('OUTLINE_'):
+        //     return '/dashboard/projects/$projectId/edit/outline'
+        // case status.startsWith('SYNOPSIS_'):
+        //     return '/dashboard/projects/$projectId/edit/synopsis'
+        default:
+            return '/dashboard/projects/$projectId/edit/script'
+    }
 }
