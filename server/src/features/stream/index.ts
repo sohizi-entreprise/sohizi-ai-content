@@ -91,14 +91,14 @@ export const streamRoutes = new Elysia({ prefix: '/stream' })
     // Note: We'd need to find the request by projectId, but for simplicity
     // we just set the cancel flag and let the producer handle it
 
-    return { cancelled: true }
+    return { ok: true }
   }, {
     params: z.object({
       projectId: z.uuid('Invalid project id'),
     }),
     response: {
       200: t.Object({
-        cancelled: t.Boolean(),
+        ok: t.Boolean(),
       }),
     },
   })

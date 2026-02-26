@@ -146,6 +146,44 @@ export const generationRequests = pgTable('generation_requests', {
     ...timestamps,
   })
   
+  // Chat enums
+  export const chatEditorTypeEnum = pgEnum('chat_editor_type', ['synopsis', 'script', 'bible', 'outline']);
+  export const chatMessageRoleEnum = pgEnum('chat_message_role', ['user', 'assistant', 'system']);
+
+  // Chat tables
+  export const conversations = pgTable('conversations', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    projectId: uuid('project_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
+    title: varchar('title', { length: 255 }).default('New Chat').notNull(),
+    editorType: chatEditorTypeEnum('editor_type').notNull(),
+    ...timestamps,
+  })
+
+  export const messages = pgTable('messages', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    conversationId: uuid('conversation_id')
+      .references(() => conversations.id, { onDelete: 'cascade' })
+      .notNull(),
+    role: chatMessageRoleEnum('role').notNull(),
+    content: text('content').notNull(),
+    context: jsonb('context').$type<{
+      id: string
+      type: 'selection' | 'character' | 'location' | 'scene'
+      label: string
+      content: string
+      metadata?: Record<string, unknown>
+    }[]>(),
+    mentions: jsonb('mentions').$type<{
+      id: string
+      type: 'character' | 'location'
+      name: string
+      description?: string
+    }[]>(),
+    ...timestamps,
+  })
+
   // Type exports for use in app
   export type Project = typeof projects.$inferSelect
   export type Image = typeof images.$inferSelect
@@ -154,8 +192,12 @@ export const generationRequests = pgTable('generation_requests', {
   export type Segment = typeof segments.$inferSelect
   export type Shot = typeof shots.$inferSelect
   export type GenerationRequest = typeof generationRequests.$inferSelect
+  export type Conversation = typeof conversations.$inferSelect
+  export type Message = typeof messages.$inferSelect
 
   export type GenerationRequestStatus = (typeof generationRequestStatusEnum.enumValues)[number]
   export type GenerationRequestType = (typeof generationRequestTypeEnum.enumValues)[number]
+  export type ChatEditorType = (typeof chatEditorTypeEnum.enumValues)[number]
+  export type ChatMessageRole = (typeof chatMessageRoleEnum.enumValues)[number]
   
   

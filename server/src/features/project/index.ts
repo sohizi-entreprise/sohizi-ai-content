@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { projectModel } from '@/entities/project'
 import * as projectService from './service'
 import * as projectOptions from '@/constants/project-options'
+import { NarrativeArcItemDTO } from '@/entities/project/model'
 
 export const projectRoutes = new Elysia({ prefix: '/projects' })
   .get('/options', () => {
@@ -58,5 +59,16 @@ export const projectRoutes = new Elysia({ prefix: '/projects' })
     }),
     response: {
       200: t.Object({ confirmed: t.Boolean() }),
+    },
+  })
+  .put('/:id/narrative-arcs', ({ body, params }) => {
+    return projectService.selectNarrativeArc(params.id, body);
+  }, {
+    params: t.Object({
+      id: t.String(),
+    }),
+    body: t.Array(NarrativeArcItemDTO),
+    response: {
+      200: t.Object({ ok: t.Boolean() }),
     },
   })

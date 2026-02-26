@@ -1,0 +1,196 @@
+/* ============================================================================
+   SYNOPSIS EDITOR STYLES
+   ============================================================================ */
+
+.synopsis-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.synopsis-editor-wrapper {
+  flex: 1;
+}
+
+.synopsis-editor-content {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 6rem;
+  background: white;
+  min-height: 1100px;
+  outline: none;
+  color: black;
+}
+
+.synopsis-editor-content:focus {
+  outline: none;
+}
+
+/* ============================================================================
+   SYNOPSIS TITLE NODE
+   ============================================================================ */
+
+.synopsis-title {
+  color: black;
+  font-size: 3rem;
+  line-height: 1;
+  text-align: center;
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  width: 100%;
+  border: none;
+  padding: 0;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0;
+  background: transparent;
+  resize: none;
+  min-height: auto;
+}
+
+.synopsis-title:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ============================================================================
+   SYNOPSIS DIVIDER (NON-EDITABLE)
+   ============================================================================ */
+
+.synopsis-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+  user-select: none;
+}
+
+.synopsis-divider-line {
+  width: 2.5rem;
+  height: 2px;
+  background: var(--color-primary, oklch(0.65 0.2 145));
+}
+
+.synopsis-divider-text {
+  font-style: italic;
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  letter-spacing: 0.025em;
+  font-weight: 500;
+  color: oklch(0.55 0.2 145);
+}
+
+/* ============================================================================
+   SYNOPSIS CONTENT PARAGRAPH
+   ============================================================================ */
+
+.synopsis-content {
+  color: black;
+  font-size: 1rem;
+  line-height: 1.75;
+  border: none;
+  padding-bottom: 1rem;
+  background: transparent;
+  resize: none;
+  min-height: auto;
+  width: 100%;
+}
+
+.synopsis-content:last-of-type {
+  padding-bottom: 0;
+}
+
+.synopsis-content:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ============================================================================
+   PLACEHOLDER STYLES
+   ============================================================================ */
+
+.synopsis-title.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: oklch(0.6 0.02 270);
+  pointer-events: none;
+  height: 0;
+  width: 100%;
+  text-align: center;
+}
+
+.synopsis-content.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: oklch(0.6 0.02 270);
+  pointer-events: none;
+  height: 0;
+}
+
+/* ============================================================================
+   AI DIFF STYLES (same as script editor for consistency)
+   ============================================================================ */
+
+.synopsis-editor-content .ai-diff-addition {
+  background: oklch(0.92 0.12 145 / 0.5);
+  color: oklch(0.35 0.15 145);
+  padding: 0.125em 0.25em;
+  border-radius: 3px;
+  text-decoration: none;
+}
+
+.synopsis-editor-content .ai-diff-deletion {
+  background: oklch(0.92 0.1 25 / 0.4);
+  color: oklch(0.5 0.15 25);
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.55 0.2 25);
+  text-decoration-thickness: 2px;
+  padding: 0.125em 0.25em;
+  border-radius: 3px;
+}
+
+/* ============================================================================
+   SELECTION STYLES
+   ============================================================================ */
+
+.synopsis-editor-content ::selection {
+  background: oklch(0.9 0.08 145 / 0.5);
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .synopsis-editor-content {
+    padding: 2rem;
+  }
+
+  .synopsis-title {
+    font-size: 2rem;
+  }
+
+  .synopsis-divider-text {
+    font-size: 1rem;
+  }
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+  .synopsis-editor-wrapper {
+    padding: 0;
+  }
+
+  .synopsis-editor-content {
+    background: white;
+    color: black;
+    box-shadow: none;
+    border-radius: 0;
+  }
+}

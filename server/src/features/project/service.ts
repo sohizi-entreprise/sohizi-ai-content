@@ -1,13 +1,14 @@
 import { projectModel, projectRepo } from "@/entities/project"
 import * as error from '../error'
 import * as aiService from "../ai/service";
+import { NarrativeArcList } from "zSchemas";
 
 export const startProject = async (data: projectModel.CreateProject) => {
     // Save the project in db
     const project = await projectRepo.createProject(data);
 
-    // Fire and forget - generate concepts
-    aiService.generateScriptComponents(project.id, 'concept');
+    // lauch the concept generator job in the background
+    await aiService.generateScriptComponents(project.id, 'concept');
     // Return the created project
     return {
         project,
@@ -39,4 +40,19 @@ export const updateProject = async (id: string, data: projectModel.UpdateProject
 export const listProjects = async () => {
     const projects = await projectRepo.listProjects();
     return projects;
+}
+
+export const selectNarrativeArc = async (id: string, arcs: NarrativeArcList) => {
+    const project = await projectRepo.getProjectById(id);
+    if (!project) {
+        throw new error.NotFound('Project not found');
+    }
+    const selectedArc = arcs.filter(arc => arc.isSelected);
+    if(selectedArc.length !== 1) {
+        throw new error.BadRequest('You must select exactly one narrative arc');
+    }
+    await projectRepo.updateProject(id, { narrative_arcs: arcs });
+    // lauch the synopsis generator job in the background
+    await aiService.generateScriptComponents(id, 'synopsis');
+    return { ok: true };
 }

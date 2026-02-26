@@ -1,6 +1,6 @@
 import { queryOptions, mutationOptions } from '@tanstack/react-query'
 import * as requests from './request'
-import { CreateProjectInput, UpdateProjectInput } from './type'
+import { CreateProjectInput, NarrativeArc, UpdateProjectInput } from './type'
 
 const keysFactory = {
     projects: () => ['projects'],
@@ -46,4 +46,11 @@ export const getProjectOptionsQueryOptions = queryOptions({
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
+})
+
+export const getSelectNarrativeArcMutationOptions = (id: string) => mutationOptions({
+    mutationFn: (data: NarrativeArc[]) => requests.selectNarrativeArc(id, data),
+    meta: {
+        invalidateQueries: [keysFactory.project(id)],
+    }
 })

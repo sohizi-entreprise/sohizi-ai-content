@@ -79,10 +79,8 @@ function getRedirectLink(status: string) {
     switch (true) {
         case status.startsWith('CONCEPT_'):
             return '/dashboard/projects/$projectId/concept'
-        // case status.startsWith('OUTLINE_'):
-        //     return '/dashboard/projects/$projectId/edit/outline'
-        // case status.startsWith('SYNOPSIS_'):
-        //     return '/dashboard/projects/$projectId/edit/synopsis'
+        case status.startsWith('SYNOPSIS_'):
+            return '/dashboard/projects/$projectId/synopsis'
         default:
             return '/dashboard/projects/$projectId/edit/script'
     }

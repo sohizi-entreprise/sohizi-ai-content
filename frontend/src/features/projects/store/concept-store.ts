@@ -43,11 +43,16 @@ type SynopsisDeltaData = {
     text: string
 }
 
+export type GeneratingState = {
+    concept: boolean
+    synopsis: boolean
+}
+
 export type ConceptState = {
     projectId: string | null
     narrativeArcs: NarrativeArc[]
     synopsis: Synopsis | null
-    isGenerating: boolean
+    isGenerating: GeneratingState
     errors: GenerationErrors
     reasoning: GenerationReasoning
     _buffers: StreamBuffers
@@ -73,7 +78,7 @@ type ConceptActions = {
     updateSynopsis: (updates: Partial<Synopsis>) => void
 
     // Generation state
-    setIsGenerating: (isGenerating: boolean) => void
+    setIsGenerating: (type: keyof GeneratingState, isGenerating: boolean) => void
 
     // Errors & Reasoning
     setError: (type: keyof GenerationErrors, error: string | null) => void
@@ -108,11 +113,16 @@ const initialBuffers: StreamBuffers = {
     synopsis: { content: '', reasoning: '' },
 }
 
+const initialGenerating: GeneratingState = {
+    concept: false,
+    synopsis: false,
+}
+
 const initialState: ConceptState = {
     projectId: null,
     narrativeArcs: [],
     synopsis: null,
-    isGenerating: false,
+    isGenerating: initialGenerating,
     errors: initialErrors,
     reasoning: initialReasoning,
     _buffers: initialBuffers,
@@ -133,7 +143,7 @@ export const useConceptStore = create<ConceptState & ConceptActions>((set, get) 
         projectId,
         narrativeArcs: arcs,
         synopsis,
-        isGenerating: false,
+        isGenerating: initialGenerating,
     }),
 
     reset: () => set(initialState),
@@ -181,7 +191,9 @@ export const useConceptStore = create<ConceptState & ConceptActions>((set, get) 
     // Generation state
     // -------------------------------------------------------------------------
 
-    setIsGenerating: (isGenerating) => set({ isGenerating }),
+    setIsGenerating: (type, isGenerating) => set((state) => ({
+        isGenerating: { ...state.isGenerating, [type]: isGenerating }
+    })),
 
     // -------------------------------------------------------------------------
     // Errors & Reasoning
@@ -210,7 +222,7 @@ export const useConceptStore = create<ConceptState & ConceptActions>((set, get) 
             // Concept events
             case 'concept_start':
                 set((state) => ({ 
-                    isGenerating: true, 
+                    isGenerating: { ...state.isGenerating, concept: true }, 
                     narrativeArcs: [],
                     errors: { ...state.errors, concept: null },
                     reasoning: { ...state.reasoning, concept: null },
@@ -262,14 +274,14 @@ export const useConceptStore = create<ConceptState & ConceptActions>((set, get) 
             }
 
             case 'concept_end':
-                set({ isGenerating: false })
+                set((state) => ({ isGenerating: { ...state.isGenerating, concept: false } }))
                 break
 
             case 'concept_error': {
                 const errorData = data as { error?: string; message?: string }
                 const errorMessage = errorData?.error ?? errorData?.message ?? 'Concept generation failed'
                 set((state) => ({ 
-                    isGenerating: false,
+                    isGenerating: { ...state.isGenerating, concept: false },
                     errors: { ...state.errors, concept: errorMessage },
                 }))
                 break
@@ -278,7 +290,7 @@ export const useConceptStore = create<ConceptState & ConceptActions>((set, get) 
             // Synopsis events
             case 'synopsis_start':
                 set((state) => ({ 
-                    isGenerating: true, 
+                    isGenerating: { ...state.isGenerating, synopsis: true }, 
                     synopsis: null,
                     errors: { ...state.errors, synopsis: null },
                     reasoning: { ...state.reasoning, synopsis: null },
@@ -333,14 +345,14 @@ export const useConceptStore = create<ConceptState & ConceptActions>((set, get) 
             }
 
             case 'synopsis_end':
-                set({ isGenerating: false })
+                set((state) => ({ isGenerating: { ...state.isGenerating, synopsis: false } }))
                 break
 
             case 'synopsis_error': {
                 const errorData = data as { error?: string; message?: string }
                 const errorMessage = errorData?.error ?? errorData?.message ?? 'Synopsis generation failed'
                 set((state) => ({ 
-                    isGenerating: false,
+                    isGenerating: { ...state.isGenerating, synopsis: false },
                     errors: { ...state.errors, synopsis: errorMessage },
                 }))
                 break
@@ -363,7 +375,7 @@ export const useConceptStore = create<ConceptState & ConceptActions>((set, get) 
                 
                 if (!isStreamNotFound) {
                     set((state) => ({ 
-                        isGenerating: false,
+                        isGenerating: { concept: false, synopsis: false },
                         errors: { 
                             concept: state.errors.concept ?? errorMessage,
                             synopsis: state.errors.synopsis ?? errorMessage,

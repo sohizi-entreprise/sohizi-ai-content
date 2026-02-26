@@ -3,6 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Disable scroll bouncing on ScrollArea */
+[data-slot="scroll-area-viewport"] {
+  overscroll-behavior: none;
+}
+
 /* Custom fonts */
 body {
   @apply m-0;

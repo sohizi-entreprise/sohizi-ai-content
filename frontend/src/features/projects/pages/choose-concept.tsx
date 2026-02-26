@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button'
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
 import { IconArrowNarrowRight, IconCircleCheckFilled, IconLoader2, IconSparkles2 } from '@tabler/icons-react'
 import { Textarea } from '@/components/ui/textarea'
-import { useSuspenseQuery } from '@tanstack/react-query'
-import { getProjectQueryOptions } from '../query-mutation'
-import { useParams } from '@tanstack/react-router'
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
+import { getProjectQueryOptions, getSelectNarrativeArcMutationOptions } from '../query-mutation'
+import { useNavigate, useParams } from '@tanstack/react-router'
 import { useResumableStream } from '@/hooks/use-resumable-stream'
 import { useConceptStore } from '../store/concept-store'
 import { useShallow } from 'zustand/shallow'
 import { NarrativeArc } from '../type'
+import { toast } from 'sonner'
 
 
 type ConceptCardProps = {
@@ -24,7 +25,7 @@ export default function ChooseConcept() {
     const { projectId } = useParams({ from: '/dashboard/projects/$projectId/concept' })
     const handleStreamEvent = useConceptStore(state => state.handleStreamEvent)
     const setIsGenerating = useConceptStore(state => state.setIsGenerating)
-    const isGenerating = useConceptStore(state => state.isGenerating)
+    const isGeneratingConcept = useConceptStore(state => state.isGenerating.concept)
     
     const { startStream } = useResumableStream<Partial<NarrativeArc>[]>(projectId, {
         autoSubscribe: true,
@@ -34,7 +35,7 @@ export default function ChooseConcept() {
         }
     })
     const regenerateConcept = () => {
-        setIsGenerating(true)
+        setIsGenerating('concept', true)
         startStream('concept')
     }
 
@@ -47,9 +48,9 @@ export default function ChooseConcept() {
                                 title="Choose your narrative arc." 
                                 description="We've distilled your idea into three distinct directions. Select one to begin structuring your screenplay." 
                     />
-                    <Button onClick={regenerateConcept} className='font-semibold' disabled={isGenerating}>
-                        {isGenerating ? <IconLoader2 className='size-4 animate-spin' /> : <IconSparkles2 className='size-4' />}
-                        {isGenerating ? 'Generating...' : 'Regenerate'}
+                    <Button onClick={regenerateConcept} className='font-bold' disabled={isGeneratingConcept}>
+                        {isGeneratingConcept ? <IconLoader2 className='size-4 animate-spin' /> : <IconSparkles2 className='size-4' />}
+                        {isGeneratingConcept ? 'Generating...' : 'Regenerate'}
                     </Button>
                 </div>
                 <Suspense fallback={<div>Loading...</div>}>
@@ -67,6 +68,8 @@ function RenderConcept({projectId}: {projectId: string}){
         initialize: state.initialize,
         hasSelection: state.hasSelection,
     })))
+    const { mutate: selectNarrativeArc, isPending } = useMutation(getSelectNarrativeArcMutationOptions(projectId))
+    const navigate = useNavigate()
 
     // Initialize store with data from server
     useEffect(() => {
@@ -76,7 +79,16 @@ function RenderConcept({projectId}: {projectId: string}){
     }, [projectId, data, initialize])
 
     const handleSubmit = () => {
-        console.log('All arcs:', narrativeArcs)
+        selectNarrativeArc(narrativeArcs, {
+            onSuccess: () => {
+                navigate({ to: '/dashboard/projects/$projectId/synopsis', params: { projectId } })
+            },
+            onError: (error) => {
+                toast.error(error.message, {
+                    position: 'top-center',
+                })
+            }
+        })
     }
 
     if (!data) {
@@ -92,9 +104,9 @@ function RenderConcept({projectId}: {projectId: string}){
             </div>
             <div className={cn('fixed bottom-0 left-0 right-0 bg-background/10 backdrop-blur-2xl border-t translate-y-full transition-all duration-300', hasSelection() ? 'translate-y-0' : '')}>
                 <Container className='flex items-center justify-end py-8 z-10'>
-                    <Button className='font-bold capitalize' onClick={handleSubmit}>
+                    <Button className='font-bold capitalize' onClick={handleSubmit} disabled={isPending}>
                         Continue
-                        <IconArrowNarrowRight className='size-4' />
+                        {isPending ? <IconLoader2 className='size-4 animate-spin' /> : <IconArrowNarrowRight className='size-4' />}
                     </Button>
                 </Container>
             </div>
@@ -106,6 +118,7 @@ function RenderConcept({projectId}: {projectId: string}){
 function ConceptCard({ index }: ConceptCardProps) {
     const [collapsed, setCollapsed] = useState(false)
     const { narrativeArcs, updateArc, selectArc, isGenerating } = useConceptStore()
+    const isGeneratingConcept = isGenerating.concept
     
     const arc = narrativeArcs[index]
     if (!arc) return null
@@ -134,7 +147,7 @@ function ConceptCard({ index }: ConceptCardProps) {
                         onChange={(e) => updateArc(index, { title: e.target.value })} 
                         className='text-xl font-semibold tracking-tight group-hover:scale-102 transition-transform duration-300 w-full'
                         placeholder='Title...'
-                        readOnly={isGenerating}
+                        readOnly={isGeneratingConcept}
                     />
                     <div className='flex items-center gap-2 text-primary'>
                         {tone.length > 0 ? tone.map((tag, i) => (
@@ -153,7 +166,7 @@ function ConceptCard({ index }: ConceptCardProps) {
                         className='font-semibold border-primary/30!' 
                         variant='outline'
                         onClick={() => selectArc(index)}
-                        disabled={isGenerating}
+                        disabled={isGeneratingConcept}
                     >
                         {isSelected ? 'Picked' : 'Pick me'}
                     </Button>
@@ -168,14 +181,14 @@ function ConceptCard({ index }: ConceptCardProps) {
                     onChange={(e) => updateArc(index, { logline: e.target.value })} 
                     className={cn('text-gray-300', textAreaClass)} 
                     placeholder='Logline...' 
-                    readOnly={isGenerating}
+                    readOnly={isGeneratingConcept}
                 />
                 <Textarea 
                     value={synopsis} 
                     onChange={(e) => updateArc(index, { synopsis: e.target.value })} 
                     className={cn('text-muted-foreground', textAreaClass)} 
                     placeholder='Summary...' 
-                    readOnly={isGenerating}
+                    readOnly={isGeneratingConcept}
                 />
             </div>
         </div>

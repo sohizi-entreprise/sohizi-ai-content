@@ -2,30 +2,31 @@ import { Project } from "@/db/schema";
 import { SystemPromptBuilder } from "../prompts/promptBuilder";
 import { identities } from "../prompts";
 import { skills } from "../skills";
-import { narrativeArcSchema, narrativeArcListSchema, NarrativeArcList, ProjectBrief } from "zSchemas";
+import { narrativeArcSchema, ProjectBrief, synopsisSchema, Synopsis } from "zSchemas";
 import {streamText} from 'ai';
 import { openai } from "@/lib/llm-providers";
 import { ResumableStream, StreamEvent } from "@/lib";
 import { v4 as uuidv4 } from 'uuid';
 import { z } from "zod";
 
-type conceptGeneratorParams = {
+type Params = {
     project: Project;
     onStart: () => void | Promise<void>;
-    onFinish: (narrativeArcs: NarrativeArcList, totalUsage: number) => void | Promise<void>;
+    onFinish: (synopsis: Synopsis, totalUsage: number) => void | Promise<void>;
     onError: (error: Error) => void | Promise<void>;
     onAbort: () => void | Promise<void>;
     stream: ResumableStream;
 }
 
-export async function conceptGenerator({ project, onStart, onFinish, onError, onAbort, stream }: conceptGeneratorParams) {
+export async function synopsisGenerator({ project, onStart, onFinish, onError, onAbort, stream }: Params) {
 
     // Generate a run_id for the stream
     const runId = uuidv4();
     
-    if (!project.brief) {
-        const errorMessage = 'Project brief is required for concept generation';
-        const event = {type: 'concept_error', data: {runId: runId, error: errorMessage}} as const;
+    const selectedArc = project.narrative_arcs?.find(arc => arc.isSelected);
+    if (!selectedArc) {
+        const errorMessage = 'You must select a narrative arc before generating a synopsis';
+        const event = {type: 'synopsis_error', data: {runId: runId, error: errorMessage}} as const;
         await stream.push(event);
         await stream.close();
         onError(new Error(errorMessage));
@@ -42,8 +43,8 @@ export async function conceptGenerator({ project, onStart, onFinish, onError, on
         // Send request to llm
         const response = streamText({
             model: openai('gpt-5.1'),
-            system: buildConceptGeneratorSystemPrompt(),
-            prompt: getUserPrompt(project.brief),
+            system: buildSystemPrompt(),
+            prompt: getUserPrompt(project),
             abortSignal: abortController.signal,
             providerOptions:{
                 openai: {
@@ -57,10 +58,10 @@ export async function conceptGenerator({ project, onStart, onFinish, onError, on
                 }
     
                 try {
-                    const narrativeArcs = narrativeArcListSchema.parse(JSON.parse(text)) as NarrativeArcList;
-                    await onFinish(narrativeArcs, totalUsage.totalTokens || 0);
+                    const synopsis = synopsisSchema.parse(JSON.parse(text)) as Synopsis;
+                    await onFinish(synopsis, totalUsage.totalTokens || 0);
                 } catch (error) {
-                    onError(new Error("Error parsing narrative arcs"));
+                    onError(new Error("Error parsing synopsis"));
                 }
             },
             onError: (error) => {
@@ -87,25 +88,24 @@ export async function conceptGenerator({ project, onStart, onFinish, onError, on
             let event: StreamEvent<unknown> | null = null;
             switch (chunk.type) {
                 case "start":
-                    event = {type: 'concept_start', data: {runId: runId}}
+                    event = {type: 'synopsis_start', data: {runId: runId}}
                     break;
                 case "text-delta":
-                    event = {type: 'concept_delta', data: {runId: runId, type: 'content', text: chunk.text}}
+                    event = {type: 'synopsis_delta', data: {runId: runId, type: 'content', text: chunk.text}}
                     break;
         
                 case "reasoning-delta":
-                    event = {type: 'concept_delta', data: {runId: runId, type: 'reasoning', text: chunk.text}}
-                    console.log('reasoning:', chunk.text);
+                    event = {type: 'synopsis_delta', data: {runId: runId, type: 'reasoning', text: chunk.text}}
                     break;
 
                 case "finish":
-                    event = {type: 'concept_end', data: {runId: runId}}
+                    event = {type: 'synopsis_end', data: {runId: runId}}
                     break;
 
                 case "error":
-                    console.log('concept error =======================', chunk.error);
+                    console.log('synopsis error =======================', chunk.error);
                     const errorMessage = chunk.error instanceof Error ? chunk.error.message : String(chunk.error);
-                    event = {type: 'concept_error', data: {runId: runId, error: errorMessage}}
+                    event = {type: 'synopsis_error', data: {runId: runId, error: errorMessage}}
                     break;
             }
             if (event) {
@@ -122,32 +122,41 @@ export async function conceptGenerator({ project, onStart, onFinish, onError, on
             errMsg = String(error);
             onError(new Error(JSON.stringify(error)));
         }
-        const event = {type: 'concept_error', data: {runId: runId, error: errMsg}} as const;
+        const event = {type: 'synopsis_error', data: {runId: runId, error: errMsg}} as const;
         await stream.push(event);
     } finally {
-        await stream.push({type: 'concept_end', data: {runId: runId}});
+        await stream.push({type: 'synopsis_end', data: {runId: runId}});
         await stream.close();
     }
 
 }
 
 
-function buildConceptGeneratorSystemPrompt() {
+function buildSystemPrompt() {
     const systemPromptBuilder = new SystemPromptBuilder()
-    const expectedOutput = z.array(narrativeArcSchema).describe('The output should be a JSON array of narrative arc concepts. Return only a valid json array, no other text or comments.')
+    const expectedOutput = synopsisSchema.describe('The output should be a JSON object of a synopsis. Return only a valid json object, no other text or comments.')
     const jsonSchema = z.toJSONSchema(expectedOutput)
     const systemPrompt = systemPromptBuilder
-        .addIdentity(identities.narrativeArcIdentity.default())
-        .addSkills(skills.narrativeArc.default())
+        .addIdentity(identities.synopsisIdentity.default())
+        .addSkills(skills.synopsis.default())
         .addOutputFormat(JSON.stringify(jsonSchema))
         .build()
     return systemPrompt
 }
 
-function getUserPrompt(brief: ProjectBrief) {
+function getUserPrompt(project: Project) {
+    const b = project.brief;
     return `
-Generate 3 narrative arc concepts for the following project brief.
+Generate a synopsis for the following ${project.brief.format} project.
 ---
-${JSON.stringify(brief)}
+Here is the initial project brief:
+\`\`\`json
+${JSON.stringify(project.brief)}
+\`\`\`
+
+Here is the selected narrative arc:
+\`\`\`json
+${JSON.stringify(project.narrative_arcs?.find(arc => arc.isSelected))}
+\`\`\`
 `
 }

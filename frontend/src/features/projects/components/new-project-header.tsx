@@ -1,15 +1,17 @@
 import { Link } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ClassValue } from 'clsx';
 
 type Props = {
-    currentStep: 'brief' | 'concepts' | 'drafting'
+    currentStep: 'brief' | 'concepts' | 'drafting';
+    className?: ClassValue;
 }
 
-export default function NewProjectHeader({ currentStep }: Props) {
+export default function NewProjectHeader({ currentStep, className }: Props) {
 
   return (
-    <div className='grid grid-cols-3 gap-4 border-b border-white/10 px-8 py-4 sticky top-0 backdrop-blur-2xl z-50'>
+    <div className={cn('grid grid-cols-3 gap-4 border-b border-white/10 px-8 h-header sticky top-0 bg-background/80 backdrop-blur-2xl z-50', className)}>
         <div className='flex items-center gap-2 text-muted-foreground'>
             <Link to="/dashboard/main/projects">
                 <span className='text-muted-foreground text-sm hover:text-white transition-colors cursor-pointer'>Projects</span>

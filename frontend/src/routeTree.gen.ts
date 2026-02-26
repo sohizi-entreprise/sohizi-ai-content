@@ -16,6 +16,7 @@ import { Route as DashboardMainRouteImport } from './routes/dashboard/main'
 import { Route as DashboardProjectsNewRouteImport } from './routes/dashboard/projects/new'
 import { Route as DashboardProjectsProjectIdRouteImport } from './routes/dashboard/projects/$projectId'
 import { Route as DashboardMainProjectsRouteImport } from './routes/dashboard/main/projects'
+import { Route as DashboardProjectsProjectIdSynopsisRouteImport } from './routes/dashboard/projects/$projectId/synopsis'
 import { Route as DashboardProjectsProjectIdEditRouteImport } from './routes/dashboard/projects/$projectId/edit'
 import { Route as DashboardProjectsProjectIdConceptRouteImport } from './routes/dashboard/projects/$projectId/concept'
 import { Route as DashboardProjectsProjectIdEditStoryboardRouteImport } from './routes/dashboard/projects/$projectId/edit/storyboard'
@@ -60,6 +61,12 @@ const DashboardMainProjectsRoute = DashboardMainProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => DashboardMainRoute,
 } as any)
+const DashboardProjectsProjectIdSynopsisRoute =
+  DashboardProjectsProjectIdSynopsisRouteImport.update({
+    id: '/synopsis',
+    path: '/synopsis',
+    getParentRoute: () => DashboardProjectsProjectIdRoute,
+  } as any)
 const DashboardProjectsProjectIdEditRoute =
   DashboardProjectsProjectIdEditRouteImport.update({
     id: '/edit',
@@ -113,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
   '/dashboard/projects/$projectId/concept': typeof DashboardProjectsProjectIdConceptRoute
   '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
+  '/dashboard/projects/$projectId/synopsis': typeof DashboardProjectsProjectIdSynopsisRoute
   '/dashboard/projects/$projectId/edit/characters': typeof DashboardProjectsProjectIdEditCharactersRoute
   '/dashboard/projects/$projectId/edit/elements': typeof DashboardProjectsProjectIdEditElementsRoute
   '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
@@ -128,6 +136,7 @@ export interface FileRoutesByTo {
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
   '/dashboard/projects/$projectId/concept': typeof DashboardProjectsProjectIdConceptRoute
   '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
+  '/dashboard/projects/$projectId/synopsis': typeof DashboardProjectsProjectIdSynopsisRoute
   '/dashboard/projects/$projectId/edit/characters': typeof DashboardProjectsProjectIdEditCharactersRoute
   '/dashboard/projects/$projectId/edit/elements': typeof DashboardProjectsProjectIdEditElementsRoute
   '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
@@ -145,6 +154,7 @@ export interface FileRoutesById {
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
   '/dashboard/projects/$projectId/concept': typeof DashboardProjectsProjectIdConceptRoute
   '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
+  '/dashboard/projects/$projectId/synopsis': typeof DashboardProjectsProjectIdSynopsisRoute
   '/dashboard/projects/$projectId/edit/characters': typeof DashboardProjectsProjectIdEditCharactersRoute
   '/dashboard/projects/$projectId/edit/elements': typeof DashboardProjectsProjectIdEditElementsRoute
   '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/dashboard/projects/new'
     | '/dashboard/projects/$projectId/concept'
     | '/dashboard/projects/$projectId/edit'
+    | '/dashboard/projects/$projectId/synopsis'
     | '/dashboard/projects/$projectId/edit/characters'
     | '/dashboard/projects/$projectId/edit/elements'
     | '/dashboard/projects/$projectId/edit/script'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/dashboard/projects/new'
     | '/dashboard/projects/$projectId/concept'
     | '/dashboard/projects/$projectId/edit'
+    | '/dashboard/projects/$projectId/synopsis'
     | '/dashboard/projects/$projectId/edit/characters'
     | '/dashboard/projects/$projectId/edit/elements'
     | '/dashboard/projects/$projectId/edit/script'
@@ -194,6 +206,7 @@ export interface FileRouteTypes {
     | '/dashboard/projects/new'
     | '/dashboard/projects/$projectId/concept'
     | '/dashboard/projects/$projectId/edit'
+    | '/dashboard/projects/$projectId/synopsis'
     | '/dashboard/projects/$projectId/edit/characters'
     | '/dashboard/projects/$projectId/edit/elements'
     | '/dashboard/projects/$projectId/edit/script'
@@ -256,6 +269,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/main/projects'
       preLoaderRoute: typeof DashboardMainProjectsRouteImport
       parentRoute: typeof DashboardMainRoute
+    }
+    '/dashboard/projects/$projectId/synopsis': {
+      id: '/dashboard/projects/$projectId/synopsis'
+      path: '/synopsis'
+      fullPath: '/dashboard/projects/$projectId/synopsis'
+      preLoaderRoute: typeof DashboardProjectsProjectIdSynopsisRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdRoute
     }
     '/dashboard/projects/$projectId/edit': {
       id: '/dashboard/projects/$projectId/edit'
@@ -351,6 +371,7 @@ const DashboardProjectsProjectIdEditRouteWithChildren =
 interface DashboardProjectsProjectIdRouteChildren {
   DashboardProjectsProjectIdConceptRoute: typeof DashboardProjectsProjectIdConceptRoute
   DashboardProjectsProjectIdEditRoute: typeof DashboardProjectsProjectIdEditRouteWithChildren
+  DashboardProjectsProjectIdSynopsisRoute: typeof DashboardProjectsProjectIdSynopsisRoute
 }
 
 const DashboardProjectsProjectIdRouteChildren: DashboardProjectsProjectIdRouteChildren =
@@ -359,6 +380,8 @@ const DashboardProjectsProjectIdRouteChildren: DashboardProjectsProjectIdRouteCh
       DashboardProjectsProjectIdConceptRoute,
     DashboardProjectsProjectIdEditRoute:
       DashboardProjectsProjectIdEditRouteWithChildren,
+    DashboardProjectsProjectIdSynopsisRoute:
+      DashboardProjectsProjectIdSynopsisRoute,
   }
 
 const DashboardProjectsProjectIdRouteWithChildren =

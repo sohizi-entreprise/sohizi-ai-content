@@ -11,7 +11,7 @@ const ProjectBriefDTO = t.Object({
   storyIdea: t.String(),
 })
 
-const NarrativeArcItemDTO = t.Object({
+export const NarrativeArcItemDTO = t.Object({
   title: t.String(),
   logline: t.String(),
   synopsis: t.String(),
