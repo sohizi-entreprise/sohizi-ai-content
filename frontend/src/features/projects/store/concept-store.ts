@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { parse as parsePartialJson } from 'partial-json'
-import { NarrativeArc, Synopsis } from '../type'
+import type { JSONContent } from '@tiptap/core'
+import { NarrativeArc } from '../type'
 import { StreamEvent } from '@/hooks/use-resumable-stream'
 
 // ============================================================================
@@ -39,8 +40,9 @@ type ConceptDeltaData = {
 // Data format from server synopsis_delta events  
 type SynopsisDeltaData = {
     runId: string
-    type: 'content' | 'reasoning'
-    text: string
+    type: 'content' | 'reasoning' | 'prose'
+    text?: string
+    content?: JSONContent
 }
 
 export type GeneratingState = {
@@ -51,19 +53,16 @@ export type GeneratingState = {
 export type ConceptState = {
     projectId: string | null
     narrativeArcs: NarrativeArc[]
-    synopsis: Synopsis | null
+    synopsis: JSONContent | null  // TipTap prose content
     isGenerating: GeneratingState
     errors: GenerationErrors
     reasoning: GenerationReasoning
     _buffers: StreamBuffers
 }
 
-// Partial narrative arc for streaming updates
-type PartialNarrativeArc = Partial<NarrativeArc>
-
 type ConceptActions = {
     // Initialization
-    initialize: (projectId: string, arcs: NarrativeArc[], synopsis?: Synopsis | null) => void
+    initialize: (projectId: string, arcs: NarrativeArc[], synopsis?: JSONContent | null) => void
     reset: () => void
 
     // Narrative Arcs
@@ -74,8 +73,7 @@ type ConceptActions = {
     removeArc: (index: number) => void
 
     // Synopsis
-    setSynopsis: (synopsis: Synopsis) => void
-    updateSynopsis: (updates: Partial<Synopsis>) => void
+    setSynopsis: (synopsis: JSONContent | null) => void
 
     // Generation state
     setIsGenerating: (type: keyof GeneratingState, isGenerating: boolean) => void
@@ -87,7 +85,7 @@ type ConceptActions = {
     clearReasoning: () => void
 
     // Stream event handlers
-    handleStreamEvent: (event: StreamEvent<PartialNarrativeArc[] | Partial<Synopsis> | unknown>) => void
+    handleStreamEvent: (event: StreamEvent<unknown>) => void
 
     // Selectors
     getSelectedArc: () => NarrativeArc | null
@@ -182,10 +180,6 @@ export const useConceptStore = create<ConceptState & ConceptActions>((set, get) 
     // -------------------------------------------------------------------------
 
     setSynopsis: (synopsis) => set({ synopsis }),
-
-    updateSynopsis: (updates) => set((state) => ({
-        synopsis: state.synopsis ? { ...state.synopsis, ...updates } : null,
-    })),
 
     // -------------------------------------------------------------------------
     // Generation state
@@ -303,44 +297,24 @@ export const useConceptStore = create<ConceptState & ConceptActions>((set, get) 
 
             case 'synopsis_delta': {
                 const deltaData = data as SynopsisDeltaData
-                if (!deltaData?.text) break
 
-                set((state) => {
-                    // Update the appropriate buffer
-                    const newBuffers = { ...state._buffers }
-                    if (deltaData.type === 'content') {
-                        newBuffers.synopsis.content += deltaData.text
-                    } else if (deltaData.type === 'reasoning') {
+                // Handle prose content directly
+                if (deltaData.type === 'prose' && deltaData.content) {
+                    set({ synopsis: deltaData.content })
+                    break
+                }
+
+                // Handle reasoning text
+                if (deltaData.type === 'reasoning' && deltaData.text) {
+                    set((state) => {
+                        const newBuffers = { ...state._buffers }
                         newBuffers.synopsis.reasoning += deltaData.text
-                    }
-
-                    // Try to parse the buffered content as partial JSON
-                    let synopsis = state.synopsis
-                    if (deltaData.type === 'content' && newBuffers.synopsis.content) {
-                        try {
-                            const parsed = parsePartialJson(newBuffers.synopsis.content) as Partial<Synopsis>
-                            if (parsed && typeof parsed === 'object') {
-                                synopsis = {
-                                    title: parsed.title ?? state.synopsis?.title ?? '',
-                                    text: parsed.text ?? state.synopsis?.text ?? '',
-                                }
-                            }
-                        } catch {
-                            // Partial JSON not yet parseable, continue buffering
+                        return { 
+                            _buffers: newBuffers,
+                            reasoning: { ...state.reasoning, synopsis: newBuffers.synopsis.reasoning },
                         }
-                    }
-
-                    // Update reasoning if it's a reasoning chunk
-                    const reasoning = deltaData.type === 'reasoning'
-                        ? { ...state.reasoning, synopsis: newBuffers.synopsis.reasoning }
-                        : state.reasoning
-
-                    return { 
-                        _buffers: newBuffers, 
-                        synopsis,
-                        reasoning,
-                    }
-                })
+                    })
+                }
                 break
             }
 

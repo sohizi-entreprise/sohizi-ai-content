@@ -37,7 +37,7 @@ import { synopsisSkill } from './synopsis'
 import { outlineSkill } from './outline'
 import { characterBibleSkill } from './character-bible'
 import { worldBibleSkill } from './world-bible'
-import { proseFormatSkill } from './prose-format'
+import { proseFormatSkill, synopsisProseFormat } from './prose-format'
 import { sceneWritingSkill } from './scene-writing'
 import { scriptReviewSkill } from './script-review'
 
@@ -50,6 +50,7 @@ export const skills = {
   
   // Stage 2: Story Development
   synopsis: synopsisSkill,
+  synopsisProseFormat: synopsisProseFormat,
   
   // Stage 3: Structure
   outline: outlineSkill,

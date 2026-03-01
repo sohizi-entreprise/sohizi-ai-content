@@ -1,6 +1,6 @@
 import { useEffect, useCallback, RefObject } from 'react'
 import type { Editor } from '@tiptap/react'
-import { useChatStore } from '../store/chat-store'
+import { useChatStore, subscribeToSelectionRemoval } from '../store/chat-store'
 import type { MentionItem, EditorType } from '../types'
 
 type UseEditorBridgeOptions = {
@@ -98,4 +98,34 @@ export function useContextCreator(editorType: EditorType): UseContextCreatorRetu
   return {
     createSelectionContext,
   }
+}
+
+// ============================================================================
+// SELECTION SYNC HOOK
+// ============================================================================
+
+type UseSelectionSyncOptions = {
+  editor: Editor | null
+  enabled?: boolean
+}
+
+/**
+ * Hook to sync selection removal between chat input and editor
+ * When a selection is removed from the chat input, the corresponding
+ * context anchor mark is removed from the editor
+ */
+export function useSelectionSync({ editor, enabled = true }: UseSelectionSyncOptions): void {
+  useEffect(() => {
+    if (!enabled || !editor) return
+
+    // Subscribe to selection removal events
+    const unsubscribe = subscribeToSelectionRemoval((anchorId) => {
+      // Remove the context anchor mark from the editor
+      if (editor.commands.unsetContextAnchor) {
+        editor.commands.unsetContextAnchor(anchorId)
+      }
+    })
+
+    return unsubscribe
+  }, [editor, enabled])
 }

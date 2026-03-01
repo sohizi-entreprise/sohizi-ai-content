@@ -2,13 +2,13 @@ import { useEditor, EditorContent, type JSONContent } from '@tiptap/react'
 import { Node, Extension, mergeAttributes } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import { AIAdditionMark, AIDeletionMark } from '../extensions/ai-diff'
+import { AIAdditionMark, AIDeletionMark, ContextAnchorMark } from '../extensions'
 import { useEffect, useRef } from 'react'
 import '../styles/synopsis-editor.css'
 import { Button } from '@/components/ui/button'
 import { IconArrowNarrowRight, IconArrowBackUp, IconArrowForwardUp } from '@tabler/icons-react'
 import type { Editor } from '@tiptap/react'
-import { useChatStore } from '@/features/chat'
+import { useChatStore, useSelectionSync } from '@/features/chat'
 
 // ============================================================================
 // CUSTOM EXTENSIONS
@@ -19,6 +19,19 @@ const SynopsisTitleNode = Node.create({
   name: 'synopsisTitle',
   group: 'block',
   content: 'inline*',
+
+  addAttributes() {
+    return {
+      blockId: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-block-id'),
+        renderHTML: attributes => {
+          if (!attributes.blockId) return {}
+          return { 'data-block-id': attributes.blockId }
+        },
+      },
+    }
+  },
 
   parseHTML() {
     return [{ tag: 'h1[data-type="synopsis-title"]' }]
@@ -39,6 +52,19 @@ const SynopsisDividerNode = Node.create({
   atom: true, // Makes it non-editable
   selectable: false,
   draggable: false,
+
+  addAttributes() {
+    return {
+      blockId: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-block-id'),
+        renderHTML: attributes => {
+          if (!attributes.blockId) return {}
+          return { 'data-block-id': attributes.blockId }
+        },
+      },
+    }
+  },
 
   parseHTML() {
     return [{ tag: 'div[data-type="synopsis-divider"]' }]
@@ -65,6 +91,19 @@ const SynopsisContentNode = Node.create({
   group: 'block',
   content: 'inline*',
 
+  addAttributes() {
+    return {
+      blockId: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-block-id'),
+        renderHTML: attributes => {
+          if (!attributes.blockId) return {}
+          return { 'data-block-id': attributes.blockId }
+        },
+      },
+    }
+  },
+
   parseHTML() {
     return [{ tag: 'div[data-type="synopsis-content"]' }]
   },
@@ -77,14 +116,33 @@ const SynopsisContentNode = Node.create({
   },
 })
 
+// Synopsis Spacer Node (empty paragraph between content, no placeholder)
+const SynopsisSpacerNode = Node.create({
+  name: 'synopsisSpacer',
+  group: 'block',
+  content: 'inline*',
+
+  parseHTML() {
+    return [{ tag: 'div[data-type="synopsis-spacer"]' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['div', mergeAttributes(HTMLAttributes, { 
+      'data-type': 'synopsis-spacer',
+      class: 'synopsis-spacer' 
+    }), 0]
+  },
+})
+
 // Custom keyboard shortcut extension for Cmd+K
+// Applies a context anchor mark to the selection for AI reference
 const SelectionShortcut = Extension.create({
   name: 'selectionShortcut',
 
   addKeyboardShortcuts() {
     return {
       'Mod-k': ({ editor }) => {
-        const { from, to } = editor.state.selection
+        const { from, to, $from } = editor.state.selection
         
         // If no selection (cursor is at a single point), do nothing
         if (from === to) {
@@ -94,13 +152,36 @@ const SelectionShortcut = Extension.create({
         // Get the selected text
         const selectedText = editor.state.doc.textBetween(from, to, ' ')
         
-        // Access store directly and update state
+        // Get the parent block's blockId
+        const parentNode = $from.parent
+        const blockId = parentNode.attrs?.blockId as string | undefined
+        
+        // Generate a unique anchor ID
+        const anchorId = crypto.randomUUID()
+        
+        // Apply the context anchor mark to wrap the selection
+        editor.chain().setContextAnchor({ anchorId }).run()
+        
+        // Create display text (truncated if needed)
+        const displayText = selectedText.length > 24 
+          ? selectedText.slice(0, 24) + '...' 
+          : selectedText
+        
+        // Update chat store with full context
         const { addSelectionContext, setInputFocused, setInputContent, inputContent } = useChatStore.getState()
-        const blockId = crypto.randomUUID()
-        const blockContent = selectedText.length > 24 ? selectedText.slice(0, 24) + '...' : selectedText
-        addSelectionContext({ id: blockId, display: blockContent })
-        setInputContent(inputContent + ` &&[${blockContent}](${blockId})`)
+        
+        addSelectionContext({ 
+          id: anchorId, 
+          display: displayText,
+          fullText: selectedText,
+          from,
+          to,
+          blockId,
+        })
+        
+        setInputContent(inputContent + ` &&[${displayText}](${anchorId})`)
         setInputFocused(true)
+        
         return true
       },
     };
@@ -113,14 +194,9 @@ const SelectionShortcut = Extension.create({
 
 export type { JSONContent }
 
-export type SynopsisData = {
-  title: string
-  text: string
-}
-
 type SynopsisEditorProps = {
-  content?: SynopsisData | null
-  onChange?: (content: SynopsisData) => void
+  content?: JSONContent | null
+  onChange?: (content: JSONContent) => void
   readOnly?: boolean
   className?: string
 }
@@ -136,7 +212,7 @@ export function SynopsisEditor({
   readOnly = false,
   className = '',
 }: SynopsisEditorProps) {
-  // Track the last content we set to avoid unnecessary updates
+  // Track the last content to avoid unnecessary updates
   const lastContentRef = useRef<string>('')
 
   const editor = useEditor({
@@ -158,9 +234,6 @@ export function SynopsisEditor({
           if (node.type.name === 'synopsisTitle') {
             return 'Title...'
           }
-          if (node.type.name === 'synopsisContent') {
-            return 'Enter your synopsis here...'
-          }
           return ''
         },
       }),
@@ -168,20 +241,22 @@ export function SynopsisEditor({
       SynopsisTitleNode,
       SynopsisDividerNode,
       SynopsisContentNode,
+      SynopsisSpacerNode,
       // AI Diff marks
       AIAdditionMark,
       AIDeletionMark,
+      // Context anchor for AI editing
+      ContextAnchorMark,
       // Custom keyboard shortcuts
       SelectionShortcut,
     ],
-    content: synopsisToJSON(content),
+    content: content ?? undefined,
     editable: !readOnly,
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
-      const synopsisData = jsonToSynopsis(json)
-      // Update ref to track what we have in editor
-      lastContentRef.current = JSON.stringify(synopsisData)
-      onChange?.(synopsisData)
+      console.log(json)
+      lastContentRef.current = JSON.stringify(json)
+      onChange?.(json)
     },
     editorProps: {
       attributes: {
@@ -190,17 +265,29 @@ export function SynopsisEditor({
     },
   })
 
-  // Sync editor content when prop changes (e.g., from store updates)
+  // Sync selection removal between chat input and editor
+  // When a selection is removed from chat input, remove the context anchor mark
+  useSelectionSync({ editor, enabled: !readOnly })
+
+  // Sync editor content when content prop changes
   useEffect(() => {
-    if (!editor || !content) return
+    if (!editor) return
+
+    // If content is null/undefined, clear the editor (e.g., when regenerating)
+    if (!content) {
+      lastContentRef.current = ''
+      editor.commands.clearContent(false) // false = don't emit update
+      return
+    }
 
     const contentKey = JSON.stringify(content)
     
-    // Only update if content actually changed and differs from editor state
+    // Only update if content actually changed
     if (contentKey !== lastContentRef.current) {
       lastContentRef.current = contentKey
-      const newContent = synopsisToJSON(content)
-      editor.commands.setContent(newContent)
+      // Use emitUpdate: false to prevent triggering onUpdate during streaming
+      // This avoids a feedback loop: setContent -> onUpdate -> setSynopsis -> re-render
+      editor.commands.setContent(content, { emitUpdate: false })
     }
   }, [editor, content])
 
@@ -261,80 +348,3 @@ function ActionButtons({ editor }: { editor: Editor }) {
     )
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-// Convert SynopsisData to TipTap JSONContent
-function synopsisToJSON(data: SynopsisData | null | undefined): JSONContent {
-    // Split text by double newlines to create paragraphs
-    const paragraphs = data?.text 
-      ? data.text.split('\n\n').filter(p => p.trim())
-      : []
-  
-    const contentNodes: JSONContent[] = [
-      {
-        type: 'synopsisTitle',
-        content: data?.title ? [{ type: 'text', text: data.title }] : [],
-      },
-      {
-        type: 'synopsisDivider',
-      },
-    ]
-  
-    // Add each paragraph as a separate synopsisContent node
-    if (paragraphs.length > 0) {
-      for (const paragraph of paragraphs) {
-        contentNodes.push({
-          type: 'synopsisContent',
-          content: [{ type: 'text', text: paragraph }],
-        })
-      }
-    } else {
-      // Add empty paragraph for placeholder
-      contentNodes.push({
-        type: 'synopsisContent',
-        content: [],
-      })
-    }
-  
-    return {
-      type: 'doc',
-      content: contentNodes,
-    }
-  }
-  
-  // Extract SynopsisData from TipTap JSONContent
-  function jsonToSynopsis(json: JSONContent): SynopsisData {
-    let title = ''
-    const paragraphs: string[] = []
-  
-    if (json.content) {
-      for (const node of json.content) {
-        if (node.type === 'synopsisTitle') {
-          title = extractText(node)
-        } else if (node.type === 'synopsisContent') {
-          const paragraphText = extractText(node)
-          if (paragraphText) {
-            paragraphs.push(paragraphText)
-          }
-        }
-      }
-    }
-  
-    // Join paragraphs with double newlines
-    const text = paragraphs.join('\n\n')
-  
-    return { title, text }
-  }
-  
-  // Helper to extract text from a node
-  function extractText(node: JSONContent): string {
-    if (!node.content) return ''
-    return node.content
-      .map((child) => {
-        if (child.type === 'text') return child.text || ''
-        return extractText(child)
-      })
-      .join('')
-  }

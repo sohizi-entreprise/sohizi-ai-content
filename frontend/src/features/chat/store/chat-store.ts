@@ -5,9 +5,34 @@ import type {
   Conversation,
   Message,
   EditorType,
-  MentionItem,
+  SelectionContext,
   Mentions
 } from '../types'
+
+// ============================================================================
+// SELECTION REMOVAL SUBSCRIBERS
+// ============================================================================
+
+type SelectionRemovalCallback = (anchorId: string) => void
+const selectionRemovalSubscribers = new Set<SelectionRemovalCallback>()
+
+/**
+ * Subscribe to selection removal events
+ * Returns an unsubscribe function
+ */
+export function subscribeToSelectionRemoval(callback: SelectionRemovalCallback): () => void {
+  selectionRemovalSubscribers.add(callback)
+  return () => {
+    selectionRemovalSubscribers.delete(callback)
+  }
+}
+
+/**
+ * Notify all subscribers that a selection was removed
+ */
+function notifySelectionRemoval(anchorId: string): void {
+  selectionRemovalSubscribers.forEach((callback) => callback(anchorId))
+}
 
 // ============================================================================
 // INITIAL STATE
@@ -64,7 +89,7 @@ type ChatActions = {
   clearMessages: () => void
   
   // Context actions
-  addSelectionContext: (context: MentionItem) => void
+  addSelectionContext: (context: SelectionContext) => void
   removeSelectionContext: (id: string) => void
   
   // Input actions
@@ -158,9 +183,13 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
     attachedContext: { ...state.attachedContext, selections: [...state.attachedContext.selections, context] },
   })),
 
-  removeSelectionContext: (id) => set((state) => ({
-    attachedContext: { ...state.attachedContext, selections: state.attachedContext.selections.filter((c) => c.id !== id) },
-  })),
+  removeSelectionContext: (id) => {
+    // Notify subscribers before removing
+    notifySelectionRemoval(id)
+    set((state) => ({
+      attachedContext: { ...state.attachedContext, selections: state.attachedContext.selections.filter((c) => c.id !== id) },
+    }))
+  },
 
   clearInput: () => set({ inputContent: '', attachedContext: initialMentions }),
 

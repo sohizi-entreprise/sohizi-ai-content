@@ -13,9 +13,6 @@ name: generating-synopsis
 description: Expands a selected narrative arc into a complete, detailed synopsis. Use after the user has selected a narrative arc concept.
 ---
 
-## Task
-Expand the selected narrative arc into a complete synopsis that serves as the foundation for the script.
-
 ## Synopsis Structure
 
 **1. Hook (Opening)**
@@ -55,16 +52,6 @@ Expand the selected narrative arc into a complete synopsis that serves as the fo
 - Camera directions
 - Actual dialogue (paraphrase instead)
 - Over-explain themes
-
-## Output
-
-JSON object:
-\`\`\`json
-{
-  "title": "Final project title",
-  "text": "Complete synopsis with \\n\\n paragraph breaks. 400-800 words."
-}
-\`\`\`
 `,
 
   formats: {
@@ -119,16 +106,6 @@ Develop a synopsis for **storytime** format - optimized for oral delivery where 
 - [HOOK] markers for engagement moments
 - Natural pause points
 - Cliffhanger opportunities
-
-## Output
-
-JSON object:
-\`\`\`json
-{
-  "title": "Engaging, clickable title",
-  "text": "Synopsis with \\n\\n breaks. Include [BEAT] and [HOOK] markers. 400-800 words."
-}
-\`\`\`
 `,
   }
 }

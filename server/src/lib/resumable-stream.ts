@@ -2,8 +2,9 @@ import type Redis from 'ioredis'
 
 type ConceptEventType = 'concept_start' | 'concept_delta' | 'concept_end' | 'concept_error' | 'concept_reasoning'
 type SynopsisEventType = 'synopsis_start' | 'synopsis_delta' | 'synopsis_end' | 'synopsis_error' | 'synopsis_reasoning'
+type EditorEventType = 'editor_start' | 'editor_delta' | 'editor_end' | 'editor_error' | 'editor_reasoning' | 'editor_tool_call' | 'editor_tool_result'
 
-export type StreamEventType = ConceptEventType | SynopsisEventType
+export type StreamEventType = ConceptEventType | SynopsisEventType | EditorEventType
 
 // DOMAIN_EVENT = CONCEPT_CHUNK, CONCEPT_FINISH, CONCEPT_ERROR
 

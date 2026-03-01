@@ -17,8 +17,10 @@
     "drizzle-orm": "^0.45.1",
     "elysia": "latest",
     "ioredis": "^5.9.3",
+    "partial-json": "^0.1.7",
     "pg": "^8.16.3",
     "uuid": "^13.0.0",
+    "yaml": "^2.8.2",
     "zod": "^4.3.5"
   },
   "devDependencies": {

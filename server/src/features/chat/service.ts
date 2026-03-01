@@ -1,5 +1,10 @@
 import { chatRepo } from '@/entities/chat'
 import type { CreateConversation, CreateMessage } from '@/entities/chat/model'
+import { EditComponent, EditorAgentInput } from '../ai/script-engine/editor-agent/types';
+import { projectRepo } from '@/entities/project';
+import { ResumableStream, redis } from "@/lib";
+import { NotFound } from '../error';
+import { EditorAgent, EditorStreamData } from '../ai/script-engine/editor-agent';
 
 // ============================================================================
 // CONVERSATIONS
@@ -89,6 +94,49 @@ async function generateAIResponse(
 
 This is a placeholder response. The actual AI integration will be implemented to provide contextual assistance for your content.`;
 }
+
+// ============================================================================
+// EDIT CONTENT
+// ============================================================================
+
+export type EditContentParams = {
+  projectId: string;
+  conversationId: string;
+  component: EditComponent;
+  prompt: string;
+  context?: {
+      blocks?: string[];
+      selections?: string[];
+  };
+};
+
+export const editContent = async (params: EditContentParams) => {
+  const project = await projectRepo.getProjectById(params.projectId);
+  if (!project) {
+      throw new NotFound('Project not found');
+  }
+
+  // Create a unique stream key for this edit session
+  const streamKey = params.conversationId;
+  const stream = new ResumableStream<EditorStreamData>(redis, streamKey);
+
+  const editorAgent = new EditorAgent({
+      model: 'gpt-5.1',
+      reasoningEffort: 'medium',
+  });
+
+  const input: EditorAgentInput = {
+      projectId: params.projectId,
+      conversationId: params.conversationId,
+      message: params.prompt,
+      context: params.context || {},
+  };
+
+  // Fire and forget - agent runs asynchronously
+  editorAgent.run(input, stream, params.component, project);
+
+  return { ok: true, streamKey };
+};
 
 // ============================================================================
 // HELPERS

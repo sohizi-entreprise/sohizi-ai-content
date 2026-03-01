@@ -89,4 +89,46 @@ Available marks: bold, italic, underline, strike, code
 Return valid ProseMirror JSON object directly (no markdown code blocks unless requested).
 `
 
+export const synopsisProseFormat = `
+---
+name: generating-synopsis-prose  
+description: MANDATORY OUTPUT FORMAT - Synopsis must be a JSON array, not prose text.
+---
+
+## ⚠️ CRITICAL: OUTPUT FORMAT REQUIREMENT
+
+**YOUR ENTIRE RESPONSE MUST BE A JSON ARRAY.**
+
+- First character: \`[\`
+- Last character: \`]\`
+- NO prose text, NO markdown, NO explanation
+
+## JSON Structure
+
+| Key | Value |
+|-----|-------|
+| \`t\` | "h1" (title) or "p" (paragraph) |
+| \`c\` | The text content as a string |
+
+## Exact Format
+
+[{"t":"h1","c":"Synopsis Title Here"},{"t":"p","c":"First paragraph of the synopsis..."},{"t":"p","c":"Second paragraph..."},{"t":"p","c":"Third paragraph..."}]
+
+## Rules
+
+1. Start response with \`[\` immediately
+2. First node must be \`{"t":"h1","c":"..."}\` for the title
+3. Following nodes are \`{"t":"p","c":"..."}\` for paragraphs  
+4. Use \`\\"\` to escape quotes inside text
+5. End with \`]\`
+
+## WRONG ❌
+Enemy at the Door
+Marcus arrives home...
+
+## CORRECT ✓
+[{"t":"h1","c":"Enemy at the Door"},{"t":"p","c":"Marcus arrives home..."}]
+
+`
+
 export default proseFormatSkill

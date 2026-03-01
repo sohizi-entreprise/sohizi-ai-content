@@ -20,10 +20,22 @@ export type MentionItem = {
   display: string
 }
 
+/**
+ * Selection context with anchor information for AI editing
+ */
+export type SelectionContext = {
+  id: string          // UUID that matches the context anchor in editor
+  display: string     // Truncated text for display
+  fullText: string    // Full selected text for AI context
+  from: number        // Start position in document
+  to: number          // End position in document
+  blockId?: string    // Parent block ID for targeted edits
+}
+
 export type Mentions = {
   characters: MentionItem[]
   locations: MentionItem[]
-  selections: MentionItem[]
+  selections: SelectionContext[]
 }
 
 // ============================================================================
@@ -141,4 +153,115 @@ export type TokenUsage = {
   used: number
   total: number
   percentage: number
+}
+
+// ============================================================================
+// AGENT EVENT TYPES
+// ============================================================================
+
+export type AgentEventType =
+  | 'start'
+  | 'reasoning_delta'
+  | 'content_delta'
+  | 'tool_call'
+  | 'tool_result'
+  | 'writer_start'
+  | 'writer_progress'
+  | 'writer_complete'
+  | 'sub_agent_start'
+  | 'sub_agent_progress'
+  | 'sub_agent_complete'
+  | 'error'
+  | 'complete'
+  | 'end'
+
+export type AgentEvent = {
+  type: AgentEventType
+  runId: string
+  data: unknown
+}
+
+export type AgentToolCall = {
+  toolName: string
+  toolId: string
+  args: unknown
+}
+
+export type AgentToolResult = {
+  toolName: string
+  toolId: string
+  result: unknown
+  success: boolean
+}
+
+export type WriterProgress = {
+  taskId: string
+  phase: 'writing' | 'reviewing' | 'revising'
+  content?: string
+  revisionCount?: number
+}
+
+export type WriterComplete = {
+  taskId: string
+  success: boolean
+  content: string
+  reviewNotes: string
+  revisionCount: number
+}
+
+export type SubAgentProgress = {
+  taskId: string
+  phase: string
+  content?: string
+}
+
+export type SubAgentComplete = {
+  taskId: string
+  success: boolean
+  output: unknown
+}
+
+// ============================================================================
+// AGENT STATE TYPES
+// ============================================================================
+
+export type AgentState = {
+  isRunning: boolean
+  runId: string | null
+  reasoning: string
+  currentTool: AgentToolCall | null
+  toolResults: AgentToolResult[]
+  writerProgress: WriterProgress | null
+  subAgentProgress: SubAgentProgress | null
+  error: string | null
+}
+
+// ============================================================================
+// SCRIPT BLOCK TYPES (for agent context)
+// ============================================================================
+
+export type ScriptBlock = {
+  id: string
+  type: string
+  parentId: string | null
+  content: string
+  order: number
+}
+
+export type ScriptContent = {
+  blocks: ScriptBlock[]
+  metadata?: {
+    title?: string
+    format?: string
+  }
+}
+
+export type ProjectInfo = {
+  id: string
+  format: 'storytime' | 'explainer' | 'screenplay' | 'short'
+  genre: string
+  tone: string
+  audience: string
+  maxDuration?: string
+  constraints?: Record<string, unknown>
 }

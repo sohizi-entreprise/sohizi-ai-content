@@ -22,10 +22,8 @@ export const NarrativeArcItemDTO = t.Object({
   isSelected: t.Boolean(),
 })
 
-const SynopsisDTO = t.Object({
-  title: t.String(),
-  text: t.String(),
-})
+// Synopsis is now stored as TipTap prose format (JSONContent)
+const SynopsisDTO = t.Any()
 
 const OutlineBeatDTO = t.Object({
   beatId: t.String(),

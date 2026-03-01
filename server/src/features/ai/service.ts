@@ -6,6 +6,7 @@ import { NarrativeArcList, Synopsis } from "zSchemas";
 import { Project } from "@/db/schema";
 import { synopsisGenerator } from "./script-engine/synopsis-generator";
 
+
 export const supportedScriptComponentTypes = ['concept', 'synopsis', 'outline', 'script', 'world_bible'] as const;
 export type ScriptComponentType = (typeof supportedScriptComponentTypes)[number];
 

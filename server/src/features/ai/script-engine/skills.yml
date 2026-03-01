@@ -1,0 +1,377 @@
+# Skills for the Editor Agent System
+# Each skill has: name, description (for catalog), category, and content (full prompt)
+# Skills are loaded on-demand via the load_skill tool
+
+skills:
+  - name: synopsis
+    description: "Expand a narrative arc into a detailed synopsis with structure and turning points"
+    category: writing
+    content: |
+      ## Synopsis Writing Skill
+      
+      ### Task
+      Expand the selected narrative arc into a complete synopsis that serves as 
+      the foundation for the script.
+      
+      ### Synopsis Structure
+      
+      **1. Hook (Opening)**
+      - Establish world and tone immediately
+      - Introduce protagonist in a characteristic moment
+      - Plant seeds of central conflict
+      
+      **2. Setup (Act 1)**
+      - Protagonist's ordinary world
+      - Want (external goal) vs Need (internal growth)
+      - Key relationships
+      - Inciting incident
+      
+      **3. Confrontation (Act 2)**
+      - Escalating obstacles
+      - Rising stakes
+      - Character development through challenge
+      - Midpoint shift
+      - "Dark night of the soul"
+      
+      **4. Resolution (Act 3)**
+      - Climactic confrontation
+      - Transformation/choice
+      - Conflict resolution
+      - New equilibrium
+      
+      ### Writing Guidelines
+      - Present tense, third person
+      - Specific actions and emotions
+      - Show cause and effect
+      - Highlight emotional turning points
+      - No camera directions or actual dialogue
+
+  - name: scene_writing
+    description: "Write scenes with proper structure, conflict, and emotional beats"
+    category: writing
+    content: |
+      ## Scene Writing Skill
+      
+      ### Scene Structure
+      Every scene must have:
+      1. **Goal**: What does the POV character want?
+      2. **Conflict**: What's preventing them from getting it?
+      3. **Outcome**: Disaster, partial success, or success with complications
+      
+      ### Scene Beats
+      - Opening hook (first line grabs attention)
+      - Establishing shot (where/when)
+      - Rising action (escalating tension)
+      - Turning point (something changes)
+      - Scene end (propels to next scene)
+      
+      ### Pacing Guidelines
+      - Short sentences = tension, urgency
+      - Longer sentences = reflection, calm
+      - White space = dramatic pause
+      - Cut scenes at moments of maximum tension
+      
+      ### Scene Types
+      - **Action scenes**: External conflict, physical stakes
+      - **Dialogue scenes**: Internal conflict, relationship stakes
+      - **Transition scenes**: Brief, move story forward
+      - **Revelation scenes**: Information changes everything
+
+  - name: dialogue_craft
+    description: "Write natural dialogue with subtext, voice differentiation, and conflict"
+    category: writing
+    content: |
+      ## Dialogue Craft Skill
+      
+      ### Core Principles
+      - Dialogue is NOT real speech (no um, uh, filler)
+      - Every line should do at least 2 things:
+        1. Reveal character
+        2. Advance plot OR create conflict
+      
+      ### Subtext
+      - Characters rarely say what they mean
+      - The real meaning is UNDER the words
+      - Use action lines to show true feelings
+      
+      ### Voice Differentiation
+      Each character needs unique:
+      - Vocabulary level (educated vs. street)
+      - Sentence length (terse vs. verbose)
+      - Speech patterns (questions vs. statements)
+      - Verbal tics (catchphrases, filler words)
+      
+      ### Dialogue Formatting
+      - Keep speeches short (3 lines max usually)
+      - Use interruptions (--) for tension
+      - Parentheticals only when absolutely needed
+      - "Said" is invisible; avoid fancy dialogue tags
+      
+      ### Conflict in Dialogue
+      - Characters should want different things
+      - Subtext creates tension
+      - Questions can be attacks
+      - Silence is powerful
+
+  - name: character_bible
+    description: "Develop detailed character profiles with arcs, relationships, and voice"
+    category: character
+    content: |
+      ## Character Bible Skill
+      
+      ### Character Profile Elements
+      
+      **Core Identity**
+      - Name, age, occupation
+      - Physical description (distinctive features)
+      - Personality traits (3-5 key traits)
+      
+      **Psychology**
+      - Want (external goal - what they pursue)
+      - Need (internal growth - what they must learn)
+      - Flaw (weakness that creates conflict)
+      - Fear (what they avoid at all costs)
+      - Lie (false belief they hold)
+      
+      **Background**
+      - Relevant backstory (only what affects the story)
+      - Key relationships
+      - Defining moments
+      
+      **Arc**
+      - Starting state (who they are at beginning)
+      - Transformation triggers (what changes them)
+      - Ending state (who they become)
+      
+      **Voice**
+      - Speech pattern
+      - Vocabulary level
+      - Verbal tics
+      - Sample dialogue line
+
+  - name: story_structure
+    description: "Organize story into acts, beats, and turning points"
+    category: structure
+    content: |
+      ## Story Structure Skill
+      
+      ### Three-Act Structure
+      
+      **Act 1 (25%)**
+      - Opening image
+      - Setup / ordinary world
+      - Inciting incident (10%)
+      - Debate / refusal
+      - First act break (25%) - point of no return
+      
+      **Act 2 (50%)**
+      - B-story begins
+      - Fun and games / promise of premise
+      - Midpoint (50%) - false victory or false defeat
+      - Bad guys close in
+      - All is lost (75%)
+      - Dark night of the soul
+      
+      **Act 3 (25%)**
+      - Break into three
+      - Finale / climax
+      - Final image (mirrors opening)
+      
+      ### Beat Sheet
+      Each major beat needs:
+      - Clear dramatic purpose
+      - Emotional shift
+      - Connection to theme
+      - Forward momentum
+
+  - name: review
+    description: "Evaluate content for quality, consistency, and adherence to requirements"
+    category: review
+    content: |
+      ## Review Skill
+      
+      ### Review Checklist
+      
+      **Story Quality**
+      - [ ] Clear protagonist goal
+      - [ ] Rising stakes
+      - [ ] Cause and effect logic
+      - [ ] Emotional engagement
+      
+      **Technical Quality**
+      - [ ] Proper formatting
+      - [ ] Consistent tone
+      - [ ] Appropriate length
+      - [ ] No plot holes
+      
+      **Character Consistency**
+      - [ ] Voice matches character
+      - [ ] Actions align with motivation
+      - [ ] Arc progression makes sense
+      
+      **Dialogue Quality**
+      - [ ] Subtext present
+      - [ ] Voices differentiated
+      - [ ] Advances plot/character
+      
+      ### Feedback Format
+      For each issue found:
+      1. Quote the problematic section
+      2. Explain the issue
+      3. Suggest specific fix
+      
+      ### Severity Levels
+      - **Critical**: Breaks story logic or character
+      - **Major**: Weakens impact significantly
+      - **Minor**: Polish needed but functional
+
+  - name: narrative_arc
+    description: "Generate compelling narrative arc concepts from an initial idea"
+    category: structure
+    content: |
+      ## Narrative Arc Skill
+      
+      ### Task
+      Generate distinct narrative arc concepts that explore different 
+      approaches to the same core idea.
+      
+      ### Arc Components
+      
+      **1. Core Premise**
+      - What is the central dramatic question?
+      - What makes this story worth telling?
+      
+      **2. Protagonist Journey**
+      - Who is the protagonist?
+      - What do they want? (external goal)
+      - What do they need? (internal growth)
+      - What's at stake if they fail?
+      
+      **3. Conflict Engine**
+      - What/who opposes the protagonist?
+      - Why can't this be resolved easily?
+      - How does conflict escalate?
+      
+      **4. Thematic Core**
+      - What is the story really about?
+      - What truth does the protagonist discover?
+      - What does the audience take away?
+      
+      ### Arc Differentiation
+      Each arc should explore:
+      - Different protagonist approach
+      - Different central conflict
+      - Different thematic angle
+      - Different emotional journey
+
+  - name: world_bible
+    description: "Build consistent world rules, locations, and atmosphere"
+    category: structure
+    content: |
+      ## World Bible Skill
+      
+      ### World Building Elements
+      
+      **Setting Foundation**
+      - Time period and location
+      - Social/political context
+      - Technology level
+      - Economic conditions
+      
+      **Atmosphere**
+      - Visual style/palette
+      - Mood and tone
+      - Sensory details (sounds, smells, textures)
+      
+      **Locations**
+      For each key location:
+      - Physical description
+      - Atmosphere/mood
+      - Story significance
+      - Who frequents it
+      
+      **World Rules**
+      - What's possible/impossible
+      - Social norms and taboos
+      - Power structures
+      - Consequences for rule-breaking
+      
+      ### Consistency Guidelines
+      - Establish rules early
+      - Follow rules consistently
+      - Break rules only with consequences
+      - Details should reinforce theme
+
+  - name: pacing
+    description: "Control story rhythm, tension, and release patterns"
+    category: writing
+    content: |
+      ## Pacing Skill
+      
+      ### Rhythm Fundamentals
+      
+      **Scene Length**
+      - Short scenes = faster pace, urgency
+      - Long scenes = slower pace, depth
+      - Vary length for rhythm
+      
+      **Sentence Structure**
+      - Short sentences speed up reading
+      - Long sentences slow down reading
+      - Mix for musicality
+      
+      ### Tension Management
+      
+      **Building Tension**
+      - Raise stakes progressively
+      - Add time pressure
+      - Withhold information
+      - Create anticipation
+      
+      **Release Points**
+      - Humor after intensity
+      - Quiet moments after action
+      - Character reflection
+      - Audience breathing room
+      
+      ### Act Pacing
+      - Act 1: Moderate pace, build investment
+      - Act 2A: Accelerate, complicate
+      - Midpoint: Peak or valley
+      - Act 2B: Pressure mounts
+      - Act 3: Fastest pace to climax, then resolution
+
+  - name: outline
+    description: "Create detailed story outlines with acts, beats, and scene breakdown"
+    category: structure
+    content: |
+      ## Outline Skill
+      
+      ### Outline Structure
+      
+      **Act Level**
+      - Act number and title
+      - Act purpose/goal
+      - Key beats within act
+      - Emotional arc of act
+      
+      **Beat Level**
+      - Beat name (Opening Image, Inciting Incident, etc.)
+      - What happens
+      - Why it matters
+      - Emotional impact
+      
+      **Scene Level**
+      - Scene number
+      - Slugline (INT/EXT. LOCATION - TIME)
+      - Scene purpose
+      - Characters present
+      - Key action/dialogue summary
+      - How it connects to next scene
+      
+      ### Outline Guidelines
+      - Each scene must have clear purpose
+      - Cause and effect between scenes
+      - Character arcs tracked across outline
+      - Pacing considered in scene order
+      - Subplots woven appropriately

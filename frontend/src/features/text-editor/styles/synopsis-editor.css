@@ -92,18 +92,33 @@
   font-size: 1rem;
   line-height: 1.75;
   border: none;
-  padding-bottom: 1rem;
   background: transparent;
   resize: none;
   min-height: auto;
   width: 100%;
 }
 
-.synopsis-content:last-of-type {
-  padding-bottom: 0;
+.synopsis-content:focus {
+  outline: none;
+  box-shadow: none;
 }
 
-.synopsis-content:focus {
+/* ============================================================================
+   SYNOPSIS SPACER (empty paragraph between content, no placeholder)
+   ============================================================================ */
+
+.synopsis-spacer {
+  color: black;
+  font-size: 1rem;
+  line-height: 1.75;
+  border: none;
+  background: transparent;
+  resize: none;
+  min-height: 1.75em; /* Same as line-height to maintain spacing */
+  width: 100%;
+}
+
+.synopsis-spacer:focus {
   outline: none;
   box-shadow: none;
 }
@@ -128,6 +143,22 @@
   color: oklch(0.6 0.02 270);
   pointer-events: none;
   height: 0;
+}
+
+/* ============================================================================
+   CONTEXT ANCHOR STYLES (for AI editing reference)
+   ============================================================================ */
+
+.synopsis-editor-content .context-anchor {
+  background: oklch(0.95 0.05 220 / 0.4);
+  border-bottom: 2px dashed oklch(0.6 0.15 220);
+  padding: 0 2px;
+  border-radius: 2px;
+  transition: background 0.15s ease;
+}
+
+.synopsis-editor-content .context-anchor:hover {
+  background: oklch(0.92 0.08 220 / 0.5);
 }
 
 /* ============================================================================

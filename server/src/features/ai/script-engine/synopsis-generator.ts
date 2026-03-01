@@ -2,17 +2,16 @@ import { Project } from "@/db/schema";
 import { SystemPromptBuilder } from "../prompts/promptBuilder";
 import { identities } from "../prompts";
 import { skills } from "../skills";
-import { narrativeArcSchema, ProjectBrief, synopsisSchema, Synopsis } from "zSchemas";
-import {streamText} from 'ai';
+import { streamText } from 'ai';
 import { openai } from "@/lib/llm-providers";
 import { ResumableStream, StreamEvent } from "@/lib";
 import { v4 as uuidv4 } from 'uuid';
-import { z } from "zod";
+import { parseSynopsisStreamToProse, type ProseDocument } from "./utils";
 
 type Params = {
     project: Project;
     onStart: () => void | Promise<void>;
-    onFinish: (synopsis: Synopsis, totalUsage: number) => void | Promise<void>;
+    onFinish: (synopsis: ProseDocument, totalUsage: number) => void | Promise<void>;
     onError: (error: Error) => void | Promise<void>;
     onAbort: () => void | Promise<void>;
     stream: ResumableStream;
@@ -37,7 +36,10 @@ export async function synopsisGenerator({ project, onStart, onFinish, onError, o
 
     // Create an AbortController to cancel the LLM request when the stream is cancelled
     const abortController = new AbortController();
-
+    
+    // Buffer to accumulate streamed JSON and map to preserve block IDs
+    let jsonBuffer = '';
+    const blockIdMap = new Map<number, string>();
 
     try {
         // Send request to llm
@@ -57,11 +59,12 @@ export async function synopsisGenerator({ project, onStart, onFinish, onError, o
                     return;
                 }
     
-                try {
-                    const synopsis = synopsisSchema.parse(JSON.parse(text)) as Synopsis;
-                    await onFinish(synopsis, totalUsage.totalTokens || 0);
-                } catch (error) {
-                    onError(new Error("Error parsing synopsis"));
+                // Parse final content to prose format
+                const prose = parseSynopsisStreamToProse(text, blockIdMap);
+                if (prose) {
+                    await onFinish(prose, totalUsage.totalTokens || 0);
+                } else {
+                    onError(new Error("Error parsing synopsis to prose format"));
                 }
             },
             onError: (error) => {
@@ -88,10 +91,20 @@ export async function synopsisGenerator({ project, onStart, onFinish, onError, o
             let event: StreamEvent<unknown> | null = null;
             switch (chunk.type) {
                 case "start":
+                    jsonBuffer = '';
                     event = {type: 'synopsis_start', data: {runId: runId}}
                     break;
+                    
                 case "text-delta":
-                    event = {type: 'synopsis_delta', data: {runId: runId, type: 'content', text: chunk.text}}
+                    // Accumulate JSON and parse to prose
+                    jsonBuffer += chunk.text;
+                    const prose = parseSynopsisStreamToProse(jsonBuffer, blockIdMap);
+                    if (prose) {
+                        event = {type: 'synopsis_delta', data: {runId: runId, type: 'prose', content: prose}}
+                    } else if (jsonBuffer.length > 40) {
+                        // If we have more than 40 characters, and still no prose, there is an error
+                        event = {type: 'synopsis_error', data: {runId: runId, error: 'Error parsing synopsis to prose format. Please try again.'}}
+                    }
                     break;
         
                 case "reasoning-delta":
@@ -103,7 +116,6 @@ export async function synopsisGenerator({ project, onStart, onFinish, onError, o
                     break;
 
                 case "error":
-                    console.log('synopsis error =======================', chunk.error);
                     const errorMessage = chunk.error instanceof Error ? chunk.error.message : String(chunk.error);
                     event = {type: 'synopsis_error', data: {runId: runId, error: errorMessage}}
                     break;
@@ -134,12 +146,9 @@ export async function synopsisGenerator({ project, onStart, onFinish, onError, o
 
 function buildSystemPrompt() {
     const systemPromptBuilder = new SystemPromptBuilder()
-    const expectedOutput = synopsisSchema.describe('The output should be a JSON object of a synopsis. Return only a valid json object, no other text or comments.')
-    const jsonSchema = z.toJSONSchema(expectedOutput)
     const systemPrompt = systemPromptBuilder
         .addIdentity(identities.synopsisIdentity.default())
-        .addSkills(skills.synopsis.default())
-        .addOutputFormat(JSON.stringify(jsonSchema))
+        .addSkills([skills.synopsis.default(), skills.synopsisProseFormat])
         .build()
     return systemPrompt
 }

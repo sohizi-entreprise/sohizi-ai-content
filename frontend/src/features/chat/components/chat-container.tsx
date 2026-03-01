@@ -3,7 +3,7 @@ import type { Editor } from '@tiptap/react'
 import { cn } from '@/lib/utils'
 import { ChatHeader } from './chat-header'
 import { ChatMessages } from './chat-messages'
-import { ChatInput } from './chat-input'
+import { ChatInput, sendParams } from './chat-input'
 import { useChat } from '../hooks/use-chat'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useChatStore } from '../store/chat-store'
@@ -38,6 +38,7 @@ type ChatContainerProps = {
   editorType: EditorType
   editorRef?: RefObject<Editor | null>
   className?: string
+  onSubmit?: (params: sendParams) => Promise<void>
 }
 
 export function ChatContainer({
@@ -45,6 +46,7 @@ export function ChatContainer({
   editorType,
   editorRef,
   className,
+  onSubmit,
 }: ChatContainerProps) {
   const chat = useChat({ projectId, editorType, editorRef })
   const isHistoryOpen = useChatStore((state) => state.ui.isHistoryOpen)
@@ -60,7 +62,7 @@ export function ChatContainer({
         <ChatMessages className="flex-1 min-h-0" />
 
         {/* Input */}
-        <ChatInput onSend={chat.sendMessage} disabled={chat.isSending} />
+        <ChatInput onSend={onSubmit} disabled={chat.isSending} />
 
         {/* Error display */}
         {chat.error && (
@@ -97,8 +99,6 @@ type ChatHistorySheetProps = {
 function ChatHistorySheet({
   open,
   onOpenChange,
-  projectId,
-  editorType,
   onSelectConversation,
 }: ChatHistorySheetProps) {
   // TODO: Fetch conversation history from API

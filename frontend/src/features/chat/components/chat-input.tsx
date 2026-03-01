@@ -5,14 +5,36 @@ import { cn } from '@/lib/utils'
 import { useChatStore } from '../store/chat-store'
 import { useMentions } from '../hooks/use-mentions'
 import { useVoiceInput } from '../hooks/use-voice-input'
-import { ContextChipList } from './context-chip'
 import { ContextWindowDonut, calculateTokenUsage } from './context-window-donut'
 import { MentionsInput, Mention } from 'react-mentions-ts'
 import type { MentionItem, Message } from '../types'
 import { useShallow } from 'zustand/shallow'
+import { toast } from 'sonner'
+
+// Helper to extract selection IDs from mention markup
+// Matches pattern: &&[display](id)
+function extractSelectionIds(content: string): string[] {
+  const regex = /&&\[[^\]]*\]\(([^)]+)\)/g
+  const ids: string[] = []
+  let match
+  while ((match = regex.exec(content)) !== null) {
+    ids.push(match[1])
+  }
+  return ids
+}
+
+export type sendParams = {
+  prompt: string
+  context: {
+    blocks?: string[];
+    selections?: string[];
+    locations?: string[];
+    characters?: string[];
+  }
+}
 
 type ChatInputProps = {
-  onSend?: (message: Omit<Message, 'id' | 'conversationId' | 'createdAt'>) => void
+  onSend?: (params: sendParams) => Promise<void>
   placeholder?: string
   disabled?: boolean
   className?: string
@@ -49,36 +71,37 @@ export function ChatInput({
     },
   })
 
-  // Handle keyboard events
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-
-      // Cmd/Ctrl + Enter to send
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault()
-        handleSend()
-        return
-      }
-    },
-    []
-  )
-
   // Send message
-  const handleSend = useCallback(() => {
+  const handleSend = () => {
     const content = inputValue.trim()
     if (!content || disabled || isSending) return
 
-    const message: Omit<Message, 'id' | 'conversationId' | 'createdAt'> = {
-      role: 'user',
-      content,
+    const payload: sendParams = {
+      prompt: content,
+      context: {
+        blocks: selections.map(selection => selection.blockId).filter(t => t !== undefined),
+        selections: selections.map(selection => selection.id),
+      },
     }
 
-    onSend?.(message)
-    
-    // Clear input
-    clearInput()
-    // Note: Context is cleared by the parent after successful send
-  }, [inputValue, disabled, isSending, onSend, clearInput])
+    onSend?.(payload)
+    .then(() => {
+      clearInput()
+    })
+    .catch((error) => {
+      toast.error(error instanceof Error ? error.message : String(error), {
+        position: 'top-center',
+      })
+    })
+  }
+
+  // Handle keyboard events
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleSend()
+      }
+  }
 
   const isDisabled = disabled || isSending
 
@@ -88,10 +111,39 @@ export function ChatInput({
     }
   }, [isInputFocused])
 
+  // Track previous selection IDs to detect removals
+  const prevSelectionIdsRef = useRef<string[]>([])
+
+  // Handle input change and detect removed selections
+  const handleInputChange = useCallback(({ value: nextValue }: { value: string }) => {
+    // Extract selection IDs from old and new content
+    const prevIds = prevSelectionIdsRef.current
+    const newIds = extractSelectionIds(nextValue)
+    
+    // Find removed selection IDs
+    const removedIds = prevIds.filter(id => !newIds.includes(id))
+    
+    // Remove each selection from the store (which will notify the editor)
+    removedIds.forEach(id => {
+      removeSelectionContext(id)
+    })
+    
+    // Update ref for next comparison
+    prevSelectionIdsRef.current = newIds
+    
+    // Update the input content
+    setInputContent(nextValue)
+  }, [removeSelectionContext, setInputContent])
+
+  // Keep the ref in sync when content changes externally (e.g., when adding a selection)
+  useEffect(() => {
+    prevSelectionIdsRef.current = extractSelectionIds(inputContent)
+  }, [inputContent])
+
   return (
     <div className={cn('border bg-white/5 m-4 p-2 rounded-xl overflow-hidden', className)}>
       <MentionsInput value={inputContent} 
-                      onMentionsChange={({ value: nextValue }) => setInputContent(nextValue)}
+                      onMentionsChange={handleInputChange}
                       suggestionsPlacement="above"
                       inputRef={inputRef as React.RefObject<HTMLTextAreaElement>}
                       onMentionBlur={()=> setInputFocused(false)}
@@ -101,6 +153,7 @@ export function ChatInput({
                         control: 'bg-transparent! border-none'
                       }}
                       placeholder='@ for characters, # for locations'
+                      onKeyDown={handleKeyDown}
       >
         <Mention trigger="@" data={characters} renderSuggestion={(entry) => <div>{entry.display}</div>} />
         <Mention trigger="#" data={locations} />

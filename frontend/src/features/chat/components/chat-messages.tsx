@@ -4,7 +4,6 @@ import remarkGfm from 'remark-gfm'
 import { IconUser, IconSparkles, IconCopy, IconCheck } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { useChatStore } from '../store/chat-store'
-import { ContextChipList } from './context-chip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -67,7 +66,7 @@ function MessageBubble({ message }: MessageBubbleProps) {
       {/* Avatar */}
       <div
         className={cn(
-          'flex-shrink-0 size-7 rounded-full flex items-center justify-center',
+          'shrink-0 size-7 rounded-full flex items-center justify-center',
           isUser ? 'bg-primary/20' : 'bg-accent/20'
         )}
       >
@@ -80,10 +79,6 @@ function MessageBubble({ message }: MessageBubbleProps) {
 
       {/* Content */}
       <div className={cn('flex-1 min-w-0', isUser && 'flex flex-col items-end')}>
-        {/* Context chips for user messages */}
-        {isUser && message.context && message.context.length > 0 && (
-          <ContextChipList contexts={message.context} readonly className="mb-2" />
-        )}
 
         {/* Message content */}
         <div
@@ -116,46 +111,47 @@ type MarkdownContentProps = {
 
 function MarkdownContent({ content }: MarkdownContentProps) {
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      className="prose prose-sm prose-invert max-w-none"
-      components={{
-        // Custom code block with copy button
-        code({ className, children, ...props }) {
-          const isInline = !className
-          
-          if (isInline) {
-            return (
-              <code className="bg-black/30 px-1.5 py-0.5 rounded text-xs" {...props}>
-                {children}
-              </code>
-            )
-          }
+    <div className="prose prose-sm prose-invert max-w-none">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          // Custom code block with copy button
+          code({ className, children, ...props }) {
+            const isInline = !className
+            
+            if (isInline) {
+              return (
+                <code className="bg-black/30 px-1.5 py-0.5 rounded text-xs" {...props}>
+                  {children}
+                </code>
+              )
+            }
 
-          return <CodeBlock className={className}>{children}</CodeBlock>
-        },
-        // Style other elements
-        p: ({ children }) => <p className="text-sm mb-2 last:mb-0">{children}</p>,
-        ul: ({ children }) => <ul className="text-sm list-disc pl-4 mb-2">{children}</ul>,
-        ol: ({ children }) => <ol className="text-sm list-decimal pl-4 mb-2">{children}</ol>,
-        li: ({ children }) => <li className="mb-1">{children}</li>,
-        h1: ({ children }) => <h1 className="text-base font-bold mb-2">{children}</h1>,
-        h2: ({ children }) => <h2 className="text-sm font-bold mb-2">{children}</h2>,
-        h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
-        a: ({ children, href }) => (
-          <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-            {children}
-          </a>
-        ),
-        blockquote: ({ children }) => (
-          <blockquote className="border-l-2 border-primary/50 pl-3 italic text-muted-foreground">
-            {children}
-          </blockquote>
-        ),
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+            return <CodeBlock className={className}>{children}</CodeBlock>
+          },
+          // Style other elements
+          p: ({ children }) => <p className="text-sm mb-2 last:mb-0">{children}</p>,
+          ul: ({ children }) => <ul className="text-sm list-disc pl-4 mb-2">{children}</ul>,
+          ol: ({ children }) => <ol className="text-sm list-decimal pl-4 mb-2">{children}</ol>,
+          li: ({ children }) => <li className="mb-1">{children}</li>,
+          h1: ({ children }) => <h1 className="text-base font-bold mb-2">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-sm font-bold mb-2">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
+          a: ({ children, href }) => (
+            <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-2 border-primary/50 pl-3 italic text-muted-foreground">
+              {children}
+            </blockquote>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   )
 }
 

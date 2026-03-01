@@ -38,26 +38,6 @@ export default function GenerateStreamBtn({projectId, className}: {projectId: st
         }
     )
 
-    // console.log(secondState);
-
-
-    // const { isLoading, startStream } = useStreamObject(
-    //     projectId, 
-    //     BriefSchema, 
-    //     url, 
-    //     transformSchemaToBlock,
-    //     {
-    //         onEnd: () => {
-    //             setReadonly(false)
-    //             setStreaming(false)
-    //         },
-    //         onStart: () => {
-    //             setReadonly(true)
-    //             setStreaming(true)
-    //         },
-    //         onUpdate: (data: ReturnType<typeof transformSchemaToBlock>) => {setBlocks(data)},
-    //     }
-    // )
   return (
     <Button
         size="sm"

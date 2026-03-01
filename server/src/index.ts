@@ -48,7 +48,6 @@ const app = new Elysia()
                 )
                 .get("/", () => "Welcome to Sohizi AI content")
                 .use(routes.projectRoutes)
-                .use(routes.aiRoutes)
                 .use(routes.streamRoutes)
                 .use(routes.chatRoutes)
                 .listen(3030);

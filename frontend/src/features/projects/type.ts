@@ -14,10 +14,15 @@ export type ProjectBrief = {
     storyIdea: string;
 }
 
-export type Synopsis = {
+// Legacy synopsis format (title + text)
+export type SynopsisLegacy = {
     title: string;
     text: string;
 }
+
+// Synopsis can be either legacy format or new prose format (JSONContent)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Synopsis = SynopsisLegacy | Record<string, any> | null
 
 export type Outline = {
     actId: string;
