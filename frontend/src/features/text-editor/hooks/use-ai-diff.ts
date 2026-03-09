@@ -1,12 +1,12 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import type { Editor } from '@tiptap/react'
 import { useEditorStore } from '../store/editor-store'
 import type { AISuggestion } from '../store/types'
-import { computeDiff, generateDiffHTML } from '../utils/diff'
-import { v4 as uuid } from 'uuid'
+import { generateDiffHTML } from '../utils/diff'
 
 /**
- * Hook for managing AI diffs and suggestions
+ * Hook for managing AI diffs and suggestions in the synopsis editor.
+ * Subscribes to the editor store and applies visual diffs to TipTap nodes by blockId.
  */
 export function useAIDiff(editor: Editor | null) {
   const {
@@ -20,126 +20,77 @@ export function useAIDiff(editor: Editor | null) {
   } = useEditorStore()
 
   /**
-   * Create a suggestion from AI output
+   * Find a node's position by its blockId attribute
    */
-  const createSuggestion = useCallback(
-    (params: {
-      blockId: string
-      type: AISuggestion['type']
-      content: string
-      originalContent?: string
-      reason?: string
-    }): AISuggestion => {
-      const suggestion: AISuggestion = {
-        id: uuid(),
-        blockId: params.blockId,
-        type: params.type,
-        content: params.content,
-        originalContent: params.originalContent,
-        reason: params.reason,
-        status: 'pending',
-      }
-
-      addSuggestion(suggestion)
-      return suggestion
-    },
-    [addSuggestion]
-  )
-
-  /**
-   * Apply a text replacement and show diff
-   */
-  const applyReplacement = useCallback(
-    (blockId: string, originalText: string, newText: string, reason?: string) => {
+  const findNodeByBlockId = useCallback(
+    (blockId: string): { pos: number; node: any } | null => {
       if (!editor) return null
 
-      // Create suggestion
-      const suggestion = createSuggestion({
-        blockId,
-        type: 'replacement',
-        content: newText,
-        originalContent: originalText,
-        reason,
+      let found: { pos: number; node: any } | null = null
+      editor.state.doc.descendants((node, pos) => {
+        if (node.attrs?.blockId === blockId) {
+          found = { pos, node }
+          return false
+        }
       })
+      return found
+    },
+    [editor]
+  )
 
-      // Compute diff
-      const diff = computeDiff(originalText, newText)
+  /**
+   * Apply visual diff marks for a suggestion.
+   * For replacements: show deleted text (strikethrough) and new text (highlighted).
+   * For insertions: show new text with addition mark.
+   * For deletions: show text with deletion mark.
+   */
+  const applyVisualDiff = useCallback(
+    (suggestion: AISuggestion) => {
+      if (!editor || !showDiffs) return
 
-      if (diff.hasChanges && showDiffs) {
-        // Generate HTML with diff marks
-        const diffHTML = generateDiffHTML(originalText, newText, suggestion.id)
+      const result = findNodeByBlockId(suggestion.blockId)
+      if (!result) return
 
-        // Find the block in the editor and replace content
-        // This is simplified - in production you'd need to find exact position
-        const { state } = editor
-        let blockPos: number | null = null
+      const { pos, node } = result
 
-        state.doc.descendants((node, pos) => {
-          if (node.attrs?.id === blockId) {
-            blockPos = pos
-            return false
-          }
-        })
+      if (suggestion.type === 'replacement' && suggestion.originalContent) {
+        const diffHtml = generateDiffHTML(
+          suggestion.originalContent,
+          suggestion.content,
+          suggestion.id
+        )
 
-        if (blockPos !== null) {
-          // Replace block content with diff HTML
-          // Note: This is a simplified implementation
-          // A full implementation would need to handle this more carefully
+        // Replace the node's text content with diff HTML
+        const from = pos + 1 // +1 to get inside the node
+        const to = from + node.content.size
+
+        editor
+          .chain()
+          .focus()
+          .deleteRange({ from, to })
+          .insertContentAt(from, diffHtml, { parseOptions: { preserveWhitespace: 'full' } })
+          .run()
+      } else if (suggestion.type === 'insertion') {
+        // For new content nodes, wrap the text in an addition mark
+        const from = pos + 1
+        const to = from + node.content.size
+        if (to > from) {
+          editor.chain().focus().setTextSelection({ from, to }).setAIAddition({ suggestionId: suggestion.id }).run()
+        }
+      } else if (suggestion.type === 'deletion') {
+        // Mark the entire node content for deletion
+        const from = pos + 1
+        const to = from + node.content.size
+        if (to > from) {
+          editor.chain().focus().setTextSelection({ from, to }).setAIDeletion({ suggestionId: suggestion.id }).run()
         }
       }
-
-      return suggestion
     },
-    [editor, createSuggestion, showDiffs]
+    [editor, showDiffs, findNodeByBlockId]
   )
 
   /**
-   * Apply an insertion
-   */
-  const applyInsertion = useCallback(
-    (blockId: string, content: string, reason?: string) => {
-      return createSuggestion({
-        blockId,
-        type: 'insertion',
-        content,
-        reason,
-      })
-    },
-    [createSuggestion]
-  )
-
-  /**
-   * Apply a deletion
-   */
-  const applyDeletion = useCallback(
-    (blockId: string, content: string, reason?: string) => {
-      return createSuggestion({
-        blockId,
-        type: 'deletion',
-        content,
-        originalContent: content,
-        reason,
-      })
-    },
-    [createSuggestion]
-  )
-
-  /**
-   * Add an AI comment
-   */
-  const addAIComment = useCallback(
-    (blockId: string, content: string) => {
-      return createSuggestion({
-        blockId,
-        type: 'comment',
-        content,
-      })
-    },
-    [createSuggestion]
-  )
-
-  /**
-   * Accept a suggestion and apply the change
+   * Accept a suggestion: keep the new content, remove diff marks
    */
   const accept = useCallback(
     (suggestionId: string) => {
@@ -148,22 +99,36 @@ export function useAIDiff(editor: Editor | null) {
 
       acceptSuggestion(suggestionId)
 
-      // Apply the actual change to the editor
-      if (suggestion.type === 'replacement') {
-        // Find the block and replace its content
-        // Remove diff marks
-        editor.chain().focus().unsetMark('aiDiff').run()
-      } else if (suggestion.type === 'insertion') {
-        // Insert the content
-      } else if (suggestion.type === 'deletion') {
-        // Delete the content
-      }
+      // Remove all diff marks for this suggestion
+      const { state } = editor
+      const { tr } = state
+
+      state.doc.descendants((node, pos) => {
+        if (node.isText) {
+          node.marks.forEach((mark) => {
+            if (
+              (mark.type.name === 'aiAddition' || mark.type.name === 'aiDeletion') &&
+              mark.attrs.suggestionId === suggestionId
+            ) {
+              if (mark.type.name === 'aiDeletion') {
+                // For accepted deletion: remove the deleted text entirely
+                tr.delete(pos, pos + node.nodeSize)
+              } else {
+                // For accepted addition: just remove the mark, keep the text
+                tr.removeMark(pos, pos + node.nodeSize, mark.type)
+              }
+            }
+          })
+        }
+      })
+
+      editor.view.dispatch(tr)
     },
     [editor, pendingSuggestions, acceptSuggestion]
   )
 
   /**
-   * Reject a suggestion and revert
+   * Reject a suggestion: revert to original content, remove diff marks
    */
   const reject = useCallback(
     (suggestionId: string) => {
@@ -172,13 +137,49 @@ export function useAIDiff(editor: Editor | null) {
 
       rejectSuggestion(suggestionId)
 
-      // Revert the change in the editor
       if (suggestion.type === 'replacement' && suggestion.originalContent) {
-        // Restore original content
-        editor.chain().focus().unsetMark('aiDiff').run()
+        // Restore original text by replacing the block content
+        const result = findNodeByBlockId(suggestion.blockId)
+        if (result) {
+          const { pos, node } = result
+          const from = pos + 1
+          const to = from + node.content.size
+
+          editor
+            .chain()
+            .focus()
+            .deleteRange({ from, to })
+            .insertContentAt(from, suggestion.originalContent)
+            .run()
+        }
+      } else {
+        // For insertion/deletion rejections, remove all diff marks
+        const { state } = editor
+        const { tr } = state
+
+        state.doc.descendants((node, pos) => {
+          if (node.isText) {
+            node.marks.forEach((mark) => {
+              if (
+                (mark.type.name === 'aiAddition' || mark.type.name === 'aiDeletion') &&
+                mark.attrs.suggestionId === suggestionId
+              ) {
+                if (mark.type.name === 'aiAddition') {
+                  // Reject addition: remove the added text
+                  tr.delete(pos, pos + node.nodeSize)
+                } else {
+                  // Reject deletion: keep the text, just remove the mark
+                  tr.removeMark(pos, pos + node.nodeSize, mark.type)
+                }
+              }
+            })
+          }
+        })
+
+        editor.view.dispatch(tr)
       }
     },
-    [editor, pendingSuggestions, rejectSuggestion]
+    [editor, pendingSuggestions, rejectSuggestion, findNodeByBlockId]
   )
 
   /**
@@ -199,30 +200,33 @@ export function useAIDiff(editor: Editor | null) {
       .forEach((s) => reject(s.id))
   }, [pendingSuggestions, reject])
 
-  /**
-   * Get pending suggestion count
-   */
+  // Auto-apply visual diffs when new suggestions arrive
+  useEffect(() => {
+    if (!editor || !showDiffs) return
+
+    const pendingToApply = pendingSuggestions.filter(s => s.status === 'pending')
+    for (const suggestion of pendingToApply) {
+      applyVisualDiff(suggestion)
+    }
+  // Only run when the count of pending suggestions changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSuggestions.length])
+
   const pendingCount = pendingSuggestions.filter(
     (s) => s.status === 'pending'
   ).length
 
   return {
-    // State
     pendingSuggestions,
     showDiffs,
     pendingCount,
-
-    // Actions
-    createSuggestion,
-    applyReplacement,
-    applyInsertion,
-    applyDeletion,
-    addAIComment,
+    applyVisualDiff,
     accept,
     reject,
     acceptAll,
     rejectAll,
     clearSuggestions,
     toggleShowDiffs,
+    addSuggestion,
   }
 }

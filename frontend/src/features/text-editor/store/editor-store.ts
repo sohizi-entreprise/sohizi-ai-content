@@ -70,6 +70,7 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   addSuggestion: (suggestion) =>
     set((state) => ({
       pendingSuggestions: [...state.pendingSuggestions, suggestion],
+      showDiffs: true,
     })),
 
   acceptSuggestion: (id) =>

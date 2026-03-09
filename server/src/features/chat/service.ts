@@ -1,42 +1,31 @@
 import { chatRepo } from '@/entities/chat'
-import type { CreateConversation, CreateMessage } from '@/entities/chat/model'
-import { EditComponent, EditorAgentInput } from '../ai/script-engine/editor-agent/types';
+import type { CreateMessage, ReplyUserMessage } from '@/entities/chat/model'
+import { AgentEvent, EditComponent, EditorAgentInput } from '../ai/script-engine/editor-agent/types';
 import { projectRepo } from '@/entities/project';
 import { ResumableStream, redis } from "@/lib";
 import { NotFound } from '../error';
-import { EditorAgent, EditorStreamData } from '../ai/script-engine/editor-agent';
+import { EditorAgent } from '../ai/script-engine/editor-agent';
+import { ToolModelMessage, ToolResultPart, AssistantModelMessage } from 'ai';
+import { CursorPaginationOptions } from '@/type';
+import { Conversation } from '@/db/schema';
+import { RunParams } from '../ai/script-engine/editor-agent/editor-agent';
 
 // ============================================================================
 // CONVERSATIONS
 // ============================================================================
 
-export const createConversation = async (data: CreateConversation) => {
-  const conversation = await chatRepo.createConversation(data);
-  return formatConversation(conversation);
+export const createConversation = async (projectId: string, title?: string) => {
+  await validateProject(projectId);
+  return await chatRepo.createConversation(projectId, title);
 }
 
-export const getConversation = async (id: string) => {
-  const conversation = await chatRepo.getConversationById(id);
-  if (!conversation) {
-    throw new Error('Conversation not found');
-  }
-  return formatConversation(conversation);
-}
-
-export const getProjectConversations = async (projectId: string, editorType?: string) => {
-  const conversations = await chatRepo.getConversationsByProjectId(projectId, editorType);
-  return conversations.map(formatConversation);
-}
-
-export const updateConversation = async (id: string, data: { title?: string }) => {
-  const conversation = await chatRepo.updateConversation(id, data);
-  if (!conversation) {
-    throw new Error('Conversation not found');
-  }
-  return formatConversation(conversation);
+export const getProjectConversations = async (projectId: string, options?: CursorPaginationOptions) => {
+  await validateProject(projectId);
+  return await chatRepo.listConversations(projectId, options);
 }
 
 export const deleteConversation = async (id: string) => {
+  await validateConversation(id);
   const deleted = await chatRepo.deleteConversation(id);
   return { confirmed: deleted };
 }
@@ -45,122 +34,88 @@ export const deleteConversation = async (id: string) => {
 // MESSAGES
 // ============================================================================
 
-export const getConversationMessages = async (conversationId: string) => {
-  const messages = await chatRepo.getMessagesByConversationId(conversationId);
-  return messages.map(formatMessage);
+export const getConversationMessages = async (conversationId: string, options?: CursorPaginationOptions) => {
+  await validateConversation(conversationId);
+  return await chatRepo.ListMessagesByConversationId(conversationId, options);
 }
 
-export const sendMessage = async (conversationId: string, data: CreateMessage) => {
-  // Create user message
-  const userMessage = await chatRepo.createMessage(
-    conversationId,
-    'user',
-    data.content,
-    data.context,
-    data.mentions
-  );
-
-  // Generate AI response
-  // TODO: Integrate with AI service for actual response generation
-  const aiResponse = await generateAIResponse(conversationId, data.content, data.context);
-  
-  // Create assistant message
-  const assistantMessage = await chatRepo.createMessage(
-    conversationId,
-    'assistant',
-    aiResponse
-  );
-
-  return {
-    userMessage: formatMessage(userMessage),
-    assistantMessage: formatMessage(assistantMessage),
-  };
+export const getConversationAgentRuns = async (conversationId: string, options?: CursorPaginationOptions) => {
+  await validateConversation(conversationId);
+  return await chatRepo.ListAgentRunsWithMessages(conversationId, options);
 }
 
-// Placeholder for AI response generation
-// This will be replaced with actual AI integration
-async function generateAIResponse(
-  conversationId: string,
-  userContent: string,
-  context?: any[]
-): Promise<string> {
-  // TODO: Integrate with your AI service
-  // For now, return a placeholder response
-  const contextInfo = context && context.length > 0 
-    ? `\n\nI see you've provided ${context.length} context item(s).`
-    : '';
+export const replyUserMessage = async (data: ReplyUserMessage, projectId: string) => {
+  const project =await validateProject(projectId);
 
-  return `I understand you're asking about: "${userContent.slice(0, 100)}..."${contextInfo}
-
-This is a placeholder response. The actual AI integration will be implemented to provide contextual assistance for your content.`;
-}
-
-// ============================================================================
-// EDIT CONTENT
-// ============================================================================
-
-export type EditContentParams = {
-  projectId: string;
-  conversationId: string;
-  component: EditComponent;
-  prompt: string;
-  context?: {
-      blocks?: string[];
-      selections?: string[];
-  };
-};
-
-export const editContent = async (params: EditContentParams) => {
-  const project = await projectRepo.getProjectById(params.projectId);
-  if (!project) {
-      throw new NotFound('Project not found');
+  let conversationId: string = data.conversationId ?? '';
+  let conversation: Conversation;
+  if(conversationId) {
+    conversation = await validateConversation(conversationId);
+  }else{
+    // Create a new conversation
+    conversation = await chatRepo.createConversation(projectId);
+    conversationId = conversation.id;
   }
+  // Create a new agent run
+  const {id: runId} = await chatRepo.createAgentRun(conversationId, data.selectedModel);
 
-  // Create a unique stream key for this edit session
-  const streamKey = params.conversationId;
-  const stream = new ResumableStream<EditorStreamData>(redis, streamKey);
-
-  const editorAgent = new EditorAgent({
-      model: 'gpt-5.1',
-      reasoningEffort: 'medium',
+  // Save the user message
+  const userMessage = await chatRepo.createMessage({
+    conversationId,
+    runId,
+    role: 'user',
+    content: [{type:'text', text: data.prompt}],
+    context: data.context
   });
 
-  const input: EditorAgentInput = {
-      projectId: params.projectId,
-      conversationId: params.conversationId,
-      message: params.prompt,
-      context: params.context || {},
+  // We fire and forget the request to the editor agent
+  runEditorAgent({
+    model: data.selectedModel || 'gpt-5-mini',
+    reasoningEffort: 'medium',
+    project: project,
+    conversationId: conversationId,
+    runId: runId,
+    editComponent: 'synopsis'
+  })
+
+  return {
+    success: true,
+    streamId: conversationId,
+    runId: runId,
+    userMessageId: userMessage.id,
+    conversation
   };
-
-  // Fire and forget - agent runs asynchronously
-  editorAgent.run(input, stream, params.component, project);
-
-  return { ok: true, streamKey };
-};
+}
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-function formatConversation(conversation: any) {
-  return {
-    id: conversation.id,
-    projectId: conversation.projectId,
-    title: conversation.title,
-    editorType: conversation.editorType,
-    createdAt: conversation.createdAt.toISOString(),
-    updatedAt: conversation.updatedAt.toISOString(),
-  };
+async function validateConversation(conversationId: string) {
+  const conversation = await chatRepo.getConversationById(conversationId);
+  if (!conversation) {
+    throw new NotFound('Conversation not found');
+  }
+  return conversation;
 }
 
-function formatMessage(message: any) {
-  return {
-    id: message.id,
-    conversationId: message.conversationId,
-    role: message.role,
-    content: message.content,
-    context: message.context || undefined,
-    mentions: message.mentions || undefined,
-    createdAt: message.createdAt.toISOString(),
-  };
+async function validateProject(projectId: string) {
+  const project = await projectRepo.getProjectById(projectId);
+  if (!project) {
+    throw new NotFound('Project not found');
+  }
+  return project;
+}
+
+async function runEditorAgent(params: Omit<RunParams, 'stream'> & {model: string, reasoningEffort: 'low' | 'medium' | 'high'}){
+  const {model, reasoningEffort, ...rest} = params;
+  const stream = new ResumableStream<AgentEvent>(redis, params.conversationId);
+  const editorAgent = new EditorAgent({
+    model: model,
+    reasoningEffort: reasoningEffort,
+  })
+  await editorAgent.run({
+    ...rest,
+    stream: stream
+  })
 }

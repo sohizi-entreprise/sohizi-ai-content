@@ -27,5 +27,7 @@ export const CreateProject = z.object({
   })
 
 export const UpdateProject = z.object({
-    name: z.string().min(1, 'Project name is required'),
+    name: z.string().min(1, 'Project name is required').optional(),
+    synopsis: z.unknown().optional(),
+    script: z.unknown().optional(),
 })

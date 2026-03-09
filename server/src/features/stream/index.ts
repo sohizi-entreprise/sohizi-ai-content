@@ -40,13 +40,7 @@ export const streamRoutes = new Elysia({ prefix: '/stream' })
     // Check if stream exists
     const exists = await stream.exists()
     if (!exists) {
-      // Stream doesn't exist yet or was cleaned up
-      // Return a single error event
-      yield sse({
-        event: 'empty',
-        id: '0',
-        data: JSON.stringify({ message: 'Stream not found or expired' }),
-      })
+      yield sse({ data: '' })
       return
     }
 

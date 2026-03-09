@@ -3,19 +3,47 @@ import { v4 as uuidv4 } from 'uuid'
 import { parse as parsePartialJson } from 'partial-json'
 
 /**
+ * Extract title and text from a ProseDocument or legacy synopsis
+ */
+function extractSynopsisText(synopsis: unknown): { title: string; text: string } {
+    if (!synopsis) return { title: 'Untitled', text: '' }
+
+    // New ProseDocument format
+    const doc = synopsis as ProseDocument
+    if (doc.type === 'doc' && Array.isArray(doc.content)) {
+        let title = 'Untitled'
+        const paragraphs: string[] = []
+        for (const node of doc.content) {
+            if (node.type === 'synopsisTitle') {
+                const textNode = node.content?.[0] as { type: string; text?: string } | undefined
+                if (textNode?.text) title = textNode.text
+            } else if (node.type === 'synopsisContent') {
+                const textNode = node.content?.[0] as { type: string; text?: string } | undefined
+                if (textNode?.text) paragraphs.push(textNode.text)
+            }
+        }
+        return { title, text: paragraphs.join('\n\n') }
+    }
+
+    // Legacy format
+    const legacy = synopsis as { title?: string; text?: string }
+    return { title: legacy.title ?? 'Untitled', text: legacy.text ?? '' }
+}
+
+/**
  * Build project context section
  */
 export function buildProjectContext(project: Project): string {
 
     const { format, genre, tone, audience, durationMin } = project.brief
 
-    const synopsis = project.synopsis
+    const { title, text: synopsisText } = extractSynopsisText(project.synopsis)
     
     return `
 <project_context>
 Here is the project context that you are currently working on:
 **Project Requirements:**
-- Title: ${project.synopsis?.title ?? 'Untitled'}
+- Title: ${title}
 - Format: ${format}
 - Genre: ${genre}
 - Tone: ${tone}
@@ -25,7 +53,7 @@ Here is the project context that you are currently working on:
 
 All content should align with these project requirements.
 
-${synopsis ? `**Project Synopsis:**\n${synopsis.text}` : ''}
+${synopsisText ? `**Project Synopsis:**\n${synopsisText}` : ''}
 </project_context>
 `
 }

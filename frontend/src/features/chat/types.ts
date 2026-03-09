@@ -42,15 +42,65 @@ export type Mentions = {
 // MESSAGE TYPES
 // ============================================================================
 
-export type MessageRole = 'user' | 'assistant' | 'system'
+export type MessageRole = 'user' | 'assistant' | 'tool'
+
+export type MsgTextPart = {
+  type: 'text'
+  text: string
+}
+
+export type MsgToolCallPart = {
+  type: 'tool-call'
+  toolName: string
+  toolCallId: string
+  input: unknown
+}
+
+export type ToolResult = {
+  type: 'text'
+  value: string
+} | {
+  type: 'error-text'
+  value: string
+}
+
+export type MsgToolResultPart = {
+  type: 'tool-result'
+  toolName: string
+  toolCallId: string
+  output: ToolResult
+}
+
+export type MsgContext = {
+  blocks?: string[]
+  selections?: string[]
+}
+
+export type MsgMetadata = {
+  reasoningText?: string;
+  attachments?: Record<string, unknown>;
+  context?: MsgContext;
+}
+
+export type MsgContent = MsgTextPart | MsgToolCallPart | MsgToolResultPart
 
 export type Message = {
   id: string
-  conversationId: string
+  runId: string
   role: MessageRole
-  content: string
+  content: MsgContent[]
+  metadata?: MsgMetadata
   createdAt: string
-  isStreaming?: boolean
+}
+
+export type SendMessageInput = {
+  conversationId: string | null;
+  prompt: string;
+  context?: {
+      blocks: string[];
+      selections: string[];
+  };
+  selectedModel?: string;
 }
 
 // ============================================================================
@@ -66,11 +116,18 @@ export type Conversation = {
   id: string
   projectId: string
   title: string
-  editorType: EditorType
   createdAt: string
   updatedAt: string
 }
 
+export type ConversationRun = {
+  runId: string
+  finishReason:  "error" | "not-finished" | "response" | "tool-calls" | "aborted" | "max-iterations"
+  error: string | null
+  messages: Message[]
+}
+
+// TO be deleted
 export type ConversationWithMessages = Conversation & {
   messages: Message[]
 }
@@ -81,17 +138,11 @@ export type ConversationWithMessages = Conversation & {
 
 export type ChatUIState = {
   isInputFocused: boolean
-  isMentionPopoverOpen: boolean
   mentionQuery: string
-  isHistoryOpen: boolean
   isVoiceRecording: boolean
 }
 
 export type ChatState = {
-  // Current conversation
-  currentConversation: Conversation | null
-  messages: Message[]
-  
   // Context
   attachedContext: Mentions
   
@@ -100,38 +151,7 @@ export type ChatState = {
   
   // UI State
   ui: ChatUIState
-  
-  // Loading states
-  isLoading: boolean
-  isSending: boolean
-  isStreaming: boolean
-  
-  // Errors
-  error: string | null
-}
 
-// ============================================================================
-// API TYPES
-// ============================================================================
-
-export type CreateConversationInput = {
-  projectId: string
-  editorType: EditorType
-  title?: string
-}
-
-export type SendMessageInput = {
-  conversationId: string
-  content: string
-  context?: Record<string, string>
-}
-
-export type ConversationListResponse = {
-  conversations: Conversation[]
-}
-
-export type MessagesResponse = {
-  messages: Message[]
 }
 
 // ============================================================================

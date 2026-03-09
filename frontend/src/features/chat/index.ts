@@ -1,15 +1,13 @@
 // Components
-export { ChatContainer, useChatContext } from './components/chat-container'
+export { ChatContainer } from './components/chat-container'
 export { ChatHeader } from './components/chat-header'
 export { ChatMessages } from './components/chat-messages'
 export { ChatInput } from './components/chat-input'
 export { ContextWindowDonut, calculateTokenUsage } from './components/context-window-donut'
 
 // Hooks
-export { useChat } from './hooks/use-chat'
-export { useMentions } from './hooks/use-mentions'
 export { useVoiceInput } from './hooks/use-voice-input'
-export { useEditorBridge, useContextCreator, useSelectionSync } from './hooks/use-editor-bridge'
+export { useContextCreator, useSelectionSync } from './hooks/use-editor-bridge'
 export { useAgentStream } from './hooks/use-agent-stream'
 export type { AgentStreamInput, AgentStreamCallbacks, UseAgentStreamReturn } from './hooks/use-agent-stream'
 
@@ -29,10 +27,7 @@ export type {
   ConversationWithMessages,
   ChatUIState,
   ChatState,
-  CreateConversationInput,
   SendMessageInput,
-  ConversationListResponse,
-  MessagesResponse,
   VoiceInputState,
   TokenUsage,
   // Agent types

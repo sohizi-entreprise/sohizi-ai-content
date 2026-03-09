@@ -3,64 +3,44 @@ import { z } from 'zod'
 import { chatModel } from '@/entities/chat'
 import * as chatService from './service'
 import { redis, createBlockingRedisClient, ResumableStream } from '@/lib'
+import { CreateMessageDTO, ReplyUserMessageDTO } from '@/entities/chat/model'
 
-export const chatRoutes = new Elysia({ prefix: '/chat' })
+export const chatRoutes = new Elysia({ prefix: '/chats' })
   // ============================================================================
   // CONVERSATIONS
   // ============================================================================
   
   // Create a new conversation
-  .post('/conversations', ({ body }) => {
-    return chatService.createConversation(body);
+  .post('/:projectId/conversations', ({ params }) => {
+    return chatService.createConversation(params.projectId);
   }, {
-    body: chatModel.CreateConversationDTO,
+    params: t.Object({
+      projectId: t.String({ format: 'uuid' }),
+    }),
     response: {
       200: chatModel.ConversationDTO,
     },
   })
   
   // Get conversations for a project
-  .get('/conversations/project/:projectId', ({ params, query }) => {
-    return chatService.getProjectConversations(params.projectId, query.editorType);
+  .get('/:projectId/conversations', ({ params, query }) => {
+    return chatService.getProjectConversations(params.projectId, query);
   }, {
     params: t.Object({
       projectId: t.String({ format: 'uuid' }),
     }),
     query: t.Object({
-      editorType: t.Optional(t.String()),
+      cursor: t.Optional(t.String({ format: 'cursor' })),
+      limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
     }),
     response: {
-      200: chatModel.ConversationListDTO,
+      // 200: chatModel.ConversationListDTO,
     },
   })
-  
-  // Get a specific conversation
-  .get('/conversations/:id', ({ params }) => {
-    return chatService.getConversation(params.id);
-  }, {
-    params: t.Object({
-      id: t.String({ format: 'uuid' }),
-    }),
-    response: {
-      200: chatModel.ConversationDTO,
-    },
-  })
-  
-  // Update a conversation
-  .put('/conversations/:id', ({ params, body }) => {
-    return chatService.updateConversation(params.id, body);
-  }, {
-    params: t.Object({
-      id: t.String({ format: 'uuid' }),
-    }),
-    body: chatModel.UpdateConversationDTO,
-    response: {
-      200: chatModel.ConversationDTO,
-    },
-  })
+
   
   // Delete a conversation
-  .delete('/conversations/:id', ({ params }) => {
+  .delete('/:projectId/conversations/:id', ({ params }) => {
     return chatService.deleteConversation(params.id);
   }, {
     params: t.Object({
@@ -76,86 +56,70 @@ export const chatRoutes = new Elysia({ prefix: '/chat' })
   // ============================================================================
   
   // Get messages for a conversation
-  .get('/conversations/:id/messages', ({ params }) => {
-    return chatService.getConversationMessages(params.id);
+  .get('/:projectId/conversations/:id/messages', ({ params, query }) => {
+    return chatService.getConversationMessages(params.id, query);
   }, {
     params: t.Object({
       id: t.String({ format: 'uuid' }),
     }),
+    query: t.Object({
+      cursor: t.Optional(t.String({ format: 'cursor' })),
+      limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+    }),
     response: {
-      200: chatModel.MessageListDTO,
+      // 200: chatModel.MessageListDTO,
     },
   })
 
-  .post('/conversations/:id/messages', async ({ body, params }) => {
-    return chatService.editContent({
-      projectId: body.projectId,
-      conversationId: params.id,
-      component: body.component,
+  .post('/:projectId/conversations/messages', async ({ body, params }) => {
+    return chatService.replyUserMessage({
       prompt: body.prompt,
-      context: body.context || {},
-    })
+      context: body.context,
+      conversationId: body.conversationId,
+      selectedModel: body.selectedModel,
+    }, params.projectId);
   }, {
-    body: t.Object({
-      projectId: t.String({ format: 'uuid' }),
-      component: t.Union([
-        t.Literal('script'),
-        t.Literal('synopsis'),
-        t.Literal('characters'),
-        t.Literal('world'),
-      ]),
-      prompt: t.String(),
-      context: t.Optional(t.Object({
-        blocks: t.Optional(t.Array(t.String())),
-        selections: t.Optional(t.Array(t.String())),
-      })),
-    }),
+    body: ReplyUserMessageDTO,
     params: t.Object({
-      id: t.String({ format: 'uuid' }),
+      projectId: t.String({ format: 'uuid' }),
     }),
     response: {
       200: t.Object({
-        ok: t.Boolean(),
-        streamKey: t.String(),
+        success: t.Boolean(),
+        streamId: t.String(),
+        runId: t.String(),
+        userMessageId: t.String(),
+        conversation: chatModel.ConversationDTO,
       }),
     },
   })
 
-  // ============================================================================
-  // EDIT STREAM (SSE)
-  // ============================================================================
-
   /**
-   * GET /chat/conversations/:id/stream - SSE endpoint for edit stream
+   * GET stream - Connect and receive SSE for the conversation stream
    */
-  .get('/conversations/:id/stream', async function* ({ params, request }) {
+  .get('/:projectId/conversations/:id/stream', async function* ({ params, request }) {
     const { id: conversationId } = params
 
-    // Get Last-Event-ID from headers (for resumption)
     const lastEventId = request.headers.get('Last-Event-ID') || undefined
 
-    // The streamKey is the conversationId
     const stream = new ResumableStream(redis, conversationId)
-    
-    // Check if stream exists
+
     const exists = await stream.exists()
     if (!exists) {
-      yield sse({
-        event: 'error',
-        id: '0',
-        data: JSON.stringify({ message: 'Stream not found or expired' }),
-      })
-      return
+      yield sse({ data: '' })
+      return 
     }
 
-    // Create a blocking client for this subscription
     const blockingClient = createBlockingRedisClient()
-    
+
     try {
       if (blockingClient.status === 'wait') {
         await blockingClient.connect()
       }
-      
+
+      // Yield once so the response is always text/event-stream (required by EventSource)
+      yield sse({ data: '' })
+
       for await (const entry of stream.subscribe(blockingClient, lastEventId)) {
         yield sse({
           event: entry.event.type,
@@ -167,15 +131,16 @@ export const chatRoutes = new Elysia({ prefix: '/chat' })
       await blockingClient.quit().catch(() => {})
     }
   }, {
-    params: z.object({
-      id: z.uuid('Invalid conversation id'),
+    params: t.Object({
+      projectId: t.String({ format: 'uuid' }),
+      id: t.String({ format: 'uuid' }),
     }),
   })
 
   /**
-   * DELETE /chat/conversations/:id/stream - Cancel the edit stream
+   *  Cancel the edit stream
    */
-  .delete('/conversations/:id/stream', async ({ params }) => {
+  .delete('/:projectId/conversations/:id/stream', async ({ params }) => {
     const { id: conversationId } = params
 
     const stream = new ResumableStream(redis, conversationId)

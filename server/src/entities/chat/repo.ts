@@ -1,17 +1,18 @@
 import { db } from "@/db";
-import { conversations, messages } from "@/db/schema";
-import { eq, desc, and } from "drizzle-orm";
-import type { CreateConversation, CreateMessage, ContextItem, MentionItem } from "./model";
+import { conversations, messages, agent_runs } from "@/db/schema";
+import { eq, desc, asc, and, lt, gt } from "drizzle-orm";
+import { AgentRunFinishReason, ChatMetadata, CursorPaginationOptions, CursorPaginationResult, MsgContent, MsgContext, MsgMetadata } from "@/type";
+import type { Message } from "@/db/schema";
+
 
 // ============================================================================
 // CONVERSATIONS
 // ============================================================================
 
-export const createConversation = async (data: CreateConversation) => {
+export const createConversation = async (projectId: string, title: string = 'New Chat') => {
   const result = await db.insert(conversations).values({
-    projectId: data.projectId,
-    editorType: data.editorType,
-    title: data.title || 'New Chat',
+    projectId,
+    title
   }).returning();
   return result[0];
 }
@@ -21,20 +22,45 @@ export const getConversationById = async (id: string) => {
   return result[0];
 }
 
-export const getConversationsByProjectId = async (projectId: string, editorType?: string) => {
-  const conditions = [eq(conversations.projectId, projectId)];
-  
-  if (editorType) {
-    conditions.push(eq(conversations.editorType, editorType as any));
-  }
-  
-  const result = await db
+export type ListConversationsResult = CursorPaginationResult<typeof conversations.$inferSelect>;
+
+const DEFAULT_CONVERSATIONS_PAGE_SIZE = 20;
+const MAX_CONVERSATIONS_PAGE_SIZE = 100;
+
+export const listConversations = async (
+  projectId: string,
+  options?: CursorPaginationOptions
+): Promise<ListConversationsResult> => {
+  const limit = Math.min(
+    options?.limit ?? DEFAULT_CONVERSATIONS_PAGE_SIZE,
+    MAX_CONVERSATIONS_PAGE_SIZE
+  );
+  const cursor = options?.cursor;
+
+  const rows = await db
     .select()
     .from(conversations)
-    .where(and(...conditions))
-    .orderBy(desc(conversations.updatedAt));
-  
-  return result;
+    .where(
+      cursor
+        ? and(
+            eq(conversations.projectId, projectId),
+            lt(conversations.updatedAt, new Date(cursor))
+          )
+        : eq(conversations.projectId, projectId)
+    )
+    .orderBy(desc(conversations.updatedAt))
+    .limit(limit + 1);
+
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit);
+  const nextCursor =
+    hasMore && page.length > 0 ? page[page.length - 1].updatedAt.toISOString() : null;
+
+  return {
+    data: page,
+    nextCursor,
+    hasMore,
+  };
 }
 
 export const updateConversation = async (id: string, data: { title?: string }) => {
@@ -42,7 +68,6 @@ export const updateConversation = async (id: string, data: { title?: string }) =
     .update(conversations)
     .set({
       ...data,
-      updatedAt: new Date(),
     })
     .where(eq(conversations.id, id))
     .returning();
@@ -58,61 +83,164 @@ export const deleteConversation = async (id: string) => {
 }
 
 // ============================================================================
-// MESSAGES
+// AGENT RUNS
 // ============================================================================
 
-export const createMessage = async (
-  conversationId: string,
-  role: 'user' | 'assistant' | 'system',
-  content: string,
-  context?: ContextItem[],
-  mentions?: MentionItem[]
-) => {
-  const result = await db.insert(messages).values({
+export const createAgentRun = async (conversationId: string, selectedModel: string='default') => {
+  const metadata = {
+      spentTokens: {
+          input: 0,
+          output: 0
+      },
+      selectedModel
+  }
+
+  const result = await db.insert(agent_runs).values({
     conversationId,
-    role,
-    content,
-    context: context || null,
-    mentions: mentions || null,
-  }).returning();
-
-  // Update conversation's updatedAt
-  await db
-    .update(conversations)
-    .set({ updatedAt: new Date() })
-    .where(eq(conversations.id, conversationId));
-
+    metadata
+  }).returning({ id: agent_runs.id });
   return result[0];
 }
 
-export const getMessagesByConversationId = async (conversationId: string) => {
+export const listAgentRuns = async (conversationId: string) => {
   const result = await db
     .select()
-    .from(messages)
-    .where(eq(messages.conversationId, conversationId))
-    .orderBy(messages.createdAt);
-  
+    .from(agent_runs)
+    .where(eq(agent_runs.conversationId, conversationId))
+    .orderBy(desc(agent_runs.createdAt));
   return result;
 }
 
-export const getMessageById = async (id: string) => {
-  const result = await db.select().from(messages).where(eq(messages.id, id));
-  return result[0];
+export type AgentRunWithMessages = {
+  runId: string;
+  finishReason: AgentRunFinishReason;
+  error: string | null;
+  metadata: ChatMetadata | null;
+  messages: Message[];
+};
+
+export type ListAgentRunsWithMessagesResult = CursorPaginationResult<AgentRunWithMessages>;
+
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
+export const ListAgentRunsWithMessages = async (
+  conversationId: string,
+  options?: CursorPaginationOptions
+): Promise<ListAgentRunsWithMessagesResult> => {
+  const limit = Math.min(options?.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+  const cursor = options?.cursor;
+
+  const runs = await db.query.agent_runs.findMany({
+    where: cursor
+      ? and(
+          eq(agent_runs.conversationId, conversationId),
+          lt(agent_runs.createdAt, new Date(cursor))
+        )
+      : eq(agent_runs.conversationId, conversationId),
+    orderBy: desc(agent_runs.createdAt),
+    limit: limit + 1,
+    with: {
+      messages: {
+        orderBy: asc(messages.createdAt),
+      },
+    },
+  });
+
+  const hasMore = runs.length > limit;
+  const page = runs.slice(0, limit);
+  const nextCursor = hasMore && page.length > 0
+    ? page[page.length - 1].createdAt.toISOString()
+    : null;
+
+  return {
+    data: page.map((run) => ({
+      runId: run.id,
+      finishReason: run.finishReason,
+      error: run.error,
+      metadata: run.metadata,
+      messages: run.messages ?? [],
+    })),
+    nextCursor,
+    hasMore,
+  };
 }
 
-export const updateMessage = async (id: string, content: string) => {
+export type UpdateAgentRunData = {
+  error?: string,
+  metadata?: ChatMetadata
+  finishReason?: AgentRunFinishReason
+}
+
+export const updateAgentRun = async (id: string, data: UpdateAgentRunData) => {
   const result = await db
-    .update(messages)
-    .set({ content })
-    .where(eq(messages.id, id))
+    .update(agent_runs)
+    .set({
+      ...data,
+    })
+    .where(eq(agent_runs.id, id))
     .returning();
   return result[0];
 }
 
-export const deleteMessage = async (id: string) => {
-  const result = await db
-    .delete(messages)
-    .where(eq(messages.id, id))
-    .returning({ id: messages.id });
-  return result.length > 0;
+// ============================================================================
+// MESSAGES
+// ============================================================================
+
+export type CreateMessageData = {
+  conversationId: string,
+  runId: string,
+  role: 'user' | 'assistant' | 'tool',
+  content: MsgContent[],
+  context?: MsgContext,
+  metadata?: MsgMetadata
+}
+
+export const createMessage = async (payload: CreateMessageData) => {
+  const result = await db.insert(messages).values(payload).returning();
+  return result[0];
+}
+
+export const createMessagesBulk = async (payloads: CreateMessageData[]) => {
+  if (payloads.length === 0) return [];
+  const result = await db.insert(messages).values(payloads).returning();
+  return result;
+}
+
+export type ListMessagesByConversationIdResult = CursorPaginationResult<typeof messages.$inferSelect>;
+
+const DEFAULT_MESSAGES_PAGE_SIZE = 20;
+const MAX_MESSAGES_PAGE_SIZE = 100;
+
+export const ListMessagesByConversationId = async (
+  conversationId: string,
+  options?: CursorPaginationOptions
+): Promise<ListMessagesByConversationIdResult> => {
+  const limit = Math.min(options?.limit ?? DEFAULT_MESSAGES_PAGE_SIZE, MAX_MESSAGES_PAGE_SIZE);
+  const cursor = options?.cursor;
+
+  const rows = await db
+    .select()
+    .from(messages)
+    .where(
+      cursor
+        ? and(
+            eq(messages.conversationId, conversationId),
+            gt(messages.createdAt, new Date(cursor))
+          )
+        : eq(messages.conversationId, conversationId)
+    )
+    .orderBy(asc(messages.createdAt))
+    .limit(limit + 1);
+
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit);
+  const nextCursor =
+    hasMore && page.length > 0 ? page[page.length - 1].createdAt.toISOString() : null;
+
+  return {
+    data: page,
+    nextCursor,
+    hasMore,
+  };
 }

@@ -4,9 +4,11 @@ import { cn } from '@/lib/utils'
 
 type DiffOverlayProps = {
   className?: string
+  onAccept?: (id: string) => void
+  onReject?: (id: string) => void
 }
 
-export function DiffOverlay({ className }: DiffOverlayProps) {
+export function DiffOverlay({ className, onAccept, onReject }: DiffOverlayProps) {
   const { 
     pendingSuggestions, 
     showDiffs,
@@ -18,6 +20,34 @@ export function DiffOverlay({ className }: DiffOverlayProps) {
 
   if (!showDiffs || pendingCount === 0) {
     return null
+  }
+
+  const handleAccept = (id: string) => {
+    if (onAccept) {
+      onAccept(id)
+    } else {
+      acceptSuggestion(id)
+    }
+  }
+
+  const handleReject = (id: string) => {
+    if (onReject) {
+      onReject(id)
+    } else {
+      rejectSuggestion(id)
+    }
+  }
+
+  const handleAcceptAll = () => {
+    pendingSuggestions
+      .filter(s => s.status === 'pending')
+      .forEach(s => handleAccept(s.id))
+  }
+
+  const handleRejectAll = () => {
+    pendingSuggestions
+      .filter(s => s.status === 'pending')
+      .forEach(s => handleReject(s.id))
   }
 
   return (
@@ -70,8 +100,8 @@ export function DiffOverlay({ className }: DiffOverlayProps) {
               )}
 
               <DiffActions
-                onAccept={() => acceptSuggestion(suggestion.id)}
-                onReject={() => rejectSuggestion(suggestion.id)}
+                onAccept={() => handleAccept(suggestion.id)}
+                onReject={() => handleReject(suggestion.id)}
               />
             </div>
           ))}
@@ -80,21 +110,13 @@ export function DiffOverlay({ className }: DiffOverlayProps) {
       {pendingCount > 1 && (
         <div className="mt-3 pt-3 border-t border-white/10 flex gap-2">
           <button
-            onClick={() => {
-              pendingSuggestions
-                .filter(s => s.status === 'pending')
-                .forEach(s => acceptSuggestion(s.id))
-            }}
+            onClick={handleAcceptAll}
             className="flex-1 px-3 py-1.5 text-xs bg-green-500/20 text-green-400 rounded hover:bg-green-500/30 transition-colors"
           >
             Accept All
           </button>
           <button
-            onClick={() => {
-              pendingSuggestions
-                .filter(s => s.status === 'pending')
-                .forEach(s => rejectSuggestion(s.id))
-            }}
+            onClick={handleRejectAll}
             className="flex-1 px-3 py-1.5 text-xs bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors"
           >
             Reject All

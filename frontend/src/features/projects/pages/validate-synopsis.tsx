@@ -5,15 +5,20 @@ import { Button } from '@/components/ui/button'
 import {IconLoader2, IconSparkles2 } from '@tabler/icons-react'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect} from 'react'
 import { getProjectQueryOptions } from '../query-mutation'
 import { useConceptStore } from '../store/concept-store'
 import { useResumableStream } from '@/hooks/use-resumable-stream'
-import { useEditStream } from '@/hooks/use-edit-stream'
 import { SynopsisEditor } from '@/features/text-editor/components/synopsis-editor'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { ChatContainer, useChatStore } from '@/features/chat'
-import { sendParams } from '@/features/chat/components/chat-input'
+import { ChatContainer } from '@/features/chat'
+import { DiffOverlay } from '@/features/text-editor/components/ai/diff-overlay'
+import { useGetSSE } from '@/hooks/use-get-sse'
+import { sseEditorEventHandlers } from '@/features/chat/event-handlers'
+import { useConversationStore } from '@/features/chat/store/conversation-store'
+import { useAutosave } from '@/features/text-editor/hooks/use-autosave'
+import type { JSONContent } from '@tiptap/react'
+import { toast } from 'sonner'
 
 
 export default function ValidateSynopsis() {
@@ -25,7 +30,6 @@ export default function ValidateSynopsis() {
         autoSubscribe: true,
         onEvent: handleStreamEvent,
         onError: (_error) => {
-            // console.error('stream error:', error)
         }
     })
     const regenerateSynopsis = () => {
@@ -53,6 +57,7 @@ export default function ValidateSynopsis() {
                         <RenderSynopsis projectId={projectId} />
                     </Suspense>
                 </Container>
+                <DiffOverlay />
             </ScrollArea>
 
             <div className='w-96 border-l pt-header'>
@@ -73,16 +78,30 @@ function RenderSynopsis({projectId}: {projectId: string}) {
     const setSynopsis = useConceptStore(state => state.setSynopsis)
     const synopsis = useConceptStore(state => state.synopsis)
 
-    // Initialize store with server data
-    // Handle both old format (title/text) and new prose format
+    const autosave = useAutosave({
+        duration: 1000,
+        projectId,
+        onSaveComplete: () => {
+            console.log('Autosaved synopsis')
+        },
+        onSaveError: (error) => {
+            toast.error('Error autosaving synopsis', {
+                position: 'top-center',
+            })
+            console.error('Error autosaving synopsis', error)
+        },
+    })
+
+    const handleChange = (content: JSONContent) => {
+        autosave({ type: 'synopsis', content })
+    }
+
     useEffect(() => {
         if (data?.synopsis) {
-            // Check if it's already prose format (has 'type' and 'content')
             const serverSynopsis = data.synopsis as { type?: string; content?: unknown[] }
             if (serverSynopsis.type === 'doc' && Array.isArray(serverSynopsis.content)) {
                 setSynopsis(data.synopsis)
             }
-            // Old format would need conversion - for now just skip
         }
     }, [data?.synopsis, setSynopsis])
 
@@ -91,99 +110,36 @@ function RenderSynopsis({projectId}: {projectId: string}) {
             <SynopsisEditor 
                 content={synopsis} 
                 readOnly={isGeneratingSynopsis}
-                onChange={setSynopsis}
+                onChange={handleChange}
             />
         </div>
     )
 }
 
-// Edit stream event types
-const EDIT_EVENT_TYPES = [
-    'editor_start',
-    'editor_delta', 
-    'editor_end',
-    'editor_error',
-    'editor_reasoning',
-    'editor_tool_call',
-    'editor_tool_result',
-] as const
-
-// Payload for edit content request
-type EditPayload = {
-    projectId: string
-    component: 'synopsis' | 'script' | 'characters' | 'world'
-    prompt: string
-    model?: string
-    reasoningEffort?: 'low' | 'medium' | 'high'
-    context?: {
-        blocks?: string[];
-        selections?: string[];
-    }
-}
-
 function RenderChat({projectId}: {projectId: string}) {
-    const conversation = useChatStore((state) => state.currentConversation)
-    const setStreaming = useChatStore((state) => state.setStreaming)
-    
-    // Configure the edit stream hook
-    // TODO: Use isStreaming and cancel for UI feedback and cancellation
-    const { startEdit } = useEditStream<EditPayload>(
-        {
-            requestUrl: `/chat/conversations/${conversation?.id}/messages`,
-            streamUrl: '/chat/conversations/{id}/stream',
-            cancelUrl: '/chat/conversations/{id}/stream',
-            eventTypes: EDIT_EVENT_TYPES,
-        },
-        {
-            onEvent: (event) => {
-                // Handle different event types
-                if (event.event === 'editor_delta') {
-                    const data = event.data as { type?: string; text?: string; runId?: string }
-                    if (data.type === 'content' && data.text) {
-                        // Append to the current streaming message
-                        // This would need the message ID from somewhere
-                        console.log('[Edit] Delta:', data.text)
-                    }
-                }
-            },
-            onStart: () => {
-                setStreaming(true)
-                console.log('[Edit] Stream started')
-            },
-            onComplete: () => {
-                setStreaming(false)
-                console.log('[Edit] Stream completed')
-            },
-            onError: (error) => {
-                setStreaming(false)
-                console.error('[Edit] Stream error:', error)
-            },
-            onCancel: () => {
-                setStreaming(false)
-                console.log('[Edit] Stream cancelled')
-            },
-        }
-    )
 
-    const onSubmit = async (params: sendParams) => {
-        if (!conversation?.id) {
-            console.error('No conversation ID')
-            return
-        }
+    const conversationId = useConversationStore(state => state.currentConversation?.id)
 
-        await startEdit({
-            projectId,
-            component: 'synopsis',
-            prompt: params.prompt,
-            context: params.context,
-        })
-    }
+    const subscribe = useGetSSE({
+        eventFuncMap: sseEditorEventHandlers,
+    })
+
+    useEffect(() => {
+        let unsubscribe: () => void;
+        if (conversationId) {
+            const url = `${import.meta.env.VITE_API_BASE_URL}/chats/${projectId}/conversations/${conversationId}/stream`
+            console.log('Subscribed to stream', url)
+            unsubscribe = subscribe(url)
+        }
+        return () => {
+            unsubscribe?.()
+        }
+    }, [conversationId, subscribe])
 
     return (
         <ChatContainer 
             projectId={projectId} 
             editorType="synopsis"
-            onSubmit={onSubmit}
         />
     )
 }

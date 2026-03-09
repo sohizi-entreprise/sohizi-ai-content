@@ -1,5 +1,7 @@
+import { Project } from '@/db/schema'
+import { ResumableStream } from '@/lib'
+import { MsgContent, MsgTextPart, MsgToolCallPart, MsgToolResultPart } from '@/type'
 import { z } from 'zod'
-import { StreamBus } from '../../stream-bus'
 
 // ============================================================================
 // BLOCK TYPES
@@ -64,13 +66,13 @@ export type ProjectInfo = {
 // AGENT EVENT TYPES
 // ============================================================================
 
-export type WriterPhase = 'writing_start' | 'writing_delta' | 'writing_end' | 'reviewing_start' | 'reviewing_delta' | 'reviewing_end'
+export type WriterPhase = 'writing_start' | 'writing_delta' | 'writing_end' | 'writing_tool_call'
 
 export type AgentEventType =
   | 'editing_error'
   | 'editing_end'
   | 'editing_start'
-  | 'content_editing'
+  | 'content_diff'
 
   | 'script_content_editing'
   | 'synopsis_content_editing'
@@ -80,23 +82,48 @@ export type AgentEventType =
 
 export type AgentChunkType =
   | 'reasoning_delta'
-  | 'todo'
-  | 'status_delta'
-  | 'text'
+  | 'todo_delta'
+  | 'text_delta'
+  | 'error'
+  | 'tool_call_delta'
   | WriterPhase
 
 export type AgentEvent = {
-  type: AgentEventType
-  data: {
     runId: string
-    type: AgentChunkType
-    content: string
-  }
+    type?: AgentChunkType
+    text?: string
+    metadata?: Record<string, unknown>
+    stepId?: string
+}
+
+export type TokenUsage = {
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+}
+
+export type Trace = {
+  stepNumber: number
+  type: 'reasoning' | 'content' | 'tool_call' | 'tool_result' | 'error'
+  data: Record<string, unknown>
+}
+
+export type EditorStreamData = {
+  runId: string
+  type?: 'reasoning' | 'content' | 'tool_call' | 'tool_result' | 'todo' | 'diff'
+  text?: string
+  error?: string
+  toolName?: string
+  toolId?: string
+  args?: unknown
+  result?: unknown
+  suggestions?: unknown[]
 }
 
 export type RunContext = {
-  streamBus: StreamBus<AgentEvent>
-  eventType: AgentEventType
+  runId: string
+  stream: ResumableStream<AgentEvent>
+  project: Project
 }
 
 export type ReasoningDeltaEvent = AgentEvent & {
@@ -210,10 +237,23 @@ export type CompleteEvent = AgentEvent & {
 // AGENT INPUT/OUTPUT
 // ============================================================================
 
+export type ConversationMessage = {
+  role: 'user'
+  content: MsgTextPart[]
+} | {
+  role: 'assistant'
+  content: (MsgTextPart | MsgToolCallPart)[]
+}
+| {
+  role: 'tool'
+  content: MsgToolResultPart[]
+}
+
 export type EditorAgentInput = {
   projectId: string
   conversationId: string
   message: string
+  history: ConversationMessage[]
   context: {
     blocks?: string[];
     selections?: string[];

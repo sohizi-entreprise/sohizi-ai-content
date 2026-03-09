@@ -160,5 +160,4 @@ export type ProjectOptions = {
     audiences: ProjectAudienceOption[]
 }
 
-
 export type ProjectStatusType = 'DRAFT' | "COMPLETED" | "EDITING"

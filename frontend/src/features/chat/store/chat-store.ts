@@ -2,9 +2,6 @@ import { create } from 'zustand'
 import type {
   ChatState,
   ChatUIState,
-  Conversation,
-  Message,
-  EditorType,
   SelectionContext,
   Mentions
 } from '../types'
@@ -54,22 +51,14 @@ const initialMentions: Mentions = {
 
 const initialUIState: ChatUIState = {
   isInputFocused: false,
-  isMentionPopoverOpen: false,
   mentionQuery: '',
-  isHistoryOpen: false,
   isVoiceRecording: false,
 }
 
 const initialState: ChatState = {
-  currentConversation: null,
-  messages: [],
   attachedContext: initialMentions,
   inputContent: '',
   ui: initialUIState,
-  isLoading: false,
-  isSending: false,
-  isStreaming: false,
-  error: null,
 }
 
 // ============================================================================
@@ -77,16 +66,6 @@ const initialState: ChatState = {
 // ============================================================================
 
 type ChatActions = {
-  // Conversation actions
-  setCurrentConversation: (conversation: Conversation | null) => void
-  createNewConversation: (projectId: string, editorType: EditorType) => void
-  
-  // Message actions
-  setMessages: (messages: Message[]) => void
-  addMessage: (message: Message) => void
-  updateMessage: (id: string, updates: Partial<Message>) => void
-  appendToStreamingMessage: (id: string, content: string) => void
-  clearMessages: () => void
   
   // Context actions
   addSelectionContext: (context: SelectionContext) => void
@@ -98,18 +77,7 @@ type ChatActions = {
   
   // UI actions
   setInputFocused: (focused: boolean) => void
-  toggleHistory: () => void
-  setHistoryOpen: (open: boolean) => void
   setVoiceRecording: (recording: boolean) => void
-  
-  // Loading state actions
-  setLoading: (loading: boolean) => void
-  setSending: (sending: boolean) => void
-  setStreaming: (streaming: boolean) => void
-  
-  // Error actions
-  setError: (error: string | null) => void
-  clearError: () => void
   
   // Reset
   reset: () => void
@@ -121,58 +89,6 @@ type ChatActions = {
 
 export const useChatStore = create<ChatState & ChatActions>((set) => ({
   ...initialState,
-
-  // -------------------------------------------------------------------------
-  // Conversation actions
-  // -------------------------------------------------------------------------
-
-  setCurrentConversation: (conversation) => set({ 
-    currentConversation: conversation,
-    messages: [],
-    error: null,
-  }),
-
-  createNewConversation: (projectId, editorType) => {
-    const newConversation: Conversation = {
-      id: crypto.randomUUID(),
-      projectId,
-      title: 'New Chat',
-      editorType,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    set({
-      currentConversation: newConversation,
-      messages: [],
-      attachedContext: initialMentions,
-      inputContent: '',
-      error: null,
-    })
-  },
-
-  // -------------------------------------------------------------------------
-  // Message actions
-  // -------------------------------------------------------------------------
-
-  setMessages: (messages) => set({ messages }),
-
-  addMessage: (message) => set((state) => ({
-    messages: [...state.messages, message],
-  })),
-
-  updateMessage: (id, updates) => set((state) => ({
-    messages: state.messages.map((msg) =>
-      msg.id === id ? { ...msg, ...updates } : msg
-    ),
-  })),
-
-  appendToStreamingMessage: (id, content) => set((state) => ({
-    messages: state.messages.map((msg) =>
-      msg.id === id ? { ...msg, content: msg.content + content } : msg
-    ),
-  })),
-
-  clearMessages: () => set({ messages: [] }),
 
   // -------------------------------------------------------------------------
   // Input actions
@@ -191,7 +107,12 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
     }))
   },
 
-  clearInput: () => set({ inputContent: '', attachedContext: initialMentions }),
+  clearInput: () => set((state)=>{
+    for(const selection of state.attachedContext.selections){
+      notifySelectionRemoval(selection.id)
+    }
+    return { inputContent: '', attachedContext: { ...state.attachedContext, selections: [] } }
+  }),
 
   // -------------------------------------------------------------------------
   // UI actions
@@ -201,32 +122,9 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
     ui: { ...state.ui, isInputFocused: focused },
   })),
 
-  toggleHistory: () => set((state) => ({
-    ui: { ...state.ui, isHistoryOpen: !state.ui.isHistoryOpen },
-  })),
-
-  setHistoryOpen: (open) => set((state) => ({
-    ui: { ...state.ui, isHistoryOpen: open },
-  })),
-
   setVoiceRecording: (recording) => set((state) => ({
     ui: { ...state.ui, isVoiceRecording: recording },
   })),
-
-  // -------------------------------------------------------------------------
-  // Loading state actions
-  // -------------------------------------------------------------------------
-
-  setLoading: (isLoading) => set({ isLoading }),
-  setSending: (isSending) => set({ isSending }),
-  setStreaming: (isStreaming) => set({ isStreaming }),
-
-  // -------------------------------------------------------------------------
-  // Error actions
-  // -------------------------------------------------------------------------
-
-  setError: (error) => set({ error }),
-  clearError: () => set({ error: null }),
 
   // -------------------------------------------------------------------------
   // Reset

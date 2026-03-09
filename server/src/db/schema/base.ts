@@ -6,10 +6,13 @@ import {
     integer,
     jsonb,
     varchar,
-    pgEnum
+    pgEnum,
+    index,
   } from 'drizzle-orm/pg-core'
+import { relations } from 'drizzle-orm'
 import { projectConstants } from '@/constants'
 import { ProjectBrief, ProseDocument, StoryBible, Synopsis, NarrativeArcList, OutlineList } from 'zSchemas';
+import { AgentRunFinishReason, ChatMetadata, MsgContent, MsgMetadata } from '@/type';
   
 const timestamps = {
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -147,8 +150,7 @@ export const generationRequests = pgTable('generation_requests', {
   })
   
   // Chat enums
-  export const chatEditorTypeEnum = pgEnum('chat_editor_type', ['synopsis', 'script', 'bible', 'outline']);
-  export const chatMessageRoleEnum = pgEnum('chat_message_role', ['user', 'assistant', 'system']);
+  export const chatMessageRoleEnum = pgEnum('chat_message_role', ['user', 'assistant', 'tool']);
 
   // Chat tables
   export const conversations = pgTable('conversations', {
@@ -157,32 +159,60 @@ export const generationRequests = pgTable('generation_requests', {
       .references(() => projects.id, { onDelete: 'cascade' })
       .notNull(),
     title: varchar('title', { length: 255 }).default('New Chat').notNull(),
-    editorType: chatEditorTypeEnum('editor_type').notNull(),
     ...timestamps,
-  })
+  }, (table) => ([
+    index('conversations_project_id_idx').on(table.projectId),
+  ]))
+
+  export const agent_runs = pgTable('agent_runs', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    conversationId: uuid('conversation_id')
+      .references(() => conversations.id, { onDelete: 'cascade' })
+      .notNull(),
+    finishReason: varchar('finish_reason', { length: 50 }).default('not-finished').notNull().$type<AgentRunFinishReason>(),
+    error: text('error'),
+    metadata: jsonb('metadata').$type<ChatMetadata>(),
+    ...timestamps,
+  }, (table) => ([
+    index('agent_runs_conversation_id_idx').on(table.conversationId),
+  ]))
 
   export const messages = pgTable('messages', {
     id: uuid('id').defaultRandom().primaryKey(),
     conversationId: uuid('conversation_id')
       .references(() => conversations.id, { onDelete: 'cascade' })
       .notNull(),
+    runId: uuid('run_id')
+      .references(() => agent_runs.id, { onDelete: 'cascade' })
+      .notNull(),
     role: chatMessageRoleEnum('role').notNull(),
-    content: text('content').notNull(),
-    context: jsonb('context').$type<{
-      id: string
-      type: 'selection' | 'character' | 'location' | 'scene'
-      label: string
-      content: string
-      metadata?: Record<string, unknown>
-    }[]>(),
-    mentions: jsonb('mentions').$type<{
-      id: string
-      type: 'character' | 'location'
-      name: string
-      description?: string
-    }[]>(),
+    content: jsonb('content').$type<MsgContent[]>().notNull(),
+    metadata: jsonb('metadata').$type<MsgMetadata>().default({}),
     ...timestamps,
-  })
+  }, (table) => ([
+    index('messages_conversation_id_idx').on(table.conversationId),
+    index('messages_run_id_idx').on(table.runId),
+  ]))
+
+
+  export const agentRunsRelations = relations(agent_runs, ({ one, many }) => ({
+    conversation: one(conversations, {
+      fields: [agent_runs.conversationId],
+      references: [conversations.id],
+    }),
+    messages: many(messages),
+  }))
+
+  export const messagesRelations = relations(messages, ({ one }) => ({
+    conversation: one(conversations, {
+      fields: [messages.conversationId],
+      references: [conversations.id],
+    }),
+    agentRun: one(agent_runs, {
+      fields: [messages.runId],
+      references: [agent_runs.id]
+    }),
+  }))
 
   // Type exports for use in app
   export type Project = typeof projects.$inferSelect
@@ -194,10 +224,10 @@ export const generationRequests = pgTable('generation_requests', {
   export type GenerationRequest = typeof generationRequests.$inferSelect
   export type Conversation = typeof conversations.$inferSelect
   export type Message = typeof messages.$inferSelect
+  export type AgentRun = typeof agent_runs.$inferSelect
 
   export type GenerationRequestStatus = (typeof generationRequestStatusEnum.enumValues)[number]
   export type GenerationRequestType = (typeof generationRequestTypeEnum.enumValues)[number]
-  export type ChatEditorType = (typeof chatEditorTypeEnum.enumValues)[number]
   export type ChatMessageRole = (typeof chatMessageRoleEnum.enumValues)[number]
   
   

@@ -254,7 +254,6 @@ export function SynopsisEditor({
     editable: !readOnly,
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
-      console.log(json)
       lastContentRef.current = JSON.stringify(json)
       onChange?.(json)
     },

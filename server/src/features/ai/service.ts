@@ -2,7 +2,7 @@ import { projectRepo } from "@/entities/project";
 import { NotFound, BadRequest, Forbidden } from "../error";
 import { ResumableStream, redis } from "@/lib";
 import { conceptGenerator } from "./script-engine/concept-generator";
-import { NarrativeArcList, Synopsis } from "zSchemas";
+import { NarrativeArcList } from "zSchemas";
 import { Project } from "@/db/schema";
 import { synopsisGenerator } from "./script-engine/synopsis-generator";
 
@@ -76,7 +76,7 @@ export const generateSynopsis = async (project: Project, stream: ResumableStream
         await projectRepo.updateProject(projectId, { status: 'SYNOPSIS_GENERATION_IN_PROGRESS' });
     }
 
-    const onFinish = async(synopsis: Synopsis, totalUsage: number) => {
+    const onFinish = async(synopsis: Record<string, unknown>, totalUsage: number) => {
         await projectRepo.updateProject(projectId, { status: 'SYNOPSIS_GENERATION_COMPLETED', synopsis: synopsis });
     }
 

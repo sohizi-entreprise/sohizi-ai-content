@@ -1,15 +1,12 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
-import { IconMicrophone, IconMicrophoneOff, IconSend, IconPlayerPlay, IconCircleArrowRightFilled, IconArrowBigRightFilled, IconCaretUpFilled } from '@tabler/icons-react'
+import { useRef, useCallback, useEffect } from 'react'
+import { IconMicrophone, IconMicrophoneOff, IconCaretUpFilled, IconLoader2 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useChatStore } from '../store/chat-store'
-import { useMentions } from '../hooks/use-mentions'
 import { useVoiceInput } from '../hooks/use-voice-input'
-import { ContextWindowDonut, calculateTokenUsage } from './context-window-donut'
+import { ContextWindowDonut } from './context-window-donut'
 import { MentionsInput, Mention } from 'react-mentions-ts'
-import type { MentionItem, Message } from '../types'
 import { useShallow } from 'zustand/shallow'
-import { toast } from 'sonner'
 
 // Helper to extract selection IDs from mention markup
 // Matches pattern: &&[display](id)
@@ -26,17 +23,18 @@ function extractSelectionIds(content: string): string[] {
 export type sendParams = {
   prompt: string
   context: {
-    blocks?: string[];
-    selections?: string[];
-    locations?: string[];
-    characters?: string[];
+    blocks: string[];
+    selections: string[];
+    // locations?: string[];
+    // characters?: string[];
   }
 }
 
 type ChatInputProps = {
-  onSend?: (params: sendParams) => Promise<void>
+  onSend?: (params: sendParams) => void
   placeholder?: string
   disabled?: boolean
+  isLoading?: boolean
   className?: string
 }
 
@@ -44,21 +42,17 @@ export function ChatInput({
   onSend,
   placeholder = 'Ask anything... Use @ for characters, # for locations',
   disabled = false,
+  isLoading = false,
   className,
 }: ChatInputProps) {
-  const [inputValue, setInputValue] = useState('')
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Store
   const {characters, locations, selections} = useChatStore(useShallow((state) => state.attachedContext))
-  const addSelectionContext = useChatStore((state) => state.addSelectionContext)
   const removeSelectionContext = useChatStore((state) => state.removeSelectionContext)
   const setInputContent = useChatStore((state) => state.setInputContent)
   const inputContent = useChatStore((state) => state.inputContent)
-  const clearInput = useChatStore((state) => state.clearInput)
   const isInputFocused = useChatStore(state => state.ui.isInputFocused)
   const setInputFocused = useChatStore((state) => state.setInputFocused)
-  const isSending = useChatStore((state) => state.isSending)
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -66,15 +60,15 @@ export function ChatInput({
   const voice = useVoiceInput({
     onTranscript: (transcript, isFinal) => {
       if (isFinal) {
-        setInputValue((prev) => prev + transcript + ' ')
+        setInputContent(inputContent + transcript + ' ')
       }
     },
   })
 
   // Send message
   const handleSend = () => {
-    const content = inputValue.trim()
-    if (!content || disabled || isSending) return
+    const content = inputContent.trim()
+    if (!content || disabled) return
 
     const payload: sendParams = {
       prompt: content,
@@ -85,14 +79,6 @@ export function ChatInput({
     }
 
     onSend?.(payload)
-    .then(() => {
-      clearInput()
-    })
-    .catch((error) => {
-      toast.error(error instanceof Error ? error.message : String(error), {
-        position: 'top-center',
-      })
-    })
   }
 
   // Handle keyboard events
@@ -103,7 +89,7 @@ export function ChatInput({
       }
   }
 
-  const isDisabled = disabled || isSending
+  const disableBtn = disabled || !inputContent.trim() || isLoading
 
   useEffect(() => {
     if (inputRef.current && isInputFocused) {
@@ -152,7 +138,7 @@ export function ChatInput({
                         input: 'bg-transparent! max-h-50 text-sm',
                         control: 'bg-transparent! border-none'
                       }}
-                      placeholder='@ for characters, # for locations'
+                      placeholder={placeholder}
                       onKeyDown={handleKeyDown}
       >
         <Mention trigger="@" data={characters} renderSuggestion={(entry) => <div>{entry.display}</div>} />
@@ -169,7 +155,7 @@ export function ChatInput({
           <Button
             size="icon-sm"
             onClick={voice.toggleRecording}
-            disabled={isDisabled}
+            disabled={disableBtn}
             className={cn(
               'size-6 bg-white/5 rounded-full text-gray-400 hover:bg-white/10 hover:text-white',
               voice.isRecording && 'text-red-500 animate-pulse'
@@ -188,11 +174,17 @@ export function ChatInput({
         <Button
           variant="default"
           onClick={handleSend}
-          disabled={isDisabled || !inputValue.trim()}
+          disabled={disableBtn}
           className="size-6 rounded-full"
           aria-label="Send message"
         >
-          <IconCaretUpFilled className="size-4" />
+          {
+            isLoading ? (
+              <IconLoader2 className="size-4 animate-spin" />
+            ) : (
+              <IconCaretUpFilled className="size-4" />
+            )
+          }
         </Button>
       </div>
       

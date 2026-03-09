@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 import { tool } from 'ai'
 
@@ -7,9 +6,16 @@ import { WriterAgent } from '../sub-agents/writer-agent'
 import { SubAgent } from '../sub-agents/sub-agent'
 import type { RunContext } from './types'
 
+
 // ============================================================================
 // TOOL SCHEMAS
 // ============================================================================
+
+export const readContentSchema = z.object({
+  component: z.enum(['synopsis', 'script']).describe('Which component to read.'),
+  blockIds: z.array(z.string()).describe('IDs of blocks to read. If empty, it reads the entire component which can be verbose.'),
+  offset: z.number().describe('How many additional blocks to read before and after each target component.'),
+})
 
 export const loadSkillSchema = z.object({
   skills: z.array(z.string()).describe('The names of the skills to load (e.g., ["scene_writing", "dialogue_craft"])'),
@@ -27,9 +33,25 @@ export const todoWriteSchema = z.object({
   items: z.array(todoItemSchema).describe('List of todo items to create or update. Pass multiple items to update statuses simultaneously.'),
 })
 
+export const insertOperation = z.object({
+  type: z.literal('insert'),
+  insertAfterBlockId: z.string().describe('ID of the block to insert the new content after.'),
+})
+
+export const deleteOperation = z.object({
+  type: z.literal('delete'),
+  blockId: z.string().describe('ID of the block to delete.'),
+})
+
+export const updateOperation = z.object({
+  type: z.literal('update'),
+  blockId: z.string().describe('ID of the block to update.'),
+})
+
 export const editContentSchema = z.object({
-  instruction: z.string().describe('Clear instruction on what to write or how to update'),
-  skillset: z.array(z.string()).describe('Skills to load for this writing task (e.g., ["scene_writing", "dialogue_craft"])'),
+  instruction: z.string().describe('Clear instruction on what to write or how to update the content.'),
+  skillset: z.array(z.string()).describe('Skills to load for this writing task (e.g., ["synopsis", "narrative_arc"])'),
+  operation: z.union([insertOperation, deleteOperation, updateOperation]).describe('The operation to perform on the script content.'),
 })
 
 export const deleteContentSchema = z.object({
@@ -46,10 +68,44 @@ export const spawnTaskSchema = z.object({
   complexity: z.enum(['simple', 'complex']).default('simple').describe('Use "complex" for multi-step reasoning or critical analysis'),
 })
 
+export const outputSchema = z.object({
+  success: z.boolean(),
+  text: z.string(),
+})
+
 
 // ============================================================================
 // TOOL DEFINITIONS
 // ============================================================================
+
+/**
+ * Read current editor content from the database
+ */
+export const readContent = tool({
+  description: `Retrieves the current text content and Block IDs from the editor.
+CRITICAL RULE: You MUST use this tool FIRST before making any edits or writing new content to ensure you understand the existing narrative context and story flow.
+Parameters:
+- component (String, Enum): [REQUIRED] Specifies which part of the project to read. For example: 'synopsis' or 'script'.
+- blockIds (Array of Strings): The specific Block IDs you want to read. WARNING: Leaving this empty retrieves the entire component, which is highly verbose and consumes massive context. Always specify target IDs unless a full read is absolutely necessary.
+- offset (Integer): The number of surrounding blocks to fetch before and after each requested blockId. (e.g., An offset of 2 returns the target block plus the 2 blocks before it and the 2 blocks after it). Always use a small offset (e.g., 1 to 3) to understand the surrounding context and maintain story flow consistency.
+`,
+  inputSchema: readContentSchema,
+  outputSchema: outputSchema,
+  execute: async ({ component, blockIds, offset }, { experimental_context }) => {
+    const runContext = experimental_context as RunContext
+    const project = runContext.project
+
+    const allBlocks = getBlocksForComponent(project, component)
+    if (allBlocks.length === 0) {
+      return { success: true, text: formatBlocksAsText([], component) }
+    }
+
+    const indices = selectBlockIndicesWithOffset(allBlocks, blockIds, offset)
+    const selectedBlocks = indices.map((i) => allBlocks[i])
+    const text = formatBlocksAsText(selectedBlocks, component)
+    return { success: true, text }
+  },
+})
 
 /**
  * Load a skill's full content into context
@@ -57,14 +113,17 @@ export const spawnTaskSchema = z.object({
 export const loadSkills = tool({
   description: 'Load a skill to gain knowledge about a specific technique. You MUST load relevant skills before performing related actions.',
   inputSchema: loadSkillSchema,
+  outputSchema: outputSchema,
   execute: async ({ skills }) => {
     const content = skillRegistry.getSkillsContent(skills)
 
     if (!content) {
-      return `Failed to load skills: The names you provided are not valid skills. Available skills: ${skillRegistry.getSkillNames().join(', ')}`
+      return { success: false, 
+               text: `Failed to load skills: The names you provided are not valid skills. Available skills: ${skillRegistry.getSkillNames().join(', ')}` 
+              }
     }
 
-    return `<loaded_skills>\n${content}\n</loaded_skills>`
+    return { success: true, text: `<loaded_skills>\n${content}\n</loaded_skills>` }
   },
 })
 
@@ -83,8 +142,8 @@ Call this tool to:
 
 Pass multiple items to update statuses simultaneously when possible.`,
   inputSchema: todoWriteSchema,
-  execute: async ({ items }, {experimental_context}) => {
-    const runContext = experimental_context as RunContext
+  outputSchema: outputSchema,
+  execute: async ({ items }) => {
   
     const STATUS_ICONS: Record<string, string> = {
       pending: '⏳',
@@ -92,24 +151,12 @@ Pass multiple items to update statuses simultaneously when possible.`,
       done: '✅',
     }
 
-    // Validate and normalize items
     const validatedItems: TodoItem[] = items.map((item) => ({
       id: item.id,
       task: item.task,
       status: ['pending', 'in_progress', 'done'].includes(item.status) ? item.status : 'pending',
     }))
 
-    // Emit todo list event
-    runContext.streamBus.push({
-      type: 'progress_update',
-      data: {
-        runId: uuidv4(),
-        type: 'todo',
-        content: JSON.stringify(validatedItems),
-      },
-    })
-
-    // Count statuses
     let pendingCount = 0
     let inProgressCount = 0
     let doneCount = 0
@@ -120,7 +167,6 @@ Pass multiple items to update statuses simultaneously when possible.`,
       else if (item.status === 'done') doneCount++
     }
 
-    // Build summary
     const summaryLines: string[] = ['Todo list updated:']
 
     validatedItems.forEach((item, idx) => {
@@ -130,15 +176,12 @@ Pass multiple items to update statuses simultaneously when possible.`,
 
     summaryLines.push(`\nProgress: ${doneCount}/${validatedItems.length} tasks completed`)
 
-    // Warn if multiple tasks are in_progress
     if (inProgressCount > 1) {
       summaryLines.push('⚠️ Warning: Multiple tasks are in_progress. Focus on one task at a time.')
     }
 
-    // Find next task to work on
     let nextTask: string | null = null
 
-    // First, check for any in_progress task
     for (const item of validatedItems) {
       if (item.status === 'in_progress') {
         nextTask = item.task
@@ -146,7 +189,6 @@ Pass multiple items to update statuses simultaneously when possible.`,
       }
     }
 
-    // If no in_progress, find next pending task
     if (!nextTask) {
       for (const item of validatedItems) {
         if (item.status === 'pending') {
@@ -157,43 +199,46 @@ Pass multiple items to update statuses simultaneously when possible.`,
       }
     }
 
-    // Check if all tasks are completed
     if (!nextTask && doneCount === validatedItems.length) {
       summaryLines.push('\n✅ All tasks completed!')
     }
 
-    const response = summaryLines.join('\n')
-
-    return response
+    return { success: true, text: summaryLines.join('\n') }
   },
 })
 
 /**
- * Write or update content - spawns WriterAgent sub-agent
+ * Write or update content - spawns WriterAgent sub-agent, computes diff, and streams it to client
  */
 export const editContent = tool({
-  description: `Modifies content in the script editor. Use this tool when the user wants to:
-- Write new content (scenes, dialogue, descriptions, etc.)
-- Update an existing block of content
-- Delete or remove content
-
-Provide a clear, specific instruction describing what to write or change, and select relevant skills to guide the writing style.`,
+  description: `Delegates script writing and editing to this tool. Use this tool to write new content (e.g., titles, synopsis paragraphs), update existing blocks, or restructure sections.
+CRITICAL REQUIREMENTS:
+- Block IDs: You MUST explicitly include the exact Block IDs or selection identifiers to be edited within your instruction.
+- Clear Instructions: Provide highly specific directions detailing exactly what the sub-agent needs to write or change.
+- Skills: Select and pass the relevant skills the tool will need.
+Note: The tool will generate the new content and submit it directly to the user's editor for human review (accept/reject).
+`,
   inputSchema: editContentSchema,
-  execute: async ({ instruction, skillset }, {abortSignal, experimental_context}) => {
+  outputSchema: outputSchema,
+  execute: async ({ instruction, skillset, operation }, {abortSignal, experimental_context}) => {
     const runContext = experimental_context as RunContext
 
     const writerAgent = new WriterAgent({
       instruction,
       skillset,
-      // TODO: Build the context
-      context: "TODO: Build the context",
-      streamBus: runContext.streamBus,
+      operation,
+      project: runContext.project,
+      stream: runContext.stream,
       abortSignal: abortSignal,
     })
 
-    const {tokensUsed, ...result} = await writerAgent.run()
-    // TODO track tokens used
-    return result
+    const result = await writerAgent.run(runContext.runId)
+
+    if (!result.success) {
+      return { success: false, text: 'error' in result ? result.error : 'Writer agent failed' }
+    }
+    return { success: true, text: 'New content written and sent to editor.' }
+
   },
 })
 
@@ -216,6 +261,7 @@ export const delegateTask = tool({
 
 Provide a clear instruction, relevant skills, and specify the expected output format (text or JSON).`,
   inputSchema: spawnTaskSchema,
+  outputSchema: outputSchema,
   execute: async ({ instruction, skillset, expectedOutput, complexity }, {abortSignal}) => {
 
     const subAgent = new SubAgent({
@@ -228,7 +274,78 @@ Provide a clear instruction, relevant skills, and specify the expected output fo
 
     const {tokensUsed, ...result} = await subAgent.run()
 
-    return result
+    return { success: result.success, text: result.success ? result.response : result.error }
 
   },
 })
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+type ProseNode = {
+  type: string
+  attrs?: Record<string, unknown>
+  content?: Array<{ type: 'text'; text?: string } | ProseNode>
+  text?: string
+}
+type ProseDocument = { type: 'doc'; content: ProseNode[] }
+
+type ContentBlock = { id: string; type: string; content: string; order: number }
+
+function extractTextFromProseNode(node: ProseNode): string {
+  if (typeof node.text === 'string') return node.text
+  if (!Array.isArray(node.content)) return ''
+  return node.content
+    .map((c) => (c && typeof c === 'object' && 'text' in c ? (c as { text?: string }).text ?? '' : extractTextFromProseNode(c as ProseNode)))
+    .join('')
+}
+
+function getBlocksFromProseDocument(doc: ProseDocument | null): ContentBlock[] {
+  if (!doc || doc.type !== 'doc' || !Array.isArray(doc.content)) return []
+  const blocks: ContentBlock[] = []
+  doc.content.forEach((node, order) => {
+    const id = (node.attrs?.blockId ?? node.attrs?.id) as string | undefined
+    if (id == null && (node.type === 'synopsisSpacer' || node.type === 'synopsisDivider')) return
+    const blockId = id ?? `_order_${order}`
+    const content = extractTextFromProseNode(node).trim()
+    blocks.push({ id: blockId, type: node.type, content, order })
+  })
+  return blocks
+}
+
+function getBlocksFromSynopsis(synopsis: unknown): ContentBlock[] {
+  if (!synopsis) return []
+  const doc = synopsis as { type?: string; content?: ProseNode[] }
+  if (doc.type === 'doc' && Array.isArray(doc.content)) return getBlocksFromProseDocument(doc as ProseDocument)
+  const legacy = synopsis as { title?: string; text?: string }
+  const title = legacy.title ?? 'Untitled'
+  const text = legacy.text ?? ''
+  const blocks: ContentBlock[] = []
+  if (title) blocks.push({ id: 'title', type: 'synopsisTitle', content: title, order: 0 })
+  if (text) blocks.push({ id: 'body', type: 'synopsisContent', content: text, order: 1 })
+  return blocks
+}
+
+function getBlocksForComponent(project: RunContext['project'], component: 'synopsis' | 'script'): ContentBlock[] {
+  if (component === 'script') return getBlocksFromProseDocument(project.script as ProseDocument | null)
+  return getBlocksFromSynopsis(project.synopsis)
+}
+
+function selectBlockIndicesWithOffset(blocks: ContentBlock[], blockIds: string[], offset: number): number[] {
+  if (blockIds.length === 0) return blocks.map((_, i) => i)
+  const idToIndex = new Map(blocks.map((b, i) => [b.id, i]))
+  const indices = new Set<number>()
+  for (const id of blockIds) {
+    const i = idToIndex.get(id)
+    if (i == null) continue
+    for (let k = Math.max(0, i - offset); k <= Math.min(blocks.length - 1, i + offset); k++) indices.add(k)
+  }
+  return [...indices].sort((a, b) => a - b)
+}
+
+function formatBlocksAsText(blocks: ContentBlock[], component: 'synopsis' | 'script'): string {
+  if (blocks.length === 0) return `[${component}: no content]`
+  const lines = blocks.map((b) => `[id=${b.id} type=${b.type}]\n${b.content || '(empty)'}`)
+  return `<${component}>\n${lines.join('\n\n')}\n</${component}>`
+}

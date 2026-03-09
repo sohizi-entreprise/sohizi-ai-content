@@ -1,5 +1,6 @@
-import type { BlockType, ScriptContent, ProjectInfo, AgentEvent } from '../editor-agent/types'
-import type { StreamBus } from '../../stream-bus'
+import { Project } from '@/db/schema'
+import type { AgentEvent } from '../editor-agent/types'
+import { ResumableStream } from '@/lib/resumable-stream'
 
 // ============================================================================
 // WRITER AGENT TYPES
@@ -8,8 +9,18 @@ import type { StreamBus } from '../../stream-bus'
 export type WriterAgentConfig = {
   instruction: string
   skillset: string[]
-  streamBus: StreamBus<AgentEvent>
-  context: string
+  stream: ResumableStream<AgentEvent>
+  project: Project
+  operation: {
+        type: "insert";
+        insertAfterBlockId: string;
+    } | {
+        type: "delete";
+        blockId: string;
+    } | {
+        type: "update";
+        blockId: string;
+    }
   abortSignal?: AbortSignal
 }
 
@@ -17,8 +28,6 @@ export type ReviewResult = {
   approved: boolean
   feedback: string[]
 }
-
-export type WriterPhase = 'writing_start' | 'writing_delta' | 'writing_end' | 'reviewing_start' | 'reviewing_delta' | 'reviewing_end'
 
 // ============================================================================
 // SUB-AGENT TYPES

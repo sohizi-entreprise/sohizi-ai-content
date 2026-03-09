@@ -20,3 +20,64 @@ export type ProjectRequirements = {
     forbiddenPhrases: string[];
   };
 };
+
+export type MsgTextPart = {
+  type: 'text'
+  text: string
+}
+
+export type MsgToolCallPart = {
+  type: 'tool-call'
+  toolName: string
+  toolCallId: string
+  input: unknown
+}
+
+export type ToolResult = {
+  type: 'text'
+  value: string
+} | {
+  type: 'error-text'
+  value: string
+}
+
+export type MsgToolResultPart = {
+  type: 'tool-result'
+  toolName: string
+  toolCallId: string
+  output: ToolResult
+}
+
+export type MsgContent = MsgTextPart | MsgToolCallPart | MsgToolResultPart
+
+export type MsgContext = {
+  blocks?: string[]
+  selections?: string[]
+}
+
+export type MsgMetadata = {
+  reasoningText?: string
+  attachments?: Record<string, unknown>
+  context?: MsgContext
+}
+
+export type ChatMetadata = {
+  spentTokens: {
+    input: number
+    output: number
+  }
+  selectedModel?: string
+}
+
+export type CursorPaginationOptions = {
+  limit?: number;
+  cursor?: string;
+};
+
+export type CursorPaginationResult<T> = {
+  data: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
+export type AgentRunFinishReason = 'response' | 'error' | 'tool-calls' | 'aborted' | 'max-iterations' | 'not-finished';

@@ -234,8 +234,8 @@ export function useEditStream<TPayload = unknown, TData = unknown>(
       })
 
       // Step 2: Extract stream ID from response
-      // Support common patterns: { streamId, chatId, id }
-      const streamId = response.data?.streamId || response.data?.chatId || response.data?.id
+      // Support common patterns: { streamId, streamKey, chatId, id }
+      const streamId = response.data?.streamId || response.data?.streamKey || response.data?.chatId || response.data?.id
 
       if (!streamId) {
         throw new Error('No stream ID returned from server')
