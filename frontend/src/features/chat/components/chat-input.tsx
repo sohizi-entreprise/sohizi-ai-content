@@ -47,12 +47,11 @@ export function ChatInput({
 }: ChatInputProps) {
 
   // Store
-  const {characters, locations, selections} = useChatStore(useShallow((state) => state.attachedContext))
-  const removeSelectionContext = useChatStore((state) => state.removeSelectionContext)
+  const {characters, locations} = useChatStore(useShallow((state) => state.attachedContext))
   const setInputContent = useChatStore((state) => state.setInputContent)
+  const appendInputContent = useChatStore((state) => state.appendInputContent)
   const inputContent = useChatStore((state) => state.inputContent)
-  const isInputFocused = useChatStore(state => state.ui.isInputFocused)
-  const setInputFocused = useChatStore((state) => state.setInputFocused)
+  const editorBridge = useChatStore(state => state.editorBridge)
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -73,8 +72,8 @@ export function ChatInput({
     const payload: sendParams = {
       prompt: content,
       context: {
-        blocks: selections.map(selection => selection.blockId).filter(t => t !== undefined),
-        selections: selections.map(selection => selection.id),
+        blocks: [],
+        selections: [],
       },
     }
 
@@ -92,10 +91,22 @@ export function ChatInput({
   const disableBtn = disabled || !inputContent.trim() || isLoading
 
   useEffect(() => {
-    if (inputRef.current && isInputFocused) {
-      inputRef.current.focus()
+    if (!editorBridge?.isReady) return
+    // Clear all context anchors when this input mounts
+    editorBridge.execute({ type: 'CLEAR_CONTEXT_ANCHOR' })
+    const unsubscribe = editorBridge.subscribe((event) => {
+      switch (event.type) {
+        case 'CONTEXT_SELECTED':
+          const formattedText = ` &&[${event.data.display}](${event.data.id})`
+          appendInputContent(formattedText)
+          inputRef.current?.focus()
+          break
+      }
+    })
+    return () => {
+      unsubscribe()
     }
-  }, [isInputFocused])
+  }, [editorBridge])
 
   // Track previous selection IDs to detect removals
   const prevSelectionIdsRef = useRef<string[]>([])
@@ -111,7 +122,8 @@ export function ChatInput({
     
     // Remove each selection from the store (which will notify the editor)
     removedIds.forEach(id => {
-      removeSelectionContext(id)
+      editorBridge?.execute({ type: 'CLEAR_CONTEXT_ANCHOR', blockId: id })
+      inputRef.current?.focus()
     })
     
     // Update ref for next comparison
@@ -119,7 +131,7 @@ export function ChatInput({
     
     // Update the input content
     setInputContent(nextValue)
-  }, [removeSelectionContext, setInputContent])
+  }, [editorBridge, setInputContent])
 
   // Keep the ref in sync when content changes externally (e.g., when adding a selection)
   useEffect(() => {
@@ -132,7 +144,6 @@ export function ChatInput({
                       onMentionsChange={handleInputChange}
                       suggestionsPlacement="above"
                       inputRef={inputRef as React.RefObject<HTMLTextAreaElement>}
-                      onMentionBlur={()=> setInputFocused(false)}
                       autoResize
                       classNames={{
                         input: 'bg-transparent! max-h-50 text-sm',
@@ -143,7 +154,7 @@ export function ChatInput({
       >
         <Mention trigger="@" data={characters} renderSuggestion={(entry) => <div>{entry.display}</div>} />
         <Mention trigger="#" data={locations} />
-        <Mention trigger="&&" data={selections}/>
+        <Mention trigger="&&" data={[]}/>
       </MentionsInput>
 
       <div className='flex items-center justify-end gap-2 mt-2'>

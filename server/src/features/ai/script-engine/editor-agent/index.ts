@@ -11,7 +11,6 @@ export {
   readContentSchema,
   loadSkillSchema,
   todoWriteSchema,
-  editContentSchema,
 } from './tools'
 
 // Types

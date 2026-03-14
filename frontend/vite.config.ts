@@ -7,6 +7,10 @@ import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
 const config = defineConfig({
+  ssr: {
+    // Bundle so Vite resolves extensionless relative imports (Node ESM requires .js)
+    noExternal: ['tiptap-pagination-plus'],
+  },
   plugins: [
     devtools(),
     nitro(),

@@ -1,6 +1,6 @@
 import { chatRepo } from '@/entities/chat'
 import type { CreateMessage, ReplyUserMessage } from '@/entities/chat/model'
-import { AgentEvent, EditComponent, EditorAgentInput } from '../ai/script-engine/editor-agent/types';
+import { AgentEvent } from '../ai/script-engine/editor-agent/types';
 import { projectRepo } from '@/entities/project';
 import { ResumableStream, redis } from "@/lib";
 import { NotFound } from '../error';
@@ -72,7 +72,7 @@ export const replyUserMessage = async (data: ReplyUserMessage, projectId: string
   runEditorAgent({
     model: data.selectedModel || 'gpt-5-mini',
     reasoningEffort: 'medium',
-    project: project,
+    projectId: project.id,
     conversationId: conversationId,
     runId: runId,
     editComponent: 'synopsis'

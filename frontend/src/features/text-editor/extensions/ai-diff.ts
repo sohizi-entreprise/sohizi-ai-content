@@ -7,16 +7,16 @@ export interface AIDiffOptions {
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     aiDiff: {
-      setAIAddition: (attributes?: { suggestionId?: string }) => ReturnType
-      setAIDeletion: (attributes?: { suggestionId?: string }) => ReturnType
+      setAIAddition: (attributes?: { blockId?: string }) => ReturnType
+      setAIDeletion: (attributes?: { blockId?: string }) => ReturnType
       unsetAIDiff: () => ReturnType
     }
     aiAddition: {
-      setAIAddition: (attributes?: { suggestionId?: string }) => ReturnType
+      setAIAddition: (attributes?: { blockId?: string }) => ReturnType
       unsetAIAddition: () => ReturnType
     }
     aiDeletion: {
-      setAIDeletion: (attributes?: { suggestionId?: string }) => ReturnType
+      setAIDeletion: (attributes?: { blockId?: string }) => ReturnType
       unsetAIDeletion: () => ReturnType
     }
   }
@@ -42,12 +42,12 @@ export const AIAdditionMark = Mark.create({
 
   addAttributes() {
     return {
-      suggestionId: {
+      blockId: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-suggestion-id'),
+        parseHTML: (element) => element.getAttribute('data-block-id'),
         renderHTML: (attributes) => {
-          if (!attributes.suggestionId) return {}
-          return { 'data-suggestion-id': attributes.suggestionId }
+          if (!attributes.blockId) return {}
+          return { 'data-block-id': attributes.blockId }
         },
       },
     }
@@ -121,12 +121,12 @@ export const AIDeletionMark = Mark.create({
 
   addAttributes() {
     return {
-      suggestionId: {
+      blockId: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-suggestion-id'),
+        parseHTML: (element) => element.getAttribute('data-block-id'),
         renderHTML: (attributes) => {
-          if (!attributes.suggestionId) return {}
-          return { 'data-suggestion-id': attributes.suggestionId }
+          if (!attributes.blockId) return {}
+          return { 'data-block-id': attributes.blockId }
         },
       },
     }

@@ -11,8 +11,8 @@ import {
   } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { projectConstants } from '@/constants'
-import { ProjectBrief, ProseDocument, StoryBible, Synopsis, NarrativeArcList, OutlineList } from 'zSchemas';
-import { AgentRunFinishReason, ChatMetadata, MsgContent, MsgMetadata } from '@/type';
+import { ProjectBrief, StoryBible, NarrativeArcList, OutlineList } from 'zSchemas';
+import { AgentRunFinishReason, ChatMetadata, MsgContent, MsgMetadata, ProseDocument } from '@/type';
   
 const timestamps = {
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -44,7 +44,7 @@ export const generationRequests = pgTable('generation_requests', {
     title: varchar('title', {length: 100}).notNull(),
     brief: jsonb('brief').notNull().$type<ProjectBrief>(),
     narrative_arcs: jsonb('narrative_arcs').$type<NarrativeArcList>(),
-    synopsis: jsonb('synopsis').$type<Synopsis>(),
+    synopsis: jsonb('synopsis').$type<ProseDocument>(),
     outline: jsonb('outline').$type<OutlineList>(),
     story_bible: jsonb('story_bible').$type<StoryBible>(),
     script: jsonb('script').$type<ProseDocument>(),

@@ -3,14 +3,15 @@ import { LanguageModelUsage, ModelMessage, stepCountIs, streamText } from 'ai'
 import { v4 as uuidv4 } from 'uuid'
 
 import { ResumableStream } from '@/lib'
+import { buildDocumentBlockIndex } from './document-index'
 import { skillRegistry } from './skill-registry'
-import { readContent, loadSkills, todoWrite, editContent, delegateTask } from './tools'
-import type { EditorAgentInput, EditComponent, AgentEvent, RunContext, TokenUsage, Trace, EditorStreamData, ConversationMessage } from './types'
+import { loadSkills, todoWrite, editContent, delegateTask, getDocumentOutline, searchDocument, readBlockContext, getEntityDefinition } from './tools'
+import type { EditComponent, AgentEvent, RunContext, TokenUsage, ConversationMessage } from './types'
 import { Project } from '@/db/schema'
-import { buildProjectContext } from '../utils'
 import { chatRepo } from '@/entities/chat'
 import { AgentRunFinishReason, ChatMetadata, MsgTextPart, MsgToolCallPart, MsgToolResultPart } from '@/type'
 import { buildEditorAgentPrompt } from '../../prompts/editor-agent'
+import { projectRepo } from '@/entities/project'
 
 // ============================================================================
 // TYPES
@@ -22,7 +23,7 @@ export type EditorAgentConfig = {
 }
 
 export type RunParams = {
-  project: Project
+  projectId: string
   conversationId: string
   runId: string
   stream: ResumableStream<AgentEvent>
@@ -54,7 +55,9 @@ export class EditorAgent {
    * Returns the accumulated assistant text for persistence.
    */
   async run(params: RunParams) {
-    const { project, conversationId, runId, stream, editComponent, maxIterations=10 } = params
+    const { projectId, conversationId, runId, stream, editComponent, maxIterations=10 } = params
+
+    const project = await projectRepo.getProjectById(projectId)
 
     const abortController = new AbortController()
 
@@ -68,10 +71,12 @@ export class EditorAgent {
     const messages: ModelMessage[] = await this.getMessageHistory(conversationId)
 
     // RunContext passed to tools via experimental_context
+    const documentIndex = buildDocumentBlockIndex(project)
     const runContext: RunContext = {
       stream,
       project,
-      runId
+      runId,
+      documentIndex,
     }
 
     let stepId = uuidv4()
@@ -83,7 +88,16 @@ export class EditorAgent {
         model: openai(this.model),
         system: systemPrompt,
         messages,
-        tools: { readContent, loadSkills, todoWrite, editContent, delegateTask },
+        tools: {
+          loadSkills,
+          todoWrite,
+          editContent,
+          delegateTask,
+          getDocumentOutline,
+          searchDocument,
+          readBlockContext,
+          getEntityDefinition,
+        },
         stopWhen: stepCountIs(maxIterations),
         abortSignal: abortController.signal,
         providerOptions: {
@@ -200,6 +214,8 @@ export class EditorAgent {
         }
       })
 
+      let toolIdMap: Record<string, string> = {}
+
       for await (const chunk of response.fullStream) {
         if (await stream.isCancelled()) {
           abortController.abort()
@@ -227,7 +243,7 @@ export class EditorAgent {
               type: 'editor_delta',
               data: {
                 runId,
-                type: 'tool_call_delta',
+                type: 'tool_call',
                 metadata:{
                   toolName: chunk.toolName,
                   toolId: chunk.toolCallId,
@@ -237,6 +253,64 @@ export class EditorAgent {
               },
             })
             break
+
+          case 'tool-input-start':
+            // Send notification
+            toolIdMap[chunk.id] = chunk.toolName
+            if(chunk.toolName === 'editContent' || chunk.toolName === 'todoWrite'){
+              await stream.push({
+                type: 'editor_delta',
+                data: {
+                  runId,
+                  type: 'tool_call_start',
+                  metadata:{
+                    toolName: chunk.toolName,
+                    toolId: chunk.id,
+                    args: ''
+                  },
+                  stepId
+                },
+              })
+            }
+            break;
+
+          case 'tool-input-delta':
+            if(chunk.id in toolIdMap){
+              await stream.push({
+                type: 'editor_delta',
+                data: {
+                  runId,
+                  type: 'tool_call_delta',
+                  metadata:{
+                    toolName: toolIdMap[chunk.id],
+                    toolId: chunk.id,
+                    args: chunk.delta
+                  },
+                  stepId
+                },
+              })
+
+            }
+            break;
+
+          case 'tool-input-end':
+            if (chunk.id in toolIdMap) {
+              await stream.push({
+                type: 'editor_delta',
+                data: {
+                  runId,
+                  type: 'tool_call_end',
+                  metadata: {
+                    toolName: toolIdMap[chunk.id],
+                    toolId: chunk.id,
+                    args: '',
+                  },
+                  stepId,
+                },
+              })
+              delete toolIdMap[chunk.id]
+            }
+            break;
 
           case 'error':
             await stream.push({

@@ -1,27 +1,21 @@
-import NewProjectHeader from '../components/new-project-header'
-import StepMarker from '../components/step-marker'
 import Container from '@/components/layout/container'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Suspense, useEffect } from 'react'
+import StepMarker from '../components/step-marker'
 import { Button } from '@/components/ui/button'
-import {IconLoader2, IconSparkles2 } from '@tabler/icons-react'
-import { useSuspenseQuery } from '@tanstack/react-query'
+import NewProjectHeader from '../components/new-project-header'
+import { IconLoader2, IconSparkles2 } from '@tabler/icons-react'
 import { useParams } from '@tanstack/react-router'
-import { Suspense, useEffect} from 'react'
-import { getProjectQueryOptions } from '../query-mutation'
 import { useConceptStore } from '../store/concept-store'
 import { useResumableStream } from '@/hooks/use-resumable-stream'
-import { SynopsisEditor } from '@/features/text-editor/components/synopsis-editor'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { ChatContainer } from '@/features/chat'
-import { DiffOverlay } from '@/features/text-editor/components/ai/diff-overlay'
+import { ChatContainer } from '@/features/chat/components/chat-container'
+import { useConversationStore } from '@/features/chat/store/conversation-store'
 import { useGetSSE } from '@/hooks/use-get-sse'
 import { sseEditorEventHandlers } from '@/features/chat/event-handlers'
-import { useConversationStore } from '@/features/chat/store/conversation-store'
-import { useAutosave } from '@/features/text-editor/hooks/use-autosave'
-import type { JSONContent } from '@tiptap/react'
-import { toast } from 'sonner'
+import SynopsisEditor from '../components/synopsis-editor'
+import { TextSkeleton } from '@/features/text-editor'
 
-
-export default function ValidateSynopsis() {
+export default function SynopsisPage() {
     const { projectId } = useParams({ from: '/dashboard/projects/$projectId/synopsis' })
     const handleStreamEvent = useConceptStore(state => state.handleStreamEvent)
     const isGeneratingSynopsis = useConceptStore(state => state.isGenerating.synopsis)
@@ -53,11 +47,10 @@ export default function ValidateSynopsis() {
                             {isGeneratingSynopsis ? 'Generating...' : 'Regenerate'}
                         </Button>
                     </div>
-                    <Suspense fallback={<div>Loading...</div>}>
-                        <RenderSynopsis projectId={projectId} />
+                    <Suspense fallback={<SynopsisLoader />}>
+                        <SynopsisEditor projectId={projectId} />
                     </Suspense>
                 </Container>
-                <DiffOverlay />
             </ScrollArea>
 
             <div className='w-96 border-l pt-header'>
@@ -67,54 +60,10 @@ export default function ValidateSynopsis() {
             </div>
 
         </div>
-        
     </div>
   )
 }
 
-function RenderSynopsis({projectId}: {projectId: string}) {
-    const { data } = useSuspenseQuery(getProjectQueryOptions(projectId))
-    const isGeneratingSynopsis = useConceptStore(state => state.isGenerating.synopsis)
-    const setSynopsis = useConceptStore(state => state.setSynopsis)
-    const synopsis = useConceptStore(state => state.synopsis)
-
-    const autosave = useAutosave({
-        duration: 1000,
-        projectId,
-        onSaveComplete: () => {
-            console.log('Autosaved synopsis')
-        },
-        onSaveError: (error) => {
-            toast.error('Error autosaving synopsis', {
-                position: 'top-center',
-            })
-            console.error('Error autosaving synopsis', error)
-        },
-    })
-
-    const handleChange = (content: JSONContent) => {
-        autosave({ type: 'synopsis', content })
-    }
-
-    useEffect(() => {
-        if (data?.synopsis) {
-            const serverSynopsis = data.synopsis as { type?: string; content?: unknown[] }
-            if (serverSynopsis.type === 'doc' && Array.isArray(serverSynopsis.content)) {
-                setSynopsis(data.synopsis)
-            }
-        }
-    }, [data?.synopsis, setSynopsis])
-
-    return (
-        <div>
-            <SynopsisEditor 
-                content={synopsis} 
-                readOnly={isGeneratingSynopsis}
-                onChange={handleChange}
-            />
-        </div>
-    )
-}
 
 function RenderChat({projectId}: {projectId: string}) {
 
@@ -141,5 +90,15 @@ function RenderChat({projectId}: {projectId: string}) {
             projectId={projectId} 
             editorType="synopsis"
         />
+    )
+}
+
+function SynopsisLoader(){
+    return (
+        <div className='main-editor-content space-y-6'>
+            <TextSkeleton />
+            <TextSkeleton />
+            <TextSkeleton />
+        </div>
     )
 }

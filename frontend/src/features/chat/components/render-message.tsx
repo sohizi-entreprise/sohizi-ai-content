@@ -1,4 +1,4 @@
-import { Message, MsgTextPart, MsgToolCallPart, MsgToolResultPart } from '../types'
+import { Message, MsgTextPart, MsgToolResultPart } from '../types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -25,28 +25,35 @@ function RenderUserMessage({ message }: { message: Message }) {
 }
 
 function RenderAssistantMessage({ message }: { message: Message }) {
-
     const reasoning = message.metadata?.reasoningText ?? ''
-    const { content, toolCalls } = extractContent(message)
+    const content = Array.isArray(message.content) ? message.content : []
     return (
         <div className="prose prose-sm prose-invert max-w-none">
             {
                 reasoning && <p className='text-sm text-muted-foreground mb-2'>Thinking: {reasoning}</p>
             }
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {content.join('\n')}
-            </ReactMarkdown>
-
             {
-                toolCalls.map((toolCall, index) => (
-                    <div key={index} className='border border-white/10 p-4'>
-                        <p>{toolCall.toolName}</p>
-                        <p>{JSON.stringify(toolCall.input)}</p>
-                    </div>
-                ))
+                content.map((part, index) => {
+                    if (part.type === 'text') {
+                        return (
+                            <ReactMarkdown key={index} remarkPlugins={[remarkGfm]}>
+                                {part.text}
+                            </ReactMarkdown>
+                        )
+                    }
+                    if (part.type === 'tool-call') {
+                        return (
+                            <div key={index} className='border border-white/10 p-4 my-2'>
+                                <p>{part.isLoading ? 'Loading...' : ''}</p>
+                                <p>{part.toolName}</p>
+                                <p>{typeof part.input === 'string' ? part.input : JSON.stringify(part.input)}</p>
+                            </div>
+                        )
+                    }
+                    return null
+                })
             }
         </div>
-       
     )
 }
 
@@ -71,17 +78,3 @@ function RenderToolResponse({ message }: { message: Message }) {
     )
 }
 
-function extractContent(message: Message) {
-
-    const content = []
-    const toolCalls: MsgToolCallPart[] = []
-
-    for(const ct of message.content) {
-        if(ct.type === 'text') {
-            content.push(ct.text)
-        } else if(ct.type === 'tool-call') {
-            toolCalls.push(ct)
-        }
-    }
-    return { content, toolCalls }
-}

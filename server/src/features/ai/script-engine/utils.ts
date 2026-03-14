@@ -3,59 +3,80 @@ import { v4 as uuidv4 } from 'uuid'
 import { parse as parsePartialJson } from 'partial-json'
 
 /**
- * Extract title and text from a ProseDocument or legacy synopsis
+ * Returns a string describing each document's id, availability status, and supported block/entity types.
+ * Used to inform the AI which documents exist and what it can edit.
  */
-function extractSynopsisText(synopsis: unknown): { title: string; text: string } {
-    if (!synopsis) return { title: 'Untitled', text: '' }
+export function returnSupportedTypePerDocument(project: Project): string {
+  const sections: string[] = []
 
-    // New ProseDocument format
-    const doc = synopsis as ProseDocument
-    if (doc.type === 'doc' && Array.isArray(doc.content)) {
-        let title = 'Untitled'
-        const paragraphs: string[] = []
-        for (const node of doc.content) {
-            if (node.type === 'synopsisTitle') {
-                const textNode = node.content?.[0] as { type: string; text?: string } | undefined
-                if (textNode?.text) title = textNode.text
-            } else if (node.type === 'synopsisContent') {
-                const textNode = node.content?.[0] as { type: string; text?: string } | undefined
-                if (textNode?.text) paragraphs.push(textNode.text)
-            }
-        }
-        return { title, text: paragraphs.join('\n\n') }
-    }
+  // Synopsis
+  const synopsisStatus = project.synopsis
+    ? 'Available - can be edited'
+    : 'Not available - cannot be edited yet.'
+  sections.push(`Synopsis
+documentId: synopsis
+Status: ${synopsisStatus}
+supported blocktypes:
+- title
+- paragraph
+- selection`)
 
-    // Legacy format
-    const legacy = synopsis as { title?: string; text?: string }
-    return { title: legacy.title ?? 'Untitled', text: legacy.text ?? '' }
-}
+  // Script
+  const scriptStatus = project.script
+    ? 'Available - can be edited'
+    : 'Not available - cannot be edited yet.'
+  sections.push(`Script
+documentId: script
+Status: ${scriptStatus}
+supported blocktypes:
+- title
+- logline
+- segment
+- slugline
+- action
+- parenthetical
+- dialogue
+- character
+- transition
+- shot
+- paragraph
+- selection`)
 
-/**
- * Build project context section
- */
-export function buildProjectContext(project: Project): string {
+  // Story Bible (from zSchemas: timePeriod, setting, characters[], locations[], props[])
+  const storyBibleStatus = project.story_bible
+    ? 'Generated - can be edited'
+    : 'Not available - cannot be edited yet.'
+  sections.push(`Story Bible
+documentId: story_bible
+Status: ${storyBibleStatus}
+supported Entities:
+- characters [array of]
+- locations [array of]
+- props [array of]
 
-    const { format, genre, tone, audience, durationMin } = project.brief
+Character fields:
+  - id [unique across the document]
+  - name
+  - role [protagonist | antagonist | supporting | minor]
+  - age
+  - occupation
+  - physicalDescription
+  - personalityTraits
+  - backstory
+  - motivation
+  - flaw
+  - voice
+Location fields:
+  - id
+  - name
+  - description
+  - atmosphere
+Prop:
+  - id
+  - name
+  - description`)
 
-    const { title, text: synopsisText } = extractSynopsisText(project.synopsis)
-    
-    return `
-<project_context>
-Here is the project context that you are currently working on:
-**Project Requirements:**
-- Title: ${title}
-- Format: ${format}
-- Genre: ${genre}
-- Tone: ${tone}
-- Audience: ${audience}
-- Expected video duration: ${durationMin} minute(s)
-- Expected script length: ${durationMin} pages - ${durationMin * 55} lines 
-
-All content should align with these project requirements.
-
-${synopsisText ? `**Project Synopsis:**\n${synopsisText}` : ''}
-</project_context>
-`
+  return sections.join('\n\n')
 }
 
 

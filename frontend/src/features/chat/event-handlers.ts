@@ -1,5 +1,6 @@
 import { SseEventHandler } from "@/hooks/use-get-sse"
 import { useConversationStore } from "./store/conversation-store"
+import { toast } from "sonner"
 
 export const sseEditorEventHandlers = {
     editor_start: handleStart,
@@ -24,7 +25,7 @@ type EditorReasoningData = {
 
 type EditorToolCallData = {
     runId: string
-    type: 'tool_call_delta'
+    type: 'tool_call_delta' | 'tool_call_start' | 'tool_call_end' | 'tool_call'
     metadata: {
         toolName: string
         toolId: string
@@ -76,11 +77,33 @@ function handleStart(_data: unknown, _options: FuncOptions){
 
 function handleDelta(data: unknown, _options: FuncOptions){
     const expectedData = data as EditorDeltaData
-    const {updateTextChunk, updateToolCallChunk} = useConversationStore.getState()
+    const {updateTextChunk, updateToolCallChunk, updateToolCallDelta} = useConversationStore.getState()
     if(expectedData.type === 'text_delta'){
         updateTextChunk({runId: expectedData.runId, stepId: expectedData.stepId, text: expectedData.text})
-    }else{
-        updateToolCallChunk({runId: expectedData.runId, stepId: expectedData.stepId, toolName: expectedData.metadata.toolName, toolId: expectedData.metadata.toolId, args: expectedData.metadata.args})
+        return
+    }
+    const baseToolContent = {
+        toolName: expectedData.metadata.toolName,
+        toolId: expectedData.metadata.toolId,
+        runId: expectedData.runId, 
+        stepId: expectedData.stepId
+    }
+    switch (expectedData.type) {
+        case 'tool_call_delta':
+            updateToolCallDelta({...baseToolContent, type: 'tool_call_delta', args: expectedData.metadata.args as string })
+            break;
+        case 'tool_call_start':
+            updateToolCallDelta({...baseToolContent, type: 'tool_call_start', args: expectedData.metadata.args as string })
+            break;
+        case 'tool_call_end':
+            updateToolCallDelta({...baseToolContent, type: 'tool_call_end', args: expectedData.metadata.args as string })
+            break;
+        case 'tool_call':
+            updateToolCallChunk({...baseToolContent, args: expectedData.metadata.args})
+            break;
+    
+        default:
+            break;
     }
 }
 
@@ -90,6 +113,9 @@ function handleError(data: unknown, _options: FuncOptions){
     if(!currentRun) return
     setCurrentRun({...currentRun, finishReason: 'error', error: expectedData.text})
     setIsStreaming(false)
+    toast.error(expectedData.text, {
+        position: 'top-center',
+    })
 }
 
 function handleEnd(_data: unknown, _options: FuncOptions){

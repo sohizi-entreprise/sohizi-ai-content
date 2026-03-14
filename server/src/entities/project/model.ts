@@ -86,7 +86,7 @@ export const CreateProjectDTO = t.Object({
   brief: t.Optional(ProjectBriefDTO),
 })
 
-// DTO to update a project (all fields optional)
+// DTO to update a project (all fields optional).
 export const UpdateProjectDTO = t.Partial(t.Object({
   title: t.String({ minLength: 1 }),
   narrative_arcs: t.Union([t.Array(NarrativeArcItemDTO), t.Null()]),
@@ -94,7 +94,6 @@ export const UpdateProjectDTO = t.Partial(t.Object({
   outline: t.Union([t.Array(OutlineActDTO), t.Null()]),
   story_bible: t.Union([StoryBibleDTO, t.Null()]),
   script: t.Union([t.Any(), t.Null()]), // ProseDocument is complex, use Any for flexibility
-  status: t.UnionEnum(projectConstants.projectStatuses),
 }))
 
 // Full project response DTO

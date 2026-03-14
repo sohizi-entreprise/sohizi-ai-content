@@ -1,7 +1,8 @@
 import { Project } from '@/db/schema'
 import { ResumableStream } from '@/lib'
-import { MsgContent, MsgTextPart, MsgToolCallPart, MsgToolResultPart } from '@/type'
+import { MsgTextPart, MsgToolCallPart, MsgToolResultPart } from '@/type'
 import { z } from 'zod'
+import type { DocumentBlockIndex } from './document-index'
 
 // ============================================================================
 // BLOCK TYPES
@@ -86,6 +87,9 @@ export type AgentChunkType =
   | 'text_delta'
   | 'error'
   | 'tool_call_delta'
+  | 'tool_call_start'
+  | 'tool_call_end'
+  | 'tool_call'
   | WriterPhase
 
 export type AgentEvent = {
@@ -102,28 +106,11 @@ export type TokenUsage = {
   totalTokens: number
 }
 
-export type Trace = {
-  stepNumber: number
-  type: 'reasoning' | 'content' | 'tool_call' | 'tool_result' | 'error'
-  data: Record<string, unknown>
-}
-
-export type EditorStreamData = {
-  runId: string
-  type?: 'reasoning' | 'content' | 'tool_call' | 'tool_result' | 'todo' | 'diff'
-  text?: string
-  error?: string
-  toolName?: string
-  toolId?: string
-  args?: unknown
-  result?: unknown
-  suggestions?: unknown[]
-}
-
 export type RunContext = {
   runId: string
   stream: ResumableStream<AgentEvent>
   project: Project
+  documentIndex: DocumentBlockIndex
 }
 
 export type ReasoningDeltaEvent = AgentEvent & {
@@ -247,17 +234,6 @@ export type ConversationMessage = {
 | {
   role: 'tool'
   content: MsgToolResultPart[]
-}
-
-export type EditorAgentInput = {
-  projectId: string
-  conversationId: string
-  message: string
-  history: ConversationMessage[]
-  context: {
-    blocks?: string[];
-    selections?: string[];
-  }
 }
 
 export type EditorAgentOutput = {

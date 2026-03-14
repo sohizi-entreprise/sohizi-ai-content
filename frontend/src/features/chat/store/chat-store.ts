@@ -1,35 +1,7 @@
 import { create } from 'zustand'
-import type {
-  ChatState,
-  ChatUIState,
-  SelectionContext,
-  Mentions
-} from '../types'
+import type { Mentions } from '../types'
+import { EditorAIBridge } from '../hooks/use-ai-editor-bridge'
 
-// ============================================================================
-// SELECTION REMOVAL SUBSCRIBERS
-// ============================================================================
-
-type SelectionRemovalCallback = (anchorId: string) => void
-const selectionRemovalSubscribers = new Set<SelectionRemovalCallback>()
-
-/**
- * Subscribe to selection removal events
- * Returns an unsubscribe function
- */
-export function subscribeToSelectionRemoval(callback: SelectionRemovalCallback): () => void {
-  selectionRemovalSubscribers.add(callback)
-  return () => {
-    selectionRemovalSubscribers.delete(callback)
-  }
-}
-
-/**
- * Notify all subscribers that a selection was removed
- */
-function notifySelectionRemoval(anchorId: string): void {
-  selectionRemovalSubscribers.forEach((callback) => callback(anchorId))
-}
 
 // ============================================================================
 // INITIAL STATE
@@ -45,20 +17,22 @@ const initialMentions: Mentions = {
     { id: '1', display: 'New York' },
     { id: '2', display: 'Los Angeles' },
     { id: '3', display: 'Chicago' },
-  ],
-  selections: [],
+  ]
 }
 
-const initialUIState: ChatUIState = {
-  isInputFocused: false,
-  mentionQuery: '',
-  isVoiceRecording: false,
+type ChatState = {
+  attachedContext: Mentions
+  inputContent: string
+  isVoiceRecording: boolean
+  editorBridge: EditorAIBridge | null
 }
+
 
 const initialState: ChatState = {
   attachedContext: initialMentions,
   inputContent: '',
-  ui: initialUIState,
+  isVoiceRecording: false,
+  editorBridge: null,
 }
 
 // ============================================================================
@@ -66,20 +40,11 @@ const initialState: ChatState = {
 // ============================================================================
 
 type ChatActions = {
-  
-  // Context actions
-  addSelectionContext: (context: SelectionContext) => void
-  removeSelectionContext: (id: string) => void
-  
-  // Input actions
   setInputContent: (content: string) => void
+  appendInputContent: (content: string) => void
   clearInput: () => void
-  
-  // UI actions
-  setInputFocused: (focused: boolean) => void
   setVoiceRecording: (recording: boolean) => void
-  
-  // Reset
+  setEditorBridge: (bridge: EditorAIBridge | null) => void
   reset: () => void
 }
 
@@ -89,46 +54,12 @@ type ChatActions = {
 
 export const useChatStore = create<ChatState & ChatActions>((set) => ({
   ...initialState,
-
-  // -------------------------------------------------------------------------
-  // Input actions
-  // -------------------------------------------------------------------------
-
+  setEditorBridge: (bridge) => set({ editorBridge: bridge }),
   setInputContent: (inputContent) => set({ inputContent }),
-  addSelectionContext: (context) => set((state) => ({
-    attachedContext: { ...state.attachedContext, selections: [...state.attachedContext.selections, context] },
-  })),
-
-  removeSelectionContext: (id) => {
-    // Notify subscribers before removing
-    notifySelectionRemoval(id)
-    set((state) => ({
-      attachedContext: { ...state.attachedContext, selections: state.attachedContext.selections.filter((c) => c.id !== id) },
-    }))
-  },
-
+  appendInputContent: (content) => set((state) => ({ inputContent: state.inputContent + content })),
   clearInput: () => set((state)=>{
-    for(const selection of state.attachedContext.selections){
-      notifySelectionRemoval(selection.id)
-    }
     return { inputContent: '', attachedContext: { ...state.attachedContext, selections: [] } }
   }),
-
-  // -------------------------------------------------------------------------
-  // UI actions
-  // -------------------------------------------------------------------------
-
-  setInputFocused: (focused) => set((state) => ({
-    ui: { ...state.ui, isInputFocused: focused },
-  })),
-
-  setVoiceRecording: (recording) => set((state) => ({
-    ui: { ...state.ui, isVoiceRecording: recording },
-  })),
-
-  // -------------------------------------------------------------------------
-  // Reset
-  // -------------------------------------------------------------------------
-
+  setVoiceRecording: (recording) => set({ isVoiceRecording: recording }),
   reset: () => set(initialState),
 }))

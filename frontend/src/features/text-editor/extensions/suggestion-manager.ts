@@ -6,10 +6,10 @@ import { findContextAnchorById } from './context-anchor'
 // ============================================================================
 
 export type AIEditOperation =
-  | { type: 'replace'; anchorId: string; newContent: string }
-  | { type: 'insert_before'; anchorId: string; content: string }
-  | { type: 'insert_after'; anchorId: string; content: string }
-  | { type: 'delete'; anchorId: string }
+  | { type: 'replace'; blockId: string; newContent: string }
+  | { type: 'insert_before'; blockId: string; content: string }
+  | { type: 'insert_after'; blockId: string; content: string }
+  | { type: 'delete'; blockId: string }
 
 export type AIEditSuggestion = {
   suggestionId: string
@@ -218,9 +218,9 @@ export class SuggestionManager {
 
   private applyReplace(
     suggestionId: string,
-    op: { type: 'replace'; anchorId: string; newContent: string }
+    op: { type: 'replace'; blockId: string; newContent: string }
   ): boolean {
-    const anchor = findContextAnchorById(this.editor, op.anchorId)
+    const anchor = findContextAnchorById(this.editor, op.blockId)
     if (!anchor) return false
 
     const { from, to } = anchor
@@ -248,9 +248,9 @@ export class SuggestionManager {
 
   private applyInsertBefore(
     suggestionId: string,
-    op: { type: 'insert_before'; anchorId: string; content: string }
+    op: { type: 'insert_before'; blockId: string; content: string }
   ): boolean {
-    const anchor = findContextAnchorById(this.editor, op.anchorId)
+    const anchor = findContextAnchorById(this.editor, op.blockId)
     if (!anchor) return false
 
     // Insert before the anchor with addition mark
@@ -269,9 +269,9 @@ export class SuggestionManager {
 
   private applyInsertAfter(
     suggestionId: string,
-    op: { type: 'insert_after'; anchorId: string; content: string }
+    op: { type: 'insert_after'; blockId: string; content: string }
   ): boolean {
-    const anchor = findContextAnchorById(this.editor, op.anchorId)
+    const anchor = findContextAnchorById(this.editor, op.blockId)
     if (!anchor) return false
 
     // Insert after the anchor with addition mark
@@ -290,9 +290,9 @@ export class SuggestionManager {
 
   private applyDelete(
     suggestionId: string,
-    op: { type: 'delete'; anchorId: string }
+    op: { type: 'delete'; blockId: string }
   ): boolean {
-    const anchor = findContextAnchorById(this.editor, op.anchorId)
+    const anchor = findContextAnchorById(this.editor, op.blockId)
     if (!anchor) return false
 
     // Mark content as deletion

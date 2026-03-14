@@ -12,3 +12,17 @@
 [ ] highligh known entities
 [ ] handle llm suggestions
 [ ] handle quick actions (summarize, polish, etc...)
+
+---
+
+Regarding AI editors
+
+[ ] implement single changes individually
+[ ] implement scroll to concrete changed section
+[ ] stop eventSource for always trying to reconnect
+[ ] implement editor change logs on the server to help the model track of the changes that happened
+[ ] improve the chat rendering UI/UX
+[ ] implement the token usage (donut percent) on the chat input
+[ ] Change the synopsis block types to simple like title and paragraph
+[ ] Render skeleton on the paper while we are streaming
+[ ] make possible to hide and show the chat container

@@ -4,7 +4,6 @@ import { stepCountIs, streamText } from 'ai'
 import { skillRegistry } from '../editor-agent/skill-registry'
 import type { WriterAgentConfig, SubAgentResult } from './types'
 import { getContentWriterPrompt } from '../../prompts/content-writer'
-import { readContent } from '../editor-agent/tools'
 import { WriterPhase } from '../editor-agent'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -73,7 +72,6 @@ export class WriterAgent {
         model: openai('gpt-5-mini'),
         system: systemPrompt,
         prompt: userPrompt,
-        tools: {readContent},
         abortSignal: this.config.abortSignal,
         stopWhen: stepCountIs(25),
         onStepFinish: ()=>{

@@ -7,12 +7,11 @@ export { ContextWindowDonut, calculateTokenUsage } from './components/context-wi
 
 // Hooks
 export { useVoiceInput } from './hooks/use-voice-input'
-export { useContextCreator, useSelectionSync } from './hooks/use-editor-bridge'
 export { useAgentStream } from './hooks/use-agent-stream'
 export type { AgentStreamInput, AgentStreamCallbacks, UseAgentStreamReturn } from './hooks/use-agent-stream'
 
 // Store
-export { useChatStore, subscribeToSelectionRemoval } from './store/chat-store'
+export { useChatStore } from './store/chat-store'
 
 // Types
 export type {

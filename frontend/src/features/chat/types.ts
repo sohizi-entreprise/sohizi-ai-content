@@ -20,22 +20,9 @@ export type MentionItem = {
   display: string
 }
 
-/**
- * Selection context with anchor information for AI editing
- */
-export type SelectionContext = {
-  id: string          // UUID that matches the context anchor in editor
-  display: string     // Truncated text for display
-  fullText: string    // Full selected text for AI context
-  from: number        // Start position in document
-  to: number          // End position in document
-  blockId?: string    // Parent block ID for targeted edits
-}
-
 export type Mentions = {
   characters: MentionItem[]
   locations: MentionItem[]
-  selections: SelectionContext[]
 }
 
 // ============================================================================
@@ -54,6 +41,7 @@ export type MsgToolCallPart = {
   toolName: string
   toolCallId: string
   input: unknown
+  isLoading?: boolean
 }
 
 export type ToolResult = {
@@ -130,28 +118,6 @@ export type ConversationRun = {
 // TO be deleted
 export type ConversationWithMessages = Conversation & {
   messages: Message[]
-}
-
-// ============================================================================
-// CHAT STATE TYPES
-// ============================================================================
-
-export type ChatUIState = {
-  isInputFocused: boolean
-  mentionQuery: string
-  isVoiceRecording: boolean
-}
-
-export type ChatState = {
-  // Context
-  attachedContext: Mentions
-  
-  // Input
-  inputContent: string
-  
-  // UI State
-  ui: ChatUIState
-
 }
 
 // ============================================================================

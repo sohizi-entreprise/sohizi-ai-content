@@ -9,6 +9,10 @@ export { NoteExtension } from './note'
 export { PageBreakExtension } from './page-break'
 export { AIDiffExtension, AIAdditionMark, AIDeletionMark } from './ai-diff'
 export { SlashCommandExtension } from './slash-command'
+export { SynopsisTitleNode, SynopsisDividerNode, SynopsisContentNode, SynopsisSpacerNode } from './synopsis'
+export { SelectionShortcut } from './selection-context'
+export { EditorEventBusExtension } from './editor-event-bus'
+export { DiffStoreExtension } from './diff-store'
 
 // Context anchor for AI editing
 export { ContextAnchorMark, findContextAnchorById, getAllContextAnchors } from './context-anchor'

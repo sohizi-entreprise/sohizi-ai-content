@@ -4,7 +4,18 @@ import { tool } from 'ai'
 import { skillRegistry } from './skill-registry'
 import { WriterAgent } from '../sub-agents/writer-agent'
 import { SubAgent } from '../sub-agents/sub-agent'
+import type { StoryBibleEntityType } from '@/type'
 import type { RunContext } from './types'
+import {
+  formatEntityDefinition,
+  formatOutlineAsText,
+  formatSearchResultsAsText,
+  formatStoryBibleOutline,
+  getBlockContext,
+  getEntityDefinition as getEntityDefinitionFromIndex,
+  getOutline,
+  search,
+} from './document-index'
 
 
 // ============================================================================
@@ -35,28 +46,28 @@ export const todoWriteSchema = z.object({
 
 export const insertOperation = z.object({
   type: z.literal('insert'),
+  blockType: z.string().describe('The type of the block to insert.'),
+  content: z.string().describe('The new block content in plain text. No markdown.'),
   insertAfterBlockId: z.string().describe('ID of the block to insert the new content after.'),
 })
 
 export const deleteOperation = z.object({
   type: z.literal('delete'),
-  blockId: z.string().describe('ID of the block to delete.'),
+  blockId: z.string().describe('ID of the block/selection to delete.'),
+  content: z.string().describe('Leave it empty.').default(''),
 })
 
 export const updateOperation = z.object({
   type: z.literal('update'),
-  blockId: z.string().describe('ID of the block to update.'),
+  blockId: z.string().describe('ID of the block/selection to update. MUST keep the original "id" for consistency.'),
+  content: z.string().describe('The new content of the block/selection in plain text. No markdown'),
 })
 
-export const editContentSchema = z.object({
-  instruction: z.string().describe('Clear instruction on what to write or how to update the content.'),
-  skillset: z.array(z.string()).describe('Skills to load for this writing task (e.g., ["synopsis", "narrative_arc"])'),
-  operation: z.union([insertOperation, deleteOperation, updateOperation]).describe('The operation to perform on the script content.'),
-})
-
-export const deleteContentSchema = z.object({
-  blockIds: z.array(z.string()).describe('IDs of blocks to delete'),
-})
+// export const editContentSchema = z.object({
+//   instruction: z.string().describe('Clear instruction on what to write or how to update the content.'),
+//   skillset: z.array(z.string()).describe('Skills to load for this writing task (e.g., ["synopsis", "narrative_arc"])'),
+//   operation: z.union([insertOperation, deleteOperation, updateOperation]).describe('The operation to perform on the script content.'),
+// })
 
 export const spawnTaskSchema = z.object({
   instruction: z.string().describe('Clear instruction on what the sub-agent should do'),
@@ -73,39 +84,9 @@ export const outputSchema = z.object({
   text: z.string(),
 })
 
-
 // ============================================================================
 // TOOL DEFINITIONS
 // ============================================================================
-
-/**
- * Read current editor content from the database
- */
-export const readContent = tool({
-  description: `Retrieves the current text content and Block IDs from the editor.
-CRITICAL RULE: You MUST use this tool FIRST before making any edits or writing new content to ensure you understand the existing narrative context and story flow.
-Parameters:
-- component (String, Enum): [REQUIRED] Specifies which part of the project to read. For example: 'synopsis' or 'script'.
-- blockIds (Array of Strings): The specific Block IDs you want to read. WARNING: Leaving this empty retrieves the entire component, which is highly verbose and consumes massive context. Always specify target IDs unless a full read is absolutely necessary.
-- offset (Integer): The number of surrounding blocks to fetch before and after each requested blockId. (e.g., An offset of 2 returns the target block plus the 2 blocks before it and the 2 blocks after it). Always use a small offset (e.g., 1 to 3) to understand the surrounding context and maintain story flow consistency.
-`,
-  inputSchema: readContentSchema,
-  outputSchema: outputSchema,
-  execute: async ({ component, blockIds, offset }, { experimental_context }) => {
-    const runContext = experimental_context as RunContext
-    const project = runContext.project
-
-    const allBlocks = getBlocksForComponent(project, component)
-    if (allBlocks.length === 0) {
-      return { success: true, text: formatBlocksAsText([], component) }
-    }
-
-    const indices = selectBlockIndicesWithOffset(allBlocks, blockIds, offset)
-    const selectedBlocks = indices.map((i) => allBlocks[i])
-    const text = formatBlocksAsText(selectedBlocks, component)
-    return { success: true, text }
-  },
-})
 
 /**
  * Load a skill's full content into context
@@ -218,26 +199,34 @@ CRITICAL REQUIREMENTS:
 - Skills: Select and pass the relevant skills the tool will need.
 Note: The tool will generate the new content and submit it directly to the user's editor for human review (accept/reject).
 `,
-  inputSchema: editContentSchema,
+  inputSchema: z.object({
+    operation: z.union([insertOperation, deleteOperation, updateOperation]).describe('The editing operation to perform on the script content.'),
+  }),
   outputSchema: outputSchema,
-  execute: async ({ instruction, skillset, operation }, {abortSignal, experimental_context}) => {
-    const runContext = experimental_context as RunContext
+  execute: async ({operation}, {experimental_context}) => {
+    const {documentIndex} = experimental_context as RunContext
 
-    const writerAgent = new WriterAgent({
-      instruction,
-      skillset,
-      operation,
-      project: runContext.project,
-      stream: runContext.stream,
-      abortSignal: abortSignal,
-    })
+    // Validates in the block exist for 
 
-    const result = await writerAgent.run(runContext.runId)
-
-    if (!result.success) {
-      return { success: false, text: 'error' in result ? result.error : 'Writer agent failed' }
+    switch (operation.type) {
+      case 'insert':
+        if(!documentIndex.byId.get(operation.insertAfterBlockId)) {
+          return { success: false, text: `insertAfterBlockId ${operation.insertAfterBlockId} does not exist.` }
+        }
+        break
+      case 'delete':
+        if(!documentIndex.byId.get(operation.blockId)) {
+          return { success: false, text: `Block or Selection with ID ${operation.blockId} does not exist.` }
+        }
+        break
+      case 'update':
+        if(!documentIndex.byId.get(operation.blockId)) {
+          return { success: false, text: `Block or Selection with ID ${operation.blockId} does not exist.` }
+        }
+        break
     }
-    return { success: true, text: 'New content written and sent to editor.' }
+
+    return { success: true, text: 'Editing operation completed successfully.' }
 
   },
 })
@@ -280,72 +269,87 @@ Provide a clear instruction, relevant skills, and specify the expected output fo
 })
 
 // ============================================================================
-// HELPER FUNCTIONS
+// READ TOOLS
 // ============================================================================
+const documentId = z.enum(['synopsis', 'script', 'story_bible']).describe('The ID of the document to search.')
 
-type ProseNode = {
-  type: string
-  attrs?: Record<string, unknown>
-  content?: Array<{ type: 'text'; text?: string } | ProseNode>
-  text?: string
-}
-type ProseDocument = { type: 'doc'; content: ProseNode[] }
+export const getDocumentOutline = tool({
+  description: `Returns a lightweight structural outline of the entire document without fetching block content.
+  It gives you block IDs, types, labels, and hierarchy so you can plan targeted reads instead of scanning blindly. 
+  Think of it as the table of contents for the active editor.
+  `,
+  inputSchema: z.object({
+    documentId,
+  }),
+  outputSchema: outputSchema,
+  execute: async ({ documentId }, { experimental_context }) => {
+    const runContext = experimental_context as RunContext
+    const { documentIndex, project } = runContext
+    let text: string
+    if (documentId === 'story_bible') {
+      text = formatStoryBibleOutline(project.story_bible as Parameters<typeof formatStoryBibleOutline>[0])
+    } else {
+      const nodes = getOutline(documentIndex, documentId as 'synopsis' | 'script')
+      text = formatOutlineAsText(nodes)
+    }
+    return { success: true, text }
+  },
+})
 
-type ContentBlock = { id: string; type: string; content: string; order: number }
+export const searchDocument = tool({
+  description: `Searches for specific keywords, phrases, or entity names across the workspace.
+  Returns the block IDs and a short text snippet of the matches. Use this to find references to a prop, location, or character without reading the whole document.
+  `,
+  inputSchema: z.object({
+    documentIds: z.array(documentId).describe('Optional. An array of document IDs to restrict the search to. If empty, searches all available documents.'),
+    query: z.string().describe('The specific text, character name, or keyword to search for.'),
+  }),
+  outputSchema: outputSchema,
+  execute: async ({ documentIds, query }, { experimental_context }) => {
+    const runContext = experimental_context as RunContext
+    const matches = search(
+      runContext.documentIndex,
+      documentIds as ('synopsis' | 'script' | 'story_bible')[],
+      query
+    )
+    const text = formatSearchResultsAsText(matches)
+    return { success: true, text }
+  },
+})
 
-function extractTextFromProseNode(node: ProseNode): string {
-  if (typeof node.text === 'string') return node.text
-  if (!Array.isArray(node.content)) return ''
-  return node.content
-    .map((c) => (c && typeof c === 'object' && 'text' in c ? (c as { text?: string }).text ?? '' : extractTextFromProseNode(c as ProseNode)))
-    .join('')
-}
+export const readBlockContext = tool({
+  description: `Reads the content of a specific block in the document by its block ID.
+  Use this to get the block's content, type, and ID. Use when you need to read a block (or a user-selected snippet identified by blockId) before suggesting edits.`,
+  inputSchema: z.object({
+    blockId: z.string().describe('The block ID (block or contextAnchor snippet) to read.'),
+  }),
+  outputSchema: outputSchema,
+  execute: async ({ blockId }, { experimental_context }) => {
+    const runContext = experimental_context as RunContext
+    const text = getBlockContext(runContext.documentIndex, blockId)
+    return { success: true, text }
+  },
+})
 
-function getBlocksFromProseDocument(doc: ProseDocument | null): ContentBlock[] {
-  if (!doc || doc.type !== 'doc' || !Array.isArray(doc.content)) return []
-  const blocks: ContentBlock[] = []
-  doc.content.forEach((node, order) => {
-    const id = (node.attrs?.blockId ?? node.attrs?.id) as string | undefined
-    if (id == null && (node.type === 'synopsisSpacer' || node.type === 'synopsisDivider')) return
-    const blockId = id ?? `_order_${order}`
-    const content = extractTextFromProseNode(node).trim()
-    blocks.push({ id: blockId, type: node.type, content, order })
-  })
-  return blocks
-}
-
-function getBlocksFromSynopsis(synopsis: unknown): ContentBlock[] {
-  if (!synopsis) return []
-  const doc = synopsis as { type?: string; content?: ProseNode[] }
-  if (doc.type === 'doc' && Array.isArray(doc.content)) return getBlocksFromProseDocument(doc as ProseDocument)
-  const legacy = synopsis as { title?: string; text?: string }
-  const title = legacy.title ?? 'Untitled'
-  const text = legacy.text ?? ''
-  const blocks: ContentBlock[] = []
-  if (title) blocks.push({ id: 'title', type: 'synopsisTitle', content: title, order: 0 })
-  if (text) blocks.push({ id: 'body', type: 'synopsisContent', content: text, order: 1 })
-  return blocks
-}
-
-function getBlocksForComponent(project: RunContext['project'], component: 'synopsis' | 'script'): ContentBlock[] {
-  if (component === 'script') return getBlocksFromProseDocument(project.script as ProseDocument | null)
-  return getBlocksFromSynopsis(project.synopsis)
-}
-
-function selectBlockIndicesWithOffset(blocks: ContentBlock[], blockIds: string[], offset: number): number[] {
-  if (blockIds.length === 0) return blocks.map((_, i) => i)
-  const idToIndex = new Map(blocks.map((b, i) => [b.id, i]))
-  const indices = new Set<number>()
-  for (const id of blockIds) {
-    const i = idToIndex.get(id)
-    if (i == null) continue
-    for (let k = Math.max(0, i - offset); k <= Math.min(blocks.length - 1, i + offset); k++) indices.add(k)
-  }
-  return [...indices].sort((a, b) => a - b)
-}
-
-function formatBlocksAsText(blocks: ContentBlock[], component: 'synopsis' | 'script'): string {
-  if (blocks.length === 0) return `[${component}: no content]`
-  const lines = blocks.map((b) => `[id=${b.id} type=${b.type}]\n${b.content || '(empty)'}`)
-  return `<${component}>\n${lines.join('\n\n')}\n</${component}>`
-}
+export const getEntityDefinition = tool({
+  description: `Fetches the canonical definition blocks for a character, location, or prop from the world editor. 
+  Use this when reasoning about a screenplay or synopsis edit that involves an entity — to verify consistency with established traits, backstory, or physical description before suggesting changes. 
+  Avoids cross-editor confusion by always pulling the ground truth from the world editor..
+  `,
+  inputSchema: z.object({
+    entityId: z.string().describe('The ID of the entity to get the definition of.'),
+    entityType: z.enum(['character', 'location', 'prop']).describe('The type of the entity to get the definition of.'),
+  }),
+  outputSchema: outputSchema,
+  execute: async ({ entityId, entityType }, { experimental_context }) => {
+    const runContext = experimental_context as RunContext
+    const project = runContext.project
+    const entity = getEntityDefinitionFromIndex(
+      project,
+      entityId,
+      entityType as StoryBibleEntityType
+    )
+    const text = formatEntityDefinition(entity, entityType as StoryBibleEntityType)
+    return { success: !!entity, text }
+  },
+})

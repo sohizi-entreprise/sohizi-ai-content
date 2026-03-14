@@ -14,11 +14,11 @@ declare module '@tiptap/core' {
       /**
        * Set a context anchor mark on the current selection
        */
-      setContextAnchor: (attributes: { anchorId: string }) => ReturnType
+      setContextAnchor: (attributes: { blockId: string }) => ReturnType
       /**
-       * Remove a specific context anchor by ID
+       * Remove a specific context anchor by block ID
        */
-      unsetContextAnchor: (anchorId: string) => ReturnType
+      unsetContextAnchor: (blockId: string) => ReturnType
       /**
        * Remove all context anchors from the document
        */
@@ -52,12 +52,12 @@ export const ContextAnchorMark = Mark.create<ContextAnchorOptions>({
 
   addAttributes() {
     return {
-      anchorId: {
+      blockId: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-anchor-id'),
+        parseHTML: (element) => element.getAttribute('data-block-id'),
         renderHTML: (attributes) => {
-          if (!attributes.anchorId) return {}
-          return { 'data-anchor-id': attributes.anchorId }
+          if (!attributes.blockId) return {}
+          return { 'data-block-id': attributes.blockId }
         },
       },
     }
@@ -65,7 +65,7 @@ export const ContextAnchorMark = Mark.create<ContextAnchorOptions>({
 
   parseHTML() {
     return [
-      { tag: 'span[data-anchor-id]' },
+      { tag: 'span[data-block-id]' },
       { tag: 'span.context-anchor' },
     ]
   },
@@ -90,7 +90,7 @@ export const ContextAnchorMark = Mark.create<ContextAnchorOptions>({
         },
 
       unsetContextAnchor:
-        (anchorId) =>
+        (blockId) =>
         ({ tr, state, dispatch }) => {
           const markType = state.schema.marks.contextAnchor
           if (!markType) return false
@@ -103,7 +103,7 @@ export const ContextAnchorMark = Mark.create<ContextAnchorOptions>({
 
             const anchor = node.marks.find(
               (mark) =>
-                mark.type === markType && mark.attrs.anchorId === anchorId
+                mark.type === markType && mark.attrs.blockId === blockId
             )
 
             if (anchor) {
@@ -142,23 +142,23 @@ export const ContextAnchorMark = Mark.create<ContextAnchorOptions>({
 // ============================================================================
 
 /**
- * Find a context anchor by its ID in the editor
+ * Find a context anchor by its block ID in the editor
  * Returns the position range of the anchor or null if not found
  */
 export function findContextAnchorById(
   editor: { state: { doc: { descendants: Function }; schema: { marks: Record<string, unknown> } } },
-  anchorId: string
+  blockId: string
 ): { from: number; to: number; text: string } | null {
   let result: { from: number; to: number; text: string } | null = null
   const markType = editor.state.schema.marks.contextAnchor
 
   if (!markType) return null
 
-  editor.state.doc.descendants((node: { isText: boolean; marks: Array<{ type: unknown; attrs: { anchorId: string } }>; text?: string; nodeSize: number }, pos: number) => {
+  editor.state.doc.descendants((node: { isText: boolean; marks: Array<{ type: unknown; attrs: { blockId: string } }>; text?: string; nodeSize: number }, pos: number) => {
     if (!node.isText) return
 
     const anchor = node.marks.find(
-      (mark) => mark.type === markType && mark.attrs.anchorId === anchorId
+      (mark) => mark.type === markType && mark.attrs.blockId === blockId
     )
 
     if (anchor && node.text) {
@@ -178,19 +178,19 @@ export function findContextAnchorById(
  */
 export function getAllContextAnchors(
   editor: { state: { doc: { descendants: Function }; schema: { marks: Record<string, unknown> } } }
-): Array<{ anchorId: string; from: number; to: number; text: string }> {
-  const anchors: Array<{ anchorId: string; from: number; to: number; text: string }> = []
+): Array<{ blockId: string; from: number; to: number; text: string }> {
+  const anchors: Array<{ blockId: string; from: number; to: number; text: string }> = []
   const markType = editor.state.schema.marks.contextAnchor
 
   if (!markType) return anchors
 
-  editor.state.doc.descendants((node: { isText: boolean; marks: Array<{ type: unknown; attrs: { anchorId: string } }>; text?: string; nodeSize: number }, pos: number) => {
+  editor.state.doc.descendants((node: { isText: boolean; marks: Array<{ type: unknown; attrs: { blockId: string } }>; text?: string; nodeSize: number }, pos: number) => {
     if (!node.isText) return
 
     node.marks.forEach((mark) => {
       if (mark.type === markType && node.text) {
         anchors.push({
-          anchorId: mark.attrs.anchorId,
+          blockId: mark.attrs.blockId,
           from: pos,
           to: pos + node.nodeSize,
           text: node.text,

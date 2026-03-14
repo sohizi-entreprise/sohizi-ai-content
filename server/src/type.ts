@@ -81,3 +81,16 @@ export type CursorPaginationResult<T> = {
 };
 
 export type AgentRunFinishReason = 'response' | 'error' | 'tool-calls' | 'aborted' | 'max-iterations' | 'not-finished';
+
+export type ProseNode = {
+  type: string
+  attrs?: Record<string, unknown>
+  content?: Array<{ type: 'text'; text?: string } | ProseNode>
+  text?: string
+}
+
+export type ProseDocument = { type: 'doc'; content: ProseNode[] }
+
+export type DocumentId = 'synopsis' | 'script' | 'story_bible' | 'shots';
+
+export type StoryBibleEntityType = 'character' | 'location' | 'prop';
