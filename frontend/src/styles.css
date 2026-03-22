@@ -74,6 +74,7 @@ code,
   --header-height: 3rem;
   --shadow-primary: 0 0 12px var(--primary);
   --paper-width: 8.5in;
+  --paper-padding: 1in;
 }
 
 /* Light theme override */
@@ -152,6 +153,7 @@ code,
   --spacing-header: var(--header-height);
   --spacing-paper: var(--paper-width);
   --shadow-primary: var(--shadow-primary);
+  --spacing-paper-pad: var(--paper-padding);
   
   /* Gradient utilities */
   --gradient-violet: linear-gradient(135deg, oklch(0.6 0.25 280), oklch(0.65 0.25 310));
@@ -480,4 +482,23 @@ input[type="range"]:focus::-webkit-slider-runnable-track {
   min-height: 1100px;
   outline: none;
   color: black;
+}
+
+.a4-page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 25.4mm; /* 1 inch margins */
+  background: white;
+  margin: 0 auto;
+}
+
+.screenplay-page {
+  width: 8.5in;
+  min-height: 11in;
+  height: auto;
+  padding: 1in; /* top right bottom left */
+  font-family: 'Courier Prime', monospace;
+  background: white;
+  font-size: 12pt;
+  line-height: 1;
 }

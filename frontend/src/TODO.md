@@ -26,3 +26,4 @@ Regarding AI editors
 [ ] Change the synopsis block types to simple like title and paragraph
 [ ] Render skeleton on the paper while we are streaming
 [ ] make possible to hide and show the chat container
+[ ] Make the diff accept/decline reactif. Currently the buttons don't appear as you generate changes

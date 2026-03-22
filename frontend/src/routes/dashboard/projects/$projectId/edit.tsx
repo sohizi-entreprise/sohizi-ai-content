@@ -11,7 +11,7 @@ function RouteComponent() {
       <div className='h-screen'>
           <Header />
           <div className='flex h-full pt-header'>
-              <div className='flex px-4 items-center'>
+              <div className='flex items-center pr-2'>
                   <ProjectNav />
               </div>
   
@@ -27,7 +27,7 @@ function RouteComponent() {
   function Header(){
 
     return(
-        <header className="fixed left-0 right-0 top-0 bg-background/60 backdrop-blur-xl flex items-center justify-between px-4 z-50 h-header">
+        <header className="fixed left-0 right-0 top-0 bg-background/60 backdrop-blur-xl flex items-center justify-between px-4 z-50 h-header border-b border-white/10">
             <div className=''>
                 Sohizi AI
             </div>

@@ -24,24 +24,45 @@ export const narrativeArcSchema = z.object({
 
 export const narrativeArcListSchema = z.array(narrativeArcSchema);
 
-
-export const outlineSchema = z.object({
-    actId: z.string().min(1).describe("The unique identifier for the act (e.g., 'act_1', 'act_2')"),
-    beat: z.object({
-        beatId: z.string().min(1).describe("The unique identifier for the beat (e.g., 'beat_opening_image')"),
-        title: z.string().min(1).describe("The name of the beat (e.g., 'Opening Image', 'Inciting Incident', 'Midpoint')"),
-        summary: z.string().min(1).describe("A description of what happens in this beat"),
-        goals: z.array(z.string()).min(1).describe("What this beat accomplishes narratively"),
-        turningPoints: z.array(z.string()).min(1).describe("Key moments that shift the story direction within this beat"),
-    }).describe("The dramatic beat that this section of the outline represents"),
-    scenes: z.array(z.object({
-        sceneId: z.string().min(1).describe("The unique identifier for the scene (e.g., 'scene_001')"),
-        slugline: z.string().min(1).describe("The scene heading in standard format (e.g., 'INT. COFFEE SHOP - DAY')"),
-        summary: z.string().min(1).describe("Brief description of what happens in the scene and its purpose"),
-    })).describe("The list of scenes that make up this beat"),
+export const sceneOutlineSchema = z.object({
+    scene_number: z.number().describe("Sequential scene number within the script (e.g., 1, 2, 3)"),
+    slugline: z.string().min(1).describe("Scene heading in standard format (e.g., 'INT. COFFEE SHOP - DAY')"),
+    characters_present: z.array(z.string()).describe("Names of characters appearing in this scene"),
+    scene_goal: z.string().describe("What this scene needs to accomplish narratively"),
+    conflict_obstacle: z.string().describe("The tension, conflict, or obstacle that drives the scene"),
+    action_summary: z.string().describe("Brief description of what happens in the scene"),
+    emotional_shift: z.string().describe("How the emotional tone changes from the start to end of the scene"),
+    story_engine_output: z.string().describe("How this scene advances the central conflict or character arcs"),
 });
 
-export const outlineListSchema = z.array(outlineSchema);
+const beatSchema = z.object({
+    beat_name: z.string().min(1).describe("Name of the story beat (e.g., 'Opening Image', 'Inciting Incident', 'Midpoint')"),
+    summary: z.string().min(1).describe("A concise description of what happens in this beat"),
+    scenes: z.array(sceneOutlineSchema).describe("Scenes that comprise this beat"),
+});
+
+export const scriptOutlineSchema = z.object({
+    beats: z.array(beatSchema).describe("Story beats that structure the script, each containing related scenes"),
+});
+
+
+// export const outlineSchema = z.object({
+//     actId: z.string().min(1).describe("The unique identifier for the act (e.g., 'act_1', 'act_2')"),
+//     beat: z.object({
+//         beatId: z.string().min(1).describe("The unique identifier for the beat (e.g., 'beat_opening_image')"),
+//         title: z.string().min(1).describe("The name of the beat (e.g., 'Opening Image', 'Inciting Incident', 'Midpoint')"),
+//         summary: z.string().min(1).describe("A description of what happens in this beat"),
+//         goals: z.array(z.string()).min(1).describe("What this beat accomplishes narratively"),
+//         turningPoints: z.array(z.string()).min(1).describe("Key moments that shift the story direction within this beat"),
+//     }).describe("The dramatic beat that this section of the outline represents"),
+//     scenes: z.array(z.object({
+//         sceneId: z.string().min(1).describe("The unique identifier for the scene (e.g., 'scene_001')"),
+//         slugline: z.string().min(1).describe("The scene heading in standard format (e.g., 'INT. COFFEE SHOP - DAY')"),
+//         summary: z.string().min(1).describe("Brief description of what happens in the scene and its purpose"),
+//     })).describe("The list of scenes that make up this beat"),
+// });
+
+// export const outlineListSchema = z.array(outlineSchema);
 
 export const synopsisSchema = z.object({
     title: z.string().min(1).describe("The title of the synopsis"),
@@ -50,7 +71,6 @@ export const synopsisSchema = z.object({
 
 
 export const CharacterSchema = z.object({
-    id: z.string().min(1).describe("The unique identifier for the character (e.g., 'char_sarah_chen')"),
     name: z.string().min(1).describe("The character's full name (e.g., 'Sarah Chen')"),
     role: z.enum(["protagonist", "antagonist", "supporting", "minor"]).describe("The character's role in the story"),
     age: z.number().min(1).describe("The character's age"),
@@ -64,25 +84,55 @@ export const CharacterSchema = z.object({
 });
 
 export const LocationSchema = z.object({
-    id: z.string().min(1).describe("The unique identifier for the location (e.g., 'loc_precinct')"),
     name: z.string().min(1).describe("The name of the location (e.g., 'The Precinct')"),
     description: z.string().min(1).describe("Detailed visual description of the location"),
-    atmosphere: z.string().min(1).describe("The mood and feel of the location (e.g., 'Fluorescent-lit, coffee-stained chaos')"),
 });
 
 export const PropSchema = z.object({
-    id: z.string().min(1).describe("The unique identifier for the prop (e.g., 'prop_sarahs_badge')"),
     name: z.string().min(1).describe("The name of the prop (e.g., 'Sarah's Badge')"),
     description: z.string().min(1).describe("Description of the prop and its narrative significance (e.g., 'Worn, scratched detective badge - Symbol of her identity crisis')"),
 });
 
-export const storyBibleSchema = z.object({
-    timePeriod: z.string().min(1).describe("When the story takes place (e.g., 'Present day', '1920s', 'Near future')"),
-    setting: z.string().min(1).describe("The primary location or world where the story unfolds (e.g., 'Chicago', 'Small coastal town')"),
-    characters: z.array(CharacterSchema).describe("All characters in the story with their details, relationships, and arcs"),
-    locations: z.array(LocationSchema).describe("All significant locations that appear in the story"),
-    props: z.array(PropSchema).describe("Important props that have narrative significance"),
+const keyLocationOutlineSchema = z.object({
+    name: z.string().min(1).describe("Name of the location (e.g., 'The Warehouse', 'City Hall')"),
+    description: z.string().describe("Physical and atmospheric description of the place"),
+    significance: z.string().describe("Why this location matters to the story or characters. Keep it very concise (1-2 sentences)."),
 });
+
+const keyCharacterOutlineSchema = z.object({
+    name: z.string().min(1).describe("Character's full name or primary alias"),
+    role: z.enum(["protagonist", "antagonist", "supporting"]).describe("Narrative function in the story"),
+    age: z.number().min(1).describe("Character's age in years"),
+    goal: z.string().describe("What the character wants or is driving toward in the story. Keep it very concise (1-2 sentences)."),
+});
+
+export const storyBibleSchema = z.object({
+    world: z.object({
+        setting: z.string().min(1).describe("The primary location or world where the story unfolds (e.g., 'Chicago', 'Small coastal town')"),
+        timePeriod: z.string().min(1).describe("When the story takes place (e.g., 'Present day', '1920s', 'Near future')"),
+        worldRules: z.string().describe("A very concise rules or logic that govern the world (magic, tech, social norms).(2-3 sentences)"),
+        socialContext: z.string().describe("A very concise of the social structure, power dynamics, and cultural context.(2-3 sentences)"),
+    }),
+    conflictEngine: z.object({
+        centralConflict: z.string().describe("The main opposing forces or dilemma driving the plot"),
+        stakes: z.string().describe("What can be won or lost; consequences of failure"),
+        antagonisticForce: z.string().describe("Who or what opposes the protagonist"),
+        timePressure: z.string().describe("Deadlines, ticking clocks, or urgency"),
+        mainDramaticQuestion: z.string().describe("The story question the audience wants answered (e.g., 'Will they escape?')"),
+    }),
+    keyLocations: z.array(keyLocationOutlineSchema).describe("Key locations with name, description, and significance"),
+    keyCharacters: z.array(keyCharacterOutlineSchema).describe("Key characters with role, age, and goal"),
+    toneAndStyle: z.object({
+        visualStyle: z.string().describe("Look and feel (e.g., noir, documentary, high contrast)"),
+        dialogueStyle: z.string().describe("How characters speak (e.g., naturalistic, stylized, sparse)"),
+        pacing: z.string().describe("Rhythm of the story (e.g., slow burn, propulsive, episodic)"),
+    }),
+    continuityRules: z.object({
+        factsToConsistent: z.string().describe("A very concise established facts that must stay consistent"),
+        characterBehaviorRules: z.string().describe("A very concise how characters should act and react consistently"),
+        thingsToAvoid: z.string().describe("A very concise contradictions or mistakes to avoid"),
+    }),
+}).describe("The story bible is a comprehensive outline of the story, including the world, conflict engine, key locations, key characters, tone and style, and continuity rules. Keep each section very concise (1-3 sentences) and to the point.");
 
 // ProseMirror/Tiptap Mark schema (inline formatting)
 export const proseMarkSchema = z.object({
@@ -114,14 +164,20 @@ export const proseDocumentSchema = z.object({
     content: z.array(proseNodeSchema),
 });
 
+
+
 // Type exports
 export type ProjectBrief = z.infer<typeof projectBriefSchema>;
 export type NarrativeArc = z.infer<typeof narrativeArcSchema>;
 export type NarrativeArcList = z.infer<typeof narrativeArcListSchema>;
-export type Outline = z.infer<typeof outlineSchema>;
-export type OutlineList = z.infer<typeof outlineListSchema>;
+export type Outline = z.infer<typeof scriptOutlineSchema>;
+export type SceneOutline = z.infer<typeof sceneOutlineSchema>;
 export type Synopsis = z.infer<typeof synopsisSchema>;
 export type StoryBible = z.infer<typeof storyBibleSchema>;
 export type ProseMark = z.infer<typeof proseMarkSchema>;
 export type ProseNode = ProseNodeType;
 export type ProseDocument = z.infer<typeof proseDocumentSchema>;
+export type Character = z.infer<typeof CharacterSchema>;
+export type Location = z.infer<typeof LocationSchema>;
+export type Prop = z.infer<typeof PropSchema>;
+export type EntityObject = Character | Location | Prop;

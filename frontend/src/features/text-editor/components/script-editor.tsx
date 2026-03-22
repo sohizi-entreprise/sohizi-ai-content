@@ -5,7 +5,7 @@ import Highlight from '@tiptap/extension-highlight'
 import { useEditorStore } from '../store/editor-store'
 import { EditorToolbar } from './editor-toolbar'
 import { 
-  SceneHeadingExtension,
+  SluglineExtension,
   ActionExtension,
   CharacterExtension,
   DialogueExtension,
@@ -122,7 +122,7 @@ export function ScriptEditor({
       }),
       Placeholder.configure({
         placeholder: ({ node }) => {
-          if (node.type.name === 'sceneHeading') {
+          if (node.type.name === 'slugline') {
             return 'INT./EXT. LOCATION - TIME'
           }
           if (node.type.name === 'character') {
@@ -141,7 +141,7 @@ export function ScriptEditor({
         multicolor: true,
       }),
       // Custom screenplay extensions
-      SceneHeadingExtension,
+      SluglineExtension,
       ActionExtension,
       CharacterExtension,
       DialogueExtension,

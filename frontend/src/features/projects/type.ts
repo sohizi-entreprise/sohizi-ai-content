@@ -161,3 +161,60 @@ export type ProjectOptions = {
 }
 
 export type ProjectStatusType = 'DRAFT' | "COMPLETED" | "EDITING"
+
+// Entity types
+export type EntityType = 'CHARACTER' | 'LOCATION' | 'PROP' | 'COSTUME'
+
+export type BaseEntity = {
+    id: string
+    projectId: string
+    name: string
+    slug: string
+    type: EntityType
+    createdAt: string
+    updatedAt: string
+}
+
+export type CharacterEntity = BaseEntity & {
+    metadata: {
+        name: string
+        role: "protagonist" | "antagonist" | "supporting" | "minor";
+        age: number;
+        occupation: string;
+        physicalDescription: string;
+        personalityTraits: string[];
+        backstory: string;
+        motivation: string;
+        flaw: string;
+        voice: string;
+    }
+}
+
+export type LocationEntity = BaseEntity & {
+    metadata: {
+        name: string;
+        description: string;
+    }
+}
+
+export type PropEntity = BaseEntity & {
+    metadata: {
+        name: string;
+        description: string;
+    }
+}
+
+export type CostumeEntity = BaseEntity & {
+    metadata: {
+        name: string;
+        description: string;
+    }
+}
+
+export type Entity = CharacterEntity | LocationEntity | PropEntity | CostumeEntity
+
+export type ListEntitiesResponse = {
+    items: Entity[]
+    nextCursor?: string
+    hasMore: boolean
+}

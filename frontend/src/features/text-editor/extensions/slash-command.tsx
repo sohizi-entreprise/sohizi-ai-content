@@ -30,12 +30,12 @@ interface BlockItem {
 // Define available blocks with keyboard shortcuts
 const BLOCKS: BlockItem[] = [
   {
-    title: 'Scene Heading',
+    title: 'Slugline',
     description: 'INT./EXT. LOCATION - TIME',
     shortcut: '⌘1',
     icon: <IconMovie className="size-4" />,
     command: (editor, range) => {
-      editor.chain().focus().deleteRange(range).setNode('sceneHeading').run()
+      editor.chain().focus().deleteRange(range).setNode('slugline').run()
     },
   },
   {

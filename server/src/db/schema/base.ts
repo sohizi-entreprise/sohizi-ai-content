@@ -8,11 +8,12 @@ import {
     varchar,
     pgEnum,
     index,
+    uniqueIndex,
   } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { projectConstants } from '@/constants'
-import { ProjectBrief, StoryBible, NarrativeArcList, OutlineList } from 'zSchemas';
-import { AgentRunFinishReason, ChatMetadata, MsgContent, MsgMetadata, ProseDocument } from '@/type';
+import { ProjectBrief, StoryBible, NarrativeArcList, Outline } from 'zSchemas';
+import { AgentRunFinishReason, ChatMetadata, MsgContent, MsgMetadata, ProseDocument, SceneContent } from '@/type';
   
 const timestamps = {
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -20,7 +21,7 @@ const timestamps = {
 }
 
 export const blockStatusEnum = pgEnum('block_status', ['PENDING', 'DRAFT', 'ERROR', 'APPROVED']);
-export const entityTypeEnum = pgEnum('entity_type', ['CHARACTER', 'LOCATION', 'PROP', 'COSTUME']);
+export const entityTypeEnum = pgEnum('entity_type', projectConstants.entityTypes);
 export const imageOwnerTypeEnum = pgEnum('image_owner_type', ['PROJECT', 'SHOT', 'ENTITY']);
 
 export const generationRequestStatusEnum = pgEnum('generation_request_status', ['ENQUEUED', 'PROCESSING', 'COMPLETED', 'FAILED']);
@@ -45,24 +46,10 @@ export const generationRequests = pgTable('generation_requests', {
     brief: jsonb('brief').notNull().$type<ProjectBrief>(),
     narrative_arcs: jsonb('narrative_arcs').$type<NarrativeArcList>(),
     synopsis: jsonb('synopsis').$type<ProseDocument>(),
-    outline: jsonb('outline').$type<OutlineList>(),
+    outline: jsonb('outline').$type<Outline>(),
     story_bible: jsonb('story_bible').$type<StoryBible>(),
     script: jsonb('script').$type<ProseDocument>(),
     status: varchar('status', {length: 50}).default('DRAFT').notNull().$type<projectConstants.ProjectStatus>(),
-    ...timestamps,
-  })
-
-  
-  export const segments = pgTable('segments', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    projectId: uuid('project_id')
-      .references(() => projects.id, { onDelete: 'cascade' })
-      .notNull(),
-    order: integer('order').notNull(),
-    title: text('title').notNull(),
-    summary: text('summary').notNull(),
-    goals: jsonb('goals').$type<string[]>(),
-    turningPoints: jsonb('turning_points').$type<string[]>(),
     ...timestamps,
   })
   
@@ -71,16 +58,8 @@ export const generationRequests = pgTable('generation_requests', {
     projectId: uuid('project_id')
       .references(() => projects.id, { onDelete: 'cascade' })
       .notNull(),
-    segmentId: uuid('segment_id')
-      .references(() => segments.id, { onDelete: 'cascade' })
-      .notNull(),
     order: integer('order').notNull(),
-    title: text('title').notNull(),
-    content: text('content').notNull(),
-    metadata: jsonb('metadata').$type<{
-      timeOfDay: string
-      location: string
-    }>(),
+    content: jsonb('content').$type<SceneContent[]>().notNull(),
     ...timestamps,
   })
 
@@ -112,11 +91,14 @@ export const generationRequests = pgTable('generation_requests', {
     projectId: uuid('project_id')
       .references(() => projects.id, { onDelete: 'cascade' })
       .notNull(),
-    name: text('name').notNull(),
-    description: text('description').notNull(),
+    name: varchar('name', {length: 150}).notNull(),
+    slug: varchar('slug', {length: 150}).notNull(),
     type: entityTypeEnum('type').notNull(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull(),
     ...timestamps,
-  })
+  }, (table) => ([
+    uniqueIndex('entities_project_type_slug_unique').on(table.projectId, table.type, table.slug),
+  ]))
 
   export const shotToEntities = pgTable('shot_to_entities', {
     id: uuid('id').defaultRandom().primaryKey(),
@@ -219,7 +201,6 @@ export const generationRequests = pgTable('generation_requests', {
   export type Image = typeof images.$inferSelect
   export type Entity = typeof entities.$inferSelect
   export type Scene = typeof scenes.$inferSelect
-  export type Segment = typeof segments.$inferSelect
   export type Shot = typeof shots.$inferSelect
   export type GenerationRequest = typeof generationRequests.$inferSelect
   export type Conversation = typeof conversations.$inferSelect

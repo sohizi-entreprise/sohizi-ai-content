@@ -36,6 +36,20 @@
       "when": 1772880535056,
       "tag": "0004_optimal_viper",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773763891262,
+      "tag": "0005_cuddly_justin_hammer",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774077600000,
+      "tag": "0006_fine_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

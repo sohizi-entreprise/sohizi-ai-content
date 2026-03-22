@@ -39,7 +39,7 @@ export { BLOCK_METADATA } from './store/types'
 
 // Extensions (for advanced usage)
 export {
-  SceneHeadingExtension,
+  SluglineExtension,
   ActionExtension,
   CharacterExtension,
   DialogueExtension,

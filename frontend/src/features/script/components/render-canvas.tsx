@@ -6,7 +6,7 @@ const EXAMPLE_CONTENT: JSONContent = {
   type: 'doc',
   content: [
     {
-      type: 'sceneHeading',
+      type: 'slugline',
       content: [{ type: 'text', text: 'INT. COFFEE SHOP - DAY' }]
     },
     {

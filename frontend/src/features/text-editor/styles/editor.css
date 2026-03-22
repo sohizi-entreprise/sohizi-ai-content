@@ -37,14 +37,14 @@
    ============================================================================ */
 
 /* Scene Heading */
-.screenplay-scene-heading {
+.screenplay-slugline {
   text-transform: uppercase;
   font-weight: bold;
   margin-top: 0;
   margin-bottom: 0;
 }
 
-.screenplay-scene-heading:first-child {
+.screenplay-slugline:first-child {
   margin-top: 0;
 }
 
@@ -168,7 +168,7 @@
    ============================================================================ */
 
 .script-editor-content p.is-editor-empty:first-child::before,
-.screenplay-scene-heading.is-empty::before,
+.screenplay-slugline.is-empty::before,
 .screenplay-action.is-empty::before,
 .screenplay-character.is-empty::before,
 .screenplay-dialogue.is-empty::before {
@@ -271,6 +271,85 @@
       }
     }
   }
+}
+
+/* ============================================================================
+   WORLD EDITOR
+   ============================================================================ */
+
+.world-editor {
+  height: 100%;
+}
+
+.world-editor-wrapper {
+  height: 100%;
+}
+
+.world-editor-content {
+  color: black;
+  outline: none;
+}
+
+.world-editor-content:focus {
+  outline: none;
+}
+
+.world-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0 1rem;
+  user-select: none;
+}
+
+.world-section-heading:first-child {
+  margin-top: 0;
+}
+
+.world-section-heading-line {
+  flex: 1;
+  height: 1px;
+  background: oklch(0.8 0.02 270);
+}
+
+.world-section-heading-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: oklch(0.5 0.02 270);
+}
+
+.world-field {
+  margin-bottom: 1rem;
+}
+
+.world-field-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: oklch(0.35 0.02 270);
+  margin-bottom: 0.25rem;
+  user-select: none;
+}
+
+.world-field-value {
+  min-height: 1.25rem;
+  padding: 0.25rem 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: black;
+}
+
+.world-field.is-empty .world-field-value::before {
+  content: attr(data-placeholder);
+  color: oklch(0.6 0.02 270);
+  font-style: italic;
+  pointer-events: none;
+}
+
+.world-field-value::selection,
+.world-field-value *::selection {
+  background: oklch(0.9 0.08 145 / 0.5);
 }
 
 /* ============================================================================
@@ -497,4 +576,300 @@
   text-align: center;
   font-size: 0.875rem;
   color: oklch(0.5 0.02 270);
+}
+
+/* ============================================================================
+   SCENES EDITOR STYLES
+   ============================================================================ */
+
+.scenes-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.scenes-editor-wrapper {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.scenes-editor-content {
+  max-width: 8.5in;
+  margin: 0 auto;
+  padding: 1in;
+  background: white;
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: black;
+  outline: none;
+  min-height: 11in;
+}
+
+.scenes-editor-content:focus {
+  outline: none;
+}
+
+.scenes-editor-content ::selection {
+  background: oklch(0.9 0.08 145 / 0.5);
+}
+
+/* Scene Container */
+.screenplay-scene {
+  margin-bottom: 0;
+  padding-bottom: 1em;
+}
+
+.screenplay-scene:last-child {
+  margin-bottom: 0;
+}
+
+/* Scene Delimiter */
+.screenplay-scene-delimiter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 2em 0;
+  user-select: none;
+  cursor: default;
+}
+
+.scene-delimiter-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    oklch(0.75 0.02 270) 10%,
+    oklch(0.75 0.02 270) 90%,
+    transparent
+  );
+  border: none;
+}
+
+.scene-delimiter-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid oklch(0.8 0.02 270);
+  background: white;
+  color: oklch(0.55 0.02 270);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  margin: 0 0.5em;
+}
+
+.scene-delimiter-button:hover {
+  border-color: oklch(0.6 0.15 250);
+  background: oklch(0.95 0.05 250);
+  color: oklch(0.5 0.2 250);
+  transform: scale(1.05);
+}
+
+.scene-delimiter-button:active {
+  transform: scale(0.98);
+}
+
+.scene-delimiter-icon {
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+/* Placeholder styles for scenes editor - Tiptap 3.x compatible */
+/* Base placeholder style using Tiptap's is-empty class */
+.scenes-editor-content .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: oklch(0.55 0.02 270);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Ensure placeholders show for nested screenplay blocks inside scenes */
+.scenes-editor-content .screenplay-slugline.is-empty::before,
+.scenes-editor-content .screenplay-action.is-empty::before,
+.scenes-editor-content .screenplay-character.is-empty::before,
+.scenes-editor-content .screenplay-dialogue.is-empty::before,
+.scenes-editor-content .screenplay-parenthetical.is-empty::before,
+.scenes-editor-content .screenplay-transition.is-empty::before,
+.scenes-editor-content .screenplay-shot.is-empty::before,
+.scenes-editor-content .screenplay-note.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: oklch(0.55 0.02 270);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Fallback: Handle nodes that have only <br> as content (Tiptap empty state) */
+.scenes-editor-content .screenplay-slugline:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-action:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-character:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-dialogue:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-parenthetical:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-transition:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-shot:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-note:has(> br:only-child)::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: oklch(0.55 0.02 270);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Scene heading and character placeholders - not italic */
+.scenes-editor-content .screenplay-slugline.is-empty::before,
+.scenes-editor-content .screenplay-slugline:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-character.is-empty::before,
+.scenes-editor-content .screenplay-character:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-transition.is-empty::before,
+.scenes-editor-content .screenplay-transition:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-shot.is-empty::before,
+.scenes-editor-content .screenplay-shot:has(> br:only-child)::before {
+  font-style: normal;
+}
+
+/* Action, dialogue, and other placeholders - italic */
+.scenes-editor-content .screenplay-action.is-empty::before,
+.scenes-editor-content .screenplay-action:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-dialogue.is-empty::before,
+.scenes-editor-content .screenplay-dialogue:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-parenthetical.is-empty::before,
+.scenes-editor-content .screenplay-parenthetical:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-note.is-empty::before,
+.scenes-editor-content .screenplay-note:has(> br:only-child)::before {
+  font-style: italic;
+}
+
+/* Responsive adjustments for scenes editor */
+@media (max-width: 768px) {
+  .scenes-editor-wrapper {
+    padding: 1rem;
+  }
+
+  .scenes-editor-content {
+    padding: 0.5in;
+    font-size: 11pt;
+    min-height: auto;
+  }
+
+  .screenplay-scene-delimiter {
+    padding: 1.5em 0;
+  }
+
+  .scene-delimiter-button {
+    width: 24px;
+    height: 24px;
+  }
+
+  .scene-delimiter-icon {
+    font-size: 16px;
+  }
+}
+
+/* Print styles for scenes editor */
+@media print {
+  .scenes-editor-wrapper {
+    padding: 0;
+  }
+
+  .scenes-editor-content {
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .screenplay-scene-delimiter {
+    display: none;
+  }
+}
+
+/* ============================================================================
+   ENTITY TIPTAP EDITOR STYLES
+   ============================================================================ */
+
+.entity-editor {
+  margin-top: 1.5rem;
+}
+
+.entity-editor-content {
+  outline: none;
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: black;
+}
+
+.entity-editor-content:focus {
+  outline: none;
+}
+
+/* Entity TipTap Field Node */
+.entity-tiptap-field {
+  margin-bottom: 1.5rem;
+}
+
+.entity-tiptap-field:last-child {
+  margin-bottom: 0;
+}
+
+.entity-tiptap-field-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-green-600);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  user-select: none;
+}
+
+.entity-tiptap-field-label::before {
+  content: '';
+  display: block;
+  width: 1rem;
+  height: 1px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.entity-tiptap-field-value {
+  min-height: 1.5rem;
+  color: black;
+  font-size: 1rem;
+  /* line-height: 1.6; */
+  white-space: pre-wrap;
+  word-break: break-word;
+  transition: border-color 0.15s ease;
+}
+
+.entity-tiptap-field-value:focus-within {
+  border-color: oklch(0.5 0.15 145);
+}
+
+/* Placeholder for empty entity fields */
+.entity-tiptap-field-value:empty::before,
+.entity-tiptap-field-value:has(> br:only-child)::before {
+  content: attr(data-placeholder);
+  color: oklch(0.4 0.01 270);
+  font-style: italic;
+  pointer-events: none;
+}
+
+/* Selection styles */
+.entity-editor-content ::selection {
+  background: oklch(0.5 0.15 145 / 0.3);
+}
+
+/* Voice field styling (italic) */
+.entity-tiptap-field[data-field="voice"] .entity-tiptap-field-value {
+  font-style: italic;
 }

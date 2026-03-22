@@ -25,59 +25,66 @@ export const NarrativeArcItemDTO = t.Object({
 // Synopsis is now stored as TipTap prose format (JSONContent)
 const SynopsisDTO = t.Any()
 
-const OutlineBeatDTO = t.Object({
-  beatId: t.String(),
-  title: t.String(),
-  summary: t.String(),
-  goals: t.Array(t.String()),
-  turningPoints: t.Array(t.String()),
-})
-
-const OutlineSceneDTO = t.Object({
-  sceneId: t.String(),
+const SceneOutlineDTO = t.Object({
+  scene_number: t.Number(),
   slugline: t.String(),
+  characters_present: t.Array(t.String()),
+  scene_goal: t.String(),
+  conflict_obstacle: t.String(),
+  action_summary: t.String(),
+  emotional_shift: t.String(),
+  story_engine_output: t.String(),
+})
+
+const BeatDTO = t.Object({
+  beat_name: t.String(),
   summary: t.String(),
+  scenes: t.Array(SceneOutlineDTO),
 })
 
-const OutlineActDTO = t.Object({
-  actId: t.String(),
-  beat: OutlineBeatDTO,
-  scenes: t.Array(OutlineSceneDTO),
+const OutlineDTO = t.Object({
+  beats: t.Array(BeatDTO),
 })
 
-const CharacterDTO = t.Object({
-  id: t.String(),
+const KeyLocationDTO = t.Object({
   name: t.String(),
-  role: t.Union([t.Literal("protagonist"), t.Literal("antagonist"), t.Literal("supporting"), t.Literal("minor")]),
+  description: t.String(),
+  significance: t.String(),
+})
+
+const KeyCharacterDTO = t.Object({
+  name: t.String(),
+  role: t.Union([t.Literal("protagonist"), t.Literal("antagonist"), t.Literal("supporting")]),
   age: t.Number(),
-  occupation: t.String(),
-  physicalDescription: t.String(),
-  personalityTraits: t.Array(t.String()),
-  backstory: t.String(),
-  motivation: t.String(),
-  flaw: t.String(),
-  voice: t.String(),
-})
-
-const LocationDTO = t.Object({
-  id: t.String(),
-  name: t.String(),
-  description: t.String(),
-  atmosphere: t.String(),
-})
-
-const PropDTO = t.Object({
-  id: t.String(),
-  name: t.String(),
-  description: t.String(),
+  goal: t.String(),
 })
 
 const StoryBibleDTO = t.Object({
-  timePeriod: t.String(),
-  setting: t.String(),
-  characters: t.Array(CharacterDTO),
-  locations: t.Array(LocationDTO),
-  props: t.Array(PropDTO),
+  world: t.Object({
+    setting: t.String(),
+    timePeriod: t.String(),
+    worldRules: t.String(),
+    socialContext: t.String(),
+  }),
+  conflictEngine: t.Object({
+    centralConflict: t.String(),
+    stakes: t.String(),
+    antagonisticForce: t.String(),
+    timePressure: t.String(),
+    mainDramaticQuestion: t.String(),
+  }),
+  keyLocations: t.Array(KeyLocationDTO),
+  keyCharacters: t.Array(KeyCharacterDTO),
+  toneAndStyle: t.Object({
+    visualStyle: t.String(),
+    dialogueStyle: t.String(),
+    pacing: t.String(),
+  }),
+  continuityRules: t.Object({
+    factsToConsistent: t.String(),
+    characterBehaviorRules: t.String(),
+    thingsToAvoid: t.String(),
+  }),
 })
 
 // DTO to create a project (minimal - just title and optional brief)
@@ -91,9 +98,10 @@ export const UpdateProjectDTO = t.Partial(t.Object({
   title: t.String({ minLength: 1 }),
   narrative_arcs: t.Union([t.Array(NarrativeArcItemDTO), t.Null()]),
   synopsis: t.Union([SynopsisDTO, t.Null()]),
-  outline: t.Union([t.Array(OutlineActDTO), t.Null()]),
+  outline: t.Union([OutlineDTO, t.Null()]),
   story_bible: t.Union([StoryBibleDTO, t.Null()]),
   script: t.Union([t.Any(), t.Null()]), // ProseDocument is complex, use Any for flexibility
+  status: t.Optional(t.UnionEnum(projectConstants.projectStatuses, {default: undefined})),
 }))
 
 // Full project response DTO
@@ -103,7 +111,7 @@ export const ProjectResponseDTO = t.Object({
   brief: t.Union([ProjectBriefDTO, t.Null()]),
   narrative_arcs: t.Union([t.Array(NarrativeArcItemDTO), t.Null()]),
   synopsis: t.Union([SynopsisDTO, t.Null()]),
-  outline: t.Union([t.Array(OutlineActDTO), t.Null()]),
+  outline: t.Union([OutlineDTO, t.Null()]),
   story_bible: t.Union([StoryBibleDTO, t.Null()]),
   script: t.Union([t.Any(), t.Null()]),
   status: t.String(),
@@ -128,6 +136,42 @@ export const CreateProjectResponseDTO = t.Object({
   project: ProjectResponseDTO,
   requestId: t.String(),
 })
+
+const CharacterDTO = t.Object({
+  name: t.String(),
+  role: t.Union([
+    t.Literal("protagonist"),
+    t.Literal("antagonist"),
+    t.Literal("supporting"),
+    t.Literal("minor"),
+  ]),
+  age: t.Number(),
+  occupation: t.String(),
+  physicalDescription: t.String(),
+  personalityTraits: t.Array(t.String()),
+  backstory: t.String(),
+  motivation: t.String(),
+  flaw: t.String(),
+  voice: t.String(),
+})
+
+const LocationDTO = t.Object({
+  name: t.String(),
+  description: t.String(),
+})
+
+const PropDTO = t.Object({
+  name: t.String(),
+  description: t.String(),
+})
+
+const CostumeDTO = t.Object({
+  name: t.String(),
+  description: t.String(),
+  isDefault: t.Boolean(),
+})
+
+export const EntityObjectDTO = t.Union([CharacterDTO, LocationDTO, PropDTO, CostumeDTO])
 
 // Type exports
 export type CreateProject = typeof CreateProjectDTO.static

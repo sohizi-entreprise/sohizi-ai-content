@@ -140,7 +140,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
 }
 
 function getActiveBlockType(editor: Editor): string {
-  if (editor.isActive('sceneHeading')) return 'Scene Heading'
+  if (editor.isActive('slugline')) return 'Slugline'
   if (editor.isActive('action')) return 'Action'
   if (editor.isActive('character')) return 'Character'
   if (editor.isActive('dialogue')) return 'Dialogue'

@@ -1,24 +1,24 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { v4 as uuid } from 'uuid'
 
-// Pattern to match scene headings: INT., EXT., INT/EXT., I/E. followed by location
-const SCENE_HEADING_PATTERN = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s+.+/i
+// Pattern to match sluglines: INT., EXT., INT/EXT., I/E. followed by location
+const SLUGLINE_PATTERN = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s+.+/i
 
-export interface SceneHeadingOptions {
+export interface SluglineOptions {
   HTMLAttributes: Record<string, unknown>
 }
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
-    sceneHeading: {
-      setSceneHeading: () => ReturnType
-      toggleSceneHeading: () => ReturnType
+    slugline: {
+      setSlugline: () => ReturnType
+      toggleSlugline: () => ReturnType
     }
   }
 }
 
-export const SceneHeadingExtension = Node.create<SceneHeadingOptions>({
-  name: 'sceneHeading',
+export const SluglineExtension = Node.create<SluglineOptions>({
+  name: 'slugline',
 
   addOptions() {
     return {
@@ -58,7 +58,7 @@ export const SceneHeadingExtension = Node.create<SceneHeadingOptions>({
   parseHTML() {
     return [
       {
-        tag: 'div[data-type="scene-heading"]',
+        tag: 'div[data-type="slugline"]',
       },
     ]
   },
@@ -67,8 +67,8 @@ export const SceneHeadingExtension = Node.create<SceneHeadingOptions>({
     return [
       'div',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        'data-type': 'scene-heading',
-        class: 'screenplay-scene-heading',
+        'data-type': 'slugline',
+        class: 'screenplay-slugline',
       }),
       0,
     ]
@@ -76,12 +76,12 @@ export const SceneHeadingExtension = Node.create<SceneHeadingOptions>({
 
   addCommands() {
     return {
-      setSceneHeading:
+      setSlugline:
         () =>
         ({ commands }) => {
           return commands.setNode(this.name)
         },
-      toggleSceneHeading:
+      toggleSlugline:
         () =>
         ({ commands }) => {
           return commands.toggleNode(this.name, 'paragraph')
@@ -91,7 +91,7 @@ export const SceneHeadingExtension = Node.create<SceneHeadingOptions>({
 
   addKeyboardShortcuts() {
     return {
-      'Mod-1': () => this.editor.commands.setSceneHeading(),
+      'Mod-1': () => this.editor.commands.setSlugline(),
       
       // On Enter, check if current line matches scene heading pattern
       'Enter': () => {
@@ -110,9 +110,9 @@ export const SceneHeadingExtension = Node.create<SceneHeadingOptions>({
         // Get the text content of the current block
         const textContent = currentNode.textContent
         
-        // Check if it matches scene heading pattern
-        if (SCENE_HEADING_PATTERN.test(textContent)) {
-          // Convert to scene heading and then create a new paragraph
+        // Check if it matches slugline pattern
+        if (SLUGLINE_PATTERN.test(textContent)) {
+          // Convert to slugline and then create a new paragraph
           const blockStart = $from.start()
           const blockEnd = $from.end()
           

@@ -152,7 +152,7 @@ export function useScriptEditor(editor: Editor | null) {
       if (!editor) return
 
       const commands: Record<BlockType, () => boolean> = {
-        'scene-heading': () => editor.chain().focus().setSceneHeading().run(),
+        'scene-heading': () => editor.chain().focus().setSlugline().run(),
         'action': () => editor.chain().focus().setAction().run(),
         'character': () => editor.chain().focus().setCharacter().run(),
         'dialogue': () => editor.chain().focus().setDialogue().run(),

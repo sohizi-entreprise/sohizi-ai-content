@@ -39,6 +39,13 @@ export const projectStatuses = [
     "SHOTS_GENERATION_COMPLETED",
 ] as const
 
+export const entityTypes = [
+    "CHARACTER",
+    "LOCATION",
+    "PROP",
+    "COSTUME",
+] as const
+
 export type ProjectFormat = (typeof projectFormats)[number]
 export type ProjectAudience = (typeof projectAudiences)[number]
 export type ProjectStatus = (typeof projectStatuses)[number]

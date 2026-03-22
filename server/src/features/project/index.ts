@@ -3,7 +3,10 @@ import { z } from 'zod'
 import { projectModel } from '@/entities/project'
 import * as projectService from './service'
 import * as projectOptions from '@/constants/project-options'
-import { NarrativeArcItemDTO } from '@/entities/project/model'
+import { EntityObjectDTO, NarrativeArcItemDTO } from '@/entities/project/model'
+import { generateScriptComponents, regenerateEntity, supportedScriptComponentTypes } from '@/features/ai/service'
+import { ResumableStream, redis } from '@/lib'
+import { entityTypes } from '@/constants/project'
 
 export const projectRoutes = new Elysia({ prefix: '/projects' })
   .get('/options', () => {
@@ -71,4 +74,76 @@ export const projectRoutes = new Elysia({ prefix: '/projects' })
     response: {
       200: t.Object({ ok: t.Boolean() }),
     },
+  })
+  .post('/:id/generate/:componentType', async ({ params }) => {
+    const result = await generateScriptComponents(params.id, params.componentType);
+    return { ok: result.ok, streamId: result.projectId };
+  }, {
+    params: t.Object({
+      id: t.String(),
+      componentType: t.Union(supportedScriptComponentTypes.map(type => t.Literal(type))),
+    }),
+    response: {
+      200: t.Object({ ok: t.Boolean(), streamId: t.String() }),
+    },
+  })
+  .delete('/:id/generate/stream', async ({ params }) => {
+    const stream = new ResumableStream(redis, params.id);
+    await stream.cancel();
+    return { ok: true };
+  }, {
+    params: z.object({
+      id: z.uuid('Invalid stream id'),
+    }),
+    response: {
+      200: t.Object({ ok: t.Boolean() }),
+    },
+  })
+  .get('/:id/entities', ({ params, query }) => {
+    return projectService.listAllEntities(params.id, query.cursor, query.limit, query.entityType);
+  }, {
+    params: z.object({
+      id: z.uuid('Invalid project id'),
+    }),
+    query: t.Object({
+      cursor: t.Optional(t.String({ format: 'cursor' })),
+      limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+      entityType: t.Optional(t.UnionEnum(entityTypes, { default: undefined })),
+    }),
+    response: {
+      // 200: t.Array(EntityObjectDTO),
+    },
+  })
+  .get('/:id/entities/:entityId', ({ params }) => {
+    return projectService.getEntity(params.id, params.entityId);
+  }, {
+    params: z.object({
+      id: z.uuid('Invalid project id'),
+      entityId: z.uuid('Invalid entity id'),
+    }),
+  })
+  .put('/:id/entities/:entityId', ({ body, params }) => {
+    return projectService.updateEntity(params.id, params.entityId, body);
+  }, {
+    params: z.object({
+      id: z.uuid('Invalid project id'),
+      entityId: z.uuid('Invalid entity id'),
+    }),
+    body: EntityObjectDTO,
+  })
+  .delete('/:id/entities/:entityId', ({ params }) => {
+    return projectService.deleteEntity(params.entityId);
+  }, {
+    params: z.object({
+      id: z.uuid('Invalid project id'),
+      entityId: z.uuid('Invalid entity id'),
+    }),
+  })
+  .post('/:id/entities/:entityId/regenerate', async ({ params }) => {
+    return regenerateEntity(params.id, params.entityId);
+  }, {
+    params: z.object({
+      id: z.uuid('Invalid project id'),
+      entityId: z.uuid('Invalid entity id'),
+    }),
   })

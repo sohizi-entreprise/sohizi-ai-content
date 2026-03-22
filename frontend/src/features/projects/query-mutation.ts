@@ -1,10 +1,14 @@
-import { queryOptions, mutationOptions } from '@tanstack/react-query'
+import { infiniteQueryOptions, queryOptions, mutationOptions } from '@tanstack/react-query'
 import * as requests from './request'
-import { CreateProjectInput, NarrativeArc, UpdateProjectInput } from './type'
+import { CreateProjectInput, Entity, NarrativeArc, UpdateProjectInput } from './type'
+import type { ScriptComponentType } from './request'
 
 const keysFactory = {
     projects: () => ['projects'],
     project: (id: string) => ['project', id],
+    entities: (projectId: string, limit?: number, entityType?: Entity['type']) =>
+        ['project', projectId, 'entities', { limit, entityType }],
+    entity: (projectId: string, entityId?: string) => ['project', projectId, 'entities', entityId],
     projectOptions: () => ['projectOptions'],
 }
 
@@ -53,4 +57,64 @@ export const getSelectNarrativeArcMutationOptions = (id: string) => mutationOpti
     meta: {
         invalidateQueries: [keysFactory.project(id)],
     }
+})
+
+export const getGenerateContentMutationOptions = (id: string) => mutationOptions({
+    mutationFn: (componentType: ScriptComponentType) => requests.generateContent(id, componentType),
+})
+
+export const getCancelGenerateStreamMutationOptions = (id: string) => mutationOptions({
+    mutationFn: () => requests.cancelGenerateStream(id),
+})
+
+export const getInfiniteListEntitiesQueryOptions = (
+    projectId: string,
+    cursor?: string,
+    limit?: number,
+    entityType?: Entity['type']
+) => infiniteQueryOptions({
+    queryKey: keysFactory.entities(projectId, limit, entityType),
+    initialPageParam: cursor,
+    queryFn: ({ pageParam }) => requests.listEntities(projectId, pageParam, limit, entityType),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    select: (data) => data.pages.flatMap(page => page.items),
+})
+
+export const getEntityQueryOptions = (projectId: string, entityId?: string) => queryOptions({
+    queryKey: keysFactory.entity(projectId, entityId),
+    queryFn: () => {
+        if (!entityId) throw new Error('Entity ID is required')
+        return requests.getEntity(projectId, entityId)
+    },
+    enabled: !!projectId && !!entityId,
+})
+
+export const getUpdateEntityMutationOptions = (projectId: string, entityId: string) => mutationOptions({
+    mutationFn: (data: Entity['metadata']) => requests.updateEntity(projectId, entityId, data),
+    meta: {
+        invalidateQueries: [
+            keysFactory.entity(projectId, entityId),
+            keysFactory.project(projectId),
+        ],
+    },
+})
+
+export const getDeleteEntityMutationOptions = (projectId: string, entityId: string) => mutationOptions({
+    mutationFn: () => requests.deleteEntity(projectId, entityId),
+    meta: {
+        invalidateQueries: [
+            keysFactory.project(projectId),
+            keysFactory.entities(projectId),
+            keysFactory.entity(projectId, entityId),
+        ],
+    },
+})
+
+export const getRegenerateEntityMutationOptions = (projectId: string, entityId: string) => mutationOptions({
+    mutationFn: () => requests.regenerateEntity(projectId, entityId),
+    meta: {
+        invalidateQueries: [
+            keysFactory.entity(projectId, entityId),
+        ],
+    },
 })

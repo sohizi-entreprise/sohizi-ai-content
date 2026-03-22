@@ -89,6 +89,12 @@ export type ProseNode = {
   text?: string
 }
 
+export type SceneContent = 
+  | { type: 'slugline'; text: string; locationId?: string }
+  | { type: 'action'; text: string }
+  | { type: 'dialogue'; text: string; character: string; parenthetical?: string }
+  | { type: 'transition'; text: string }
+
 export type ProseDocument = { type: 'doc'; content: ProseNode[] }
 
 export type DocumentId = 'synopsis' | 'script' | 'story_bible' | 'shots';

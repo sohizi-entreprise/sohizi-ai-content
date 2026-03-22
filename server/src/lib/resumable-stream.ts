@@ -2,10 +2,17 @@ import type Redis from 'ioredis'
 
 type ConceptEventType = 'concept_start' | 'concept_delta' | 'concept_end' | 'concept_error' | 'concept_reasoning'
 type SynopsisEventType = 'synopsis_start' | 'synopsis_delta' | 'synopsis_end' | 'synopsis_error' | 'synopsis_reasoning'
+type StoryBibleEventType = 'story_bible_start' | 'story_bible_delta' | 'story_bible_end' | 'story_bible_error'
+type CharacterEventType = 'character_start' | 'character_delta' | 'character_end' | 'character_error'
+type ScriptEventType = 'script_start' | 'script_delta' | 'script_end' | 'script_error'
+type SceneEventType = 'scene_start' | 'scene_delta' | 'scene_end' | 'scene_error'
+type ShotEventType = 'shot_start' | 'shot_delta' | 'shot_end' | 'shot_error'
+type EntityEventType = 'entity_start' | 'entity_delta' | 'entity_end' | 'entity_error'
 type EditorEventType = 'editor_start' | 'editor_delta' | 'editor_end' | 'editor_error' | 'editor_reasoning' | 'editor_tool_call' | 'editor_tool_result'
 type AgentEventType = 'content_edit' | 'progress_update'
+type BatchEventType = 'batch_progress'
 
-export type StreamEventType = ConceptEventType | SynopsisEventType | EditorEventType | AgentEventType
+export type StreamEventType = ConceptEventType | SynopsisEventType | StoryBibleEventType | CharacterEventType | ScriptEventType | SceneEventType | ShotEventType | EntityEventType | EditorEventType | AgentEventType | BatchEventType
 
 // DOMAIN_EVENT = CONCEPT_CHUNK, CONCEPT_FINISH, CONCEPT_ERROR
 
