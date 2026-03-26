@@ -5,7 +5,8 @@ import { skills } from "../skills";
 import { ResumableStream } from "@/lib";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
-import { proseNodeSchema, scriptOutlineSchema, type ProseDocument, type ProseNode, type Outline as ScriptOutline, type SceneOutline } from "zSchemas";
+import { scriptOutlineSchema, type Outline as ScriptOutline, type SceneOutline, sceneContentSchema } from "zSchemas";
+import type { SceneContent } from "@/type";
 import { streamLLMStep, streamLLMBatch } from "./stream-llm";
 
 // ---------------------------------------------------------------------------
@@ -17,10 +18,7 @@ import { streamLLMStep, streamLLMBatch } from "./stream-llm";
 //     slugline: z.string().min(1),
 //     characters_present: z.array(z.string()),
 //     scene_goal: z.string(),
-//     conflict_obstacle: z.string(),
 //     action_summary: z.string(),
-//     emotional_shift: z.string(),
-//     story_engine_output: z.string(),
 // });
 
 // const beatSchema = z.object({
@@ -31,8 +29,6 @@ import { streamLLMStep, streamLLMBatch } from "./stream-llm";
 // const scriptOutlineSchema = z.object({
 //     beats: z.array(beatSchema),
 // });
-
-const sceneFragmentSchema = z.array(proseNodeSchema);
 
 export type { SceneOutline, ScriptOutline };
 
@@ -57,7 +53,7 @@ type SceneDevelopmentParams = BaseParams & {
     scriptOutline: ScriptOutline;
     /** Batch size for scene development (default: 3) */
     batchSize?: number;
-    onFinish: (script: ProseDocument, totalUsage: number) => void | Promise<void>;
+    onFinish: (scenes: SceneContent[][], totalUsage: number) => void | Promise<void>;
 };
 
 // ---------------------------------------------------------------------------
@@ -213,7 +209,7 @@ export async function generateScriptOutline({
 
 /**
  * Develops full script scenes based on a script outline.
- * Processes scenes in batches and merges into a single ProseDocument.
+ * Processes scenes in batches and returns screenplay block arrays.
  * This is an independent step that can be called separately.
  */
 export async function generateScenes({
@@ -252,12 +248,14 @@ export async function generateScenes({
     }
 
     const flatScenes = flattenScenes(scriptOutline);
-    const batchSceneSchema = z.array(sceneFragmentSchema);
+    const batchSceneSchema = z.array(z.object({
+        scene: sceneContentSchema,
+    }));
 
     try {
         await stream.push({ type: "scene_start", data: { runId } });
 
-        const result = await streamLLMBatch<{ beat_name: string; scene: SceneOutline }, ProseNode[][]>({
+        const result = await streamLLMBatch<{ beat_name: string; scene: SceneOutline }, { scene: SceneContent[] }[]>({
             items: flatScenes,
             batchSize,
             buildBatchParams: (batchItems, _batchIndex) => {
@@ -265,13 +263,13 @@ export async function generateScenes({
                     systemPrompt: buildSceneDevelopmentSystemPrompt(),
                     userPrompt: getSceneDevelopmentUserPrompt(project, scriptOutline, batchItems),
                     schema: batchSceneSchema,
-                    validate: (arr: ProseNode[][]) => {
-                        if (arr.length === 0 || arr.length > batchSize) {
-                            throw new Error(`Expected 1–${batchSize} scene fragments, got ${arr.length}`);
+                    validate: (arr: { scene: SceneContent[] }[]) => {
+                        if (arr.length !== batchItems.length) {
+                            throw new Error(`Expected ${batchItems.length} scene payloads, got ${arr.length}`);
                         }
                     },
                     stepName: "scene_development",
-                    buildDeltaPayload: (scenes: ProseNode[][]) => ({ sceneCount: scenes.length }),
+                    buildDeltaPayload: (scenes: { scene: SceneContent[] }[]) => ({ sceneCount: scenes.length }),
                     streamReasoningDeltas: true,
                 };
             },
@@ -282,13 +280,8 @@ export async function generateScenes({
             errorEventType: "scene_error",
             onStart,
             onFinish: async (results, totalUsage) => {
-                // Merge all scene fragments into a single ProseDocument
-                const allSceneContents = results.flat();
-                const mergedScript: ProseDocument = {
-                    type: "doc",
-                    content: allSceneContents.flat(),
-                };
-                await onFinish(mergedScript, totalUsage);
+                const generatedScenes = results.flat().map((result) => result.scene);
+                await onFinish(generatedScenes, totalUsage);
             },
             onError,
             onAbort,
@@ -320,7 +313,7 @@ function buildOutlineSystemPrompt(): string {
         .addIdentity(identities.outlineIdentity.default())
         .addSkills(skills.outline.default())
         .addOutputFormat(
-            `Output a single JSON object with a "beats" array. Each beat has "beat_name" (one of: ${FIFTEEN_BEATS.join(", ")}) and "scenes". Each scene has: scene_number, slugline, characters_present (array of strings), scene_goal, conflict_obstacle, action_summary, emotional_shift, story_engine_output. Do not include markdown or comments.\n${JSON.stringify(jsonSchema)}`
+            `Output a single JSON object with a "beats" array. Each beat has "beat_name" (one of: ${FIFTEEN_BEATS.join(", ")}) and "scenes". Each scene has: scene_number, slugline, characters_present (array of strings), scene_goal, action_summary. The action_summary must also capture the key conflict or obstacle, the emotional turn, and the consequence or decision that drives the next scene. Do not include markdown or comments.\n${JSON.stringify(jsonSchema)}`
         )
         .build();
 }
@@ -332,6 +325,8 @@ Generate the script outline using the 15 Beat Sheet structure. Return one JSON o
 
 Use these beat names where appropriate: ${FIFTEEN_BEATS.join(", ")}.
 
+BE CONCISE AND TO THE POINT.
+
 Each beat has:
 - beat_name: string
 - scenes: array of scene cards, each with:
@@ -339,10 +334,7 @@ Each beat has:
   - slugline: "INT./EXT. LOCATION - DAY/NIGHT/etc."
   - characters_present: array of character names
   - scene_goal: what the POV character wants entering the scene
-  - conflict_obstacle: who or what is stopping them
-  - action_summary: 2–3 sentence summary of what happens (physically and verbally)
-  - emotional_shift: value change (e.g. Confident to Terrified)
-  - story_engine_output: new information or decision that forces the next scene
+  - action_summary: 2–3 sentence summary of what happens (physically and verbally); also include the key conflict or obstacle, the emotional turn, and the new information, decision, or consequence that forces the next scene
 
 <project_brief>
 ${JSON.stringify(project.brief)}
@@ -367,11 +359,22 @@ ${JSON.stringify(project.story_bible)}
 // ---------------------------------------------------------------------------
 
 function buildSceneDevelopmentSystemPrompt(): string {
+    const jsonSchema = z.toJSONSchema(z.array(z.object({ scene: sceneContentSchema })));
     return new SystemPromptBuilder()
         .addIdentity(identities.sceneWriterIdentity.default())
         .addSkills([skills.sceneWriting.default(), skills.proseFormat()])
         .addOutputFormat(
-            `Output a JSON array of exactly 1–3 items (one per scene in this batch). Each item is an array of ProseMirror block nodes for that scene: sceneHeading, action, character, parenthetical, dialogue, transition. No root "doc" wrapper. Use sceneHeading with content text for the slugline. Valid node types: sceneHeading, action, character, parenthetical, dialogue, transition. Text nodes use {"type":"text","text":"..."}. Return only valid JSON, no markdown.`
+            `Output a JSON array of exactly 1–3 items (one per scene in this batch). Each item must be an object with a single "scene" array that represents exactly one scene only.
+
+Hard constraints for each "scene" array:
+- Include exactly 1 slugline block, and it must be the first block.
+- Never include a second slugline. If the action would move to another time or location, that belongs in a different scene object, not inside the current one.
+- Include 0 or 1 transition blocks total.
+- A transition is optional, and if used it must be the final block in the array.
+- Do not default to "CUT TO:". Only use a transition when it adds real storytelling value, such as "MATCH CUT TO:", "SMASH CUT TO:", or "DISSOLVE TO:".
+- If no meaningful transition is needed, omit the transition block entirely.
+
+The "scene" array contains screenplay blocks in chronological order using only these shapes: {"type":"slugline","text":"INT. LOCATION - DAY","locationId":"optional"}, {"type":"action","text":"..."}, {"type":"dialogue","character":"NAME","parenthetical":"optional","text":"..."}, {"type":"transition","text":"MATCH CUT TO:"}. Return only valid JSON, no markdown.\n${JSON.stringify(jsonSchema)}`
         )
         .build();
 }
@@ -387,16 +390,29 @@ function getSceneDevelopmentUserPrompt(
             (item) =>
                 `Scene ${item.scene.scene_number} (${item.beat_name}): ${item.scene.slugline}
   Goal: ${item.scene.scene_goal}
-  Conflict: ${item.scene.conflict_obstacle}
   Action: ${item.scene.action_summary}
-  Emotional shift: ${item.scene.emotional_shift}
-  Story engine: ${item.scene.story_engine_output}
   Characters: ${item.scene.characters_present.join(", ")}`
         )
         .join("\n\n");
 
     return `
-Write full script content for these ${batchItems.length} scene(s). Return a JSON array of ${batchItems.length} arrays: each inner array is the ProseMirror block nodes for one scene (sceneHeading first, then action/dialogue blocks). No "doc" wrapper.
+Write full script content for these ${batchItems.length} scene(s). Return a JSON array of exactly ${batchItems.length} objects.
+
+For each object:
+- The only key must be "scene".
+- The "scene" value must contain exactly one scene, not multiple scenes stitched together.
+- Start with exactly one slugline block.
+- After that, use action and dialogue blocks to dramatize only that same scene.
+- Never add another slugline inside the same scene object.
+- Include at most one transition block, and only if it adds clear storytelling value.
+- If you include a transition, place it at the very end of the scene.
+- Do not mechanically end scenes with "CUT TO:".
+- Prefer no transition unless a purposeful edit is warranted, such as:
+  - "MATCH CUT TO:" for a visual connection
+  - "SMASH CUT TO:" for a sudden contrast
+  - "DISSOLVE TO:" for passage of time, memory, or dream logic
+
+Important: if you feel tempted to introduce a new location, new time, or a fresh scene beat with its own slugline, do not put it in the current object. Keep the current object focused on one dramatic unit only.
 
 Scenes to write:
 ${sceneDescriptions}

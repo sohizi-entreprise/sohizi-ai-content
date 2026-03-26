@@ -12,10 +12,7 @@ export type SceneOutline = {
     slugline: string
     characters_present: string[]
     scene_goal: string
-    conflict_obstacle: string
     action_summary: string
-    emotional_shift: string
-    story_engine_output: string
 }
 
 export type Beat = {

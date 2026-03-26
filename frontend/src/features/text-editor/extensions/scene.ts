@@ -1,5 +1,9 @@
 import { Node, mergeAttributes } from '@tiptap/core'
+import { TextSelection, type Transaction } from '@tiptap/pm/state'
+import { ReactNodeViewRenderer } from '@tiptap/react'
 import { v4 as uuid } from 'uuid'
+import { Fragment, type Node as ProseMirrorNode } from '@tiptap/pm/model'
+import SceneComponent from '../components/scene-component'
 
 export interface SceneOptions {
   HTMLAttributes: Record<string, unknown>
@@ -26,7 +30,7 @@ export const SceneExtension = Node.create<SceneOptions>({
 
   group: 'block',
 
-  content: 'slugline (action | character | dialogue | parenthetical | shot | note)* transition?',
+  content: 'slugline (action | dialogue)* transition?',
 
   defining: true,
 
@@ -68,7 +72,6 @@ export const SceneExtension = Node.create<SceneOptions>({
       'div',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         'data-type': 'scene',
-        class: 'screenplay-scene',
       }),
       0,
     ]
@@ -78,18 +81,24 @@ export const SceneExtension = Node.create<SceneOptions>({
     return {
       setScene:
         () =>
-        ({ commands }) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: { id: uuid() },
-            content: [
-              { type: 'slugline' },
-            ],
-          })
+        ({ state, dispatch }) => {
+          const insertPos = state.selection.from
+          const sceneNumber = countScenesBeforePos(state.doc, insertPos) + 1
+          const sceneNode = state.schema.nodes.scene.create(
+            { id: uuid(), sceneNumber },
+            [state.schema.nodes.slugline.create()],
+          )
+
+          let tr = state.tr.insert(insertPos, sceneNode)
+          tr = renumberScenesFrom(tr, insertPos, sceneNumber)
+          tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 2)))
+
+          dispatch?.(tr)
+          return true
         },
       addSceneAfter:
         () =>
-        ({ state, chain }) => {
+        ({ state, dispatch }) => {
           const { selection } = state
           const { $from } = selection
           
@@ -110,42 +119,49 @@ export const SceneExtension = Node.create<SceneOptions>({
           }
           
           const insertPos = scenePos + sceneNode.nodeSize
-          
-          return chain()
-            .insertContentAt(insertPos, [
-              { type: 'sceneDelimiter' },
-              {
-                type: 'scene',
-                attrs: { id: uuid() },
-                content: [
-                  { type: 'slugline' },
-                ],
-              },
-            ])
-            .focus(insertPos + 2)
-            .run()
+          const sceneNumber = countScenesBeforePos(state.doc, insertPos) + 1
+          const delimiterNode = state.schema.nodes.sceneDelimiter.create()
+          const newSceneNode = state.schema.nodes.scene.create(
+            { id: uuid(), sceneNumber },
+            [state.schema.nodes.slugline.create()],
+          )
+
+          let tr = state.tr.insert(
+            insertPos,
+            Fragment.fromArray([delimiterNode, newSceneNode]),
+          )
+          tr = renumberScenesFrom(tr, insertPos + delimiterNode.nodeSize, sceneNumber)
+          tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 3)))
+
+          dispatch?.(tr)
+          return true
         },
       addSceneWithDelimiter:
         () =>
-        ({ state, chain }) => {
+        ({ state, dispatch }) => {
           const { doc } = state
           const insertPos = doc.content.size
-          
-          return chain()
-            .insertContentAt(insertPos, [
-              { type: 'sceneDelimiter' },
-              {
-                type: 'scene',
-                attrs: { id: uuid() },
-                content: [
-                  { type: 'slugline' },
-                ],
-              },
-            ])
-            .focus()
-            .run()
+          const sceneNumber = countScenesBeforePos(doc, insertPos) + 1
+          const delimiterNode = state.schema.nodes.sceneDelimiter.create()
+          const newSceneNode = state.schema.nodes.scene.create(
+            { id: uuid(), sceneNumber },
+            [state.schema.nodes.slugline.create()],
+          )
+
+          let tr = state.tr.insert(
+            insertPos,
+            Fragment.fromArray([delimiterNode, newSceneNode]),
+          )
+          tr = renumberScenesFrom(tr, insertPos + delimiterNode.nodeSize, sceneNumber)
+          tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 3)))
+
+          dispatch?.(tr)
+          return true
         },
     }
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(SceneComponent)
   },
 
   addKeyboardShortcuts() {
@@ -155,3 +171,45 @@ export const SceneExtension = Node.create<SceneOptions>({
     }
   },
 })
+
+
+function countScenesBeforePos(doc: ProseMirrorNode, pos: number){
+  let count = 0
+
+  doc.nodesBetween(0, pos, (node, nodePos) => {
+    if (node.type.name === 'scene' && nodePos < pos) {
+      count += 1
+      return false
+    }
+
+    return true
+  })
+
+  return count
+}
+
+function renumberScenesFrom(
+  tr: Transaction,
+  fromPos: number,
+  startingSceneNumber: number,
+){
+  let sceneNumber = startingSceneNumber
+
+  tr.doc.nodesBetween(fromPos, tr.doc.content.size, (node: ProseMirrorNode, pos: number) => {
+    if (node.type.name !== 'scene') {
+      return true
+    }
+
+    if (node.attrs.sceneNumber !== sceneNumber) {
+      tr.setNodeMarkup(pos, undefined, {
+        ...node.attrs,
+        sceneNumber,
+      })
+    }
+
+    sceneNumber += 1
+    return false
+  })
+
+  return tr
+}

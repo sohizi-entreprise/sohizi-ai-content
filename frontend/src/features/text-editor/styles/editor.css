@@ -41,7 +41,7 @@
   text-transform: uppercase;
   font-weight: bold;
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: 1rem;
 }
 
 .screenplay-slugline:first-child {
@@ -50,7 +50,7 @@
 
 /* Action */
 .screenplay-action {
-  margin-bottom: 0;
+  margin-bottom: 1rem;
 }
 
 /* Character */
@@ -313,7 +313,7 @@
 }
 
 .world-section-heading-text {
-  font-size: 0.7rem;
+  font-size: 1rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -325,11 +325,24 @@
 }
 
 .world-field-label {
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 600;
-  color: oklch(0.35 0.02 270);
+  color: var(--color-green-600);
   margin-bottom: 0.25rem;
   user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-transform: uppercase;
+}
+
+.world-field-label::before {
+  content: '';
+  display: block;
+  width: 1rem;
+  height: 1px;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .world-field-value {
@@ -418,28 +431,13 @@
   color: oklch(0.35 0.15 145);
 }
 
-[data-decoration-id] {
-  /* Reuse theme variables from demos setup for consistent look */
-  background-color: lightpink;
-  /* border-bottom: 2px dashed red; */
-  border-radius: 0.2rem;
-  padding: 0 0.18rem;
-  box-decoration-break: clone;
-}
-
-/* When the decoration is empty (no query), add a subtle hint */
-[data-decoration-id].is-empty::after {
-  content: '\00A0';
-  border-bottom: 1px dotted gray;
-}
-
 /* Make suggestion decoration visually match mention nodes */
 .suggestion {
-  background-color: var(--color-gray-200);
-  border-radius: 0.4rem;
+  /* background-color: var(--color-gray-200);
+  border-radius: 0.4rem; */
   box-decoration-break: clone;
   color: black;
-  padding: 0.1rem 0.3rem;
+  /* padding: 0.1rem 0.3rem; */
 }
 
 .suggestion::after {
@@ -588,16 +586,9 @@
   height: 100%;
 }
 
-.scenes-editor-wrapper {
-  flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-}
-
 .scenes-editor-content {
-  max-width: 8.5in;
-  margin: 0 auto;
-  padding: 1in;
+  /* margin: 0 auto;*/
+  padding: 1in; 
   background: white;
   font-family: 'Courier Prime', 'Courier New', monospace;
   font-size: 12pt;
@@ -625,62 +616,6 @@
   margin-bottom: 0;
 }
 
-/* Scene Delimiter */
-.screenplay-scene-delimiter {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  padding: 2em 0;
-  user-select: none;
-  cursor: default;
-}
-
-.scene-delimiter-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    oklch(0.75 0.02 270) 10%,
-    oklch(0.75 0.02 270) 90%,
-    transparent
-  );
-  border: none;
-}
-
-.scene-delimiter-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid oklch(0.8 0.02 270);
-  background: white;
-  color: oklch(0.55 0.02 270);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-  margin: 0 0.5em;
-}
-
-.scene-delimiter-button:hover {
-  border-color: oklch(0.6 0.15 250);
-  background: oklch(0.95 0.05 250);
-  color: oklch(0.5 0.2 250);
-  transform: scale(1.05);
-}
-
-.scene-delimiter-button:active {
-  transform: scale(0.98);
-}
-
-.scene-delimiter-icon {
-  font-size: 18px;
-  font-weight: 300;
-  line-height: 1;
-}
 
 /* Placeholder styles for scenes editor - Tiptap 3.x compatible */
 /* Base placeholder style using Tiptap's is-empty class */
@@ -698,6 +633,7 @@
 .scenes-editor-content .screenplay-character.is-empty::before,
 .scenes-editor-content .screenplay-dialogue.is-empty::before,
 .scenes-editor-content .screenplay-parenthetical.is-empty::before,
+.scenes-editor-content .screenplay-speech.is-empty::before,
 .scenes-editor-content .screenplay-transition.is-empty::before,
 .scenes-editor-content .screenplay-shot.is-empty::before,
 .scenes-editor-content .screenplay-note.is-empty::before {
@@ -714,6 +650,7 @@
 .scenes-editor-content .screenplay-character:has(> br:only-child)::before,
 .scenes-editor-content .screenplay-dialogue:has(> br:only-child)::before,
 .scenes-editor-content .screenplay-parenthetical:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-speech:has(> br:only-child)::before,
 .scenes-editor-content .screenplay-transition:has(> br:only-child)::before,
 .scenes-editor-content .screenplay-shot:has(> br:only-child)::before,
 .scenes-editor-content .screenplay-note:has(> br:only-child)::before {
@@ -741,11 +678,29 @@
 .scenes-editor-content .screenplay-action:has(> br:only-child)::before,
 .scenes-editor-content .screenplay-dialogue.is-empty::before,
 .scenes-editor-content .screenplay-dialogue:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-speech.is-empty::before,
+.scenes-editor-content .screenplay-speech:has(> br:only-child)::before,
 .scenes-editor-content .screenplay-parenthetical.is-empty::before,
 .scenes-editor-content .screenplay-parenthetical:has(> br:only-child)::before,
 .scenes-editor-content .screenplay-note.is-empty::before,
 .scenes-editor-content .screenplay-note:has(> br:only-child)::before {
   font-style: italic;
+}
+
+.scenes-editor-content .screenplay-character.is-empty::before,
+.scenes-editor-content .screenplay-character:has(> br:only-child)::before,
+.scenes-editor-content .screenplay-parenthetical.is-empty::before,
+.scenes-editor-content .screenplay-parenthetical:has(> br:only-child)::before {
+  float: none;
+  display: block;
+  text-align: center;
+}
+
+.scenes-editor-content .screenplay-transition.is-empty::before,
+.scenes-editor-content .screenplay-transition:has(> br:only-child)::before {
+  float: none;
+  display: block;
+  text-align: right;
 }
 
 /* Responsive adjustments for scenes editor */
@@ -823,7 +778,7 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.7rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--color-green-600);
   letter-spacing: 0.08em;
@@ -872,4 +827,12 @@
 /* Voice field styling (italic) */
 .entity-tiptap-field[data-field="voice"] .entity-tiptap-field-value {
   font-style: italic;
+}
+
+/* ============================================================================ */
+
+/* Dialog left border color */
+
+.node-dialogue:nth-child(odd of .node-dialogue) > [data-node-view-wrapper] {
+  border-color: var(--color-purple-500) !important;
 }

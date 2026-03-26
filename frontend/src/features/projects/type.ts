@@ -1,3 +1,4 @@
+import type { JSONContent } from '@tiptap/core'
 import { z } from "zod"
 import { UpdateProject } from "./schema"
 import { PROJECT_FORMATS } from "@/lib/types"
@@ -23,6 +24,7 @@ export type SynopsisLegacy = {
 // Synopsis can be either legacy format or new prose format (JSONContent)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Synopsis = SynopsisLegacy | Record<string, any> | null
+export type ProseDocument = JSONContent
 
 export type Outline = {
     actId: string;

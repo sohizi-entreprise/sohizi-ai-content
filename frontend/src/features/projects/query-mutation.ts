@@ -1,6 +1,6 @@
 import { infiniteQueryOptions, queryOptions, mutationOptions } from '@tanstack/react-query'
 import * as requests from './request'
-import { CreateProjectInput, Entity, NarrativeArc, UpdateProjectInput } from './type'
+import { CreateProjectInput, Entity, NarrativeArc, ProseDocument, UpdateProjectInput } from './type'
 import type { ScriptComponentType } from './request'
 
 const keysFactory = {
@@ -10,6 +10,8 @@ const keysFactory = {
         ['project', projectId, 'entities', { limit, entityType }],
     entity: (projectId: string, entityId?: string) => ['project', projectId, 'entities', entityId],
     projectOptions: () => ['projectOptions'],
+    scenes: (projectId: string) => ['project', projectId, 'scenes'],
+    storyBible: (projectId: string) => ['project', projectId, 'story-bible'],
 }
 
 export const listProjectsQueryOptions = queryOptions({
@@ -116,5 +118,22 @@ export const getRegenerateEntityMutationOptions = (projectId: string, entityId: 
         invalidateQueries: [
             keysFactory.entity(projectId, entityId),
         ],
+    },
+})
+
+export const getGetScenesQueryOptions = (projectId: string) => queryOptions({
+    queryKey: keysFactory.scenes(projectId),
+    queryFn: () => requests.getScenes(projectId),
+})
+
+export const getStoryBibleQueryOptions = (projectId: string) => queryOptions({
+    queryKey: keysFactory.storyBible(projectId),
+    queryFn: () => requests.getStoryBible(projectId),
+})
+
+export const saveStoryBibleMutationOptions = (projectId: string) => mutationOptions({
+    mutationFn: (prose: ProseDocument) => requests.saveStoryBible(projectId, prose),
+    meta: {
+        invalidateQueries: [keysFactory.storyBible(projectId)],
     },
 })

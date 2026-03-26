@@ -27,3 +27,6 @@ Regarding AI editors
 [ ] Render skeleton on the paper while we are streaming
 [ ] make possible to hide and show the chat container
 [ ] Make the diff accept/decline reactif. Currently the buttons don't appear as you generate changes
+[ ] while regenerating the outline of scenes, we should take into account the new characters and locations that might be added. so basically we need to fetch entities
+[ ] When returning the project detail, avoid sending columns with big payload to reduce bandwidth
+[ ] Validate Prose before saving them

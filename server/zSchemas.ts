@@ -29,40 +29,18 @@ export const sceneOutlineSchema = z.object({
     slugline: z.string().min(1).describe("Scene heading in standard format (e.g., 'INT. COFFEE SHOP - DAY')"),
     characters_present: z.array(z.string()).describe("Names of characters appearing in this scene"),
     scene_goal: z.string().describe("What this scene needs to accomplish narratively"),
-    conflict_obstacle: z.string().describe("The tension, conflict, or obstacle that drives the scene"),
-    action_summary: z.string().describe("Brief description of what happens in the scene"),
-    emotional_shift: z.string().describe("How the emotional tone changes from the start to end of the scene"),
-    story_engine_output: z.string().describe("How this scene advances the central conflict or character arcs"),
+    action_summary: z.string().describe("2-3 sentence summary of what happens in the scene. Include the key conflict or obstacle, the major emotional turn, and the specific new information, decision, or consequence that propels the next scene. Keep it very concise and to the point."),
 });
 
 const beatSchema = z.object({
     beat_name: z.string().min(1).describe("Name of the story beat (e.g., 'Opening Image', 'Inciting Incident', 'Midpoint')"),
-    summary: z.string().min(1).describe("A concise description of what happens in this beat"),
+    summary: z.string().min(1).describe("A very concise description of what happens in this beat (1-2 sentences)"),
     scenes: z.array(sceneOutlineSchema).describe("Scenes that comprise this beat"),
 });
 
 export const scriptOutlineSchema = z.object({
     beats: z.array(beatSchema).describe("Story beats that structure the script, each containing related scenes"),
 });
-
-
-// export const outlineSchema = z.object({
-//     actId: z.string().min(1).describe("The unique identifier for the act (e.g., 'act_1', 'act_2')"),
-//     beat: z.object({
-//         beatId: z.string().min(1).describe("The unique identifier for the beat (e.g., 'beat_opening_image')"),
-//         title: z.string().min(1).describe("The name of the beat (e.g., 'Opening Image', 'Inciting Incident', 'Midpoint')"),
-//         summary: z.string().min(1).describe("A description of what happens in this beat"),
-//         goals: z.array(z.string()).min(1).describe("What this beat accomplishes narratively"),
-//         turningPoints: z.array(z.string()).min(1).describe("Key moments that shift the story direction within this beat"),
-//     }).describe("The dramatic beat that this section of the outline represents"),
-//     scenes: z.array(z.object({
-//         sceneId: z.string().min(1).describe("The unique identifier for the scene (e.g., 'scene_001')"),
-//         slugline: z.string().min(1).describe("The scene heading in standard format (e.g., 'INT. COFFEE SHOP - DAY')"),
-//         summary: z.string().min(1).describe("Brief description of what happens in the scene and its purpose"),
-//     })).describe("The list of scenes that make up this beat"),
-// });
-
-// export const outlineListSchema = z.array(outlineSchema);
 
 export const synopsisSchema = z.object({
     title: z.string().min(1).describe("The title of the synopsis"),
@@ -164,6 +142,33 @@ export const proseDocumentSchema = z.object({
     content: z.array(proseNodeSchema),
 });
 
+export const sceneContentBlockSchema = z.discriminatedUnion("type", [
+    z.object({
+        type: z.literal("slugline"),
+        text: z.string().min(1).describe("Scene heading in screenplay format, e.g. 'INT. APARTMENT - NIGHT'"),
+        locationId: z.string().optional().describe("Optional linked location entity id"),
+    }),
+    z.object({
+        type: z.literal("action"),
+        text: z.string().min(1).describe("Action line describing what is seen or happens on screen"),
+    }),
+    z.object({
+        type: z.literal("dialogue"),
+        text: z.string().min(1).describe("Spoken dialogue text"),
+        character: z.string().min(1).describe("Character name speaking the dialogue"),
+        parenthetical: z.string().min(1).optional().describe("Optional parenthetical performance direction"),
+    }),
+    z.object({
+        type: z.literal("transition"),
+        text: z.string().min(1).describe("Screenplay transition text, e.g. 'CUT TO:'"),
+    }),
+]).describe("Single screenplay scene block");
+
+export const sceneContentSchema = z
+    .array(sceneContentBlockSchema)
+    .min(1)
+    .describe("An ordered array of screenplay scene blocks");
+
 
 
 // Type exports
@@ -177,6 +182,8 @@ export type StoryBible = z.infer<typeof storyBibleSchema>;
 export type ProseMark = z.infer<typeof proseMarkSchema>;
 export type ProseNode = ProseNodeType;
 export type ProseDocument = z.infer<typeof proseDocumentSchema>;
+export type SceneContentBlock = z.infer<typeof sceneContentBlockSchema>;
+export type SceneContentSchema = z.infer<typeof sceneContentSchema>;
 export type Character = z.infer<typeof CharacterSchema>;
 export type Location = z.infer<typeof LocationSchema>;
 export type Prop = z.infer<typeof PropSchema>;

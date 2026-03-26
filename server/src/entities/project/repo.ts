@@ -1,10 +1,12 @@
 import { db } from "@/db";
 import { entities, Entity, projects, scenes, Scene } from "@/db/schema";
 import { CreateProject, UpdateProject } from "./model";
-import { eq, desc, asc, sql, and, gt, lt } from "drizzle-orm";
+import { eq, desc, asc, sql, and, gt, lt, notInArray } from "drizzle-orm";
 import { getSlug } from "@/features/ai/utils";
-import { EntityObject } from "zSchemas";
+import { EntityObject, ProseDocument } from "zSchemas";
 import type { SceneContent } from "@/type";
+import type { SceneLike } from "@/utils/script-sync-engine";
+import { randomUUID } from "node:crypto";
 
 const ORDER_GAP = 1000;
 const DEFAULT_ENTITIES_PAGE_SIZE = 25;
@@ -120,6 +122,26 @@ export const updateEntity = async (
   return result[0];
 }
 
+export const saveEntityProse = async (projectId: string, entityId: string, data: {prose: ProseDocument; metadata: EntityObject}) => {
+  const { prose, metadata } = data;
+  const {name} = metadata;
+
+  const payload: Partial<Entity> = {
+    prose,
+    metadata
+  }
+  if (name !== undefined) {
+    payload.name = name;
+    payload.slug = getSlug(name);
+  }
+  const result = await db.update(entities)
+                         .set(payload)
+                         .where(and(eq(entities.projectId, projectId), eq(entities.id, entityId)))
+                         .returning();
+  return result[0];
+}
+
+
 export const getEntityById = async (entityId: string) => {
   const result = await db.select().from(entities).where(eq(entities.id, entityId));
   return result[0];
@@ -209,6 +231,18 @@ export const listScenes = async (
   return { items, nextCursor, hasMore };
 };
 
+export const getAllScenesForSync = async (projectId: string) => {
+  const result = await db.select({
+                            id: scenes.id,
+                            order: scenes.order,
+                            content: scenes.content,
+                          })
+                         .from(scenes)
+                         .where(eq(scenes.projectId, projectId))
+                         .orderBy(asc(scenes.order));
+  return result;
+}
+
 export const getSceneById = async (sceneId: string) => {
   const result = await db.select().from(scenes).where(eq(scenes.id, sceneId));
   return result[0];
@@ -289,20 +323,103 @@ export const createScene = async (projectId: string, content: SceneContent[]) =>
   return result[0];
 };
 
-export const updateScenes = async (
-  updates: { id: string; content: SceneContent[] }[]
+export const replaceScenes = async (
+  projectId: string,
+  sceneContents: SceneContent[][]
 ) => {
-  const results = await Promise.all(
-    updates.map((update) =>
-      db
-        .update(scenes)
-        .set({ content: update.content })
-        .where(eq(scenes.id, update.id))
-        .returning()
-    )
-  );
-  return results.map((r) => r[0]);
+  return db.transaction(async (tx) => {
+    await tx.delete(scenes).where(eq(scenes.projectId, projectId));
+
+    if (sceneContents.length === 0) {
+      return [];
+    }
+
+    const result = await tx
+      .insert(scenes)
+      .values(
+        sceneContents.map((content, index) => ({
+          projectId,
+          order: (index + 1) * ORDER_GAP,
+          content,
+        }))
+      )
+      .returning();
+
+    return result;
+  });
 };
+
+export const updateScene = async (
+  sceneId: string,
+  content: SceneContent[]
+) => {
+  const result = await db
+    .update(scenes)
+    .set({ content })
+    .where(eq(scenes.id, sceneId))
+    .returning();
+
+  return result[0];
+};
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const getPersistedSceneId = (rawId: string | undefined, usedIds: Set<string>) => {
+  const preferredId = rawId && UUID_REGEX.test(rawId) ? rawId : randomUUID();
+
+  if (!usedIds.has(preferredId)) {
+    usedIds.add(preferredId);
+    return preferredId;
+  }
+
+  let nextId = randomUUID();
+  while (usedIds.has(nextId)) {
+    nextId = randomUUID();
+  }
+
+  usedIds.add(nextId);
+  return nextId;
+}
+
+export const upsertScenes = async (projectId: string, sceneList: SceneLike[]) => {
+  const usedIds = new Set<string>();
+  const scenesToPersist: Array<Pick<Scene, "id" | "projectId" | "order" | "content">> = sceneList.map((scene, index) => ({
+    id: getPersistedSceneId(scene.id, usedIds),
+    projectId,
+    order: (index + 1) * ORDER_GAP,
+    content: scene.content,
+  }));
+
+  return db.transaction(async (tx) => {
+    if (scenesToPersist.length === 0) {
+      await tx.delete(scenes).where(eq(scenes.projectId, projectId));
+      return [];
+    }
+
+    const incomingIds = scenesToPersist.map((scene) => scene.id);
+
+    await tx
+      .delete(scenes)
+      .where(and(
+        eq(scenes.projectId, projectId),
+        notInArray(scenes.id, incomingIds),
+      ));
+
+    const persistedScenes = await tx
+      .insert(scenes)
+      .values(scenesToPersist)
+      .onConflictDoUpdate({
+        target: [scenes.projectId, scenes.id],
+        set: {
+          order: sql`excluded."order"`,
+          content: sql`excluded."content"`,
+        },
+      })
+      .returning();
+
+    return persistedScenes.sort((left, right) => left.order - right.order);
+  });
+}
 
 const renumberScenes = async (projectId: string) => {
   const allScenes = await db

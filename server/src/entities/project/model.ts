@@ -24,16 +24,14 @@ export const NarrativeArcItemDTO = t.Object({
 
 // Synopsis is now stored as TipTap prose format (JSONContent)
 const SynopsisDTO = t.Any()
+export const StoryBibleProseDTO = t.Any()
 
 const SceneOutlineDTO = t.Object({
   scene_number: t.Number(),
   slugline: t.String(),
   characters_present: t.Array(t.String()),
   scene_goal: t.String(),
-  conflict_obstacle: t.String(),
   action_summary: t.String(),
-  emotional_shift: t.String(),
-  story_engine_output: t.String(),
 })
 
 const BeatDTO = t.Object({
@@ -100,6 +98,7 @@ export const UpdateProjectDTO = t.Partial(t.Object({
   synopsis: t.Union([SynopsisDTO, t.Null()]),
   outline: t.Union([OutlineDTO, t.Null()]),
   story_bible: t.Union([StoryBibleDTO, t.Null()]),
+  story_bible_prose: t.Union([StoryBibleProseDTO, t.Null()]),
   script: t.Union([t.Any(), t.Null()]), // ProseDocument is complex, use Any for flexibility
   status: t.Optional(t.UnionEnum(projectConstants.projectStatuses, {default: undefined})),
 }))
@@ -113,7 +112,7 @@ export const ProjectResponseDTO = t.Object({
   synopsis: t.Union([SynopsisDTO, t.Null()]),
   outline: t.Union([OutlineDTO, t.Null()]),
   story_bible: t.Union([StoryBibleDTO, t.Null()]),
-  script: t.Union([t.Any(), t.Null()]),
+  // script: t.Union([t.Any(), t.Null()]),
   status: t.String(),
   createdAt: t.Date(),
   updatedAt: t.Date(),

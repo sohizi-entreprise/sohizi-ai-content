@@ -19,10 +19,7 @@ export type ScriptOutlinePayload = {
             slugline: string;
             characters_present: string[];
             scene_goal: string;
-            conflict_obstacle: string;
             action_summary: string;
-            emotional_shift: string;
-            story_engine_output: string;
         }>;
     }>;
 };
@@ -48,10 +45,7 @@ const sceneOutlineSchema = z.object({
     slugline: z.string().min(1),
     characters_present: z.array(z.string()),
     scene_goal: z.string(),
-    conflict_obstacle: z.string(),
     action_summary: z.string(),
-    emotional_shift: z.string(),
-    story_engine_output: z.string(),
 });
 
 type SceneOutline = z.infer<typeof sceneOutlineSchema>;
@@ -418,9 +412,7 @@ function getShotListUserPrompt(
             (item) =>
                 `Scene ${item.scene.scene_number} (${item.beat_name}): ${item.scene.slugline}
   Goal: ${item.scene.scene_goal}
-  Conflict: ${item.scene.conflict_obstacle}
   Action: ${item.scene.action_summary}
-  Emotional shift: ${item.scene.emotional_shift}
   Characters: ${item.scene.characters_present.join(", ")}`
         )
         .join("\n\n");

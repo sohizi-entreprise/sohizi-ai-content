@@ -8,7 +8,7 @@ import { synopsisGenerator } from "./script-engine/synopsis-generator";
 import { generateStoryBibleOutline, generateCharacterDevelopment } from "./script-engine/story-bible-generator";
 import { generateScriptOutline, generateScenes, type ScriptOutline } from "./script-engine/script-generator";
 import { z } from "zod";
-import type { ProseDocument } from "@/type";
+import type { SceneContent } from "@/type";
 import { regenerateCharacter, regenerateLocation, regenerateProp } from "./script-engine/entity-generator";
 
 
@@ -249,10 +249,10 @@ export const generateScriptScenes = async (
         await projectRepo.updateProject(projectId, { status: 'SCRIPT_GENERATION_IN_PROGRESS' });
     };
 
-    const onFinish = async (script: ProseDocument, _totalUsage: number) => {
+    const onFinish = async (generatedScenes: SceneContent[][], _totalUsage: number) => {
+        await projectRepo.replaceScenes(projectId, generatedScenes);
         await projectRepo.updateProject(projectId, {
             status: 'SCRIPT_GENERATION_COMPLETED',
-            script,
         });
     };
 

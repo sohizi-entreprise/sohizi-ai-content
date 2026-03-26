@@ -79,51 +79,18 @@ export function buildCharacterDoc(metadata: CharacterEntity['metadata']): JSONCo
         content: toInlineContent(value),
       }
     })
-  
-    return { type: 'doc', content }
-}
 
-type CharacterEditorFields = Omit<CharacterEntity['metadata'], 'name' | 'role' | 'age' | 'occupation'>
-
-export function getCharacterFromDoc(doc: JSONContent): CharacterEditorFields {
-    const result: CharacterEditorFields = {
-      physicalDescription: '',
-      personalityTraits: [],
-      backstory: '',
-      motivation: '',
-      flaw: '',
-      voice: '',
+    const header = {
+      type: 'characterHeader',
+      attrs: {
+        name: metadata.name,
+        role: metadata.role,
+        age: metadata.age,
+        thumbnail: "",
+      },
     }
   
-    for (const node of doc.content ?? []) {
-      const field = CHARACTER_FIELDS.find((f) => f.nodeType === node.type)
-      if (!field) continue
-  
-      const text = extractTextFromJsonContent(node.content)
-  
-      switch (field.key) {
-        case 'physicalDescription':
-          result.physicalDescription = text
-          break
-        case 'personalityTraits':
-          result.personalityTraits = text.split(',').map((t) => t.trim()).filter(Boolean)
-          break
-        case 'backstory':
-          result.backstory = text
-          break
-        case 'motivation':
-          result.motivation = text
-          break
-        case 'flaw':
-          result.flaw = text
-          break
-        case 'voice':
-          result.voice = text
-          break
-      }
-    }
-  
-    return result
+    return { type: 'doc', content: [header, ...content] }
 }
 
 
@@ -137,21 +104,19 @@ export function buildLocationDoc(metadata: LocationEntity['metadata']): JSONCont
       },
       content: toInlineContent(metadata[field.key]),
     }))
-  
-    return { type: 'doc', content }
-  }
-  
-export function getLocationFromDoc(doc: JSONContent): { description: string } {
-    const result = { description: '' }
-  
-    for (const node of doc.content ?? []) {
-      if (node.type === 'locationDescription') {
-        result.description = extractTextFromJsonContent(node.content)
-      }
+
+    const header = {
+      type: 'entityHeader',
+      attrs: {
+        name: metadata.name,
+        thumbnail: "",
+        entityType: 'location',
+      },
     }
   
-    return result
+    return { type: 'doc', content: [header, ...content] }
   }
+  
   
   // Prop document builders
   export function buildPropDoc(metadata: PropEntity['metadata']): JSONContent {
@@ -163,18 +128,16 @@ export function getLocationFromDoc(doc: JSONContent): { description: string } {
       },
       content: toInlineContent(metadata[field.key]),
     }))
-  
-    return { type: 'doc', content }
-  }
-  
-export function getPropFromDoc(doc: JSONContent): { description: string } {
-    const result = { description: '' }
-  
-    for (const node of doc.content ?? []) {
-      if (node.type === 'propDescription') {
-        result.description = extractTextFromJsonContent(node.content)
-      }
+
+    const header = {
+      type: 'entityHeader',
+      attrs: {
+        name: metadata.name,
+        thumbnail: "",
+        entityType: 'prop',
+      },
     }
   
-    return result
-}
+    return { type: 'doc', content: [header, ...content] }
+  }
+  

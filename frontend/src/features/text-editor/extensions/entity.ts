@@ -1,4 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core'
+import { CharacterHeaderExtension, EntityHeaderExtension } from './entity-header'
 
 // Character field names
 const CHARACTER_FIELD_NAMES = [
@@ -86,11 +87,12 @@ export const CharacterFieldNodes = [
   MotivationNode,
   FlawNode,
   VoiceNode,
+  CharacterHeaderExtension
 ] 
 
-export const LocationFieldNodes = [LocationDescriptionNode]
+export const LocationFieldNodes = [LocationDescriptionNode, EntityHeaderExtension]
 
-export const PropFieldNodes = [PropDescriptionNode]
+export const PropFieldNodes = [PropDescriptionNode, EntityHeaderExtension]
 
 export const AllEntityFieldNodes = [
   ...CharacterFieldNodes,

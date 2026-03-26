@@ -30,6 +30,7 @@ export {
 export { SelectionShortcut } from './selection-context'
 export { EditorEventBusExtension } from './editor-event-bus'
 export { DiffStoreExtension } from './diff-store'
+export { SpeechExtension } from './speech'
 
 // Context anchor for AI editing
 export { ContextAnchorMark, findContextAnchorById, getAllContextAnchors } from './context-anchor'

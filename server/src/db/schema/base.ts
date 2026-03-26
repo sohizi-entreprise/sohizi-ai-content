@@ -48,6 +48,7 @@ export const generationRequests = pgTable('generation_requests', {
     synopsis: jsonb('synopsis').$type<ProseDocument>(),
     outline: jsonb('outline').$type<Outline>(),
     story_bible: jsonb('story_bible').$type<StoryBible>(),
+    story_bible_prose: jsonb('story_bible_prose').$type<ProseDocument>(),
     script: jsonb('script').$type<ProseDocument>(),
     status: varchar('status', {length: 50}).default('DRAFT').notNull().$type<projectConstants.ProjectStatus>(),
     ...timestamps,
@@ -61,7 +62,9 @@ export const generationRequests = pgTable('generation_requests', {
     order: integer('order').notNull(),
     content: jsonb('content').$type<SceneContent[]>().notNull(),
     ...timestamps,
-  })
+  }, (table) => ([
+    uniqueIndex('scenes_project_id_id_unique').on(table.projectId, table.id),
+  ]))
 
   export const shots = pgTable('shots', {
     id: uuid('id').defaultRandom().primaryKey(),
@@ -95,6 +98,7 @@ export const generationRequests = pgTable('generation_requests', {
     slug: varchar('slug', {length: 150}).notNull(),
     type: entityTypeEnum('type').notNull(),
     metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull(),
+    prose: jsonb('prose').$type<ProseDocument>(),
     ...timestamps,
   }, (table) => ([
     uniqueIndex('entities_project_type_slug_unique').on(table.projectId, table.type, table.slug),

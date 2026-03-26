@@ -147,3 +147,31 @@ export const projectRoutes = new Elysia({ prefix: '/projects' })
       entityId: z.uuid('Invalid entity id'),
     }),
   })
+  .get('/:id/story-bible', ({ params }) => {
+    return projectService.returnStoryBibleProse(params.id);
+  }, {
+    params: z.object({
+      id: z.uuid('Invalid project id'),
+    }),
+    response: {
+      200: projectModel.StoryBibleProseDTO,
+    },
+  })
+  .put('/:id/story-bible', ({ body, params }) => {
+    return projectService.saveStoryBibleProse(params.id, body);
+  }, {
+    params: z.object({
+      id: z.uuid('Invalid project id'),
+    }),
+    body: projectModel.StoryBibleProseDTO,
+    response: {
+      200: projectModel.StoryBibleProseDTO,
+    },
+  })
+  .get('/:id/scenes', ({ params }) => {
+    return projectService.returnScriptProse(params.id);
+  }, {
+    params: z.object({
+      id: z.uuid('Invalid project id'),
+    }),
+  })

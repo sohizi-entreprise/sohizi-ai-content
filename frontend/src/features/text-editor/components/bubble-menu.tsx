@@ -13,7 +13,7 @@ export default function ActionsBubbleMenu({ editor }: { editor: Editor }) {
       
   return (
     <BubbleMenu editor={editor} options={{ placement: 'bottom', offset: 8, flip: true }}>
-        <div className="bubble-menu">
+        <div className="flex items-center gap-5 bg-white px-4 py-2 drop-shadow-lg rounded-md border border-gray-100">
             <button
                 onClick={() => editor.chain().focus().toggleBold().run()}
                 className={isBold ? 'is-active' : ''}
@@ -21,6 +21,7 @@ export default function ActionsBubbleMenu({ editor }: { editor: Editor }) {
             >
                 Bold
             </button>
+            <Separator />
             <button
                 onClick={() => editor.chain().focus().toggleItalic().run()}
                 className={isItalic ? 'is-active' : ''}
@@ -28,6 +29,7 @@ export default function ActionsBubbleMenu({ editor }: { editor: Editor }) {
             >
                 Italic
             </button>
+            <Separator />
             <button
                 onClick={() => editor.chain().focus().toggleStrike().run()}
                 className={isStrikethrough ? 'is-active' : ''}
@@ -38,4 +40,8 @@ export default function ActionsBubbleMenu({ editor }: { editor: Editor }) {
         </div>
     </BubbleMenu>
   )
+}
+
+function Separator (){
+    return <div className='h-6 w-px bg-gray-300'/>
 }

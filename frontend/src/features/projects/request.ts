@@ -1,6 +1,7 @@
 import api from '@/lib/axios'
 import { isAxiosError } from 'axios'
-import { CreateProjectInput, ProjectResponse, UpdateProjectInput, ProjectListItem, ProjectOptions, NarrativeArc, Entity, ListEntitiesResponse } from './type'
+import { CreateProjectInput, ProjectResponse, UpdateProjectInput, ProjectListItem, ProjectOptions, NarrativeArc, Entity, ListEntitiesResponse, ProseDocument } from './type'
+import { JSONContent } from '@tiptap/core'
 
 export const listProjects = async (): Promise<ProjectListItem[]> => {
   const response = await api.get('/projects')
@@ -71,7 +72,7 @@ export const listEntities = async (projectId: string, cursor?: string, limit?: n
   return response.data
 }
 
-export const getEntity = async (projectId: string, entityId: string): Promise<Entity> => {
+export const getEntity = async (projectId: string, entityId: string): Promise<JSONContent> => {
   const response = await api.get(`/projects/${projectId}/entities/${entityId}`)
   return response.data
 }
@@ -88,5 +89,20 @@ export const deleteEntity = async (projectId: string, entityId: string): Promise
 
 export const regenerateEntity = async (projectId: string, entityId: string): Promise<{ ok: boolean, streamId: string }> => {
   const response = await api.post(`/projects/${projectId}/entities/${entityId}/regenerate`)
+  return response.data
+}
+
+export const getScenes = async (projectId: string): Promise<JSONContent> => {
+  const response = await api.get(`/projects/${projectId}/scenes`)
+  return response.data
+}
+
+export const getStoryBible = async (projectId: string): Promise<ProseDocument> => {
+  const response = await api.get(`/projects/${projectId}/story-bible`)
+  return response.data
+}
+
+export const saveStoryBible = async (projectId: string, prose: ProseDocument): Promise<ProseDocument> => {
+  const response = await api.put(`/projects/${projectId}/story-bible`, prose)
   return response.data
 }

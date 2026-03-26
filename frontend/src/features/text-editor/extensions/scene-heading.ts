@@ -1,8 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { v4 as uuid } from 'uuid'
 
-// Pattern to match sluglines: INT., EXT., INT/EXT., I/E. followed by location
-const SLUGLINE_PATTERN = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s+.+/i
 
 export interface SluglineOptions {
   HTMLAttributes: Record<string, unknown>
@@ -92,44 +90,22 @@ export const SluglineExtension = Node.create<SluglineOptions>({
   addKeyboardShortcuts() {
     return {
       'Mod-1': () => this.editor.commands.setSlugline(),
-      
-      // On Enter, check if current line matches scene heading pattern
-      'Enter': () => {
-        const { state } = this.editor
-        const { selection } = state
-        const { $from } = selection
-        
-        // Get the current block
-        const currentNode = $from.parent
-        
-        // Only process if we're in a paragraph
-        if (currentNode.type.name !== 'paragraph') {
-          return false // Let default Enter behavior happen
+
+      // Pressing Enter in a slugline should create the first action block of the scene.
+      'Enter': ({ editor }) => {
+        const { $from } = editor.state.selection
+
+        if ($from.parent.type.name !== 'slugline') {
+          return false
         }
-        
-        // Get the text content of the current block
-        const textContent = currentNode.textContent
-        
-        // Check if it matches slugline pattern
-        if (SLUGLINE_PATTERN.test(textContent)) {
-          // Convert to slugline and then create a new paragraph
-          const blockStart = $from.start()
-          const blockEnd = $from.end()
-          
-          this.editor
-            .chain()
-            .command(({ tr }) => {
-              tr.setBlockType(blockStart - 1, blockEnd + 1, this.type)
-              return true
-            })
-            .insertContentAt(blockEnd + 1, { type: 'paragraph' })
-            .focus()
-            .run()
-          
-          return true // Prevent default Enter behavior
-        }
-        
-        return false // Let default Enter behavior happen
+
+        const insertPos = $from.after($from.depth)
+
+        return editor
+          .chain()
+          .insertContentAt(insertPos, { type: 'action' })
+          .focus(insertPos + 1)
+          .run()
       },
     }
   },

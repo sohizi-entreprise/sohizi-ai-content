@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core'
 import { ReactRenderer } from '@tiptap/react'
 import Suggestion, { type SuggestionProps, type SuggestionKeyDownProps } from '@tiptap/suggestion'
+import { TextSelection } from '@tiptap/pm/state'
 import { forwardRef, useEffect, useImperativeHandle, useState, useRef } from 'react'
 import { computePosition, flip, shift } from '@floating-ui/dom'
 import { posToDOMRect } from '@tiptap/react'
@@ -8,14 +9,11 @@ import type { Editor, Range } from '@tiptap/core'
 import {
   IconMovie,
   IconRun,
-  IconUser,
   IconMessage,
-  IconMoodSmile,
   IconArrowRight,
-  IconCamera,
-  IconNote,
-  IconSeparator,
 } from '@tabler/icons-react'
+import { toast } from 'sonner'
+import { v4 as uuid } from 'uuid'
 import { cn } from '@/lib/utils'
 
 // Block item type
@@ -27,6 +25,133 @@ interface BlockItem {
   command: (editor: Editor, range: Range) => void
 }
 
+type SceneContext = {
+  scenePos: number
+  sceneEndPos: number
+  currentSceneChildPos: number
+  currentSceneChildText: string
+  currentSceneChildNodeSize: number
+  existingTransitionPos: number | null
+}
+
+const getSceneContext = (editor: Editor): SceneContext | null => {
+  const { $from } = editor.state.selection
+
+  let sceneDepth: number | null = null
+
+  for (let depth = $from.depth; depth >= 0; depth -= 1) {
+    if ($from.node(depth).type.name === 'scene') {
+      sceneDepth = depth
+      break
+    }
+  }
+
+  if (sceneDepth === null || sceneDepth + 1 > $from.depth) {
+    return null
+  }
+
+  const sceneNode = $from.node(sceneDepth)
+  const scenePos = $from.before(sceneDepth)
+  const sceneContentStart = scenePos + 1
+  const sceneEndPos = scenePos + sceneNode.nodeSize - 1
+  const currentSceneChildPos = $from.before(sceneDepth + 1)
+  const currentSceneChildNodeSize = $from.node(sceneDepth + 1).nodeSize
+
+  let existingTransitionPos: number | null = null
+
+  sceneNode.forEach((child, offset) => {
+    if (child.type.name === 'transition') {
+      existingTransitionPos = sceneContentStart + offset
+    }
+  })
+
+  return {
+    scenePos,
+    sceneEndPos,
+    currentSceneChildPos,
+    currentSceneChildText: $from.node(sceneDepth + 1).textContent,
+    currentSceneChildNodeSize,
+    existingTransitionPos,
+  }
+}
+
+const deleteSlashQuery = (editor: Editor, range: Range) => {
+  editor.chain().focus().deleteRange(range).run()
+}
+
+const insertBlockIntoScene = (
+  editor: Editor,
+  blockType: 'action' | 'dialogue',
+) => {
+  const sceneContext = getSceneContext(editor)
+
+  if (!sceneContext) {
+    return editor.chain().focus().setNode(blockType).run()
+  }
+
+  const { state, view } = editor
+  const { schema } = state
+  const nodeType = schema.nodes[blockType]
+  const node = nodeType?.createAndFill({ id: uuid() })
+
+  if (!node) {
+    return false
+  }
+
+  const currentNodeIsEmpty = sceneContext.currentSceneChildText.trim().length === 0
+  let insertPos = sceneContext.currentSceneChildPos
+  let tr = state.tr
+
+  if (currentNodeIsEmpty) {
+    tr = tr.delete(
+      sceneContext.currentSceneChildPos,
+      sceneContext.currentSceneChildPos + sceneContext.currentSceneChildNodeSize,
+    )
+  } else {
+    insertPos =
+      sceneContext.currentSceneChildPos + sceneContext.currentSceneChildNodeSize
+  }
+
+  if (
+    sceneContext.existingTransitionPos !== null &&
+    insertPos > sceneContext.existingTransitionPos
+  ) {
+    insertPos = sceneContext.existingTransitionPos
+  }
+
+  tr = tr.insert(insertPos, node)
+  tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 1)))
+  view.dispatch(tr)
+
+  return true
+}
+
+const insertTransitionIntoScene = (editor: Editor) => {
+  const sceneContext = getSceneContext(editor)
+
+  if (!sceneContext) {
+    return editor.chain().focus().setNode('transition').run()
+  }
+
+  if (sceneContext.existingTransitionPos !== null) {
+    toast('A transition should always be the last element of a scene.')
+    return false
+  }
+
+  const { state, view } = editor
+  const node = state.schema.nodes.transition?.createAndFill({ id: uuid() })
+
+  if (!node) {
+    return false
+  }
+
+  const tr = state.tr.insert(sceneContext.sceneEndPos, node)
+  tr.setSelection(TextSelection.near(tr.doc.resolve(sceneContext.sceneEndPos + 1)))
+  view.dispatch(tr)
+
+  return true
+}
+
 // Define available blocks with keyboard shortcuts
 const BLOCKS: BlockItem[] = [
   {
@@ -35,7 +160,14 @@ const BLOCKS: BlockItem[] = [
     shortcut: '⌘1',
     icon: <IconMovie className="size-4" />,
     command: (editor, range) => {
-      editor.chain().focus().deleteRange(range).setNode('slugline').run()
+      deleteSlashQuery(editor, range)
+
+      if (getSceneContext(editor)) {
+        editor.commands.addSceneAfter()
+        return
+      }
+
+      editor.chain().focus().setNode('slugline').run()
     },
   },
   {
@@ -44,74 +176,30 @@ const BLOCKS: BlockItem[] = [
     shortcut: '⌘2',
     icon: <IconRun className="size-4" />,
     command: (editor, range) => {
-      editor.chain().focus().deleteRange(range).setNode('action').run()
-    },
-  },
-  {
-    title: 'Character',
-    description: 'Character name (@ mention)',
-    shortcut: '⌘3',
-    icon: <IconUser className="size-4" />,
-    command: (editor, range) => {
-      // Use setCharacter which auto-triggers @ mention
-      editor.chain().focus().deleteRange(range).setCharacter().run()
+      deleteSlashQuery(editor, range)
+      insertBlockIntoScene(editor, 'action')
     },
   },
   {
     title: 'Dialogue',
     description: 'Character speech',
-    shortcut: '⌘4',
+    shortcut: '⌘3',
     icon: <IconMessage className="size-4" />,
     command: (editor, range) => {
-      editor.chain().focus().deleteRange(range).setNode('dialogue').run()
-    },
-  },
-  {
-    title: 'Parenthetical',
-    description: 'Acting direction',
-    shortcut: '⌘5',
-    icon: <IconMoodSmile className="size-4" />,
-    command: (editor, range) => {
-      // Use setParenthetical which inserts () and positions cursor
-      editor.chain().focus().deleteRange(range).setParenthetical().run()
+      deleteSlashQuery(editor, range)
+      insertBlockIntoScene(editor, 'dialogue')
     },
   },
   {
     title: 'Transition',
     description: 'CUT TO, FADE OUT, etc.',
-    shortcut: '⌘6',
+    shortcut: '⌘4',
     icon: <IconArrowRight className="size-4" />,
     command: (editor, range) => {
-      editor.chain().focus().deleteRange(range).setNode('transition').run()
+      deleteSlashQuery(editor, range)
+      insertTransitionIntoScene(editor)
     },
-  },
-  {
-    title: 'Shot',
-    description: 'Camera direction',
-    shortcut: '⌘7',
-    icon: <IconCamera className="size-4" />,
-    command: (editor, range) => {
-      editor.chain().focus().deleteRange(range).setNode('shot').run()
-    },
-  },
-  {
-    title: 'Note',
-    description: "Writer's note",
-    shortcut: '⌘8',
-    icon: <IconNote className="size-4" />,
-    command: (editor, range) => {
-      editor.chain().focus().deleteRange(range).setNode('note').run()
-    },
-  },
-  {
-    title: 'Page Break',
-    description: 'Insert page break',
-    shortcut: '⌘9',
-    icon: <IconSeparator className="size-4" />,
-    command: (editor, range) => {
-      editor.chain().focus().deleteRange(range).insertContent({ type: 'pageBreak' }).run()
-    },
-  },
+  }
 ]
 
 // Props for the command list component
@@ -185,7 +273,7 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>((props, ref) =>
   }))
 
   return (
-    <div className="slash-command-menu" ref={menuRef}>
+    <div className="bg-white border border-gray-200 drop-shadow-2xl rounded-lg p-1 w-70 flex flex-col min-h-60" ref={menuRef}>
       {props.items.length ? (
         props.items.map((item, index) => (
           <button
@@ -194,26 +282,24 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>((props, ref) =>
             onClick={() => selectItem(index)}
             onMouseEnter={() => setSelectedIndex(index)}
             className={cn(
-              'slash-command-item',
-              index === selectedIndex && 'is-selected'
+              'flex items-center px-1 py-2 rounded gap-4',
+              index === selectedIndex && 'bg-primary/20'
             )}
           >
-            <div className="slash-command-left">
-              <div className="slash-command-icon">
-                {item.icon}
-              </div>
-              <div className="slash-command-content">
-                <span className="slash-command-title">{item.title}</span>
-                <span className="slash-command-description">{item.description}</span>
-              </div>
+            <div className="text-gray-400">
+              {item.icon}
             </div>
-            <span className="slash-command-shortcut">
+            <div className="flex flex-col flex-1 items-start">
+              <span className="text-sm font-medium text-black">{item.title}</span>
+              <span className="text-xs text-muted-foreground">{item.description}</span>
+            </div>
+            <span className="bg-gray-200 text-sm rounded text-muted-foreground py-[2px] px-1">
               {item.shortcut}
             </span>
           </button>
         ))
       ) : (
-        <div className="slash-command-empty">No results</div>
+        <div className="text-black text-center p-4">No results</div>
       )}
     </div>
   )

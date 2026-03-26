@@ -67,23 +67,9 @@ export const ParentheticalExtension = Node.create<ParentheticalOptions>({
     return {
       setParenthetical:
         () =>
-        ({ chain, state }) => {
+        ({ commands }) => {
           // Set the node, insert "()", then move cursor between the parentheses
-          return chain()
-            .setNode(this.name)
-            .command(({ tr, dispatch }) => {
-              if (dispatch) {
-                const { from } = tr.selection
-                // Insert "()" at cursor position
-                tr.insertText('()', from)
-                // Move cursor between the parentheses (after the opening paren)
-                tr.setSelection(
-                  state.selection.constructor.near(tr.doc.resolve(from + 1))
-                )
-              }
-              return true
-            })
-            .run()
+          return commands.setNode(this.name)
         },
       toggleParenthetical:
         () =>
@@ -96,6 +82,48 @@ export const ParentheticalExtension = Node.create<ParentheticalOptions>({
   addKeyboardShortcuts() {
     return {
       'Mod-4': () => this.editor.commands.setParenthetical(),
+      'Enter': ({ editor }) => {
+        const { state } = editor
+        const { $from } = state.selection
+
+        if ($from.parent.type.name !== 'parenthetical') {
+          return false
+        }
+
+        const text = $from.parent.textContent.trim()
+        const insertPos = $from.after($from.depth)
+        const dialogueNode = $from.node($from.depth - 1)
+        const dialogueContentStart = $from.before($from.depth - 1) + 1
+        let speechPos: number | null = null
+
+        if (dialogueNode?.type.name === 'dialogue') {
+          dialogueNode.forEach((child, offset) => {
+            if (child.type.name === 'speech' && speechPos === null) {
+              speechPos = dialogueContentStart + offset
+            }
+          })
+        }
+
+        if (text.length === 0) {
+          if (speechPos !== null) {
+            return editor.chain().focus(speechPos + 1).run()
+          }
+
+          return editor.chain()
+            .insertContentAt(insertPos, { type: 'speech' })
+            .focus(insertPos + 1)
+            .run()
+        }
+
+        if (speechPos !== null) {
+          return editor.chain().focus(speechPos + 1).run()
+        }
+
+        return editor.chain()
+          .insertContentAt(insertPos, { type: 'speech' })
+          .focus(insertPos + 1)
+          .run()
+      },
       
       // Backspace: if trying to delete opening parenthesis, delete the block
       'Backspace': ({ editor }) => {

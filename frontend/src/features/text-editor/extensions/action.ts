@@ -57,7 +57,7 @@ export const ActionExtension = Node.create<ActionOptions>({
       'div',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         'data-type': 'action',
-        class: 'screenplay-action',
+        class: 'screenplay-action'
       }),
       0,
     ]
@@ -70,17 +70,26 @@ export const ActionExtension = Node.create<ActionOptions>({
         ({ commands }) => {
           return commands.setNode(this.name)
         },
-      toggleAction:
-        () =>
-        ({ commands }) => {
-          return commands.toggleNode(this.name, 'paragraph')
-        },
     }
   },
 
   addKeyboardShortcuts() {
     return {
       'Mod-2': () => this.editor.commands.setAction(),
+      'Enter': ({editor}) => {
+          const { $from } = editor.state.selection
+          if ($from.parent.type.name !== 'action') {
+            return false
+          }
+
+          const insertPos = $from.after($from.depth)
+          editor
+            .chain()
+            .insertContentAt(insertPos, { type: 'action' })
+            .focus(insertPos + 1)
+            .run()
+          return true
+      }
     }
   },
 })

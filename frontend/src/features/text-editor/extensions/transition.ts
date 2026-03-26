@@ -57,7 +57,7 @@ export const TransitionExtension = Node.create<TransitionOptions>({
       'div',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         'data-type': 'transition',
-        class: 'screenplay-transition',
+        class: 'screenplay-transition', // TODO: Add class name
       }),
       0,
     ]
@@ -81,22 +81,13 @@ export const TransitionExtension = Node.create<TransitionOptions>({
   addKeyboardShortcuts() {
     return {
       'Mod-6': () => this.editor.commands.setTransition(),
+      'Enter': ({ editor }) => {
+        const { $from } = editor.state.selection
+        if ($from.parent.type.name !== 'transition') {
+          return false
+        }
+        return editor.commands.addSceneAfter()
+      }
     }
-  },
-
-  addInputRules() {
-    return [
-      // Auto-convert common transitions
-      {
-        find: /^(CUT TO:|FADE OUT:|FADE IN:|DISSOLVE TO:|SMASH CUT TO:)\s*$/,
-        handler: ({ state, range, match }) => {
-          const { tr } = state
-          const start = range.from
-          const end = range.to
-
-          tr.replaceWith(start, end, this.type.create({}, state.schema.text(match[1])))
-        },
-      },
-    ]
   },
 })

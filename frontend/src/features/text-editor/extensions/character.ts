@@ -75,6 +75,15 @@ export const CharacterExtension = Node.create<CharacterOptions>({
           return { 'data-extension': attributes.extension }
         },
       },
+      characterId: {
+          // Links to parent character block
+          default: null,
+          parseHTML: (element) => element.getAttribute('data-character-id'),
+          renderHTML: (attributes) => {
+            if (!attributes.characterId) return {}
+            return { 'data-character-id': attributes.characterId }
+          },
+      },
     }
   },
 
@@ -131,7 +140,7 @@ export const CharacterExtension = Node.create<CharacterOptions>({
   addKeyboardShortcuts() {
     return {
       'Mod-3': () => this.editor.commands.setCharacter(),
-      // When Enter is pressed in a character block, create a dialogue block
+      // When Enter is pressed in a character block, move into or create a parenthetical.
       'Enter': ({ editor }) => {
         const { state } = editor
         const { $from } = state.selection
@@ -141,11 +150,27 @@ export const CharacterExtension = Node.create<CharacterOptions>({
         if (parent.type.name !== 'character') {
           return false
         }
-        
-        // Insert a dialogue block after the character
+
+        const dialogueNode = $from.node($from.depth - 1)
+        const dialogueContentStart = $from.before($from.depth - 1) + 1
+        const insertPos = $from.after($from.depth)
+        let parentheticalPos: number | null = null
+
+        if (dialogueNode?.type.name === 'dialogue') {
+          dialogueNode.forEach((child, offset) => {
+            if (child.type.name === 'parenthetical' && parentheticalPos === null) {
+              parentheticalPos = dialogueContentStart + offset
+            }
+          })
+        }
+
+        if (parentheticalPos !== null) {
+          return editor.chain().focus(parentheticalPos + 1).run()
+        }
+
         return editor.chain()
-          .insertContentAt($from.end() + 1, { type: 'dialogue' })
-          .focus()
+          .insertContentAt(insertPos, { type: 'parenthetical' })
+          .focus(insertPos + 1)
           .run()
       },
     }

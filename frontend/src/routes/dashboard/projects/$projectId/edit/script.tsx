@@ -10,7 +10,6 @@ import WorldSection from '@/features/script/components/world-section'
 import { cn } from '@/lib/utils'
 import { IconLayoutSidebarLeftExpand, IconLayoutSidebarRightExpand, IconStack2 } from '@tabler/icons-react'
 import { createFileRoute, useNavigate, useParams, useSearch } from '@tanstack/react-router'
-import { useState } from 'react'
 import z from 'zod'
 
 const TABS = ['script', 'elements', 'outline', 'world'] as const;
@@ -21,6 +20,7 @@ export const Route = createFileRoute('/dashboard/projects/$projectId/edit/script
     view: z.enum(TABS).optional().default('script'),
     entityType: z.enum(ENTITY_TYPES).optional(),
     entityId: z.string().optional(),
+    sceneId: z.string().optional(),
   }),
   component: ScriptPage,
   notFoundComponent: () => <div>Project not found</div>,
@@ -30,7 +30,6 @@ export const Route = createFileRoute('/dashboard/projects/$projectId/edit/script
 function ScriptPage() {
   const { projectId } = useParams({ from: Route.id })
   const { view } = useSearch({ from: Route.id })
-  const [showLayers, setShowLayers] = useState(false)
 
   return (
     <>
@@ -39,7 +38,8 @@ function ScriptPage() {
         <ScriptHeader />
         {view === 'world' && <WorldSection projectId={projectId} />}
         {view === 'elements' && <EntitiesSection projectId={projectId} />}
-        {(view === 'script' || view === 'outline') && <ScriptSection projectId={projectId} showLayers={showLayers} onCloseLayers={() => setShowLayers(false)} />}
+        {(view === 'script') && <ScriptSection projectId={projectId} />}
+        {(view === 'outline') && <ScriptSection projectId={projectId} />}
       </div>
 
       <RightSideHeader projectId={projectId} />

@@ -9,9 +9,10 @@ import { sseCharacterEventHandlers } from '@/features/projects/event-handlers'
 import { useScriptStore } from '@/features/projects/store/script-store'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Route } from '@/routes/dashboard/projects/$projectId/edit/script'
-import { CharacterEntity, Entity, EntityType, LocationEntity, PropEntity } from '@/features/projects/type'
+import { Entity, EntityType } from '@/features/projects/type'
 import { CharacterDetailView, LocationDetailView, PropDetailView } from './entities-views'
 import { TextSkeleton } from '@/features/text-editor'
+import { JSONContent } from '@tiptap/core'
 
 // Types matching zSchemas
 type CharacterRole = 'protagonist' | 'antagonist' | 'supporting' | 'minor'
@@ -101,18 +102,18 @@ function EntityDetailView({projectId}: {projectId: string}){
     })
   }
 
-  const getEntityDetailView = useCallback((entity: Entity | undefined)=>{
+  const getEntityDetailView = useCallback((data: JSONContent | undefined)=>{
     switch(entityType){
       case 'characters':
-        return <CharacterDetailView data={entity as CharacterEntity} isCreation={isCreation} onChange={console.log}/>
+        return <CharacterDetailView data={data} isCreation={isCreation} onChange={console.log}/>
       case 'locations':
-        return <LocationDetailView data={entity as LocationEntity} isCreation={isCreation} onChange={console.log}/>
+        return <LocationDetailView data={data} isCreation={isCreation} onChange={console.log}/>
       case 'props':
-        return <PropDetailView data={entity as PropEntity} isCreation={isCreation} onChange={console.log}/>
+        return <PropDetailView data={data} isCreation={isCreation} onChange={console.log}/>
       default:
         return null
     }
-  }, [entityType])
+  }, [entityType, isCreation])
 
   const entityNotFound = !entity && !isCreation
 
@@ -145,7 +146,7 @@ function EntityDetailView({projectId}: {projectId: string}){
           </Button>
         </div>
         {/* Entity Detail Card */}
-        <div className="bg-white p-[1in] w-paper min-h-[11in]">
+        <div className="bg-white p-[1in] w-paper min-h-[11in]" key={`${entityType}-${entityId}`}>
           {getEntityDetailView(entity)}
         </div>
       </div>

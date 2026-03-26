@@ -1,7 +1,10 @@
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useScriptStore } from '@/features/projects/store/script-store'
 import { cn } from '@/lib/utils'
-import { IconPlus, IconX } from '@tabler/icons-react'
+import { IconX } from '@tabler/icons-react'
+import { Route } from '@/routes/dashboard/projects/$projectId/edit/script'
+import { useNavigate } from '@tanstack/react-router'
 
 type Scene = {
   id: string
@@ -10,21 +13,30 @@ type Scene = {
   description: string
 }
 
-type SceneListPanelProps = {
-  scenes: Scene[]
-  selectedSceneId: string
-  onSelectScene: (sceneId: string) => void
-  onAddScene: () => void
-  onClose: () => void
-}
+// type SceneListPanelProps = {
+//   scenes: Scene[]
+//   onAddScene: () => void
+// }
 
-export default function SceneListPanel({
-  scenes,
-  selectedSceneId,
-  onSelectScene,
-  onAddScene,
-  onClose,
-}: SceneListPanelProps) {
+export default function SceneListPanel() {
+
+  const showLayers = useScriptStore(state => state.showLayers.scenes)
+  const toggleLayer = useScriptStore(state => state.toggleLayer)
+
+  const scenes: Scene[] = []
+
+  const navigate = useNavigate({from: Route.id})
+
+  const onSceneClick = (sceneId: string) => {
+    navigate({hash: sceneId})
+  }
+
+
+
+  if (!showLayers) {
+    return null
+  }
+
   return (
     <div className="absolute inset-0 z-20 flex">
       <div className="w-[300px] bg-background/95 backdrop-blur-xl border-r border-white/10 flex flex-col shadow-2xl">
@@ -36,7 +48,7 @@ export default function SceneListPanel({
             variant="ghost"
             size="icon"
             className="size-7 text-muted-foreground hover:text-foreground"
-            onClick={onClose}
+            onClick={()=>toggleLayer('scenes')}
           >
             <IconX className="size-4" />
           </Button>
@@ -47,14 +59,10 @@ export default function SceneListPanel({
             {scenes.map((scene) => (
               <button
                 key={scene.id}
-                onClick={() => onSelectScene(scene.id)}
+                onClick={() => onSceneClick(scene.id)}
                 className={cn(
                   'w-full text-left px-3 py-3 rounded-md transition-colors',
-                  'hover:bg-white/5',
-                  selectedSceneId === scene.id
-                    ? 'bg-primary/10 border-l-2 border-primary'
-                    : 'border-l-2 border-transparent'
-                )}
+                  'hover:bg-white/5')}
               >
                 <div className="flex items-start gap-3">
                   <span className="text-xs text-muted-foreground font-mono mt-0.5">
@@ -63,8 +71,7 @@ export default function SceneListPanel({
                   <div className="flex-1 min-w-0">
                     <p
                       className={cn(
-                        'text-sm font-medium truncate',
-                        selectedSceneId === scene.id ? 'text-primary' : 'text-foreground'
+                        'text-sm font-medium truncate text-foreground',
                       )}
                     >
                       {scene.heading}
@@ -78,19 +85,9 @@ export default function SceneListPanel({
             ))}
           </div>
         </ScrollArea>
-
-        <div className="p-3 pb-16 border-t border-white/10">
-          <button
-            onClick={onAddScene}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md border border-dashed border-white/20 text-muted-foreground hover:text-foreground hover:border-white/40 transition-colors text-sm"
-          >
-            <IconPlus className="size-4" />
-            Add Scene
-          </button>
-        </div>
       </div>
 
-      <div className="flex-1 bg-black/40" onClick={onClose} />
+      <div className="flex-1 bg-black/40" onClick={()=>toggleLayer('scenes')} />
     </div>
   )
 }
