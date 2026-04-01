@@ -99,6 +99,58 @@ export const cleanAndUpsertEntities = async (projectId: string, data: EntityObje
   });
 }
 
+export const cleanAndUpsertAllEntities = async (projectId: string, data: {characters: EntityObject[], locations: EntityObject[], props: EntityObject[]}) => {
+  const entitiesToInsert: Omit<Entity, 'id' | 'createdAt' | 'updatedAt' | 'prose'>[] = []
+
+  data.characters.forEach(entity => {
+    entitiesToInsert.push({
+      projectId,
+      name: entity.name,
+      slug: getSlug(entity.name),
+      type: 'CHARACTER' as const,
+      metadata: entity,
+    })
+  });
+
+  data.locations.forEach(entity => {
+    entitiesToInsert.push({
+      projectId,
+      name: entity.name,
+      slug: getSlug(entity.name),
+      type: 'LOCATION' as const,
+      metadata: entity,
+    })
+  });
+
+  data.props.forEach(entity => {
+    entitiesToInsert.push({
+      projectId,
+      name: entity.name,
+      slug: getSlug(entity.name),
+      type: 'PROP' as const,
+      metadata: entity,
+    })
+  });
+
+  return db.transaction(async (tx) => {
+    await tx.delete(entities).where(eq(entities.projectId, projectId));
+
+    if (entitiesToInsert.length === 0) {
+      return [];
+    }
+
+    const result = await tx.insert(entities).values(entitiesToInsert).onConflictDoUpdate({
+      target: [entities.projectId, entities.type, entities.slug],
+      set: {
+        name: sql`excluded.name`,
+        metadata: sql`excluded.metadata`,
+      },
+    }).returning();
+
+    return result;
+  });
+}
+
 export const updateEntity = async (
   projectId: string,
   entityId: string,

@@ -1,4 +1,13 @@
 export type ProjectStatus = 'DRAFT' | 'OUTLINE_GENERATED' | 'OUTLINE_CONFIRMED' | 'SHOTS_GENERATED';
+export type GenerationRequestStatus = 'ENQUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELED';
+export type GenerationRequestType = 
+| 'GENERATE_SCENE' 
+| 'GENERATE_ENTITY'
+| 'GENERATE_CONCEPT'
+| 'GENERATE_SYNOPSIS'
+| 'GENERATE_STORY_BIBLE'
+// | 'CHAT_COMPLETION'
+;
 export type CharacterRole = 'protagonist' | 'antagonist' | 'supporting' | 'narrator' | 'unknown';
 
 export type ProjectFormat = 'storytime' | 'explainer' | 'documentary' | 'presenter';
@@ -100,3 +109,6 @@ export type ProseDocument = { type: 'doc'; content: ProseNode[] }
 export type DocumentId = 'synopsis' | 'script' | 'story_bible' | 'shots';
 
 export type StoryBibleEntityType = 'character' | 'location' | 'prop';
+
+export type TaskType = 'SCENE_GENERATION' | 'SHOT_GENERATION' | 'ENTITY_GENERATION' | 'IMAGE_GENERATION' | 'BATCH_GENERATION'
+export type SseEventType = 'TASK_UPDATE' | 'CHAT_CHUNK'

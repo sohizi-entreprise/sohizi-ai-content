@@ -1,4 +1,5 @@
 import type Redis from 'ioredis'
+import type { SseEventType } from '@/type'
 
 type ConceptEventType = 'concept_start' | 'concept_delta' | 'concept_end' | 'concept_error' | 'concept_reasoning'
 type SynopsisEventType = 'synopsis_start' | 'synopsis_delta' | 'synopsis_end' | 'synopsis_error' | 'synopsis_reasoning'
@@ -11,8 +12,9 @@ type EntityEventType = 'entity_start' | 'entity_delta' | 'entity_end' | 'entity_
 type EditorEventType = 'editor_start' | 'editor_delta' | 'editor_end' | 'editor_error' | 'editor_reasoning' | 'editor_tool_call' | 'editor_tool_result'
 type AgentEventType = 'content_edit' | 'progress_update'
 type BatchEventType = 'batch_progress'
+type SseStreamEventType = SseEventType
 
-export type StreamEventType = ConceptEventType | SynopsisEventType | StoryBibleEventType | CharacterEventType | ScriptEventType | SceneEventType | ShotEventType | EntityEventType | EditorEventType | AgentEventType | BatchEventType
+export type StreamEventType = ConceptEventType | SynopsisEventType | StoryBibleEventType | CharacterEventType | ScriptEventType | SceneEventType | ShotEventType | EntityEventType | EditorEventType | AgentEventType | BatchEventType | SseStreamEventType
 
 // DOMAIN_EVENT = CONCEPT_CHUNK, CONCEPT_FINISH, CONCEPT_ERROR
 

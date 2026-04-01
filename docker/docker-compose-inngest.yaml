@@ -1,0 +1,14 @@
+name: sohizi-inngest
+
+services:
+  inngest:
+    image: inngest/inngest:v1.17.7
+    command: 'inngest dev -u http://host.docker.internal:3030/api/inngest'
+    ports:
+      - '8288:8288'
+      - '8289:8289'
+
+  redis:
+    image: redis:latest
+    ports:
+      - '6379:6379'

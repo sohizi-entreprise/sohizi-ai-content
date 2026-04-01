@@ -1,9 +1,10 @@
 import { Elysia } from "elysia";
-import { openapi } from '@elysiajs/openapi'
 import { swagger } from '@elysiajs/swagger'
 import * as routes from './features'
 import * as errors from './features/error'
 import { cors } from '@elysiajs/cors'
+import { inngest, functions } from "@/lib/inngest";
+import { serve } from "inngest/bun";
 
 const corsConfig = {
   origin: ['http://localhost:3000'],
@@ -11,6 +12,15 @@ const corsConfig = {
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }
+
+const handler = serve({
+  client: inngest,
+  functions,
+});
+
+const inngestHandler = new Elysia().all("/api/inngest", ({ request }) =>
+handler(request)
+);
 
 
 const app = new Elysia()
@@ -46,6 +56,7 @@ const app = new Elysia()
                     },
                   })
                 )
+                .use(inngestHandler)
                 .get("/", () => "Welcome to Sohizi AI content")
                 .use(routes.projectRoutes)
                 .use(routes.streamRoutes)

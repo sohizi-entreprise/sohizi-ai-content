@@ -1,98 +1,41 @@
-import { Elysia, sse, t } from 'elysia'
+import { Elysia, sse } from 'elysia'
 import { z } from 'zod'
-import { redis, createBlockingRedisClient, ResumableStream } from '@/lib'
-import * as aiService from '@/features/ai/service'
+import * as streamService from './service'
+import { generationRequestSchema } from './schema'
 
+const projectParams = z.object({
+  id: z.uuid('Invalid project id'),
+})
 
-export const streamRoutes = new Elysia({ prefix: '/stream' })
-  /**
-   * POST /stream/start - Initialize a stream and fire the LLM job
-   */
-  .post('/start', async ({ body }) => {
-    const { projectId, type, prompt } = body
-    return aiService.generateScriptComponents(projectId, type, prompt)
-
-  }, {
-    body: t.Object({
-      projectId: t.String({ format: 'uuid' }),
-      type: t.UnionEnum(aiService.supportedScriptComponentTypes),
-      prompt: t.Optional(t.String()),
-    }),
-    response: {
-      200: t.Object({
-        ok: t.Boolean(),
-        projectId: t.String(),
-      }),
-    },
+export const streamRoutes = new Elysia({ prefix: '/projects/:id/generations' })
+  .guard({
+    params: projectParams
   })
-
-  /**
-   * GET /stream/:projectId - SSE endpoint for EventSource subscription
-   */
-  .get('/:projectId', async function* ({ params, request }) {
-    const { projectId } = params
-
-    // Get Last-Event-ID from headers (for resumption)
-    const lastEventId = request.headers.get('Last-Event-ID') || undefined
-
-    const stream = new ResumableStream(redis, projectId)
-    
-    // Check if stream exists
-    const exists = await stream.exists()
-    if (!exists) {
-      yield sse({ data: '' })
-      return
-    }
-
-    // Create a blocking client for this subscription
-    const blockingClient = createBlockingRedisClient()
-    
-    try {
-      // Only connect if not already connected (ioredis auto-connects by default)
-      if (blockingClient.status === 'wait') {
-        await blockingClient.connect()
-      }
-      
-      for await (const entry of stream.subscribe(blockingClient, lastEventId)) {
-        yield sse({
-          event: entry.event.type,
-          id: entry.id,
-          data: JSON.stringify(entry.event.data),
-        })
-      }
-    } finally {
-      // Clean up the blocking client
-      await blockingClient.quit().catch(() => {})
-    }
-  }, {
-    params: z.object({
-      projectId: z.uuid('Invalid project id'),
-    }),
+  .post('', async ({ params, body })=>{
+    // Create a new generation request
+    return streamService.handleGenerationRequest(params.id, body)
+  },{
+    body: generationRequestSchema,
   })
-
-  /**
-   * DELETE /stream/:projectId - Cancel the stream
-   */
-  .delete('/:projectId', async ({ params }) => {
-    const { projectId } = params
-
-    const stream = new ResumableStream(redis, projectId)
+  .get('', async ({ params })=>{
+    // List active generation requests for a project
+    return streamService.listActiveGenerationRequests(params.id)
+  },{
     
-    // Set cancel flag
-    await stream.cancel()
-
-    // Update generation request status
-    // Note: We'd need to find the request by projectId, but for simplicity
-    // we just set the cancel flag and let the producer handle it
-
-    return { ok: true }
-  }, {
-    params: z.object({
-      projectId: z.uuid('Invalid project id'),
-    }),
-    response: {
-      200: t.Object({
-        ok: t.Boolean(),
-      }),
-    },
+  })
+  .delete('/:requestId', async ({ params })=>{
+    // Cancel a generation request
+    return streamService.cancelGenerationRequest(params.id, params.requestId)
+  },{
+    params: projectParams.extend({
+      requestId: z.uuid('Invalid request id'),
+    })
+  })
+  .get('/events', async function* ({ params, request }){
+    // List active generation requests for a project
+    for await (const event of streamService.sendSseEvents(params.id, request)) {
+      yield sse(event)
+    }
+  },{
+    params: projectParams,
   })

@@ -7,13 +7,16 @@ import { convertScenesToProse, diffScenes, parseScenesFromProse } from "@/utils/
 import { ProseDocument } from "@/type";
 import { entityToProseDoc, proseDocToEntityMetadata } from "@/utils/entity-sync-engine";
 import { proseDocToStoryBible, storyBibleToProseDoc } from "@/utils/world-sync-engine";
+import { handleGenerationRequest } from "../stream/service";
 
 export const startProject = async (data: projectModel.CreateProject) => {
     // Save the project in db
     const project = await projectRepo.createProject(data);
 
     // lauch the concept generator job in the background
-    await aiService.generateScriptComponents(project.id, 'concept');
+    await handleGenerationRequest(project.id, {
+        type: 'GENERATE_CONCEPT'
+    })
     // Return the created project
     return {
         project,

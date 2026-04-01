@@ -13,7 +13,15 @@ import {
 import { relations } from 'drizzle-orm'
 import { projectConstants } from '@/constants'
 import { ProjectBrief, StoryBible, NarrativeArcList, Outline } from 'zSchemas';
-import { AgentRunFinishReason, ChatMetadata, MsgContent, MsgMetadata, ProseDocument, SceneContent } from '@/type';
+import { AgentRunFinishReason, 
+         ChatMetadata, 
+         MsgContent, 
+         MsgMetadata, 
+         ProseDocument, 
+         SceneContent, 
+         GenerationRequestStatus, 
+         GenerationRequestType 
+  } from '@/type';
   
 const timestamps = {
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -24,20 +32,19 @@ export const blockStatusEnum = pgEnum('block_status', ['PENDING', 'DRAFT', 'ERRO
 export const entityTypeEnum = pgEnum('entity_type', projectConstants.entityTypes);
 export const imageOwnerTypeEnum = pgEnum('image_owner_type', ['PROJECT', 'SHOT', 'ENTITY']);
 
-export const generationRequestStatusEnum = pgEnum('generation_request_status', ['ENQUEUED', 'PROCESSING', 'COMPLETED', 'FAILED']);
-export const generationRequestTypeEnum = pgEnum('generation_request_type', ['GENERATE_BRIEF', 'GENERATE_SEGMENT', 'GENERATE_SCENE', 'GENERATE_SHOT', 'GENERATE_ENTITY', 'GENERATE_IMAGE']);
-
 export const generationRequests = pgTable('generation_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
   projectId: uuid('project_id')
     .references(() => projects.id, { onDelete: 'cascade' })
     .notNull(),
-  status: generationRequestStatusEnum('status').default('ENQUEUED').notNull(),
-  type: generationRequestTypeEnum('type').notNull(),
-  prompt: text('prompt'),
+  status: varchar('status', {length: 50}).default('ENQUEUED').notNull().$type<GenerationRequestStatus>(),
+  type: varchar('type', {length: 50}).notNull().$type<GenerationRequestType>(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   error: text('error'),
   ...timestamps,
-})
+}, (table) => ([
+  index('generation_requests_status_idx').on(table.status),
+]))
 
   // Tables
   export const projects = pgTable('projects', {
@@ -210,9 +217,6 @@ export const generationRequests = pgTable('generation_requests', {
   export type Conversation = typeof conversations.$inferSelect
   export type Message = typeof messages.$inferSelect
   export type AgentRun = typeof agent_runs.$inferSelect
-
-  export type GenerationRequestStatus = (typeof generationRequestStatusEnum.enumValues)[number]
-  export type GenerationRequestType = (typeof generationRequestTypeEnum.enumValues)[number]
   export type ChatMessageRole = (typeof chatMessageRoleEnum.enumValues)[number]
   
   
