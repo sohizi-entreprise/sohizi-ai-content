@@ -1,14 +1,14 @@
 import { chatRepo } from '@/entities/chat'
 import type { CreateMessage, ReplyUserMessage } from '@/entities/chat/model'
-import { AgentEvent } from '../ai/script-engine/editor-agent/types';
+import { AgentEvent } from '../ai/editor-agent/types';
 import { projectRepo } from '@/entities/project';
-import { ResumableStream, redis } from "@/lib";
+import { ResumableStream, redis, type StreamEvent } from "@/lib";
 import { NotFound } from '../error';
-import { EditorAgent } from '../ai/script-engine/editor-agent';
+import { EditorAgent } from '../ai/editor-agent';
 import { ToolModelMessage, ToolResultPart, AssistantModelMessage } from 'ai';
 import { CursorPaginationOptions } from '@/type';
 import { Conversation } from '@/db/schema';
-import { RunParams } from '../ai/script-engine/editor-agent/editor-agent';
+import { RunPayload } from '../ai/editor-agent/editor-agent';
 
 // ============================================================================
 // CONVERSATIONS
@@ -107,15 +107,58 @@ async function validateProject(projectId: string) {
   return project;
 }
 
-async function runEditorAgent(params: Omit<RunParams, 'stream'> & {model: string, reasoningEffort: 'low' | 'medium' | 'high'}){
-  const {model, reasoningEffort, ...rest} = params;
+async function runEditorAgent(params: RunPayload & {model: string, reasoningEffort: 'low' | 'medium' | 'high'}){
+  const {model, reasoningEffort, ...payload} = params;
   const stream = new ResumableStream<AgentEvent>(redis, params.conversationId);
+  const abortController = new AbortController()
+  let isDone = false
   const editorAgent = new EditorAgent({
     model: model,
     reasoningEffort: reasoningEffort,
   })
-  await editorAgent.run({
-    ...rest,
-    stream: stream
-  })
+
+  const cancellationWatcher = (async () => {
+    while (!isDone && !abortController.signal.aborted) {
+      if (await stream.isCancelled()) {
+        abortController.abort()
+        return
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 250))
+    }
+  })()
+
+  try {
+    for await (const event of editorAgent.run({
+      payload,
+      onSuccess: async () => {},
+      onError: async () => {},
+      onAbort: async () => {},
+      onUsageUpdate: async () => {},
+      abortSignal: abortController.signal,
+    })) {
+      await stream.push(toConversationStreamEvent(event))
+    }
+  } finally {
+    isDone = true
+    await cancellationWatcher.catch(() => {})
+    await stream.close()
+  }
+}
+
+function toConversationStreamEvent(event: AgentEvent): StreamEvent<AgentEvent> {
+  switch (event.type) {
+    case 'start':
+      return { type: 'editor_start', data: event }
+    case 'end':
+      return { type: 'editor_end', data: event }
+    case 'error':
+      return { type: 'editor_error', data: event }
+    case 'reasoning_delta':
+      return { type: 'editor_reasoning', data: event }
+    case 'editor_operation':
+      return { type: 'editor_operation', data: event }
+    default:
+      return { type: 'editor_delta', data: event }
+  }
 }

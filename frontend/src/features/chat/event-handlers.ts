@@ -7,6 +7,7 @@ export const sseEditorEventHandlers = {
     editor_delta: handleDelta,
     editor_end: handleEnd,
     editor_reasoning: handleReasoning,
+    editor_operation: handleOperation,
     content_edit: handleWritingEvent,
     editor_error: handleError,
 } as const
@@ -62,6 +63,14 @@ type WritingDelta = {
 }
 
 type WritingData = WritingStartEnd | WritingDelta
+
+type EditorOperationData = {
+    runId: string
+    type: 'editor_operation'
+    documentId: string
+    operations: unknown[]
+    stepId?: string
+}
 
 function handleStart(_data: unknown, _options: FuncOptions){
     // const expectedData = data as EditorStartData
@@ -139,4 +148,9 @@ function handleWritingEvent(data: unknown, _options: FuncOptions){
     if(expectedData.type === 'writing_delta'){
         updateWritingChunk({runId: expectedData.runId, stepId: expectedData.stepId, text: expectedData.text})
     }
+}
+
+function handleOperation(_data: unknown, _options: FuncOptions){
+    const expectedData = _data as EditorOperationData
+    void expectedData
 }

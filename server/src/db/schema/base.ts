@@ -9,8 +9,9 @@ import {
     pgEnum,
     index,
     uniqueIndex,
+    customType,
   } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import { projectConstants } from '@/constants'
 import { ProjectBrief, StoryBible, NarrativeArcList, Outline } from 'zSchemas';
 import { AgentRunFinishReason, 
@@ -20,17 +21,26 @@ import { AgentRunFinishReason,
          ProseDocument, 
          SceneContent, 
          GenerationRequestStatus, 
-         GenerationRequestType 
+         GenerationRequestType, 
+         EntityType,
+         ProjectPhase,
+         ShotVisuals,
+         ShotAudio
   } from '@/type';
+
+const tsvector = customType<{ data: string }>({
+  dataType() {
+    return 'tsvector';
+  },
+});
   
 const timestamps = {
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => /* @__PURE__ */ new Date()).notNull(),
 }
 
-export const blockStatusEnum = pgEnum('block_status', ['PENDING', 'DRAFT', 'ERROR', 'APPROVED']);
-export const entityTypeEnum = pgEnum('entity_type', projectConstants.entityTypes);
 export const imageOwnerTypeEnum = pgEnum('image_owner_type', ['PROJECT', 'SHOT', 'ENTITY']);
+
 
 export const generationRequests = pgTable('generation_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -58,6 +68,7 @@ export const generationRequests = pgTable('generation_requests', {
     story_bible_prose: jsonb('story_bible_prose').$type<ProseDocument>(),
     script: jsonb('script').$type<ProseDocument>(),
     status: varchar('status', {length: 50}).default('DRAFT').notNull().$type<projectConstants.ProjectStatus>(),
+    phase: varchar('phase', {length: 50}).default('DRAFT').notNull().$type<ProjectPhase>(),
     ...timestamps,
   })
   
@@ -68,11 +79,16 @@ export const generationRequests = pgTable('generation_requests', {
       .notNull(),
     order: integer('order').notNull(),
     content: jsonb('content').$type<SceneContent[]>().notNull(),
+    fullText: tsvector('full_text').generatedAlwaysAs(
+      sql`to_tsvector('simple', public.scene_content_search_text("content"))`
+    ),
     ...timestamps,
   }, (table) => ([
     uniqueIndex('scenes_project_id_id_unique').on(table.projectId, table.id),
+    index('scenes_full_text_idx').using('gin', table.fullText),
   ]))
 
+  
   export const shots = pgTable('shots', {
     id: uuid('id').defaultRandom().primaryKey(),
     projectId: uuid('project_id')
@@ -81,17 +97,18 @@ export const generationRequests = pgTable('generation_requests', {
     sceneId: uuid('scene_id')
       .references(() => scenes.id, { onDelete: 'cascade' })
       .notNull(),
-    order: integer('order').notNull(),
-    visualSummary: text('visual_summary').notNull(),
-    composition: text('composition').default('unspecified'),
-    shotType: varchar('shot_type', {length: 100}).default('unspecified'),
-    angle: varchar('angle', {length: 100}).default('unspecified'),
-    lens: varchar('lens', {length: 250}).default('unspecified'),
-    movement: varchar('movement', {length: 250}).default('unspecified'),
-    
+
+    actionDescription: text('action_description').notNull(),
+    visuals: jsonb('visuals').$type<ShotVisuals>(),
+    audio: jsonb('audio').$type<ShotAudio>(),
     constraints: jsonb('constraints').$type<{
-      must_include: string[]
+      negative_prompt: string[]
+      must_keep: string[]
       must_avoid: string[]
+    }>(),
+    compiledPrompts: jsonb('compiled_prompts').$type<{
+      image: string
+      audio: string
     }>(),
     ...timestamps,
   })
@@ -103,7 +120,7 @@ export const generationRequests = pgTable('generation_requests', {
       .notNull(),
     name: varchar('name', {length: 150}).notNull(),
     slug: varchar('slug', {length: 150}).notNull(),
-    type: entityTypeEnum('type').notNull(),
+    type: varchar('type', {length: 50}).$type<EntityType>().notNull(),
     metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull(),
     prose: jsonb('prose').$type<ProseDocument>(),
     ...timestamps,

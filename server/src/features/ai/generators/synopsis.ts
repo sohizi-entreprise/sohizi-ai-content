@@ -1,13 +1,8 @@
-import { ProjectBrief, NarrativeArc } from "zSchemas";
+import { ProjectBrief, NarrativeArc, synopsisSchema} from "zSchemas";
 import { streamStructuredOutput } from "../stream-llm";
 import { z } from "zod";
 import { BaseGeneratorParams } from "../type";
 import { ProseDocument } from "@/type";
-
-const synopsisSchema = z.object({
-    title: z.string().describe("The title of the synopsis"),
-    content: z.string().describe("The content of the synopsis. Separate paragraphs with double newline \n\n."),
-})
 
 type Payload = {
     narrativeArc: NarrativeArc;

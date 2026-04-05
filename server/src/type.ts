@@ -13,9 +13,8 @@ export type CharacterRole = 'protagonist' | 'antagonist' | 'supporting' | 'narra
 export type ProjectFormat = 'storytime' | 'explainer' | 'documentary' | 'presenter';
 export type Audience = 'general' | 'kids' | 'teens' | 'adult';
 export type TimeOfDay = 'dawn' | 'day' | 'sunset' | 'night' | 'unspecified';
-export type ShotType = 'establishing' | 'wide' | 'medium' | 'closeup' | 'insert';
-export type ShotAngle = 'eye_level' | 'low' | 'high' | 'over_shoulder' | 'top_down';
-export type ShotMovement = 'static' | 'slow_zoom_in' | 'slow_zoom_out' | 'pan_left' | 'pan_right' | 'tilt_up' | 'tilt_down';
+
+export type EntityType = 'CHARACTER' | 'LOCATION' | 'PROP' | 'COSTUME';
 
 export type ProjectRequirements = {
   format: ProjectFormat;
@@ -112,3 +111,58 @@ export type StoryBibleEntityType = 'character' | 'location' | 'prop';
 
 export type TaskType = 'SCENE_GENERATION' | 'SHOT_GENERATION' | 'ENTITY_GENERATION' | 'IMAGE_GENERATION' | 'BATCH_GENERATION'
 export type SseEventType = 'TASK_UPDATE' | 'CHAT_CHUNK'
+
+
+export type ProjectPhase = 'DRAFT' | 'CONCEPT' | 'SYNOPSIS' | 'BUILDING' | 'EDITING';
+export type ShotType = 'establishing' | 'wide' | 'medium' | 'closeup' | 'insert' | 'unspecified';
+export type ShotAngle = 'eye_level' | 'low' | 'high' | 'over_shoulder' | 'top_down' | 'unspecified';
+export type ShotMovement = 'static' | 'slow_zoom_in' | 'slow_zoom_out' | 'pan_left' | 'pan_right' | 'tilt_up' | 'tilt_down' | 'unspecified';
+
+export type ShotSubject = {
+  characterId: string;
+  costumeId?: string;
+  equippedPropIds?: string[];
+  actionAndPose: string;
+}
+
+export type SpeechTrack = {
+  characterId: string;
+  voiceModelId: string;
+  speechType: 'narration' | 'dialogue' | 'thought' | 'internal_monologue';
+  text: string;
+  ttsParameters: {
+    emotion: string;
+    pacing: string;
+  };
+}
+
+export type ShotVisuals = {
+  subjects: ShotSubject[]
+  environment: {
+    locationId: string
+    setting: string
+    timeOfDay: string
+    weatherOrAtmosphere: string
+  },
+  cameraPlan : {
+    shotType: ShotType
+    cameraAngle: ShotAngle
+    lensAndDepth: string
+    movement: ShotMovement
+    focusSubject?: string
+  },
+  style: {
+    lighting: string
+    colorPalette: string[]
+    medium: string
+    pipelineModifiers: string
+  }
+}
+
+export type ShotAudio = {
+  speechTracks: SpeechTrack[];
+  soundDesign: {
+    ambientSfx: string
+    actionSfx: string
+  }
+}

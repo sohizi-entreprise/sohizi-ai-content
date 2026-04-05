@@ -295,6 +295,37 @@ export const getAllScenesForSync = async (projectId: string) => {
   return result;
 }
 
+export const getAllScenesText = async (projectId: string) => {
+  const result = await db.select({
+    id: scenes.id,
+    text: sql<string>`public.scene_content_search_text(${scenes.content})`,
+  })
+  .from(scenes)
+  .where(eq(scenes.projectId, projectId))
+  .orderBy(asc(scenes.order));
+  return result;
+}
+
+export const searchScenes = async (projectId: string, query: string) => {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  const result = await db.select({
+                            id: scenes.id,
+                            order: scenes.order,
+                            content: scenes.content,
+                          })
+                         .from(scenes)
+                         .where(and(
+                           eq(scenes.projectId, projectId),
+                           sql`${scenes.fullText} @@ websearch_to_tsquery('simple', ${normalizedQuery})`
+                         ))
+                         .orderBy(asc(scenes.order));
+  return result;
+}
+
 export const getSceneById = async (sceneId: string) => {
   const result = await db.select().from(scenes).where(eq(scenes.id, sceneId));
   return result[0];

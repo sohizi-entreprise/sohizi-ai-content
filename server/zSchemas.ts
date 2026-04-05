@@ -42,10 +42,11 @@ export const scriptOutlineSchema = z.object({
     beats: z.array(beatSchema).describe("Story beats that structure the script, each containing related scenes"),
 });
 
+
 export const synopsisSchema = z.object({
-    title: z.string().min(1).describe("The title of the synopsis"),
-    text: z.string().min(1).describe("The complete synopsis as prose, breaking story into beginning/middle/end structure with protagonist arc, central conflict, and key turning points"),
-});
+    title: z.string().describe("The title of the synopsis"),
+    content: z.string().describe("The complete synopsis paragraphs, breaking story into beginning/middle/end structure with protagonist arc, central conflict, and key turning points. Separate paragraphs with double newline \n\n."),
+})
 
 
 export const CharacterSchema = z.object({
@@ -71,17 +72,10 @@ export const PropSchema = z.object({
     description: z.string().min(1).describe("Description of the prop and its narrative significance (e.g., 'Worn, scratched detective badge - Symbol of her identity crisis')"),
 });
 
-const keyLocationOutlineSchema = z.object({
-    name: z.string().min(1).describe("Name of the location (e.g., 'The Warehouse', 'City Hall')"),
-    description: z.string().describe("Physical and atmospheric description of the place"),
-    significance: z.string().describe("Why this location matters to the story or characters. Keep it very concise (1-2 sentences)."),
-});
-
-const keyCharacterOutlineSchema = z.object({
-    name: z.string().min(1).describe("Character's full name or primary alias"),
-    role: z.enum(["protagonist", "antagonist", "supporting"]).describe("Narrative function in the story"),
-    age: z.number().min(1).describe("Character's age in years"),
-    goal: z.string().describe("What the character wants or is driving toward in the story. Keep it very concise (1-2 sentences)."),
+export const CostumeSchema = z.object({
+    name: z.string().min(1).describe("The name of the costume (e.g., 'Sarah's Suit')"),
+    description: z.string().min(1).describe("Very concise description of the costume for image generation. Include only the most important details."),
+    wornBy: z.string().min(1).describe("The id of the character who wears the costume"),
 });
 
 export const storyBibleSchema = z.object({
@@ -98,8 +92,6 @@ export const storyBibleSchema = z.object({
         timePressure: z.string().describe("Deadlines, ticking clocks, or urgency"),
         mainDramaticQuestion: z.string().describe("The story question the audience wants answered (e.g., 'Will they escape?')"),
     }),
-    keyLocations: z.array(keyLocationOutlineSchema).describe("Key locations with name, description, and significance"),
-    keyCharacters: z.array(keyCharacterOutlineSchema).describe("Key characters with role, age, and goal"),
     toneAndStyle: z.object({
         visualStyle: z.string().describe("Look and feel (e.g., noir, documentary, high contrast)"),
         dialogueStyle: z.string().describe("How characters speak (e.g., naturalistic, stylized, sparse)"),
@@ -110,7 +102,7 @@ export const storyBibleSchema = z.object({
         characterBehaviorRules: z.string().describe("A very concise how characters should act and react consistently"),
         thingsToAvoid: z.string().describe("A very concise contradictions or mistakes to avoid"),
     }),
-}).describe("The story bible is a comprehensive outline of the story, including the world, conflict engine, key locations, key characters, tone and style, and continuity rules. Keep each section very concise (1-3 sentences) and to the point.");
+})
 
 // ProseMirror/Tiptap Mark schema (inline formatting)
 export const proseMarkSchema = z.object({
@@ -142,6 +134,87 @@ export const proseDocumentSchema = z.object({
     content: z.array(proseNodeSchema),
 });
 
+export const editorEntityComponentSchema = z.enum(["character", "location", "prop"]);
+
+export const editorDocumentIdSchema = z.string().min(1);
+
+const sceneProseNodeSchema = z.object({
+    type: z.literal("scene"),
+    attrs: z.record(z.string(), z.any()).optional(),
+    content: z.array(proseNodeSchema).optional(),
+});
+
+const sceneOperationComponentSchema = z.literal("scene");
+
+const insertNodeOperationSchema = z.object({
+    type: z.literal("insert_node"),
+    component: sceneOperationComponentSchema,
+    position: z.enum(["before", "after", "start", "end"]),
+    anchorNodeId: z.string().optional(),
+    content: sceneProseNodeSchema,
+}).superRefine((value, ctx) => {
+    if ((value.position === "before" || value.position === "after") && !value.anchorNodeId) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["anchorNodeId"],
+            message: "anchorNodeId is required when position is before or after.",
+        });
+    }
+});
+
+const replaceNodeOperationSchema = z.object({
+    type: z.literal("replace_node"),
+    component: sceneOperationComponentSchema,
+    nodeId: z.string().min(1),
+    content: sceneProseNodeSchema,
+});
+
+const deleteNodeOperationSchema = z.object({
+    type: z.literal("delete_node"),
+    component: sceneOperationComponentSchema,
+    nodeId: z.string().min(1),
+});
+
+const insertDocumentOperationSchema = z.object({
+    type: z.literal("insert_document"),
+    component: editorEntityComponentSchema,
+    content: proseDocumentSchema,
+});
+
+const replaceEntityDocumentOperationSchema = z.object({
+    type: z.literal("replace_document"),
+    component: editorEntityComponentSchema,
+    componentId: z.string().min(1),
+    content: proseDocumentSchema,
+});
+
+const deleteDocumentOperationSchema = z.object({
+    type: z.literal("delete_document"),
+    component: editorEntityComponentSchema,
+    componentId: z.string().min(1),
+});
+
+export const editorOperationSchema = z.discriminatedUnion("type", [
+    z.object({
+        type: z.literal("replace_document"),
+        component: z.enum(["synopsis", "story_bible"]),
+        content: proseDocumentSchema,
+    }),
+    replaceNodeOperationSchema,
+    insertNodeOperationSchema,
+    insertDocumentOperationSchema,
+    replaceEntityDocumentOperationSchema,
+    deleteNodeOperationSchema,
+    deleteDocumentOperationSchema,
+]);
+
+export const editorOperationListSchema = z.array(editorOperationSchema);
+
+export const editorOperationsPayloadSchema = z.object({
+    documentId: editorDocumentIdSchema,
+    operations: editorOperationListSchema.min(1),
+});
+
 export const sceneContentBlockSchema = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("slugline"),
@@ -170,6 +243,65 @@ export const sceneContentSchema = z
     .describe("An ordered array of screenplay scene blocks");
 
 
+const shotTypeSchema = z.enum(["establishing", "wide", "medium", "closeup", "insert", "unspecified"]);
+const shotAngleSchema = z.enum(["eye_level", "low", "high", "over_shoulder", "top_down", "unspecified"]);
+const shotMovementSchema = z.enum(["static", "slow_zoom_in", "slow_zoom_out", "pan_left", "pan_right", "tilt_up", "tilt_down", "unspecified"]);
+
+const shotSubjectSchema = z.object({
+    characterId: z.string().min(1).describe("Character entity id appearing in the shot"),
+    costumeId: z.string().min(1).optional().describe("Optional costume entity id used for this subject"),
+    equippedPropIds: z.array(z.string().min(1)).optional().describe("Optional prop ids carried or worn by the subject"),
+    actionAndPose: z.string().min(1).describe("What the subject is doing and how they are posed visually"),
+});
+
+const shotVisualsSchema = z.object({
+    subjects: z.array(shotSubjectSchema).describe("Subjects visible in the shot"),
+    environment: z.object({
+        locationId: z.string().min(1).describe("Location entity id for the shot"),
+        setting: z.string().min(1).describe("Short visual description of the setting"),
+        timeOfDay: z.string().min(1).describe("Time of day represented in the shot"),
+        weatherOrAtmosphere: z.string().min(1).describe("Weather, haze, smoke, or atmospheric qualities"),
+    }),
+    cameraPlan: z.object({
+        shotType: shotTypeSchema.describe("Shot framing size"),
+        cameraAngle: shotAngleSchema.describe("Primary camera angle"),
+        lensAndDepth: z.string().min(1).describe("Lens choice and depth-of-field guidance"),
+        movement: shotMovementSchema.describe("Camera movement for the shot"),
+        focusSubject: z.string().min(1).optional().describe("Optional subject that should receive the visual focus"),
+    }),
+    style: z.object({
+        lighting: z.string().min(1).describe("Lighting direction and quality"),
+        colorPalette: z.array(z.string().min(1)).describe("Dominant colors to preserve in the image"),
+    }),
+});
+
+const speechTrackSchema = z.object({
+    characterId: z.string().min(1).describe("Character entity id delivering the line"),
+    speechType: z.enum(["narration", "dialogue", "thought", "internal_monologue"]).describe("Type of speech delivery"),
+    text: z.string().min(1).describe("Speech content. Get it from the scene content, keep it exactly as it is."),
+    ttsParameters: z.object({
+        emotion: z.string().min(1).describe("Desired emotional delivery"),
+        pacing: z.string().min(1).describe("Desired pacing or cadence"),
+    }),
+});
+
+const shotAudioSchema = z.object({
+    speechTracks: z.array(speechTrackSchema).describe("Speech tracks aligned to the shot"),
+    soundDesign: z.object({
+        ambientSfx: z.string().min(1).describe("Ambient sound bed for the shot"),
+        actionSfx: z.string().min(1).describe("Action-specific sound effects"),
+    }),
+});
+
+export const shotSchema = z.object({
+    actionDescription: z.string().min(1).describe("Concise description of what happens in the shot, optimized for image generation. "),
+    visuals: shotVisualsSchema.describe("Visual plan for generating the shot imagery"),
+    audio: shotAudioSchema.describe("Audio plan associated with the shot"),
+    constraints: z.object({
+        negative_prompt: z.array(z.string().min(1)).describe("Prompt negatives or visual exclusions"),
+        must_keep: z.array(z.string().min(1)).describe("Elements that must remain consistent"),
+    }).describe("Hard constraints applied during generation"),
+});
 
 // Type exports
 export type ProjectBrief = z.infer<typeof projectBriefSchema>;
@@ -186,5 +318,9 @@ export type SceneContentBlock = z.infer<typeof sceneContentBlockSchema>;
 export type SceneContentSchema = z.infer<typeof sceneContentSchema>;
 export type Character = z.infer<typeof CharacterSchema>;
 export type Location = z.infer<typeof LocationSchema>;
+export type Costume = z.infer<typeof CostumeSchema>;
 export type Prop = z.infer<typeof PropSchema>;
-export type EntityObject = Character | Location | Prop;
+export type EntityObject = Character | Location | Prop | Costume;
+export type EditorEntityComponent = z.infer<typeof editorEntityComponentSchema>;
+export type EditorOperation = z.infer<typeof editorOperationSchema>;
+export type EditorOperationsPayload = z.infer<typeof editorOperationsPayloadSchema>;

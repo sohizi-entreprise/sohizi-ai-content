@@ -53,3 +53,26 @@ export function getSlug(name: string): string {
         .replace(/_+/g, "_")           // collapse multiple underscores
         .replace(/^_|_$/g, "");        // trim leading/trailing underscores
 }
+
+// THOSE ARE VALID FUNCTIONS USED SOMEWHERE ELSE, DO NOT REMOVE THEM
+export function formatSceneBlock(block: Record<string, unknown>) {
+    switch (block.type) {
+        case "slugline":
+        case "action":
+        case "transition":
+            return String(block.text ?? "").trim();
+        case "dialogue": {
+            const speaker = String(block.character ?? "").trim();
+            const parenthetical = String(block.parenthetical ?? "").trim();
+            const text = String(block.text ?? "").trim();
+            const lines = [speaker];
+            if (parenthetical) {
+                lines.push(`(${parenthetical})`);
+            }
+            lines.push(text);
+            return lines.filter(Boolean).join("\n");
+        }
+        default:
+            return String(block.text ?? "").trim();
+    }
+}

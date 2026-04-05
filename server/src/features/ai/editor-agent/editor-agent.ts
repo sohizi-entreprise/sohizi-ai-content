@@ -2,19 +2,36 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { LanguageModelUsage, ModelMessage, stepCountIs, streamText } from 'ai'
 import { v4 as uuidv4 } from 'uuid'
 
-import { ResumableStream } from '@/lib'
+import type { StreamEvent } from '@/lib'
 import { buildDocumentBlockIndex } from './document-index'
 import { skillRegistry } from './skill-registry'
-import { loadSkills, todoWrite, editContent, delegateTask, getDocumentOutline, searchDocument, readBlockContext, getEntityDefinition } from './tools'
-import type { EditComponent, AgentEvent, RunContext, TokenUsage, ConversationMessage } from './types'
+import { getEditorOperationsPayload } from './utils'
+import { loadSkills, 
+         todoWrite, 
+         editContent, 
+         delegateTask, 
+         readScreenplayOutline, 
+         readEntityOutline, 
+         readComponentDetails, 
+         readProjectRequirements, 
+         searchScreenplay, 
+         readStoryContext, 
+         readComponentSchema, 
+         rewriteStoryComponent, 
+         rewriteProjectComponent, 
+         insertScene, 
+         createEntity, 
+         deleteProjectComponent } from './tools'
+import type { EditComponent, AgentEvent, RunContext, TokenUsage, ConversationMessage, EditorAgentOutput } from './types'
 import { Project } from '@/db/schema'
 import { chatRepo } from '@/entities/chat'
 import { AgentRunFinishReason, ChatMetadata, MsgTextPart, MsgToolCallPart, MsgToolResultPart } from '@/type'
-import { buildEditorAgentPrompt } from '../../prompts/editor-agent'
+import { buildEditorAgentPrompt } from '../prompts/editor-agent'
 import { projectRepo } from '@/entities/project'
+import { BaseGeneratorParams } from '../type'
 
 // ============================================================================
-// TYPES
+// TYPES 
 // ============================================================================
 
 export type EditorAgentConfig = {
@@ -22,14 +39,15 @@ export type EditorAgentConfig = {
   reasoningEffort?: 'low' | 'medium' | 'high'
 }
 
-export type RunParams = {
+export type RunPayload = {
   projectId: string
   conversationId: string
   runId: string
-  stream: ResumableStream<AgentEvent>
   editComponent: EditComponent,
   maxIterations?: number
 }
+
+export type RunParams = BaseGeneratorParams<EditorAgentOutput, RunPayload>
 
 // ============================================================================
 // EDITOR AGENT
@@ -52,37 +70,40 @@ export class EditorAgent {
 
   /**
    * Run the agent with the given input.
-   * Returns the accumulated assistant text for persistence.
+   * Returns the accumulated assistant text for persistence. 
    */
-  async run(params: RunParams) {
-    const { projectId, conversationId, runId, stream, editComponent, maxIterations=10 } = params
+  async *run(params: RunParams): AsyncGenerator<AgentEvent, void, unknown> {
+    const { payload, onSuccess, onError, onAbort, abortSignal, onUsageUpdate } = params
+    const { projectId, conversationId, runId, editComponent, maxIterations=10 } = payload
 
     const project = await projectRepo.getProjectById(projectId)
-
-    const abortController = new AbortController()
 
     const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     })
 
     // Build system prompt with project context
-    const systemPrompt = buildEditorAgentPrompt({skillCatalog: skillRegistry.getCatalogAsString(), project, editTarget: editComponent})
+    const systemPrompt = buildEditorAgentPrompt({skillCatalog: skillRegistry.getCatalogAsString(), project})
 
     const messages: ModelMessage[] = await this.getMessageHistory(conversationId)
 
     // RunContext passed to tools via experimental_context
     const documentIndex = buildDocumentBlockIndex(project)
     const runContext: RunContext = {
-      stream,
       project,
       runId,
       documentIndex,
     }
 
     let stepId = uuidv4()
+    let finalResponse = ''
+    const toolsUsed = new Set<string>()
+    let didAbort = false
+    let didError = false
+    const pendingOperationEvents: AgentEvent[] = []
 
     try {
-      await stream.push({type: 'editor_start', data: {runId}})
+      yield { type: 'start', runId }
 
       const response = streamText({
         model: openai(this.model),
@@ -93,13 +114,21 @@ export class EditorAgent {
           todoWrite,
           editContent,
           delegateTask,
-          getDocumentOutline,
-          searchDocument,
-          readBlockContext,
-          getEntityDefinition,
+          rewriteStoryComponent,
+          rewriteProjectComponent,
+          insertScene,
+          createEntity,
+          deleteProjectComponent,
+          readScreenplayOutline,
+          readEntityOutline,
+          readComponentDetails,
+          readProjectRequirements,
+          searchScreenplay,
+          readStoryContext,
+          readComponentSchema,
         },
         stopWhen: stepCountIs(maxIterations),
-        abortSignal: abortController.signal,
+        abortSignal,
         providerOptions: {
           openai: {
             reasoningEffort: this.reasoningEffort,
@@ -108,7 +137,14 @@ export class EditorAgent {
         },
         experimental_context: runContext,
         onStepFinish: async({ usage, staticToolCalls, staticToolResults, reasoningText, text, finishReason}) => {
+          const currentStepId = stepId
           this.updateUsage(usage)
+          await onUsageUpdate({
+            inputTokens: usage.inputTokens || 0,
+            outputTokens: usage.outputTokens || 0,
+            totalTokens: usage.totalTokens || 0,
+            model: this.model,
+          })
           // Update the agent run
 
           let runFinishReason: AgentRunFinishReason = 'not-finished'
@@ -148,6 +184,25 @@ export class EditorAgent {
             },
           }))
 
+          staticToolResults.forEach((result) => {
+            const payload = getEditorOperationsPayload(result.output)
+            if (!payload) {
+              return
+            }
+
+            pendingOperationEvents.push({
+              type: 'editor_operation',
+              runId,
+              stepId: currentStepId,
+              documentId: payload.documentId,
+              operations: payload.operations,
+              metadata: {
+                toolName: result.toolName,
+                toolId: result.toolCallId,
+              },
+            })
+          })
+
           const agentMessage: chatRepo.CreateMessageData = {
             conversationId,
             runId,
@@ -161,6 +216,11 @@ export class EditorAgent {
             metadata: {
               reasoningText,
             }
+          }
+
+          staticToolCalls.forEach((call) => toolsUsed.add(call.toolName))
+          if (text) {
+            finalResponse = text
           }
 
           switch (finishReason) {
@@ -203,136 +263,156 @@ export class EditorAgent {
           
         },
         onAbort: async()=>{
+          didAbort = true
           await this.updateRun(runId, {finishReason: 'aborted'})
+          await onAbort()
         },
         onError: async({error})=>{
+          didError = true
           console.log('Error event =======================', error)
-          await this.updateRun(runId, {finishReason: 'error', error: error instanceof Error ? error.message : String(error)})
-        },
-        onFinish: async({text, finishReason, totalUsage})=>{
-
+          const resolvedError = error instanceof Error ? error : new Error(String(error))
+          await this.updateRun(runId, {finishReason: 'error', error: resolvedError.message})
+          await onError(resolvedError)
         }
       })
 
       let toolIdMap: Record<string, string> = {}
 
-      for await (const chunk of response.fullStream) {
-        if (await stream.isCancelled()) {
-          abortController.abort()
-          await stream.push({ type: 'editor_end', data: { runId } })
-          await stream.close()
+      const flushPendingOperationEvents = async function* () {
+        while (pendingOperationEvents.length > 0) {
+          const event = pendingOperationEvents.shift()
+          if (event) {
+            yield event
+          }
         }
+      }
+
+      for await (const chunk of response.fullStream) {
+        yield* flushPendingOperationEvents()
 
         switch (chunk.type) {
           case 'reasoning-delta':
-            await stream.push({
-              type: 'editor_reasoning',
-              data: { runId, type: 'reasoning_delta', text: chunk.text, stepId },
-            })
+            yield {
+              type: 'reasoning_delta',
+              runId,
+              text: chunk.text, 
+              stepId
+            }
             break
 
           case 'text-delta':
-            await stream.push({
-              type: 'editor_delta',
-              data: { runId, type: 'text_delta', text: chunk.text, stepId },
-            })
+            yield {
+              type: 'text_delta',
+              runId,
+              text: chunk.text, 
+              stepId
+            }
             break
 
           case 'tool-call':
-            await stream.push({
-              type: 'editor_delta',
-              data: {
-                runId,
-                type: 'tool_call',
-                metadata:{
-                  toolName: chunk.toolName,
-                  toolId: chunk.toolCallId,
-                  args: chunk.input,
-                },
-                stepId
+            yield {
+              type: 'tool_call',
+              runId,
+              metadata:{
+                toolName: chunk.toolName,
+                toolId: chunk.toolCallId,
+                args: chunk.input,
               },
-            })
+              stepId
+            }
             break
 
           case 'tool-input-start':
             // Send notification
             toolIdMap[chunk.id] = chunk.toolName
             if(chunk.toolName === 'editContent' || chunk.toolName === 'todoWrite'){
-              await stream.push({
-                type: 'editor_delta',
-                data: {
-                  runId,
-                  type: 'tool_call_start',
-                  metadata:{
-                    toolName: chunk.toolName,
-                    toolId: chunk.id,
-                    args: ''
-                  },
-                  stepId
+              yield {
+                type: 'tool_call_start',
+                runId,
+                metadata:{
+                  toolName: chunk.toolName,
+                  toolId: chunk.id,
+                  args: ''
                 },
-              })
+                stepId
+              }
             }
             break;
 
           case 'tool-input-delta':
             if(chunk.id in toolIdMap){
-              await stream.push({
-                type: 'editor_delta',
-                data: {
-                  runId,
-                  type: 'tool_call_delta',
-                  metadata:{
-                    toolName: toolIdMap[chunk.id],
-                    toolId: chunk.id,
-                    args: chunk.delta
-                  },
-                  stepId
+              yield {
+                type: 'tool_call_delta',
+                runId,
+                metadata:{
+                  toolName: toolIdMap[chunk.id],
+                  toolId: chunk.id,
+                  args: chunk.delta
                 },
-              })
+                stepId
+              }
 
             }
             break;
 
           case 'tool-input-end':
             if (chunk.id in toolIdMap) {
-              await stream.push({
-                type: 'editor_delta',
-                data: {
-                  runId,
-                  type: 'tool_call_end',
-                  metadata: {
-                    toolName: toolIdMap[chunk.id],
-                    toolId: chunk.id,
-                    args: '',
-                  },
-                  stepId,
+              yield {
+                type: 'tool_call_end',
+                runId,
+                metadata: {
+                  toolName: toolIdMap[chunk.id],
+                  toolId: chunk.id,
+                  args: '',
                 },
-              })
+                stepId,
+              }
               delete toolIdMap[chunk.id]
             }
             break;
 
           case 'error':
-            await stream.push({
-              type: 'editor_error',
-              data: {
-                runId,
-                type: 'error',
-                text: chunk.error instanceof Error ? chunk.error.message : String(chunk.error),
-              },
-            })
+            yield {
+              type: 'error',
+              runId,
+              text: chunk.error instanceof Error ? chunk.error.message : String(chunk.error),
+            }
             break
         }
       }
+
+      yield* flushPendingOperationEvents()
+
+      if (!didAbort && !didError) {
+        await onSuccess({
+          success: true,
+          response: finalResponse,
+          toolsUsed: Array.from(toolsUsed),
+          tokensUsed: this.usage.totalTokens,
+        })
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      await stream.push({
-        type: 'editor_error',
-        data: { runId, type: 'error', text: errorMessage },
-      })
+      if (abortSignal.aborted) {
+        if (!didAbort) {
+          didAbort = true
+          await this.updateRun(runId, {finishReason: 'aborted'})
+          await onAbort()
+        }
+      } else {
+        if (!didError) {
+          didError = true
+          await this.updateRun(runId, {finishReason: 'error', error: errorMessage})
+          await onError(error instanceof Error ? error : new Error(errorMessage))
+        }
+        yield {
+          type: 'error', 
+          runId,
+          text: errorMessage
+        }
+      }
     } finally {
-      await stream.push({ type: 'editor_end', data: { runId } })
-      await stream.close()
+      yield { type: 'end', runId }
     }
 
   }

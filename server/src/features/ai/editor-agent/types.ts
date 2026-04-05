@@ -1,7 +1,7 @@
 import { Project } from '@/db/schema'
-import { ResumableStream } from '@/lib'
 import { MsgTextPart, MsgToolCallPart, MsgToolResultPart } from '@/type'
 import { z } from 'zod'
+import type { EditorOperation } from 'zSchemas'
 import type { DocumentBlockIndex } from './document-index'
 
 // ============================================================================
@@ -67,35 +67,25 @@ export type ProjectInfo = {
 // AGENT EVENT TYPES
 // ============================================================================
 
-export type WriterPhase = 'writing_start' | 'writing_delta' | 'writing_end' | 'writing_tool_call'
-
-export type AgentEventType =
-  | 'editing_error'
-  | 'editing_end'
-  | 'editing_start'
-  | 'content_diff'
-
-  | 'script_content_editing'
-  | 'synopsis_content_editing'
-  | 'characters_content_editing'
-  | 'world_content_editing'
-  | 'progress_update'
 
 export type AgentChunkType =
   | 'reasoning_delta'
-  | 'todo_delta'
   | 'text_delta'
+  | 'editor_operation'
   | 'error'
   | 'tool_call_delta'
   | 'tool_call_start'
   | 'tool_call_end'
   | 'tool_call'
-  | WriterPhase
+  | 'start'
+  | 'end'
 
 export type AgentEvent = {
+    type: AgentChunkType
     runId: string
-    type?: AgentChunkType
     text?: string
+    documentId?: string
+    operations?: EditorOperation[]
     metadata?: Record<string, unknown>
     stepId?: string
 }
@@ -108,7 +98,6 @@ export type TokenUsage = {
 
 export type RunContext = {
   runId: string
-  stream: ResumableStream<AgentEvent>
   project: Project
   documentIndex: DocumentBlockIndex
 }
@@ -140,6 +129,12 @@ export type ToolResultEvent = AgentEvent & {
     result: unknown
     success: boolean
   }
+}
+
+export type EditorOperationEvent = AgentEvent & {
+  type: 'editor_operation'
+  documentId: string
+  operations: EditorOperation[]
 }
 
 export type WriterStartEvent = AgentEvent & {
