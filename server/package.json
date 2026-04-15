@@ -2,7 +2,7 @@
   "name": "server",
   "version": "1.0.50",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "bun test",
     "dev": "bun run --watch src/index.ts",
     "db:generate": "npx drizzle-kit generate",
     "db:migrate": "npx drizzle-kit migrate"
@@ -21,12 +21,14 @@
     "ioredis": "^5.9.3",
     "partial-json": "^0.1.7",
     "pg": "^8.16.3",
+    "shell-quote": "^1.8.3",
     "uuid": "^13.0.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/pg": "^8.16.0",
+    "@types/shell-quote": "^1.7.5",
     "bun-types": "latest",
     "drizzle-kit": "^0.31.8",
     "tsx": "^4.21.0"

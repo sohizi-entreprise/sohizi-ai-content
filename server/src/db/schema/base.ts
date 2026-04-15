@@ -104,7 +104,6 @@ export const generationRequests = pgTable('generation_requests', {
     constraints: jsonb('constraints').$type<{
       negative_prompt: string[]
       must_keep: string[]
-      must_avoid: string[]
     }>(),
     compiledPrompts: jsonb('compiled_prompts').$type<{
       image: string
