@@ -1,2 +1,0 @@
-CREATE UNIQUE INDEX IF NOT EXISTS "entities_project_type_slug_unique" ON "entities" USING btree ("project_id","type","slug");--> statement-breakpoint
-CREATE UNIQUE INDEX "scenes_project_id_id_unique" ON "scenes" USING btree ("project_id","id");

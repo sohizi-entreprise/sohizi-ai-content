@@ -5,85 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1768119422117,
-      "tag": "0000_shiny_shen",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1768127435087,
-      "tag": "0001_premium_luckman",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1771626462316,
-      "tag": "0002_sloppy_korg",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1772524017242,
-      "tag": "0003_cultured_ultimates",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1772880535056,
-      "tag": "0004_optimal_viper",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1773763891262,
-      "tag": "0005_cuddly_justin_hammer",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1774077600000,
-      "tag": "0006_fine_squadron_supreme",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1774199753386,
-      "tag": "0007_useful_smiling_tiger",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1774454868375,
-      "tag": "0008_empty_agent_zero",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1774682533277,
-      "tag": "0009_left_agent_zero",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1774696773942,
-      "tag": "0010_stale_ultimo",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1774700400000,
-      "tag": "0011_lively_full_text",
+      "when": 1776515583987,
+      "tag": "0000_regular_ultimatum",
       "breakpoints": true
     }
   ]

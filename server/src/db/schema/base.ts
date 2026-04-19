@@ -7,30 +7,39 @@ import {
     jsonb,
     varchar,
     pgEnum,
+    boolean,
     index,
     uniqueIndex,
     customType,
+    foreignKey,
   } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
-import { projectConstants } from '@/constants'
-import { ProjectBrief, StoryBible, NarrativeArcList, Outline } from 'zSchemas';
 import { AgentRunFinishReason, 
          ChatMetadata, 
          MsgContent, 
          MsgMetadata, 
          ProseDocument, 
-         SceneContent, 
          GenerationRequestStatus, 
          GenerationRequestType, 
-         EntityType,
-         ProjectPhase,
-         ShotVisuals,
-         ShotAudio
   } from '@/type';
+import { FileFormat } from '@/features/file-system/constants';
+
+type FileNodeRelationshipType = 'appears_in' | 'derived_from' | 'wears' | 'located_in' | 'uses' | 'depends_on';
+
+export type ProjectMetadata = {
+  format: string;
+  genre: string;
+}
 
 const tsvector = customType<{ data: string }>({
   dataType() {
     return 'tsvector';
+  },
+});
+
+const avector = customType<{ data: number[] }>({
+  dataType() {
+    return 'vector';
   },
 });
   
@@ -38,8 +47,6 @@ const timestamps = {
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => /* @__PURE__ */ new Date()).notNull(),
 }
-
-export const imageOwnerTypeEnum = pgEnum('image_owner_type', ['PROJECT', 'SHOT', 'ENTITY']);
 
 
 export const generationRequests = pgTable('generation_requests', {
@@ -57,106 +64,93 @@ export const generationRequests = pgTable('generation_requests', {
 ]))
 
   // Tables
-  export const projects = pgTable('projects', {
+export const projects = pgTable('projects', {
     id: uuid('id').defaultRandom().primaryKey(),
     title: varchar('title', {length: 100}).notNull(),
-    brief: jsonb('brief').notNull().$type<ProjectBrief>(),
-    narrative_arcs: jsonb('narrative_arcs').$type<NarrativeArcList>(),
-    synopsis: jsonb('synopsis').$type<ProseDocument>(),
-    outline: jsonb('outline').$type<Outline>(),
-    story_bible: jsonb('story_bible').$type<StoryBible>(),
-    story_bible_prose: jsonb('story_bible_prose').$type<ProseDocument>(),
-    script: jsonb('script').$type<ProseDocument>(),
-    status: varchar('status', {length: 50}).default('DRAFT').notNull().$type<projectConstants.ProjectStatus>(),
-    phase: varchar('phase', {length: 50}).default('DRAFT').notNull().$type<ProjectPhase>(),
+    metadata: jsonb('metadata').$type<ProjectMetadata>().notNull(),
     ...timestamps,
   })
-  
-  export const scenes = pgTable('scenes', {
+
+export const fileNodes = pgTable('file_nodes', {
     id: uuid('id').defaultRandom().primaryKey(),
     projectId: uuid('project_id')
       .references(() => projects.id, { onDelete: 'cascade' })
       .notNull(),
-    order: integer('order').notNull(),
-    content: jsonb('content').$type<SceneContent[]>().notNull(),
-    fullText: tsvector('full_text').generatedAlwaysAs(
-      sql`to_tsvector('simple', public.scene_content_search_text("content"))`
+    name: varchar('name', {length: 50}).notNull(),
+    directory: boolean('directory').default(false).notNull(),
+    parentId: uuid('parent_id'),
+    position: integer('position').default(0).notNull(),
+    isBuiltIn: boolean('is_built_in').default(false).notNull(),
+    format: varchar('format', {length: 50}).$type<FileFormat>(),
+    ...timestamps,
+  }, (table) => [
+    foreignKey({
+      columns: [table.projectId, table.parentId],
+      foreignColumns: [table.projectId, table.id],
+    }).onDelete('cascade'),
+    uniqueIndex('file_nodes_project_id_id_unique').on(table.projectId, table.id),
+    uniqueIndex('file_nodes_project_id_parent_id_name_unique').on(table.projectId, table.parentId, table.name),
+    uniqueIndex('file_nodes_project_id_root_name_unique')
+      .on(table.projectId, table.name)
+      .where(sql`${table.parentId} is null`),
+    index('file_nodes_project_id_parent_id_position_idx').on(table.projectId, table.parentId, table.position),
+  ])
+
+export const fileNodeContents = pgTable('file_node_contents', {
+    fileNodeId: uuid('file_node_id').primaryKey(),
+    projectId: uuid('project_id').notNull(),
+    content: text('content'),
+    jsonContent: jsonb('json_content').$type<Record<string, unknown>>(),
+    proseContent: jsonb('prose_content').$type<ProseDocument>(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+    ...timestamps,
+  }, (table) => [
+    foreignKey({
+      columns: [table.projectId, table.fileNodeId],
+      foreignColumns: [fileNodes.projectId, fileNodes.id],
+    }).onDelete('cascade'),
+    uniqueIndex('file_node_contents_project_id_file_node_id_unique').on(table.projectId, table.fileNodeId),
+    index('file_node_contents_project_id_idx').on(table.projectId),
+  ])
+
+export const fileNodeContentChunks = pgTable('file_node_content_chunks', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    fileNodeId: uuid('file_node_id').notNull(),
+    projectId: uuid('project_id').notNull(),
+    chunkIndex: integer('chunk_index').notNull(),
+    chunkText: text('chunk_text').notNull(),
+    searchText: tsvector('search_text').generatedAlwaysAs(
+      sql`to_tsvector('simple', coalesce("chunk_text", ''))`
     ),
+    embedding: avector('embedding'),
+    embeddingMetadata: jsonb('embedding_metadata').$type<Record<string, unknown>>(),
+    tokenCount: integer('token_count'),
     ...timestamps,
-  }, (table) => ([
-    uniqueIndex('scenes_project_id_id_unique').on(table.projectId, table.id),
-    index('scenes_full_text_idx').using('gin', table.fullText),
-  ]))
+  }, (table) => [
+    foreignKey({
+      columns: [table.projectId, table.fileNodeId],
+      foreignColumns: [fileNodeContents.projectId, fileNodeContents.fileNodeId],
+    }).onDelete('cascade'),
+    uniqueIndex('file_node_content_chunks_file_node_id_chunk_index_unique').on(table.fileNodeId, table.chunkIndex),
+    index('file_node_content_chunks_project_id_file_node_id_idx').on(table.projectId, table.fileNodeId),
+    index('file_node_content_chunks_search_text_idx').using('gin', table.searchText),
+  ])
 
-  
-  export const shots = pgTable('shots', {
+export const fileNodeRelationships = pgTable('file_node_relationships', {
     id: uuid('id').defaultRandom().primaryKey(),
-    projectId: uuid('project_id')
-      .references(() => projects.id, { onDelete: 'cascade' })
+    projectId: uuid('project_id').notNull(),
+    fileNodeId: uuid('file_node_id')
+      .references(() => fileNodes.id, { onDelete: 'cascade' })
       .notNull(),
-    sceneId: uuid('scene_id')
-      .references(() => scenes.id, { onDelete: 'cascade' })
+    relatedFileNodeId: uuid('related_file_node_id')
+      .references(() => fileNodes.id, { onDelete: 'cascade' })
       .notNull(),
-
-    actionDescription: text('action_description').notNull(),
-    visuals: jsonb('visuals').$type<ShotVisuals>(),
-    audio: jsonb('audio').$type<ShotAudio>(),
-    constraints: jsonb('constraints').$type<{
-      negative_prompt: string[]
-      must_keep: string[]
-    }>(),
-    compiledPrompts: jsonb('compiled_prompts').$type<{
-      image: string
-      audio: string
-    }>(),
+    relationType: varchar('relation_type', {length: 50}).$type<FileNodeRelationshipType>().notNull(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
     ...timestamps,
-  })
-
-  export const entities = pgTable('entities', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    projectId: uuid('project_id')
-      .references(() => projects.id, { onDelete: 'cascade' })
-      .notNull(),
-    name: varchar('name', {length: 150}).notNull(),
-    slug: varchar('slug', {length: 150}).notNull(),
-    type: varchar('type', {length: 50}).$type<EntityType>().notNull(),
-    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull(),
-    prose: jsonb('prose').$type<ProseDocument>(),
-    ...timestamps,
-  }, (table) => ([
-    uniqueIndex('entities_project_type_slug_unique').on(table.projectId, table.type, table.slug),
-  ]))
-
-  export const shotToEntities = pgTable('shot_to_entities', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    shotId: uuid('shot_id')
-      .references(() => shots.id, { onDelete: 'cascade' })
-      .notNull(),
-    entityId: uuid('entity_id')
-      .references(() => entities.id, { onDelete: 'cascade' })
-      .notNull(),
-    description: text('description'),
-  })
-  
-  export const images = pgTable('images', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    url: text('url').notNull(),
-    key: text('key').notNull().unique(),
-    thumbnail: text('thumbnail').notNull(),
-    blurhash: text('blurhash').notNull(),
-    metadata: jsonb('metadata').$type<{
-      provider: string
-      aspectRatio: string
-      height: number
-      width: number
-      format: string
-      size: number
-      seed?: number
-    }>(),
-    ownerId: uuid('owner_id').notNull(),
-    ownerType: imageOwnerTypeEnum('owner_type').notNull(),
-    ...timestamps,
-  })
+  }, (table) => [
+    uniqueIndex('file_node_relationships_project_id_file_node_id_related_file_node_id_unique').on(table.projectId, table.fileNodeId, table.relatedFileNodeId),
+  ])
   
   // Chat enums
   export const chatMessageRoleEnum = pgEnum('chat_message_role', ['user', 'assistant', 'tool']);
@@ -225,10 +219,9 @@ export const generationRequests = pgTable('generation_requests', {
 
   // Type exports for use in app
   export type Project = typeof projects.$inferSelect
-  export type Image = typeof images.$inferSelect
-  export type Entity = typeof entities.$inferSelect
-  export type Scene = typeof scenes.$inferSelect
-  export type Shot = typeof shots.$inferSelect
+  export type FileNode = typeof fileNodes.$inferSelect
+  export type FileNodeContent = typeof fileNodeContents.$inferSelect
+  export type FileNodeContentChunk = typeof fileNodeContentChunks.$inferSelect
   export type GenerationRequest = typeof generationRequests.$inferSelect
   export type Conversation = typeof conversations.$inferSelect
   export type Message = typeof messages.$inferSelect
