@@ -2,31 +2,36 @@ import { z } from "zod";
 import { buildBaseTool } from "./tool-definition";
 import { v4 as uuidv4 } from 'uuid';
 import { TodoItem } from "../../editor-agent/tools";
+import { failure, success } from "./utils";
 
 const addTodoSchema = z.object({
-    action: z.literal('add'),
+    action: z.literal('add').describe('Add new tasks to the todo list.'),
     tasks: z.array(z.string()).describe('The tasks to add to the todo list.'),
 })
 
 const completeTodoSchema = z.object({
-    action: z.literal('update'),
+    action: z.literal('update').describe('Update the status of a task after its completion.'),
     taskId: z.string().describe('The id of the task to complete.'),
     status: z.enum(['pending', 'in_progress', 'done']).describe('The status of the task.'),
 })
 
 const deleteTodoSchema = z.object({
-    action: z.literal('delete'),
+    action: z.literal('delete').describe('Remove any obsolete task from the todo list.'),
     taskId: z.string().describe('The id of the task to delete.'),
 })
 
 const listTodosSchema = z.object({
-    action: z.literal('list'),
+    action: z.literal('list').describe('List all tasks in the todo list.'),
 })
 
-const manageTodoListInputSchema = z.discriminatedUnion('action', [addTodoSchema, completeTodoSchema, deleteTodoSchema, listTodosSchema]);
+const clearTodosSchema = z.object({
+    action: z.literal('clear').describe('Clear all tasks from the todo list after they are all completed.'),
+})
+
+const manageTodoListInputSchema = z.discriminatedUnion('action', [addTodoSchema, completeTodoSchema, deleteTodoSchema, listTodosSchema, clearTodosSchema]);
 
 export const manageTodoListTool = buildBaseTool({
-    name: "manageTodoList",
+    name: "manageTasks",
     description: getDescription(),
     inputSchema: manageTodoListInputSchema,
     execute: async(input, {state}) => {
@@ -38,56 +43,43 @@ export const manageTodoListTool = buildBaseTool({
                     status: 'pending' as const,
                 }))
                 state.todos.push(...newTodos);
-                return {
-                    success: true,
-                    output: formatTodoList(state.todos),
-                }
+                return success(formatTodoList(state.todos));
             }
             case 'update':{
                 const todo = state.todos.find((todo) => todo.id === input.taskId);
                 if(!todo){
-                    return {
-                        success: false,
-                        output: `Task with id ${input.taskId} not found. Check the task id by listing the current tasks and try again.`,
-                    }
+                    return failure(`Task with id ${input.taskId} not found. Check the task id by listing the current tasks and try again.`);
                 }
                 todo.status = input.status;
-                return {
-                    success: true,
-                    output: formatTodoList(state.todos),
-                }
+                return success(formatTodoList(state.todos));
             }
             case 'delete':{
                 const todo = state.todos.find((todo) => todo.id === input.taskId);
                 if(!todo){
-                    return {
-                        success: false,
-                        output: `Task with id ${input.taskId} not found. Check the task id by listing the current tasks and try again.`,
-                    }
+                    return failure(`Task with id ${input.taskId} not found. Check the task id by listing the current tasks and try again.`);
                 }
                 state.todos = state.todos.filter((todo) => todo.id !== input.taskId);
-                return {
-                    success: true,
-                    output: formatTodoList(state.todos),
-                }
+                return success(formatTodoList(state.todos));
             }
             case 'list':{
                 if(state.todos.length === 0){
-                    return {
-                        success: true,
-                        output: 'There are no tasks in the current session. You can create one if necessary.',
-                    }
+                    return success('There are no tasks in the current session. You can create one if necessary.');
                 }
-                return {
-                    success: true,
-                    output: formatTodoList(state.todos),
+                return success(formatTodoList(state.todos));
+            }
+            case 'clear':{
+                const ongoingTasks = state.todos.filter((todo) => todo.status === 'in_progress' || todo.status === 'pending');
+                if(ongoingTasks.length > 0){
+                    const headerText = `You can't clear the todo list yet. Because there are ${ongoingTasks.length} ongoing tasks. You must complete all the tasks before clearing. If a task is obsolete, you can delete it using the 'delete' action. \nThe ongoing tasks are: \n---\n\n`
+                    const ongoingTasksText = ongoingTasks.map((todo) => ` ${todo.id} - ${todo.task} : [${todo.status}]`).join('\n');
+                    const finalText = headerText + ongoingTasksText;
+                    return failure(finalText);
                 }
+                state.todos = [];
+                return success('All tasks have been cleared.');
             }
             default:
-                return {
-                    success: false,
-                    output: 'An unknown error occurred',
-                }
+                return failure('An unknown error occurred');
         }
     },
 })

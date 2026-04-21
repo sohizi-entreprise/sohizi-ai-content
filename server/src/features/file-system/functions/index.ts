@@ -7,3 +7,4 @@ export * from './search-directory-content';
 export * from './semantic-search-directory';
 export * from './update-file-content';
 export * from './update-file-node';
+export * from './would-create-file-node-cycle';

@@ -95,9 +95,10 @@ export const getFileNodeDepthById = async(projectId: string, id: string) => {
             FROM file_nodes parent
             JOIN ancestors ON ancestors.parent_id = parent.id
             WHERE parent.project_id = ${projectId}
-        )
+        ) CYCLE id SET is_cycle USING cycle_path
         SELECT COALESCE(MAX(depth), 0) AS depth
         FROM ancestors
+        WHERE NOT is_cycle
     `);
 
     const row = result.rows[0] as { depth?: number | string } | undefined;
@@ -127,9 +128,10 @@ export const getFileNodeSubtreeHeight = async(projectId: string, id: string) => 
             FROM file_nodes child
             JOIN subtree ON child.parent_id = subtree.id
             WHERE child.project_id = ${projectId}
-        )
+        ) CYCLE id SET is_cycle USING cycle_path
         SELECT COALESCE(MAX(depth), 0) AS depth
         FROM subtree
+        WHERE NOT is_cycle
     `);
 
     const row = result.rows[0] as { depth?: number | string } | undefined;
@@ -163,11 +165,12 @@ export const isFileNodeInAncestorChain = async(
             FROM file_nodes parent
             JOIN ancestors ON ancestors.parent_id = parent.id
             WHERE parent.project_id = ${projectId}
-        )
+        ) CYCLE id SET is_cycle USING cycle_path
         SELECT EXISTS(
             SELECT 1
             FROM ancestors
             WHERE id = ${targetAncestorId}
+              AND NOT is_cycle
         ) AS exists
     `);
 
@@ -579,9 +582,10 @@ export const getFileNodePathById = async(projectId: string, fileNodeId: string) 
             FROM file_nodes parent
             JOIN ancestors ON ancestors.parent_id = parent.id
             WHERE parent.project_id = ${projectId}
-        )
+        ) CYCLE id SET is_cycle USING cycle_path
         SELECT '/' || string_agg(name, '/' ORDER BY depth DESC) AS path
         FROM ancestors
+        WHERE NOT is_cycle
     `);
 
     const row = result.rows[0] as { path?: string | null } | undefined;
@@ -594,6 +598,7 @@ export const searchDirectoryChunksByKeyword = async(
     keyword: string,
     limit = 20,
 ) => {
+    // Works with files as well
     const normalizedKeyword = keyword.trim();
 
     if (!normalizedKeyword) {
@@ -618,7 +623,7 @@ export const searchDirectoryChunksByKeyword = async(
             FROM file_nodes child
             JOIN subtree ON child.parent_id = subtree.id
             WHERE child.project_id = ${projectId}
-        ),
+        ) CYCLE id SET is_cycle USING subtree_cycle_path,
         hits AS (
             SELECT
                 chunks.id,
@@ -629,6 +634,7 @@ export const searchDirectoryChunksByKeyword = async(
             FROM file_node_content_chunks chunks
             JOIN subtree ON subtree.id = chunks.file_node_id
             WHERE chunks.project_id = ${projectId}
+              AND NOT subtree.is_cycle
               AND subtree.directory = false
               AND chunks.search_text @@ ${query}
             ORDER BY rank DESC, chunks.chunk_index ASC
@@ -660,12 +666,13 @@ export const searchDirectoryChunksByKeyword = async(
             FROM file_nodes parent
             JOIN ancestors ON ancestors.parent_id = parent.id
             WHERE parent.project_id = ${projectId}
-        ),
+        ) CYCLE id SET is_cycle USING ancestor_cycle_path,
         paths AS (
             SELECT
                 ancestors.leaf_id AS file_node_id,
                 '/' || string_agg(ancestors.name, '/' ORDER BY ancestors.depth DESC) AS path
             FROM ancestors
+            WHERE NOT ancestors.is_cycle
             GROUP BY ancestors.leaf_id
         )
         SELECT
@@ -703,7 +710,7 @@ export const searchProjectChunksByKeyword = async(
 
     const query = sql`websearch_to_tsquery('simple', ${normalizedKeyword})`;
     const result = await db.execute(sql`
-        WITH hits AS (
+        WITH RECURSIVE hits AS (
             SELECT
                 chunks.id,
                 chunks.file_node_id,
@@ -742,12 +749,13 @@ export const searchProjectChunksByKeyword = async(
             FROM file_nodes parent
             JOIN ancestors ON ancestors.parent_id = parent.id
             WHERE parent.project_id = ${projectId}
-        ),
+        ) CYCLE id SET is_cycle USING ancestor_cycle_path,
         paths AS (
             SELECT
                 ancestors.leaf_id AS file_node_id,
                 '/' || string_agg(ancestors.name, '/' ORDER BY ancestors.depth DESC) AS path
             FROM ancestors
+            WHERE NOT ancestors.is_cycle
             GROUP BY ancestors.leaf_id
         )
         SELECT
@@ -834,7 +842,7 @@ export const semanticSearchDirectoryChunks = async(
             FROM file_nodes child
             JOIN subtree ON child.parent_id = subtree.id
             WHERE child.project_id = ${projectId}
-        ),
+        ) CYCLE id SET is_cycle USING subtree_cycle_path,
         hits AS (
             SELECT
                 chunks.id,
@@ -847,6 +855,7 @@ export const semanticSearchDirectoryChunks = async(
             FROM file_node_content_chunks chunks
             JOIN subtree ON subtree.id = chunks.file_node_id
             WHERE chunks.project_id = ${projectId}
+              AND NOT subtree.is_cycle
               AND subtree.directory = false
               AND chunks.embedding IS NOT NULL
             ORDER BY distance ASC, chunks.chunk_index ASC
@@ -878,12 +887,13 @@ export const semanticSearchDirectoryChunks = async(
             FROM file_nodes parent
             JOIN ancestors ON ancestors.parent_id = parent.id
             WHERE parent.project_id = ${projectId}
-        ),
+        ) CYCLE id SET is_cycle USING ancestor_cycle_path,
         paths AS (
             SELECT
                 ancestors.leaf_id AS file_node_id,
                 '/' || string_agg(ancestors.name, '/' ORDER BY ancestors.depth DESC) AS path
             FROM ancestors
+            WHERE NOT ancestors.is_cycle
             GROUP BY ancestors.leaf_id
         )
         SELECT
@@ -923,7 +933,7 @@ export const semanticSearchProjectChunks = async(
 
     const vectorLiteral = `[${queryEmbedding.join(",")}]`;
     const result = await db.execute(sql`
-        WITH hits AS (
+        WITH RECURSIVE hits AS (
             SELECT
                 chunks.id,
                 chunks.file_node_id,
@@ -964,12 +974,13 @@ export const semanticSearchProjectChunks = async(
             FROM file_nodes parent
             JOIN ancestors ON ancestors.parent_id = parent.id
             WHERE parent.project_id = ${projectId}
-        ),
+        ) CYCLE id SET is_cycle USING ancestor_cycle_path,
         paths AS (
             SELECT
                 ancestors.leaf_id AS file_node_id,
                 '/' || string_agg(ancestors.name, '/' ORDER BY ancestors.depth DESC) AS path
             FROM ancestors
+            WHERE NOT ancestors.is_cycle
             GROUP BY ancestors.leaf_id
         )
         SELECT

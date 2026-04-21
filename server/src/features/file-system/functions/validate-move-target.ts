@@ -3,6 +3,7 @@ import { MAX_FILE_DEPTH, MAX_FILE_IN_DIRECTORY } from '../constants';
 import * as fileSystemRepo from '../repo';
 import { listDirectoryFiles } from './list-directory-files';
 import { FileSystemInputError } from './base';
+import { wouldCreateFileNodeCycle } from './would-create-file-node-cycle';
 
 export async function validateMoveTarget(projectId: string, fileNode: FileNode, parentId: string | null) {
     if (parentId !== null) {
@@ -12,11 +13,9 @@ export async function validateMoveTarget(projectId: string, fileNode: FileNode, 
         }
     }
 
-    if (fileNode.directory && parentId) {
-        const isInsideSource = await fileSystemRepo.isFileNodeInAncestorChain(projectId, parentId, fileNode.id);
-        if (isInsideSource) {
-            throw new FileSystemInputError(`Cannot move to "${parentId}" because it is inside the source directory.`);
-        }
+    const wouldCreateCycle = await wouldCreateFileNodeCycle(projectId, fileNode.id, parentId);
+    if (wouldCreateCycle) {
+        throw new FileSystemInputError(`Cannot assign parent "${parentId}" because it would create a cycle.`);
     }
 
     if ((fileNode.parentId ?? null) !== parentId) {

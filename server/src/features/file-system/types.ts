@@ -1,9 +1,10 @@
 
-type FileCreationRequest = {
-    projectId: string;
-    name: string;
-    directory: boolean;
-    parentId: string | null;
-    position: number;
-    format: 'text/markdown' | 'text/fountain';
-}
+export type ChunkHit = {
+    id: string;
+    fileNodeId: string;
+    chunkIndex: number;
+    chunkText: string;
+    path: string;
+    rank?: number;
+    distance?: number;
+};

@@ -3,11 +3,15 @@ import { buildBaseTool } from "./tool-definition";
 
 const supportedAgents = [
     {
-        role: 'writer',
-        description: 'Best suited for writing and updating content.',
+        role: 'writer-agent',
+        description: 'Best suited for off-loading heavy writes and updates that involve more than 5 files.',
     },
     {
-        role: 'researcher',
+        role: 'researcher-agent',
+        description: 'Best suited for researching data.',
+    },
+    {
+        role: 'storyboard-agent',
         description: 'Best suited for researching data.',
     },
 ] as const;

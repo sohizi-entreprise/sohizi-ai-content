@@ -52,7 +52,7 @@ export class Agent {
 
     async* runLoop(prompt: string, abortSignal: AbortSignal, maxSteps: number = 25): AsyncGenerator<AgentChunk, void, unknown> {
         this.triggerCallback('start');
-        this.state.status = 'running';
+        this.updateStateForStart();
         this.appendUserMessage(prompt);
         for(let step = 1; step <= maxSteps; step++){
             if(['finished', 'error', 'aborted', 'paused'].includes(this.state.status)){
@@ -64,9 +64,6 @@ export class Agent {
     }
 
     async* runStep(abortSignal: AbortSignal): AsyncGenerator<AgentChunk, void, unknown> {
-        // Get the messages context [system, user]
-        // If there are tool calls, we run them and return the results
-        // We need to update the state at the end of the run
         // Future implementation: context summarization + pruning && user limit checking
         // Future persist messages to the database [checkpoints]
         const request: InvokeRequest = {
@@ -158,6 +155,11 @@ export class Agent {
                 this.state.status = 'finished';
                 break;
         }
+    }
+
+    private updateStateForStart(){
+        this.state.status = 'running';
+        this.state.error = null;
     }
 
     private getInitialState(): AgentState {
