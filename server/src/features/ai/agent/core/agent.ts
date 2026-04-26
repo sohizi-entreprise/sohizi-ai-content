@@ -34,7 +34,6 @@ export type AgentChunk = {
 export class Agent {
     private readonly llmClient: LlmClient;
     public state: AgentState;
-    private readonly systemPrompt: string;
     private readonly name: string;
     private runId: string | null;
     private callbacks: Map<CallbackEvent, Set<CallbackHandler>>
@@ -42,8 +41,7 @@ export class Agent {
 
     constructor(name: string, llmClient: LlmClient, systemPrompt: string, session: Session) {
         this.llmClient = llmClient;
-        this.state = this.getInitialState();
-        this.systemPrompt = systemPrompt;
+        this.state = this.getInitialState(systemPrompt);
         this.name = name;
         this.runId = null;
         this.callbacks = new Map();
@@ -59,6 +57,8 @@ export class Agent {
                 break;
             }
             yield* this.runStep(abortSignal);
+            // TODO: Send a final complete event
+            // yield {name: this.name, runId: this.runId!, type: streamEvents.complete, usage: this.state.usage!, text: '', finishReason: this.state.finishReason!};
         }
         this.triggerCallback('finish');
     }
@@ -76,6 +76,9 @@ export class Agent {
         let text = '';
 
         for await (const chunk of this.llmClient.invoke(request)) {
+            if(chunk.type === streamEvents.complete){
+                console.log(chunk)
+            }
             switch (chunk.type) {
                 case streamEvents.complete:
                     this.incrementUsage(chunk.usage);
@@ -162,11 +165,11 @@ export class Agent {
         this.state.error = null;
     }
 
-    private getInitialState(): AgentState {
+    private getInitialState(systemPrompt: string): AgentState {
         return {
             messages: [{
                 role: 'system',
-                content: this.systemPrompt,
+                content: systemPrompt,
             }],
             usage: null,
             finishReason: null,

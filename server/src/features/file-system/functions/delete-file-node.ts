@@ -6,7 +6,7 @@ export const deleteFileNode = async(projectId: string, fileNodeId: string) => {
     if (!fileNode) {
         throw new FileSystemInputError('File not found');
     }
-    if (fileNode.isBuiltIn) {
+    if (!fileNode.editable) {
         throw new FileSystemInputError('Cannot delete a built-in file');
     }
 

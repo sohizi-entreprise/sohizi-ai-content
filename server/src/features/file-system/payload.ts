@@ -25,7 +25,7 @@ export const fileCreationRequestSchema = z.object({
     projectId: z.string(),
     name: z.string().max(50, 'Name must be less than 50 characters'),
     directory: z.boolean(),
-    parentId: z.string().nullable(),
+    parentId: z.string(),
     position: z.number().gte(0, 'Position must be greater than 0'),
     format: z.enum(FILE_FORMATS).nullable(),
 }).superRefine((data, ctx) => {

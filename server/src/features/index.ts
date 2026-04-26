@@ -1,3 +1,3 @@
 export {projectRoutes} from './project'
-export {streamRoutes} from './stream'
-export {chatRoutes} from './chat'
+export {aiRoutes} from './ai'
+export {fileSystemRoutes} from './file-system'

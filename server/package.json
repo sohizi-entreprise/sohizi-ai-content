@@ -17,7 +17,7 @@
     "ai": "^6.0.27",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
-    "elysia": "latest",
+    "elysia": "^1.4.28",
     "fountain-js": "^1.2.4",
     "inngest": "^4.1.0",
     "ioredis": "^5.9.3",

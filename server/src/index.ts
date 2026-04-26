@@ -18,8 +18,8 @@ const handler = serve({
   functions,
 });
 
-const inngestHandler = new Elysia().all("/api/inngest", ({ request }) =>
-handler(request)
+const inngestHandler = new Elysia().all("/api/inngest", ({ request }: { request: Request }) =>
+  handler(request)
 );
 
 
@@ -49,7 +49,7 @@ const app = new Elysia()
                 })
                 .use(
                   swagger({
-                    path: '/docs',                       // Swagger UI URL (default: /swagger)
+                    path: '/docs',
                     documentation: {
                       info: { title: 'My API', version: '1.0.0' },
                       tags: [{ name: 'greeting', description: 'Greeting endpoints' }],
@@ -59,8 +59,8 @@ const app = new Elysia()
                 .use(inngestHandler)
                 .get("/", () => "Welcome to Sohizi AI content")
                 .use(routes.projectRoutes)
-                .use(routes.streamRoutes)
-                .use(routes.chatRoutes)
+                .use(routes.aiRoutes)
+                .use(routes.fileSystemRoutes)
                 .listen(3030);
 
 console.log(

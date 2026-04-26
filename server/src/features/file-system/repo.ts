@@ -4,7 +4,7 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { DatabaseError } from "pg";
 import { FileCreationRequest, FileNodeInsertPosition, UpdateFileContentRequest, UpdateFileRequest } from "./payload";
 
-const ORDER_GAP = 1000;
+export const ORDER_GAP = 1000;
 const FILE_NODE_UNIQUE_CONSTRAINTS = new Set([
     'file_nodes_project_id_parent_id_name_unique',
     'file_nodes_project_id_root_name_unique',

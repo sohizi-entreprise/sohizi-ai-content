@@ -19,10 +19,9 @@ import { AgentRunFinishReason,
          MsgContent, 
          MsgMetadata, 
          ProseDocument, 
-         GenerationRequestStatus, 
-         GenerationRequestType, 
   } from '@/type';
 import { FileFormat } from '@/features/file-system/constants';
+import { ModelMessage, UserContent, AssistantContent, ToolContent } from 'ai';
 
 type FileNodeRelationshipType = 'appears_in' | 'derived_from' | 'wears' | 'located_in' | 'uses' | 'depends_on';
 
@@ -54,8 +53,8 @@ export const generationRequests = pgTable('generation_requests', {
   projectId: uuid('project_id')
     .references(() => projects.id, { onDelete: 'cascade' })
     .notNull(),
-  status: varchar('status', {length: 50}).default('ENQUEUED').notNull().$type<GenerationRequestStatus>(),
-  type: varchar('type', {length: 50}).notNull().$type<GenerationRequestType>(),
+  status: varchar('status', {length: 50}).default('ENQUEUED').notNull().$type<string>(),
+  type: varchar('type', {length: 50}).notNull().$type<string>(),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   error: text('error'),
   ...timestamps,
@@ -80,7 +79,7 @@ export const fileNodes = pgTable('file_nodes', {
     directory: boolean('directory').default(false).notNull(),
     parentId: uuid('parent_id'),
     position: integer('position').default(0).notNull(),
-    isBuiltIn: boolean('is_built_in').default(false).notNull(),
+    editable: boolean('editable').default(true).notNull(),
     format: varchar('format', {length: 50}).$type<FileFormat>(),
     ...timestamps,
   }, (table) => [

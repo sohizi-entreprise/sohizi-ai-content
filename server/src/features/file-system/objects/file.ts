@@ -159,6 +159,9 @@ export class FileObject {
     }
 
     async rename(newName: string): Promise<FileObjectResponse<FileObject | null>> {
+        if (!this.fileNode.editable) {
+            return err(`Cannot rename a built-in file ${this.fileNode.name}`);
+        }
         const normalizedName = normalizeFileName(newName);
         if (!normalizedName) {
             return err('Invalid file name');
@@ -178,7 +181,7 @@ export class FileObject {
     }
 
     async delete(): Promise<FileObjectResponse<string | null>> {
-        if (this.fileNode.isBuiltIn) {
+        if (!this.fileNode.editable) {
             return err(`Cannot delete a built-in file ${this.fileNode.name}`);
         }
 

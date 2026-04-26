@@ -1,8 +1,4 @@
-import { handleConceptGeneration, 
-         handleStoryBibleGeneration, 
-         handleEntityGeneration, 
-         handleSceneGeneration, 
-         handleSynopsisGeneration 
+import { handleConceptGeneration,
         } from './functions'
 
 export {inngest} from './client'
@@ -11,9 +7,5 @@ export {  eventNameMap } from './functions'
 
 export const functions = [
     handleConceptGeneration,
-    handleSynopsisGeneration,
-    handleStoryBibleGeneration,
-    handleEntityGeneration,
-    handleSceneGeneration,
 ]
 

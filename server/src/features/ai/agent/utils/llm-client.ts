@@ -133,6 +133,10 @@ export class LlmClient {
                 switch (chunk.type) {
                     case 'text-delta':
                         text += chunk.text;
+                        yield {
+                            type: streamEvents.textDelta,
+                            text: chunk.text,
+                        }
                         break;
                     case 'reasoning-delta':{
                         reasoningText += chunk.text;
@@ -200,6 +204,7 @@ export class LlmClient {
                 }
             }
             usage = this.getTokenUsage(await response.usage);
+            finishReason = await response.finishReason;
         } catch (e) {
             error = e instanceof Error ? e.message : String(e)
             finishReason = 'error';

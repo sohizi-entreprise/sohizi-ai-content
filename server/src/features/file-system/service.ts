@@ -21,53 +21,54 @@ import { normalizeFileName } from './utils';
 import { ProseDocument } from 'zSchemas';
 import { E5SmallLocalEmbedder } from '@/lib/rag/local-embedder';
 
+// List file trees -> ok
+// rename file
+// reorder files
+// move
+// delete -> ok
+// create file/directory -> ok
+// get file content -> ok
+
+
 export const createFileNode = async(data: FileCreationRequest) => {
-    if(!data.parentId){
-        await validateProject(data.projectId);
-    }
     try {
         return await createFileNodeFn(data);
     } catch (error) {
         if (error instanceof FileSystemConflictError || error instanceof FileSystemInputError) {
             throw new BadRequest(error.message);
         }
-        if (error instanceof FileSystemNotFoundError) {
-            throw new NotFound(error.message);
-        }
-        throw error;
+        console.error(error);
+        throw new InternalServerError('Something went wrong');
     }
 }
 
 export const deleteFileNode = async(projectId: string, fileId: string) => {
-
     try {
         await deleteFileNodeFn(projectId, fileId);
     } catch (error) {
         if (error instanceof FileSystemOperationError) {
             throw new BadRequest(error.message);
         }
-        throw error;
+        console.error(error);
+        throw new InternalServerError('Something went wrong');
     }
 
     return { ok: true, data: fileId };
 }
 
-export const updateFileContentProse = async(projectId: string, fileNodeId: string, proseContent: ProseDocument) => {
+export const updateFileContent = async(projectId: string, fileNodeId: string, data: {content: string}) => {
     try {
-        return await updateFileContentFn(projectId, fileNodeId, {proseContent});
+        return await updateFileContentFn(projectId, fileNodeId, data);
     } catch (error) {
         if (error instanceof FileSystemOperationError) {
             throw new InternalServerError(error.message);
         }
-        throw error;
+        console.error(error);
+        throw new InternalServerError('Something went wrong');
     }
 }
 
-export const listFileTreePerLevel = async(projectId: string, parentId: string | null) => {
-    if (parentId === null) {
-        await validateProject(projectId);
-        return listDirectoryFilesFn(projectId, null);
-    }
+export const listFileTreePerLevel = async(projectId: string, parentId: string) => {
 
     const fileNode = await fileSystemRepo.getFileNodeById(projectId, parentId);
     if (!fileNode) {
@@ -76,19 +77,16 @@ export const listFileTreePerLevel = async(projectId: string, parentId: string | 
     if (!fileNode.directory) {
         throw new BadRequest('Parent is not a directory');
     }
-    return listDirectoryFilesFn(projectId, parentId);
+    return fileSystemRepo.listDirectoryFiles(projectId, parentId);
 }
 
-export const getFileContentByType = async(projectId: string, fileNodeId: string) => {
+export const getFileContent = async(projectId: string, fileNodeId: string) => {
     const fileNode = await fileSystemRepo.getFileNodeById(projectId, fileNodeId);
     if (!fileNode) {
         throw new NotFound('File not found');
     }
     if (fileNode.directory) {
         throw new BadRequest('File is a directory');
-    }
-    if (!fileNode.format) {
-        throw new BadRequest('File format not found');
     }
 
     let fileContent;
@@ -104,10 +102,18 @@ export const getFileContentByType = async(projectId: string, fileNodeId: string)
     switch (fileNode.format) {
         case fileFormat.JSON:
             return fileContent.jsonContent;
-        default:
-            return fileContent.proseContent;
+        default:{
+            if(fileContent.proseContent){
+                return fileContent.proseContent;
+            }
+            const content = fileContent.content ?? "";
+
+            return content;
+        }
     }
 }
+
+// ==============================
 
 export const semanticSearch = async(
     request: { projectId: string; fileNodeId: string; query: string; limit?: number },
