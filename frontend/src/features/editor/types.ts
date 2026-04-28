@@ -1,9 +1,18 @@
-export interface FileNode {
-  id: string
-  name: string
-  children?: FileNode[]
-  isOpen?: boolean
+import { NodeRendererProps } from 'react-arborist'
+import type { FileNode as BackendFileNode } from '../projects/type'
+
+export interface FileTreeNode extends BackendFileNode {
+  children?: FileTreeNode[]
 }
+
+export interface NodeProps extends NodeRendererProps<FileTreeNode> {
+  onCreateFile: (parentId: string, index: number, isDir: boolean) => void
+}
+
+/**
+ * @deprecated Use FileTreeNode instead
+ */
+export type FileNode = FileTreeNode
 
 export interface EditorTab {
   id: string

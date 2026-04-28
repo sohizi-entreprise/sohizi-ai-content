@@ -34,7 +34,7 @@ export const useVideoEditorStore = create<VideoEditorState>((set, get) => ({
   sidebarCollapsed: false,
 
   openFile: (node) => {
-    if (node.children) return
+    if (node.directory) return
     const { openTabs } = get()
     const existing = openTabs.find((t) => t.id === node.id)
     if (existing) {

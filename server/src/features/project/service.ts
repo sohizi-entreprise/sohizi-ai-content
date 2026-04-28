@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createProjectSchema, deleteProjectSchema, updateProjectSchema} from "./schema";
 
 import { CursorPaginationOptions } from "@/type";
+import { RepositoryError } from '../error';
 
 export const startProject = async (data: z.infer<typeof createProjectSchema>) => {
     // Save the project in db
@@ -12,8 +13,19 @@ export const startProject = async (data: z.infer<typeof createProjectSchema>) =>
 }
 
 export const getProject = async (id: string) => {
-    const project = await validateProject(id);
-    return project;
+    try {
+        return await projectRepo.getProjectWithRootFiles(id);
+    } catch (e) {
+        if(e instanceof RepositoryError) {
+            switch(e.type) {
+                case 'NotFound':
+                    throw new error.NotFound(e.message);
+                default:
+                    throw new error.InternalServerError();
+            }
+        }
+        throw new error.InternalServerError();
+    }
 }
 
 export const deleteProject = async (data: z.infer<typeof deleteProjectSchema>) => {

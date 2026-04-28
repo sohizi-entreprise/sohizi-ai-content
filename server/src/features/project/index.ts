@@ -27,7 +27,7 @@ export const projectRoutes = new Elysia({ prefix: '/projects' })
   }, {
     query: z.object({
       cursor: z.string().optional(),
-      limit: z.number().optional(),
+      limit: z.coerce.number().optional(),
     }),
   })
   .get('/:projectId', ({ params }) => {

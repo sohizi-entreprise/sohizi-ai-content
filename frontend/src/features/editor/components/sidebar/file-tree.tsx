@@ -1,91 +1,210 @@
-import { Tree, type NodeRendererProps } from 'react-arborist'
+import { useCallback, useRef } from 'react'
 import {
-  ChevronRight,
-  ChevronDown,
-  Folder,
-  FolderOpen,
-  FileText,
-  FileVideo,
-  FileAudio,
-  FileCode,
-  File,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { FileNode } from '../../types'
-import { useVideoEditorStore } from '../../stores/editor-store'
-import { MOCK_FILE_TREE } from '../../mock-data'
+  DeleteHandler,
+  MoveHandler,
+  RenameHandler,
+  Tree,
+  TreeApi,
+  type NodeRendererProps,
+} from 'react-arborist'
+import { useMutation } from '@tanstack/react-query'
+import type { FileTreeNode, NodeProps } from '../../types'
+import { useFileTreeStore } from '../../stores/file-tree-store'
+import {
+  createFileNodeMutationOptions,
+  renameFileNodeMutationOptions,
+  moveFileNodeMutationOptions,
+  deleteFileNodeMutationOptions,
+} from '@/features/projects/query-mutation'
+import { DirectoryNode, useLoadChildren } from '../file-node/node-directory'
+import { DocumentNode } from '../file-node/node-file'
 
-function getFileIcon(name: string, isFolder: boolean, isOpen: boolean) {
-  if (isFolder) {
-    return isOpen ? (
-      <FolderOpen className="size-4 shrink-0 text-primary/70" />
-    ) : (
-      <Folder className="size-4 shrink-0 text-primary/70" />
+type FileTreeProps = {
+  projectId: string
+  rootFolderId: string
+}
+
+function Node(props: NodeProps) {
+
+  const isDir = props.node.data.directory
+
+  if (isDir) {
+    return <DirectoryNode {...props} />
+  }
+
+  return <DocumentNode {...props} />
+  
+}
+
+
+export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
+  const treeData = useFileTreeStore((s) => s.treeData)
+  const removeNode = useFileTreeStore((s) => s.removeNode)
+  const updateNode = useFileTreeStore((s) => s.updateNode)
+  const insertNodeAt = useFileTreeStore((s) => s.insertNodeAt)
+  const storeRootFolderId = useFileTreeStore((s) => s.rootFolderId)
+  const treeRef = useRef<TreeApi<FileTreeNode> | null>(null)
+
+  const createMutation = useMutation(createFileNodeMutationOptions(projectId))
+  const renameMutation = useMutation(renameFileNodeMutationOptions(projectId))
+  const moveMutation = useMutation(moveFileNodeMutationOptions(projectId))
+  const deleteMutation = useMutation(deleteFileNodeMutationOptions(projectId))
+
+  const handleLoadChildren = useLoadChildren()
+
+  const createFileNode = useCallback((parentId: string, index: number, isDir: boolean = false) => {
+    const tempId = `temp-${Date.now()}`
+    const tempNode: FileTreeNode = {
+      id: tempId,
+      name: '',
+      directory: isDir,
+      projectId,
+      format: isDir ? null : 'markdown',
+      parentId,
+      position: index * 1000,
+      editable: true,
+    }
+    insertNodeAt(parentId, tempNode, index)
+    setTimeout(() => {
+      treeRef.current?.edit(tempId)
+    }, 50)
+  }, [projectId, insertNodeAt])
+
+  const onRename: RenameHandler<FileTreeNode> = async ({ id, name }) => {
+    if (!name.trim()) {
+      if (id.startsWith('temp-')) {
+        removeNode(id)
+      }
+      return
+    }
+
+    if (id.startsWith('temp-')) {
+      const node = findNodeInTree(treeData, id)
+      if (!node) return
+      const parentId = node.parentId ?? rootFolderId
+      const siblings = findNodeInTree(treeData, parentId)?.children ?? treeData
+      const position = (siblings.length + 1) * 1000
+
+      const payload = {
+        name: name.trim(),
+        directory: node.directory,
+        parentId,
+        position,
+        format: node.directory ? null : 'markdown',
+        // editable: node.editable
+      }
+
+      createMutation.mutate(payload, {
+        onSettled(created, error) {
+          removeNode(id)
+          if(error || !created) {
+            console.error('Failed to create file node:', error)
+            return
+          }
+          insertNodeAt(
+            parentId,
+            node.directory ? { ...created, children: [] } : created,
+          )
+        },
+      })
+      return
+    }
+
+    const node = findNodeInTree(treeData, id)
+    if (!node || node.name === name.trim()) return
+
+    updateNode(id, { name: name.trim() })
+    try {
+      await renameMutation.mutateAsync({ fileId: id, name: name.trim() })
+    } catch (err) {
+      console.error('Failed to rename:', err)
+      updateNode(id, { name: node.name })
+    }
+  }
+
+  const onMove: MoveHandler<FileTreeNode> = async ({ dragIds, parentId, index }) => {
+    const fileId = dragIds[0]
+    if (!fileId) return
+
+    const resolvedParentId = parentId ?? rootFolderId
+
+    const parentNode = parentId ? findNodeInTree(treeData, parentId) : null
+    const siblings = parentNode ? (parentNode.children ?? []) : treeData
+    const filteredSiblings = siblings.filter((s) => s.id !== fileId)
+
+    let position: 'start' | 'end' | 'before' | 'after'
+    let anchorId: string | null = null
+
+    if (filteredSiblings.length === 0 || index === 0) {
+      position = 'start'
+    } else if (index >= filteredSiblings.length) {
+      position = 'end'
+    } else {
+      anchorId = filteredSiblings[index - 1]?.id ?? null
+      position = anchorId ? 'after' : 'start'
+    }
+
+    const node = findNodeInTree(treeData, fileId)
+    if (!node) return
+
+    removeNode(fileId)
+    const clampedIndex = Math.min(index, filteredSiblings.length)
+    insertNodeAt(
+      resolvedParentId,
+      { ...node, parentId: resolvedParentId },
+      clampedIndex,
     )
-  }
-  const ext = name.split('.').pop()?.toLowerCase()
-  switch (ext) {
-    case 'md':
-      return <FileText className="size-4 shrink-0 text-blue-400" />
-    case 'vid':
-    case 'mp4':
-    case 'mov':
-      return <FileVideo className="size-4 shrink-0 text-purple-400" />
-    case 'mp3':
-    case 'wav':
-      return <FileAudio className="size-4 shrink-0 text-green-400" />
-    case 'json':
-    case 'js':
-    case 'ts':
-      return <FileCode className="size-4 shrink-0 text-yellow-400" />
-    default:
-      return <File className="size-4 shrink-0 text-muted-foreground" />
-  }
-}
 
-function Node({ node, style, dragHandle }: NodeRendererProps<FileNode>) {
-  const selectedFileId = useVideoEditorStore((s) => s.selectedFileId)
-  const openFile = useVideoEditorStore((s) => s.openFile)
-  const isSelected = selectedFileId === node.data.id
+    if (parentId && !useFileTreeStore.getState().isDirLoaded(parentId)) {
+      await handleLoadChildren(parentId)
+    }
 
-  return (
-    <div
-      ref={dragHandle}
-      style={style}
-      className={cn(
-        'group flex cursor-pointer items-center gap-1 rounded-sm px-1 py-0.5 text-sm',
-        isSelected
-          ? 'bg-accent/60 text-foreground'
-          : 'text-muted-foreground hover:bg-accent/30 hover:text-foreground',
-      )}
-      onClick={() => {
-        if (node.isLeaf) {
-          openFile(node.data)
-        } else {
-          node.toggle()
+    try {
+      await moveMutation.mutateAsync({
+        fileId,
+        parentId: resolvedParentId,
+        anchorId,
+        position,
+      })
+    } catch (err) {
+      console.error('Failed to move:', err)
+    }
+  }
+
+  const onDelete: DeleteHandler<FileTreeNode> = async ({ ids }) => {
+    for (const id of ids) {
+      const node = findNodeInTree(treeData, id)
+      if (!node) continue
+
+      removeNode(id)
+      if (!id.startsWith('temp-')) {
+        try {
+          await deleteMutation.mutateAsync(id)
+        } catch (err) {
+          console.error('Failed to delete:', err)
         }
-      }}
-    >
-      {!node.isLeaf && (
-        <span className="flex size-4 shrink-0 items-center justify-center">
-          {node.isOpen ? (
-            <ChevronDown className="size-3" />
-          ) : (
-            <ChevronRight className="size-3" />
-          )}
-        </span>
-      )}
-      {node.isLeaf && <span className="w-4 shrink-0" />}
-      {getFileIcon(node.data.name, !node.isLeaf, node.isOpen)}
-      <span className="truncate">{node.data.name}</span>
-    </div>
-  )
-}
+      }
+    }
+  }
 
-export function FileTree() {
+  const disableDrag = useCallback(
+    (node: FileTreeNode) => node.id.startsWith('temp-'),
+    [],
+  )
+
+  const nodeRenderer = useCallback(
+    (props: NodeRendererProps<FileTreeNode>) => (
+      <Node {...props} onCreateFile={createFileNode} />
+    ),
+    [createFileNode],
+  )
+
+  if (!storeRootFolderId) return null
+
   return (
-    <Tree<FileNode>
-      data={MOCK_FILE_TREE}
+    <Tree<FileTreeNode>
+      ref={treeRef}
+      data={treeData}
       idAccessor="id"
       childrenAccessor="children"
       openByDefault={false}
@@ -94,8 +213,27 @@ export function FileTree() {
       width="100%"
       height={600}
       paddingBottom={20}
+      disableDrag={disableDrag}
+      disableDrop={(args) => {
+        if (args.parentNode && !args.parentNode.data.directory) return true
+        return false
+      }}
+      onRename={onRename}
+      onMove={onMove}
+      onDelete={onDelete}
     >
-      {Node}
+      {nodeRenderer}
     </Tree>
   )
+}
+
+function findNodeInTree(nodes: FileTreeNode[], id: string): FileTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    if (node.children) {
+      const found = findNodeInTree(node.children, id)
+      if (found) return found
+    }
+  }
+  return null
 }

@@ -1,17 +1,18 @@
 import { db } from "@/db";
 import { FileNode, FileNodeContent, fileNodeContents, fileNodes, projects} from "@/db/schema";
 import type { CursorPaginationOptions, CursorPaginationResult } from "@/type";
-import { eq, desc, sql, lt } from "drizzle-orm";
-import { createProjectSchema, projectBriefSchema } from "./schema";
+import { eq, desc, asc, sql, lt, and, isNull } from "drizzle-orm";
+import { additionalSettingsSchema, createProjectSchema, projectBriefSchema } from "./schema";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { ORDER_GAP } from "../file-system/repo";
+import { RepositoryError } from "../error";
 // Create the projects, list the project with pagination, delete a project, get a project by id, update a project
 
 const DEFAULT_PROJECTS_PAGE_SIZE = 20;
 
 export const createProject = async (data: z.infer<typeof createProjectSchema>) => {
-  const metadata = {format: data.brief.format, genre: data.brief.genre};
+  const metadata = {format: data.brief.format, genre: data.additionalSettings.genre?.value || ''};
   const result = await db.transaction(async (tx) => {
     // Create the project
     const response = await tx.insert(projects).values({
@@ -27,7 +28,7 @@ export const createProject = async (data: z.infer<typeof createProjectSchema>) =
     }).returning();
     const rootFolder = rootResponse[0]
     // Create initial files for the project
-    const [builtInFolders, builtInFileContents] = createInitialFiles(project.id, rootFolder.id, data.brief);
+    const [builtInFolders, builtInFileContents] = createInitialFiles(project.id, rootFolder.id, data);
     await tx.insert(fileNodes).values(builtInFolders).onConflictDoNothing();
     await tx.insert(fileNodeContents).values(builtInFileContents).onConflictDoNothing();
 
@@ -54,6 +55,43 @@ export const getProjectById = async (id: string) => {
                           .from(projects)
                           .where(eq(projects.id, id));
   return result[0];
+}
+
+export const getProjectWithRootFiles = async (id: string) => {
+
+  const result = await db.transaction(async (tx) => {
+    const firstQuery = await tx.select({
+      id: projects.id,
+      title: projects.title,
+      createdAt: projects.createdAt,
+      updatedAt: projects.updatedAt,
+    }).from(projects).where(eq(projects.id, id));
+    const project = firstQuery[0];
+    if (!project) {
+      throw new RepositoryError('Project not found', 'NotFound');
+    }
+
+    const secondQuery = await tx.select({
+      id: fileNodes.id
+    }).from(fileNodes).where(and(eq(fileNodes.projectId, id), isNull(fileNodes.parentId))).limit(1);
+    const rootFolderId = secondQuery[0].id;
+    if (!rootFolderId) {
+      throw new RepositoryError('Root folder not found', 'NotFound');
+    }
+    const rootFiles = await tx.select({
+      id: fileNodes.id,
+      name: fileNodes.name,
+      directory: fileNodes.directory,
+      projectId: fileNodes.projectId,
+      parentId: fileNodes.parentId,
+      position: fileNodes.position,
+      editable: fileNodes.editable,
+      format: fileNodes.format,
+    }).from(fileNodes).where(and(eq(fileNodes.projectId, id), eq(fileNodes.parentId, rootFolderId))).orderBy(asc(fileNodes.position));
+    return { project, rootFolderId, rootFiles };
+  })
+
+  return result;
 }
 
 export const listProjects = async (
@@ -102,7 +140,7 @@ export const deleteProject = async (id: string) => {
 type FileDef = Omit<FileNode, 'createdAt' | 'updatedAt'>;
 type FileContentDef = Pick<FileNodeContent, 'fileNodeId' | 'projectId' | 'content'>;
 
-function createInitialFiles(projectId: string, rootFolderId: string, projectBrief: z.infer<typeof projectBriefSchema>): [FileDef[], FileContentDef[]] {
+function createInitialFiles(projectId: string, rootFolderId: string, data: z.infer<typeof createProjectSchema>): [FileDef[], FileContentDef[]] {
   const folders = ['admin', 'development', 'pre-production', 'production', 'assets']
   const builtInFolders: FileDef[] = folders.map((folder, index) => ({
     id: uuidv4(),
@@ -132,7 +170,7 @@ function createInitialFiles(projectId: string, rootFolderId: string, projectBrie
   const briefFileContent: Pick<FileNodeContent, 'fileNodeId' | 'projectId' | 'content'> = {
     fileNodeId: briefFile.id,
     projectId: projectId,
-    content: buildBriefFileContent(projectBrief),
+    content: buildBriefFileContent(data.brief, data.additionalSettings),
   }
   
   builtInFolders.push(briefFile);
@@ -142,17 +180,21 @@ function createInitialFiles(projectId: string, rootFolderId: string, projectBrie
 }
 
 
-function buildBriefFileContent(projectBrief: z.infer<typeof projectBriefSchema>){
-  const {format, genre, durationMin, tone, audience, storyIdea} = projectBrief;
+function buildBriefFileContent(projectBrief: z.infer<typeof projectBriefSchema>, additionalSettings: z.infer<typeof additionalSettingsSchema>){
+  const {format, durationMin, storyIdea} = projectBrief;
+  let settingsContent = '';
+  for (const [_, value] of Object.entries(additionalSettings)) {
+    if (value) {
+      settingsContent += `- **${value.label}**: ${value.value}\n`;
+    }
+  }
   const content = `
 # Project Brief
 ---
 ## Project Details
 - **Format**: ${format}
-- **Genre**: ${genre}
-- **Duration**: ${durationMin == 1 ? '1 minute' : `${durationMin} minutes`}
-- **Tone**: ${tone.join(', ')}
-- **Audience**: ${audience}
+- **Duration**: ${durationMin} minutes
+${settingsContent}
 ---
 ## Story Idea
 ${storyIdea}

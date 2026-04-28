@@ -10,11 +10,16 @@ import { EditorWorkspace } from '../workspace/editor-workspace'
 import { AIPanel } from './ai-panel'
 import { useVideoEditorStore } from '../../stores/editor-store'
 
-function ExpandedLayout() {
+interface LayoutProps {
+  projectId: string
+  rootFolderId: string
+}
+
+function ExpandedLayout({ projectId, rootFolderId }: LayoutProps) {
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full w-full">
       <ResizablePanel defaultSize={15} minSize={10} maxSize={25} className="bg-sidebar">
-        <FileExplorer />
+        <FileExplorer projectId={projectId} rootFolderId={rootFolderId} />
       </ResizablePanel>
       <ResizableHandle />
       <ResizablePanel defaultSize={60} minSize={30}>
@@ -42,7 +47,7 @@ function CollapsedLayout() {
   )
 }
 
-export function AppLayout() {
+export function AppLayout({ projectId, rootFolderId }: LayoutProps) {
   const sidebarCollapsed = useVideoEditorStore((s) => s.sidebarCollapsed)
 
   return (
@@ -51,7 +56,7 @@ export function AppLayout() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <ActivityBar />
         <div className="relative h-full min-w-0 flex-1">
-          {sidebarCollapsed ? <CollapsedLayout /> : <ExpandedLayout />}
+          {sidebarCollapsed ? <CollapsedLayout /> : <ExpandedLayout projectId={projectId} rootFolderId={rootFolderId} />}
         </div>
       </div>
     </div>

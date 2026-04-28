@@ -1,32 +1,58 @@
 import { create } from 'zustand'
 
+export type SettingOption = {
+    label: string
+    value: string
+}
+
+export type AdditionalSettings = {
+    genre: SettingOption | null
+    tone: SettingOption | null
+    targetAudience: SettingOption | null
+    primaryPlatform: SettingOption | null
+    outlineStructure: SettingOption | null
+    narrativeStyle: SettingOption | null
+    videoAspectRatio: SettingOption | null
+    characterStyle: SettingOption | null
+}
+
 export type NewProjectState = {
     format: string | null
-    genre: string | null
-    duration: number
-    tones: string[]
-    audience: string | null
+    duration: string
     storyIdea: string
+    additionalSettings: AdditionalSettings
+    modelId: string | null
 }
+
+type AdditionalSettingKey = keyof AdditionalSettings
 
 type NewProjectActions = {
     setFormat: (format: string) => void
-    setGenre: (genre: string) => void
-    setDuration: (duration: number) => void
-    toggleTone: (tone: string) => void
-    setAudience: (audience: string) => void
+    setDuration: (duration: string) => void
     setStoryIdea: (storyIdea: string) => void
+    setAdditionalSetting: (key: AdditionalSettingKey, value: SettingOption) => void
+    setModelId: (modelId: string) => void
     reset: () => void
     validate: () => { valid: boolean; errors: string[] }
 }
 
+const initialAdditionalSettings: AdditionalSettings = {
+    genre: null,
+    tone: null,
+    targetAudience: null,
+    primaryPlatform: null,
+    outlineStructure: null,
+    narrativeStyle: null,
+    videoAspectRatio: null,
+    characterStyle: null,
+}
+
 const initialState: NewProjectState = {
     format: null,
-    genre: null,
-    duration: 5,
-    tones: [],
-    audience: null,
+    duration: '< 2',
     storyIdea: '',
+    additionalSettings: initialAdditionalSettings,
+    modelId: null,
 }
 
 export const useNewProjectStore = create<NewProjectState & NewProjectActions>((set, get) => ({
@@ -34,19 +60,16 @@ export const useNewProjectStore = create<NewProjectState & NewProjectActions>((s
 
     setFormat: (format) => set({ format }),
     
-    setGenre: (genre) => set({ genre }),
-    
     setDuration: (duration) => set({ duration }),
     
-    toggleTone: (tone) => set((state) => ({
-        tones: state.tones.includes(tone)
-            ? state.tones.filter((t) => t !== tone)
-            : [...state.tones, tone]
-    })),
-    
-    setAudience: (audience) => set({ audience }),
-    
     setStoryIdea: (storyIdea) => set({ storyIdea }),
+
+    setAdditionalSetting: (key, value) => set((state) => ({
+        additionalSettings: {
+            ...state.additionalSettings,
+            [key]: value,
+        }
+    })),
     
     reset: () => set(initialState),
 
@@ -57,15 +80,6 @@ export const useNewProjectStore = create<NewProjectState & NewProjectActions>((s
         if (!state.format) {
             errors.push('Please select a format')
         }
-        if (!state.genre) {
-            errors.push('Please select a genre')
-        }
-        if (state.tones.length === 0) {
-            errors.push('Please select at least one atmospheric tone')
-        }
-        if (!state.audience) {
-            errors.push('Please select a target audience')
-        }
         if (!state.storyIdea.trim()) {
             errors.push('Please describe your story idea')
         }
@@ -75,4 +89,6 @@ export const useNewProjectStore = create<NewProjectState & NewProjectActions>((s
             errors,
         }
     },
+
+    setModelId: (modelId) => set({ modelId }),
 }))

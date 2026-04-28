@@ -28,6 +28,7 @@ export const fileCreationRequestSchema = z.object({
     parentId: z.string(),
     position: z.number().gte(0, 'Position must be greater than 0'),
     format: z.enum(FILE_FORMATS).nullable(),
+    editable: z.boolean().default(true),
 }).superRefine((data, ctx) => {
     if (data.directory) {
         if(data.format){

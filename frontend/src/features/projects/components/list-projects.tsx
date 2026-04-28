@@ -1,6 +1,6 @@
-import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
+import { useMutation, useSuspenseInfiniteQuery } from '@tanstack/react-query'
 import ProjectCard from './project-card'
-import { deleteProjectMutationOptions, listProjectsQueryOptions } from '../query-mutation'
+import { deleteProjectMutationOptions, getListProjectsQueryOptions } from '../query-mutation'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 
 
 export default function ListProjects() {
-    const { data: projects = [] } = useSuspenseQuery(listProjectsQueryOptions)
+    const { data: projects = [] } = useSuspenseInfiniteQuery(getListProjectsQueryOptions({cursor: undefined, limit: 20}))
     const { mutate: deleteProject } = useMutation(deleteProjectMutationOptions)
     const { display } = useSearch({ from: '/dashboard/main/projects' })
     
@@ -21,7 +21,7 @@ export default function ListProjects() {
             <div className={cn('grid gap-6 grid-cols-1', {
                 'sm:grid-cols-2 lg:grid-cols-3': display === 'grid',
             })}>
-            {projects.map((project) => (
+            {projects?.map((project) => (
                 <Link 
                     to={getRedirectLink(project.status)} 
                     params={{ projectId: project.id }} 

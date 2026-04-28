@@ -26,6 +26,23 @@ export type SynopsisLegacy = {
 export type Synopsis = SynopsisLegacy | Record<string, any> | null
 export type ProseDocument = JSONContent
 
+export type FileNode = {
+    id: string;
+    name: string;
+    directory: boolean;
+    projectId: string;
+    format: string | null;
+    parentId: string | null;
+    position: number;
+    editable: boolean;
+}
+
+export type FileNodeContent = {
+    id: string;
+    fileNodeId: string;
+    content: string;
+}
+
 export type Outline = {
     actId: string;
     beat: {
@@ -95,13 +112,11 @@ export type NarrativeArc = {
 
 export type ProjectResponse = {
     id: string
+    title: string
+    format: string
+    genre: string
     createdAt: string
     updatedAt: string
-    brief: ProjectBrief
-    narrative_arcs: NarrativeArc[]
-    synopsis: Synopsis
-    outline: Outline[]
-    story_bible: StoryBible
 }
 
 export type ProjectListItem = {

@@ -14,7 +14,7 @@ export default function StepMarker({step, title, description, className}: Props)
             <span className="text-[11px] font-bold text-primary uppercase tracking-[0.3em]">Step {step}</span>
         </div>
         <h1 className='text-4xl font-bold tracking-tight mb-2'>{title}</h1>
-        {description && <p className='text-muted-foreground max-w-2xl leading-relaxed'>{description}</p>}
+        {description && <p className='text-muted-foreground leading-relaxed'>{description}</p>}
     </div>
   )
 }

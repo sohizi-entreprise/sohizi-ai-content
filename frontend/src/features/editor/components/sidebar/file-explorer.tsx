@@ -3,7 +3,12 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FileTree } from './file-tree'
 
-export function FileExplorer() {
+interface FileExplorerProps {
+  projectId: string
+  rootFolderId: string
+}
+
+export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-9 shrink-0 items-center justify-between px-3">
@@ -20,7 +25,7 @@ export function FileExplorer() {
         </div>
       </div>
       <ScrollArea className="flex-1 px-1">
-        <FileTree />
+        <FileTree projectId={projectId} rootFolderId={rootFolderId} />
       </ScrollArea>
     </div>
   )

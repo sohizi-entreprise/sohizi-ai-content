@@ -8,6 +8,13 @@
       "when": 1776515583987,
       "tag": "0000_regular_ultimatum",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777184409565,
+      "tag": "0001_damp_daredevil",
+      "breakpoints": true
     }
   ]
 }

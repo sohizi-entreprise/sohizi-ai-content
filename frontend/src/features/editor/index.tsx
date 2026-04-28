@@ -1,11 +1,23 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { AppLayout } from './components/layout/app-layout'
+import { useQuery } from '@tanstack/react-query'
+import { getProjectQueryOptions } from '../projects/query-mutation'
+import { useParams } from '@tanstack/react-router'
+import { useFileTreeStore } from './stores/file-tree-store'
 
 export function VideoProductionEditor() {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const { projectId } = useParams({ from: '/dashboard/projects/$projectId/editor' })
 
-  if (!mounted) {
+  const {data, isLoading} = useQuery(getProjectQueryOptions(projectId))
+  const init = useFileTreeStore((s) => s.init)
+
+  useEffect(() => {
+    if (data) {
+      init(projectId, data.rootFolderId, data.rootFiles)
+    }
+  }, [data, projectId, init])
+
+  if (isLoading || !data) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
@@ -18,5 +30,5 @@ export function VideoProductionEditor() {
     )
   }
 
-  return <AppLayout />
+  return <AppLayout projectId={projectId} rootFolderId={data.rootFolderId} />
 }

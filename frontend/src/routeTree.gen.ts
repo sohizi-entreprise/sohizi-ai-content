@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as EditorRouteImport } from './routes/editor'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
@@ -18,6 +17,7 @@ import { Route as DashboardProjectsNewRouteImport } from './routes/dashboard/pro
 import { Route as DashboardProjectsProjectIdRouteImport } from './routes/dashboard/projects/$projectId'
 import { Route as DashboardMainProjectsRouteImport } from './routes/dashboard/main/projects'
 import { Route as DashboardProjectsProjectIdSynopsisRouteImport } from './routes/dashboard/projects/$projectId/synopsis'
+import { Route as DashboardProjectsProjectIdEditorRouteImport } from './routes/dashboard/projects/$projectId/editor'
 import { Route as DashboardProjectsProjectIdEditRouteImport } from './routes/dashboard/projects/$projectId/edit'
 import { Route as DashboardProjectsProjectIdConceptRouteImport } from './routes/dashboard/projects/$projectId/concept'
 import { Route as DashboardProjectsProjectIdEditStoryboardRouteImport } from './routes/dashboard/projects/$projectId/edit/storyboard'
@@ -26,11 +26,6 @@ import { Route as DashboardProjectsProjectIdEditScriptRouteImport } from './rout
 import { Route as DashboardProjectsProjectIdEditElementsRouteImport } from './routes/dashboard/projects/$projectId/edit/elements'
 import { Route as DashboardProjectsProjectIdEditCharactersRouteImport } from './routes/dashboard/projects/$projectId/edit/characters'
 
-const EditorRoute = EditorRouteImport.update({
-  id: '/editor',
-  path: '/editor',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -71,6 +66,12 @@ const DashboardProjectsProjectIdSynopsisRoute =
   DashboardProjectsProjectIdSynopsisRouteImport.update({
     id: '/synopsis',
     path: '/synopsis',
+    getParentRoute: () => DashboardProjectsProjectIdRoute,
+  } as any)
+const DashboardProjectsProjectIdEditorRoute =
+  DashboardProjectsProjectIdEditorRouteImport.update({
+    id: '/editor',
+    path: '/editor',
     getParentRoute: () => DashboardProjectsProjectIdRoute,
   } as any)
 const DashboardProjectsProjectIdEditRoute =
@@ -119,7 +120,6 @@ const DashboardProjectsProjectIdEditCharactersRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/editor': typeof EditorRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/main/projects': typeof DashboardMainProjectsRoute
@@ -127,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
   '/dashboard/projects/$projectId/concept': typeof DashboardProjectsProjectIdConceptRoute
   '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
+  '/dashboard/projects/$projectId/editor': typeof DashboardProjectsProjectIdEditorRoute
   '/dashboard/projects/$projectId/synopsis': typeof DashboardProjectsProjectIdSynopsisRoute
   '/dashboard/projects/$projectId/edit/characters': typeof DashboardProjectsProjectIdEditCharactersRoute
   '/dashboard/projects/$projectId/edit/elements': typeof DashboardProjectsProjectIdEditElementsRoute
@@ -136,7 +137,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/editor': typeof EditorRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/main/projects': typeof DashboardMainProjectsRoute
@@ -144,6 +144,7 @@ export interface FileRoutesByTo {
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
   '/dashboard/projects/$projectId/concept': typeof DashboardProjectsProjectIdConceptRoute
   '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
+  '/dashboard/projects/$projectId/editor': typeof DashboardProjectsProjectIdEditorRoute
   '/dashboard/projects/$projectId/synopsis': typeof DashboardProjectsProjectIdSynopsisRoute
   '/dashboard/projects/$projectId/edit/characters': typeof DashboardProjectsProjectIdEditCharactersRoute
   '/dashboard/projects/$projectId/edit/elements': typeof DashboardProjectsProjectIdEditElementsRoute
@@ -155,7 +156,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/editor': typeof EditorRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/main/projects': typeof DashboardMainProjectsRoute
@@ -163,6 +163,7 @@ export interface FileRoutesById {
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
   '/dashboard/projects/$projectId/concept': typeof DashboardProjectsProjectIdConceptRoute
   '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
+  '/dashboard/projects/$projectId/editor': typeof DashboardProjectsProjectIdEditorRoute
   '/dashboard/projects/$projectId/synopsis': typeof DashboardProjectsProjectIdSynopsisRoute
   '/dashboard/projects/$projectId/edit/characters': typeof DashboardProjectsProjectIdEditCharactersRoute
   '/dashboard/projects/$projectId/edit/elements': typeof DashboardProjectsProjectIdEditElementsRoute
@@ -175,7 +176,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/editor'
     | '/dashboard/main'
     | '/dashboard/'
     | '/dashboard/main/projects'
@@ -183,6 +183,7 @@ export interface FileRouteTypes {
     | '/dashboard/projects/new'
     | '/dashboard/projects/$projectId/concept'
     | '/dashboard/projects/$projectId/edit'
+    | '/dashboard/projects/$projectId/editor'
     | '/dashboard/projects/$projectId/synopsis'
     | '/dashboard/projects/$projectId/edit/characters'
     | '/dashboard/projects/$projectId/edit/elements'
@@ -192,7 +193,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/editor'
     | '/dashboard/main'
     | '/dashboard'
     | '/dashboard/main/projects'
@@ -200,6 +200,7 @@ export interface FileRouteTypes {
     | '/dashboard/projects/new'
     | '/dashboard/projects/$projectId/concept'
     | '/dashboard/projects/$projectId/edit'
+    | '/dashboard/projects/$projectId/editor'
     | '/dashboard/projects/$projectId/synopsis'
     | '/dashboard/projects/$projectId/edit/characters'
     | '/dashboard/projects/$projectId/edit/elements'
@@ -210,7 +211,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
-    | '/editor'
     | '/dashboard/main'
     | '/dashboard/'
     | '/dashboard/main/projects'
@@ -218,6 +218,7 @@ export interface FileRouteTypes {
     | '/dashboard/projects/new'
     | '/dashboard/projects/$projectId/concept'
     | '/dashboard/projects/$projectId/edit'
+    | '/dashboard/projects/$projectId/editor'
     | '/dashboard/projects/$projectId/synopsis'
     | '/dashboard/projects/$projectId/edit/characters'
     | '/dashboard/projects/$projectId/edit/elements'
@@ -229,18 +230,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
-  EditorRoute: typeof EditorRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/editor': {
-      id: '/editor'
-      path: '/editor'
-      fullPath: '/editor'
-      preLoaderRoute: typeof EditorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -295,6 +288,13 @@ declare module '@tanstack/react-router' {
       path: '/synopsis'
       fullPath: '/dashboard/projects/$projectId/synopsis'
       preLoaderRoute: typeof DashboardProjectsProjectIdSynopsisRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdRoute
+    }
+    '/dashboard/projects/$projectId/editor': {
+      id: '/dashboard/projects/$projectId/editor'
+      path: '/editor'
+      fullPath: '/dashboard/projects/$projectId/editor'
+      preLoaderRoute: typeof DashboardProjectsProjectIdEditorRouteImport
       parentRoute: typeof DashboardProjectsProjectIdRoute
     }
     '/dashboard/projects/$projectId/edit': {
@@ -391,6 +391,7 @@ const DashboardProjectsProjectIdEditRouteWithChildren =
 interface DashboardProjectsProjectIdRouteChildren {
   DashboardProjectsProjectIdConceptRoute: typeof DashboardProjectsProjectIdConceptRoute
   DashboardProjectsProjectIdEditRoute: typeof DashboardProjectsProjectIdEditRouteWithChildren
+  DashboardProjectsProjectIdEditorRoute: typeof DashboardProjectsProjectIdEditorRoute
   DashboardProjectsProjectIdSynopsisRoute: typeof DashboardProjectsProjectIdSynopsisRoute
 }
 
@@ -400,6 +401,8 @@ const DashboardProjectsProjectIdRouteChildren: DashboardProjectsProjectIdRouteCh
       DashboardProjectsProjectIdConceptRoute,
     DashboardProjectsProjectIdEditRoute:
       DashboardProjectsProjectIdEditRouteWithChildren,
+    DashboardProjectsProjectIdEditorRoute:
+      DashboardProjectsProjectIdEditorRoute,
     DashboardProjectsProjectIdSynopsisRoute:
       DashboardProjectsProjectIdSynopsisRoute,
   }
@@ -430,7 +433,6 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
-  EditorRoute: EditorRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

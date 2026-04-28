@@ -52,3 +52,13 @@ export class InternalServerError extends BaseError {
 		super(message)
 	}
 }
+
+type RepositoryErrorType = 'NotFound' | 'DbError'
+
+export class RepositoryError extends Error {
+	constructor(public message: string, public type: RepositoryErrorType) {
+		super(message)
+        this.name = new.target.name
+		this.type = type
+	}
+}
