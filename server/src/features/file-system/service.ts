@@ -101,14 +101,11 @@ export const getFileContent = async(projectId: string, fileNodeId: string) => {
 
     switch (fileNode.format) {
         case fileFormat.JSON:
-            return fileContent.jsonContent;
+            return {content: fileContent.jsonContent};
         default:{
-            if(fileContent.proseContent){
-                return fileContent.proseContent;
-            }
             const content = fileContent.content ?? "";
 
-            return content;
+            return {content};
         }
     }
 }

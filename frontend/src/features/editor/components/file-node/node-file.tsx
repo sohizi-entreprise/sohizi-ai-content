@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FileTreeNode, NodeProps } from '../../types'
-import { useVideoEditorStore } from '../../stores/editor-store'
+import { useEditorStore } from '../../stores/editor-store'
 import { useFileTreeStore } from '../../stores/file-tree-store'
 import { DirectoryNode } from '../file-node/node-directory'
 import { FileNodeMenu } from "./node-menu"
@@ -19,8 +19,8 @@ import { FileNodeMenu } from "./node-menu"
 
 export function DocumentNode(props: NodeProps) {
     const { node, style, dragHandle } = props
-    const selectedFileId = useVideoEditorStore((s) => s.selectedFileId)
-    const openFile = useVideoEditorStore((s) => s.openFile)
+    const selectedFileId = useEditorStore((s) => s.selectedFileId)
+    const openFile = useEditorStore((s) => s.openFile)
     const isSelected = selectedFileId === node.data.id
     const isDir = node.data.directory
   

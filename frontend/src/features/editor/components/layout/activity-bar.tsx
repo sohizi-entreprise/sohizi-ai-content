@@ -11,7 +11,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/tooltip'
-import { useVideoEditorStore } from '../../stores/editor-store'
+import { useEditorStore } from '../../stores/editor-store'
 import type { ActivityBarItem } from '../../types'
 
 const ITEMS: { id: ActivityBarItem; icon: typeof Files; label: string }[] = [
@@ -22,16 +22,16 @@ const ITEMS: { id: ActivityBarItem; icon: typeof Files; label: string }[] = [
 ]
 
 export function ActivityBar() {
-  const active = useVideoEditorStore((s) => s.activityBarItem)
-  const setActive = useVideoEditorStore((s) => s.setActivityBarItem)
-  const toggleSidebar = useVideoEditorStore((s) => s.toggleSidebar)
+  const active = useEditorStore((s) => s.activityBarItem)
+  const setActive = useEditorStore((s) => s.setActivityBarItem)
+  const toggleSidebar = useEditorStore((s) => s.toggleSidebar)
 
   const handleClick = (id: ActivityBarItem) => {
     if (active === id) {
       toggleSidebar()
     } else {
       setActive(id)
-      const { sidebarCollapsed } = useVideoEditorStore.getState()
+      const { sidebarCollapsed } = useEditorStore.getState()
       if (sidebarCollapsed) toggleSidebar()
     }
   }

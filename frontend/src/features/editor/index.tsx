@@ -13,7 +13,7 @@ export function VideoProductionEditor() {
 
   useEffect(() => {
     if (data) {
-      init(projectId, data.rootFolderId, data.rootFiles)
+      init(projectId, data.rootFolderId, data.rootFiles, data.project)
     }
   }, [data, projectId, init])
 

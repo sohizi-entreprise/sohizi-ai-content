@@ -3,13 +3,13 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable'
-import { useVideoEditorStore } from '../../stores/editor-store'
+import { useEditorStore } from '../../stores/editor-store'
 import { EditorTabs } from './editor-tabs'
 import { ContentRouter } from './content-router'
 
 function PaneContent({ pane }: { pane: 'left' | 'right' }) {
-  const openTabs = useVideoEditorStore((s) => s.openTabs)
-  const activePaneTab = useVideoEditorStore((s) => s.activePaneTab)
+  const openTabs = useEditorStore((s) => s.openTabs)
+  const activePaneTab = useEditorStore((s) => s.activePaneTab)
   const paneTabs = openTabs.filter((t) => t.pane === pane)
   const activeId = activePaneTab[pane]
   const activeTab = paneTabs.find((t) => t.id === activeId) ?? paneTabs[0]
@@ -43,7 +43,7 @@ function EmptyPane() {
 }
 
 export function EditorWorkspace() {
-  const splitView = useVideoEditorStore((s) => s.splitView)
+  const splitView = useEditorStore((s) => s.splitView)
 
   if (!splitView) {
     return <PaneContent pane="left" />

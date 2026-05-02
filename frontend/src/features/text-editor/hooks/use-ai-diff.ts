@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import type { Editor } from '@tiptap/react'
-import { useEditorStore } from '../store/editor-store'
+import { useOldEditorStore } from '../store/editor-store'
 import type { AISuggestion } from '../store/types'
 import { generateDiffHTML } from '../utils/diff'
 
@@ -17,7 +17,7 @@ export function useAIDiff(editor: Editor | null) {
     rejectSuggestion,
     clearSuggestions,
     toggleShowDiffs,
-  } = useEditorStore()
+  } = useOldEditorStore()
 
   /**
    * Find a node's position by its blockId attribute

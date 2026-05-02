@@ -18,6 +18,7 @@ export interface EditorTab {
   id: string
   name: string
   extension: string
+  format: FileTreeNode['format']
   pane: 'left' | 'right'
   content?: string
 }

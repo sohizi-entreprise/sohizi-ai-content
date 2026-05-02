@@ -1,0 +1,249 @@
+.tiptap-editor-content {
+  color: var(--foreground);
+  font-size: 0.95rem;
+  line-height: 1.75;
+  letter-spacing: -0.005em;
+}
+
+.tiptap-editor-content > * + * {
+  margin-top: 0.85rem;
+}
+
+.tiptap-editor-content h1,
+.tiptap-editor-content h2,
+.tiptap-editor-content h3 {
+  color: var(--foreground);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.18;
+}
+
+.tiptap-editor-content h1 {
+  margin-top: 0;
+  font-size: 2.1rem;
+}
+
+.tiptap-editor-content h2 {
+  margin-top: 2rem;
+  font-size: 1.45rem;
+}
+
+.tiptap-editor-content h3 {
+  margin-top: 1.5rem;
+  font-size: 1.15rem;
+}
+
+.tiptap-editor-content p {
+  color: color-mix(in oklch, var(--foreground) 88%, transparent);
+}
+
+.tiptap-editor-content strong {
+  color: var(--foreground);
+  font-weight: 650;
+}
+
+.tiptap-editor-content em {
+  color: color-mix(in oklch, var(--foreground) 92%, transparent);
+}
+
+.tiptap-editor-content s {
+  color: var(--muted-foreground);
+}
+
+.tiptap-editor-content u {
+  text-decoration-color: color-mix(in oklch, var(--primary) 70%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+.tiptap-editor-content mark {
+  border-radius: 0.25rem;
+  background: color-mix(in oklch, var(--primary) 18%, transparent);
+  color: var(--foreground);
+  padding: 0.08rem 0.18rem;
+}
+
+.tiptap-editor-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--primary) 35%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+.tiptap-editor-content ul,
+.tiptap-editor-content ol {
+  padding-left: 1.35rem;
+}
+
+.tiptap-editor-content ul {
+  list-style: disc;
+}
+
+.tiptap-editor-content ol {
+  list-style: decimal;
+}
+
+.tiptap-editor-content li {
+  padding-left: 0.25rem;
+}
+
+.tiptap-editor-content li::marker {
+  color: var(--muted-foreground);
+}
+
+.tiptap-editor-content li > p {
+  margin: 0;
+}
+
+.tiptap-editor-content ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap-editor-content ul[data-type='taskList'] li {
+  display: flex;
+  gap: 0.65rem;
+  padding-left: 0;
+}
+
+.tiptap-editor-content ul[data-type='taskList'] li > label {
+  display: flex;
+  height: 1.65rem;
+  align-items: center;
+}
+
+.tiptap-editor-content ul[data-type='taskList'] input[type='checkbox'] {
+  height: 0.95rem;
+  width: 0.95rem;
+  border-radius: 0.25rem;
+  accent-color: var(--primary);
+}
+
+.tiptap-editor-content ul[data-type='taskList'] li > div {
+  flex: 1;
+}
+
+.tiptap-editor-content blockquote {
+  border-left: 3px solid color-mix(in oklch, var(--primary) 60%, transparent);
+  color: var(--muted-foreground);
+  margin: 1.4rem 0;
+  padding: 0.15rem 0 0.15rem 1rem;
+}
+
+.tiptap-editor-content code {
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: color-mix(in oklch, var(--muted) 60%, transparent);
+  color: var(--foreground);
+  font-size: 0.86em;
+  padding: 0.12rem 0.32rem;
+}
+
+.tiptap-editor-content pre {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: color-mix(in oklch, var(--muted) 45%, transparent);
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+.tiptap-editor-content pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.tiptap-editor-content hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+.tiptap-editor-content img {
+  display: block;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  box-shadow: 0 18px 60px color-mix(in oklch, var(--background) 35%, transparent);
+}
+
+.tiptap-editor-content .tableWrapper {
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+
+.tiptap-editor-content table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.tiptap-editor-content th,
+.tiptap-editor-content td {
+  position: relative;
+  border: 1px solid var(--border);
+  padding: 0.65rem 0.8rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.tiptap-editor-content th {
+  background: color-mix(in oklch, var(--muted) 55%, transparent);
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.tiptap-editor-content td {
+  color: color-mix(in oklch, var(--foreground) 86%, transparent);
+}
+
+.tiptap-editor-content .selectedCell::after {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  content: '';
+  pointer-events: none;
+}
+
+.tiptap-editor-content .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: var(--primary);
+  pointer-events: none;
+}
+
+.tiptap-editor-content.resize-cursor {
+  cursor: col-resize;
+}
+
+.tiptap-editor-content details {
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: color-mix(in oklch, var(--muted) 22%, transparent);
+  padding: 0.85rem 1rem;
+}
+
+.tiptap-editor-content summary {
+  cursor: pointer;
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.tiptap-editor-content details > div {
+  margin-top: 0.8rem;
+  color: color-mix(in oklch, var(--foreground) 88%, transparent);
+}
+
+.tiptap-editor-content p.is-editor-empty:first-child::before {
+  color: var(--muted-foreground);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

@@ -56,7 +56,7 @@ const initialState: EditorState = {
   activeBlockId: null,
 }
 
-export const useEditorStore = create<EditorState & EditorActions>((set) => ({
+export const useOldEditorStore = create<EditorState & EditorActions>((set) => ({
   ...initialState,
 
   // Mode

@@ -8,7 +8,7 @@ import { ActivityBar } from './activity-bar'
 import { FileExplorer } from '../sidebar/file-explorer'
 import { EditorWorkspace } from '../workspace/editor-workspace'
 import { AIPanel } from './ai-panel'
-import { useVideoEditorStore } from '../../stores/editor-store'
+import { useEditorStore } from '../../stores/editor-store'
 
 interface LayoutProps {
   projectId: string
@@ -48,7 +48,7 @@ function CollapsedLayout() {
 }
 
 export function AppLayout({ projectId, rootFolderId }: LayoutProps) {
-  const sidebarCollapsed = useVideoEditorStore((s) => s.sidebarCollapsed)
+  const sidebarCollapsed = useEditorStore((s) => s.sidebarCollapsed)
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">

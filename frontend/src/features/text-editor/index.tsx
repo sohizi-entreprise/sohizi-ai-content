@@ -19,7 +19,7 @@ export { useSelection } from './hooks/use-selection'
 export { useAIDiff } from './hooks/use-ai-diff'
 
 // Store
-export { useEditorStore } from './store/editor-store'
+export { useOldEditorStore } from './store/editor-store'
 
 // Types
 export type {

@@ -1,10 +1,9 @@
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 import {
   DeleteHandler,
   MoveHandler,
   RenameHandler,
   Tree,
-  TreeApi,
   type NodeRendererProps,
 } from 'react-arborist'
 import { useMutation } from '@tanstack/react-query'
@@ -18,6 +17,7 @@ import {
 } from '@/features/projects/query-mutation'
 import { DirectoryNode, useLoadChildren } from '../file-node/node-directory'
 import { DocumentNode } from '../file-node/node-file'
+import useFileTreeBridge from '../../bridge/use-file-tree-bridge'
 
 type FileTreeProps = {
   projectId: string
@@ -43,7 +43,8 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   const updateNode = useFileTreeStore((s) => s.updateNode)
   const insertNodeAt = useFileTreeStore((s) => s.insertNodeAt)
   const storeRootFolderId = useFileTreeStore((s) => s.rootFolderId)
-  const treeRef = useRef<TreeApi<FileTreeNode> | null>(null)
+  const setTree = useFileTreeBridge((s) => s.setTree)
+  const runCommand = useFileTreeBridge((s) => s.runCommand)
 
   const createMutation = useMutation(createFileNodeMutationOptions(projectId))
   const renameMutation = useMutation(renameFileNodeMutationOptions(projectId))
@@ -53,22 +54,8 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   const handleLoadChildren = useLoadChildren()
 
   const createFileNode = useCallback((parentId: string, index: number, isDir: boolean = false) => {
-    const tempId = `temp-${Date.now()}`
-    const tempNode: FileTreeNode = {
-      id: tempId,
-      name: '',
-      directory: isDir,
-      projectId,
-      format: isDir ? null : 'markdown',
-      parentId,
-      position: index * 1000,
-      editable: true,
-    }
-    insertNodeAt(parentId, tempNode, index)
-    setTimeout(() => {
-      treeRef.current?.edit(tempId)
-    }, 50)
-  }, [projectId, insertNodeAt])
+    runCommand({ type: 'create', data: { projectId, parentId, index, isDir } })
+  }, [projectId, runCommand])
 
   const onRename: RenameHandler<FileTreeNode> = async ({ id, name }) => {
     if (!name.trim()) {
@@ -203,7 +190,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
 
   return (
     <Tree<FileTreeNode>
-      ref={treeRef}
+      ref={setTree}
       data={treeData}
       idAccessor="id"
       childrenAccessor="children"

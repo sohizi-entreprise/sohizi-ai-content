@@ -10,7 +10,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useVideoEditorStore } from '../../stores/editor-store'
+import { useEditorStore } from '../../stores/editor-store'
 import type { ChatMessage } from '../../types'
 
 function ReasoningBlock({ content }: { content: string }) {
@@ -72,7 +72,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 }
 
 export function AIPanel() {
-  const messages = useVideoEditorStore((s) => s.aiMessages)
+  const messages = useEditorStore((s) => s.aiMessages)
   const [input, setInput] = useState('')
 
   return (

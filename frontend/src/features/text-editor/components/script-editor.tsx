@@ -2,7 +2,7 @@ import { useEditor, EditorContent, type JSONContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Highlight from '@tiptap/extension-highlight'
-import { useEditorStore } from '../store/editor-store'
+import { useOldEditorStore } from '../store/editor-store'
 import { EditorToolbar } from './editor-toolbar'
 import { 
   SluglineExtension,
@@ -97,7 +97,7 @@ export function ScriptEditor({
     mode, 
     setSelection,
     setActiveBlockId,
-  } = useEditorStore()
+  } = useOldEditorStore()
 
   const editor = useEditor({
     immediatelyRender: false, // Disable SSR to avoid hydration mismatches

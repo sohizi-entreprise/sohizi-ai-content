@@ -13,11 +13,12 @@ type Props = {
         label: string
         value: string
     }[]
+    children?: React.ReactNode
 }
 
 
 export const FileNodeMenu = (props: Props) => {
-    const { onChange, options } = props
+    const { onChange, options, children } = props
     const handleClick = (action: string) => {
         return (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
             e.stopPropagation()
@@ -32,10 +33,13 @@ export const FileNodeMenu = (props: Props) => {
                                     e.stopPropagation()
                                     e.preventDefault()
                                   }}
-            >
+            > {
+                children ? 
+                children : 
                 <button className="flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground">
                     <MoreHorizontal className="size-3.5" />
                 </button>
+            }
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="start" side='bottom' className="min-w-[160px]" onCloseAutoFocus={(e) => e.preventDefault()}>

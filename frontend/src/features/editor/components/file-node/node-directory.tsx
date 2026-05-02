@@ -10,7 +10,7 @@ import {
   Trash,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useVideoEditorStore } from "../../stores/editor-store"
+import { useEditorStore } from "../../stores/editor-store"
 import { useFileTreeStore } from '../../stores/file-tree-store'
 import { FileNodeMenu } from "./node-menu"
 import { useCallback } from "react"
@@ -19,8 +19,8 @@ import * as requests from '@/features/projects/request'
 
 export function DirectoryNode(props: NodeProps) {
   const { node, style, dragHandle } = props
-  const selectedFileId = useVideoEditorStore((s) => s.selectedFileId)
-  const openFile = useVideoEditorStore((s) => s.openFile)
+  const selectedFileId = useEditorStore((s) => s.selectedFileId)
+  const openFile = useEditorStore((s) => s.openFile)
   const isSelected = selectedFileId === node.data.id
   const isDir = node.data.directory
 

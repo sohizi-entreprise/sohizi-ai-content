@@ -1,4 +1,4 @@
-import { useEditorStore } from '../../store/editor-store'
+import { useOldEditorStore } from '../../store/editor-store'
 import { DiffActions } from './diff-actions'
 import { cn } from '@/lib/utils'
 
@@ -14,7 +14,7 @@ export function DiffOverlay({ className, onAccept, onReject }: DiffOverlayProps)
     showDiffs,
     acceptSuggestion,
     rejectSuggestion,
-  } = useEditorStore()
+  } = useOldEditorStore()
 
   const pendingCount = pendingSuggestions.filter(s => s.status === 'pending').length
 

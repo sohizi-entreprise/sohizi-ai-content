@@ -1,13 +1,13 @@
 import { useEffect, useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
-import { useEditorStore } from '../store/editor-store'
+import { useOldEditorStore } from '../store/editor-store'
 import type { SelectionContext, Block, BlockType } from '../store/types'
 
 /**
  * Hook to track and manage editor selection
  */
 export function useSelection(editor: Editor | null) {
-  const { selection, setSelection, clearSelection } = useEditorStore()
+  const { selection, setSelection, clearSelection } = useOldEditorStore()
 
   // Update selection when editor selection changes
   useEffect(() => {

@@ -1,13 +1,17 @@
 import { create } from 'zustand'
 import type { FileTreeNode } from '../types'
+import { ProjectResponse } from '@/features/projects/type'
+
+type Project = Omit<ProjectResponse, 'format' | 'genre'>
 
 interface FileTreeState {
   projectId: string | null
+  project: Project | null
   rootFolderId: string | null
   treeData: FileTreeNode[]
   loadedDirIds: Set<string>
 
-  init: (projectId: string, rootFolderId: string, rootFiles: FileTreeNode[]) => void
+  init: (projectId: string, rootFolderId: string, rootFiles: FileTreeNode[], project: Project) => void
   setTreeData: (data: FileTreeNode[]) => void
   appendChildren: (parentId: string, children: FileTreeNode[]) => void
   updateNode: (id: string, patch: Partial<FileTreeNode>) => void
@@ -86,11 +90,12 @@ function insertNodeAtRoot(
 
 export const useFileTreeStore = create<FileTreeState>((set, get) => ({
   projectId: null,
+  project: null,
   rootFolderId: null,
   treeData: [],
   loadedDirIds: new Set(),
 
-  init: (projectId, rootFolderId, rootFiles) => {
+  init: (projectId, rootFolderId, rootFiles, project) => {
     const files = rootFiles ?? []
     const dirNodes = files.map((f) =>
       f.directory ? { ...f, children: f.children ?? [] } : f,
@@ -100,6 +105,7 @@ export const useFileTreeStore = create<FileTreeState>((set, get) => ({
       rootFolderId,
       treeData: dirNodes,
       loadedDirIds: new Set([rootFolderId]),
+      project
     })
   },
 

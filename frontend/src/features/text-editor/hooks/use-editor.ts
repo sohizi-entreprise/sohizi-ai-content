@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
-import { useEditorStore } from '../store/editor-store'
+import { useOldEditorStore } from '../store/editor-store'
 import type { AISuggestion, Block, BlockType, SelectionContext } from '../store/types'
 import { v4 as uuid } from 'uuid'
 import { generateDiffHTML } from '../utils/diff'
@@ -16,7 +16,7 @@ export function useScriptEditor(editor: Editor | null) {
     rejectSuggestion,
     setSelection,
     addComment,
-  } = useEditorStore()
+  } = useOldEditorStore()
 
   /**
    * Get the current selection as context for AI
