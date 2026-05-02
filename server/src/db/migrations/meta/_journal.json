@@ -15,6 +15,13 @@
       "when": 1777184409565,
       "tag": "0001_damp_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777749029179,
+      "tag": "0002_abnormal_cammi",
+      "breakpoints": true
     }
   ]
 }

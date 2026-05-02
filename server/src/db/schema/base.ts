@@ -102,6 +102,7 @@ export const fileNodeContents = pgTable('file_node_contents', {
     jsonContent: jsonb('json_content').$type<Record<string, unknown>>(),
     proseContent: jsonb('prose_content').$type<ProseDocument>(),
     metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+    revision: integer('revision').default(1).notNull(),
     ...timestamps,
   }, (table) => [
     foreignKey({

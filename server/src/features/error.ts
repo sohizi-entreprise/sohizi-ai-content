@@ -32,6 +32,13 @@ export class BadRequest extends BaseError {
 	}
 }
 
+export class Conflict extends BaseError {
+    readonly status = 409
+	constructor(message: string = 'Conflict') {
+		super(message)
+	}
+}
+
 export class Forbidden extends BaseError {
     readonly status = 403
 	constructor(message: string = 'Forbidden') {

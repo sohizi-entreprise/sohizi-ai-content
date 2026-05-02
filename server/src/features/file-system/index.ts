@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia'
 import { z } from 'zod'
 import * as fileService from './service'
-import { fileCreationRequestSchema, fileNodeInsertPositionSchema } from './payload';
+import { fileCreationRequestSchema, fileNodeInsertPositionSchema, updateTextFileContentRequestSchema } from './payload';
 
 const projectParams = z.object({
     projectId: z.uuid('Invalid project id'),
@@ -41,9 +41,7 @@ export const fileSystemRoutes = new Elysia({ prefix: '/projects/:projectId/files
   .put('/:id/content', ({params, body})=>{
     return fileService.updateFileContent(params.projectId, params.id, body)
   }, {
-    body: z.object({
-      content: z.string(),
-    })
+    body: updateTextFileContentRequestSchema
   })
   .put('/:id/rename', ({params, body})=>{
     return fileService.updateFileNode(params.projectId, { id: params.id, name: body.name })

@@ -1,0 +1,1 @@
+ALTER TABLE "file_node_contents" ADD COLUMN "revision" integer DEFAULT 1 NOT NULL;

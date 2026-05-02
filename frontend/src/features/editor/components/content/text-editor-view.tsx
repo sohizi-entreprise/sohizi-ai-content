@@ -12,6 +12,8 @@ import {
   DetailsSummary,
 } from '@tiptap/extension-details'
 import { Markdown } from '@tiptap/markdown'
+import { useParams } from '@tanstack/react-router'
+import { useDiffSave } from '../../hooks/use-autosave'
 import TextEditorToolbar from './text-editor-toolbar'
 import type { EditorTab } from '../../types'
 import './text-editor.css'
@@ -101,9 +103,26 @@ const editorExtensions = [
 interface TextEditorViewProps {
   tab: EditorTab
   initialContent?: string
+  initialRevision: number
 }
 
-export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
+export function TextEditorView({
+  tab,
+  initialContent,
+  initialRevision,
+}: TextEditorViewProps) {
+  const { projectId } = useParams({
+    from: '/dashboard/projects/$projectId/editor',
+  })
+  const baseMarkdown = initialContent || SAMPLE_CONTENT
+  const diffSave = useDiffSave({
+    duration: 2000,
+    projectId,
+    fileId: tab.id,
+    onSaveComplete: () => {
+      console.log('save complete')
+    },
+  })
   const editor = useEditor({
     immediatelyRender: true,
     extensions: [
@@ -114,12 +133,21 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
         },
       }),
     ],
-    content: initialContent || SAMPLE_CONTENT,
+    content: baseMarkdown,
     contentType: 'markdown',
     editorProps: {
       attributes: {
         class: 'tiptap-editor-content focus:outline-none',
       },
+    },
+    onUpdate: ({ editor: updatedEditor }) => {
+      const markdown = updatedEditor.getMarkdown()
+      diffSave({
+        oldText: baseMarkdown,
+        newText: markdown,
+        baseRevision: initialRevision,
+      })
+      // console.log(markdown)
     },
   })
 

@@ -1,4 +1,4 @@
-import { BadRequest, InternalServerError, NotFound } from '../error';
+import { BadRequest, Conflict, InternalServerError, NotFound } from '../error';
 import * as projectRepo from '../project/repo';
 import { fileFormat } from './constants';
 import {
@@ -9,13 +9,12 @@ import {
     createFileNode as createFileNodeFn,
     deleteFileNode as deleteFileNodeFn,
     getFileContent as getFileContentFn,
-    listDirectoryFiles as listDirectoryFilesFn,
     searchDirectoryContent as searchDirectoryContentFn,
     semanticSearchDirectory as semanticSearchDirectoryFn,
     updateFileContent as updateFileContentFn,
     updateFileNode as updateFileNodeFn,
 } from './functions';
-import { FileCreationRequest, UpdateFileRequest } from './payload';
+import { FileCreationRequest, UpdateFileRequest, UpdateTextFileContentRequest } from './payload';
 import * as fileSystemRepo from './repo';
 import { normalizeFileName } from './utils';
 import { ProseDocument } from 'zSchemas';
@@ -56,16 +55,99 @@ export const deleteFileNode = async(projectId: string, fileId: string) => {
     return { ok: true, data: fileId };
 }
 
-export const updateFileContent = async(projectId: string, fileNodeId: string, data: {content: string}) => {
+type CompactTextDiff = {
+    version: 1;
+    baseLength: number;
+    baseHash: number;
+    targetLength: number;
+    targetHash: number;
+    edits: Array<{
+        start: number;
+        deleteCount: number;
+        insert: string;
+    }>;
+}
+
+export const updateFileContent = async(projectId: string, fileNodeId: string, data: UpdateTextFileContentRequest) => {
     try {
-        return await updateFileContentFn(projectId, fileNodeId, data);
+        if (data.diff) {
+            const fileContent = await getFileContentFn(projectId, fileNodeId);
+            const baseRevision = data.baseRevision;
+
+            if (baseRevision === undefined) {
+                throw new FileSystemInputError('baseRevision is required when diff is provided');
+            }
+            if (fileContent.revision !== baseRevision) {
+                throw new Conflict('File content changed before diff could be applied');
+            }
+
+            const content = applyCompactTextDiff(fileContent.content ?? '', data.diff);
+            const updated = await fileSystemRepo.updateFileContentAtRevision(
+                projectId,
+                fileNodeId,
+                { content },
+                baseRevision,
+            );
+
+            if (!updated) {
+                throw new Conflict('File content changed before diff could be applied');
+            }
+
+            return updated;
+        }
+
+        return await updateFileContentFn(projectId, fileNodeId, { content: data.content ?? '' });
     } catch (error) {
+        if (error instanceof Conflict) {
+            throw error;
+        }
+        if (error instanceof FileSystemInputError) {
+            throw new BadRequest(error.message);
+        }
         if (error instanceof FileSystemOperationError) {
             throw new InternalServerError(error.message);
         }
         console.error(error);
         throw new InternalServerError('Something went wrong');
     }
+}
+
+function applyCompactTextDiff(content: string, diff: CompactTextDiff) {
+    if (diff.version !== 1) {
+        throw new FileSystemInputError('Unsupported diff version');
+    }
+    if (content.length !== diff.baseLength || hashText(content) !== diff.baseHash) {
+        throw new FileSystemInputError('File content changed before diff could be applied');
+    }
+
+    let nextContent = content;
+
+    for (const edit of [...diff.edits].reverse()) {
+        const end = edit.start + edit.deleteCount;
+
+        if (edit.start > nextContent.length || end > nextContent.length) {
+            throw new FileSystemInputError('Diff edit is out of bounds');
+        }
+
+        nextContent = `${nextContent.slice(0, edit.start)}${edit.insert}${nextContent.slice(end)}`;
+    }
+
+    if (nextContent.length !== diff.targetLength || hashText(nextContent) !== diff.targetHash) {
+        throw new FileSystemInputError('Diff target length does not match applied content');
+    }
+
+    return nextContent;
+}
+
+function hashText(value: string) {
+    let hash = 0;
+
+    for (let index = 0; index < value.length; index += 1) {
+        hash = Math.imul(31, hash) + value.charCodeAt(index);
+        hash |= 0;
+    }
+
+    return hash;
 }
 
 export const listFileTreePerLevel = async(projectId: string, parentId: string) => {
@@ -101,11 +183,11 @@ export const getFileContent = async(projectId: string, fileNodeId: string) => {
 
     switch (fileNode.format) {
         case fileFormat.JSON:
-            return {content: fileContent.jsonContent};
+            return {content: fileContent.jsonContent, revision: fileContent.revision};
         default:{
             const content = fileContent.content ?? "";
 
-            return {content};
+            return {content, revision: fileContent.revision};
         }
     }
 }

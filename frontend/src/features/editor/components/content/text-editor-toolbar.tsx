@@ -145,7 +145,7 @@ export default function TextEditorToolbar({editor, tabName}: {editor: Editor, ta
             ))
         }
         <div className="ml-auto text-xs text-muted-foreground">
-          {tabName}
+          {tabName} --saving
         </div>
       </div>
   )

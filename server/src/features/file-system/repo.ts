@@ -339,8 +339,31 @@ export const updateBulkFileNodes = async(projectId: string, data: UpdateFileRequ
 
 export const updateFileContent = async(projectId: string, fileNodeId: string, data: UpdateFileContentRequest)=>{
     const result = await db.update(fileNodeContents)
-                           .set(data)
+                           .set({
+                               ...data,
+                               revision: sql`${fileNodeContents.revision} + 1`,
+                           })
                            .where(and(eq(fileNodeContents.projectId, projectId), eq(fileNodeContents.fileNodeId, fileNodeId)))
+                           .returning();
+    return result[0];
+}
+
+export const updateFileContentAtRevision = async(
+    projectId: string,
+    fileNodeId: string,
+    data: UpdateFileContentRequest,
+    baseRevision: number,
+) => {
+    const result = await db.update(fileNodeContents)
+                           .set({
+                               ...data,
+                               revision: sql`${fileNodeContents.revision} + 1`,
+                           })
+                           .where(and(
+                               eq(fileNodeContents.projectId, projectId),
+                               eq(fileNodeContents.fileNodeId, fileNodeId),
+                               eq(fileNodeContents.revision, baseRevision),
+                           ))
                            .returning();
     return result[0];
 }

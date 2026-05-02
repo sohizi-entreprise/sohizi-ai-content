@@ -30,6 +30,7 @@ const app = new Elysia()
                   const url = new URL(request.url)
                   switch(code){
                     case "BadRequest":
+                    case "Conflict":
                     case "Forbidden":
                     case "Unauthorized":
                     case "NotFound":

@@ -113,15 +113,44 @@ export const updateFileContentRequestSchema = z.object({
     path: ['content', 'jsonContent', 'proseContent'],
 })
 
-// z.object({
-//     id: z.string(),
-//     name: z.string().max(50, 'Name must be less than 50 characters').optional(),
-//     parentId: z.string().nullable().optional(),
-//     position: z.number().gte(0, 'Position must be greater than 0').optional(),
-// })
+export const compactTextDiffSchema = z.object({
+    version: z.literal(1),
+    baseLength: z.number().int().nonnegative(),
+    baseHash: z.number().int(),
+    targetLength: z.number().int().nonnegative(),
+    targetHash: z.number().int(),
+    edits: z.array(z.object({
+      start: z.number().int().nonnegative(),
+      deleteCount: z.number().int().nonnegative(),
+      insert: z.string(),
+    })),
+})
+
+export const updateTextFileContentRequestSchema = z.object({
+    content: z.string().optional(),
+    diff: compactTextDiffSchema.optional(),
+    baseRevision: z.number().int().positive().optional(),
+}).superRefine((data, ctx) => {
+    if (data.content === undefined && data.diff === undefined) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'content or diff is required',
+            path: ['content', 'diff'],
+        })
+    }
+
+    if (data.diff !== undefined && data.baseRevision === undefined) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'baseRevision is required when diff is provided',
+            path: ['baseRevision'],
+        })
+    }
+})
 
 export type UpdateFilePositionRequest = z.infer<typeof updateFilePositionRequestSchema>;
 export type UpdateFileRequest = z.infer<typeof updateFileRequestSchema>;
 export type UpdateFileContentRequest = z.infer<typeof updateFileContentRequestSchema>;
+export type UpdateTextFileContentRequest = z.infer<typeof updateTextFileContentRequestSchema>;
 export type FileCreationRequest = z.infer<typeof fileCreationRequestSchema>;
 export type FileNodeInsertPosition = z.infer<typeof fileNodeInsertPositionSchema>;
