@@ -19,7 +19,9 @@ interface EditorState {
   activityBarItem: ActivityBarItem
   aiMessages: Array<ChatMessage>
   sidebarCollapsed: boolean
+  savingStatus: Record<string, 'saving' | 'saved' | 'error'>
 
+  setSavingStatus: (tabId: string, status: 'saving' | 'saved' | 'error') => void
   openFile: (node: FileTreeNode) => void
   closeTab: (tabId: string) => void
   closePane: (pane: Pane) => void
@@ -40,7 +42,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activityBarItem: 'files',
   aiMessages: MOCK_CHAT_MESSAGES,
   sidebarCollapsed: false,
+  savingStatus: {},
 
+  setSavingStatus: (tabId, status) =>
+    set({ savingStatus: { ...get().savingStatus, [tabId]: status } }),
   openFile: (node) => {
     if (node.directory) return
     const { openTabs } = get()
@@ -70,10 +75,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   closeTab: (tabId) => {
-    const { activePaneTab, activeTabId, openTabs, splitView } = get()
+    const { activePaneTab, activeTabId, openTabs, savingStatus, splitView } =
+      get()
     const tab = openTabs.find((t) => t.id === tabId)
     const filtered = openTabs.filter((t) => t.id !== tabId)
-    const updates: Partial<EditorState> = { openTabs: filtered }
+    const { [tabId]: _removedSavingStatus, ...nextSavingStatus } = savingStatus
+    const updates: Partial<EditorState> = {
+      openTabs: filtered,
+      savingStatus: nextSavingStatus,
+    }
 
     if (tab) {
       const samePaneTabs = filtered.filter((t) => t.pane === tab.pane)
@@ -97,6 +107,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           activePaneTab: { left: activeId, right: null },
           activeTabId: activeId,
           openTabs: normalizedTabs,
+          savingStatus: nextSavingStatus,
           selectedFileId: activeId,
           splitView: false,
         })

@@ -6,6 +6,7 @@ import {
 } from '../query-mutations'
 import type { CompactTextDiff } from '../requests'
 import DiffWorker from '@/lib/workers/diff-worker?worker'
+import { useEditorStore } from '../stores/editor-store'
 
 export type AutosavePayload = {
   content: string
@@ -123,6 +124,8 @@ export function useDiffSave({
   const onSaveErrorRef = useRef(onSaveError)
   const workerRef = useRef<Worker | null>(null)
 
+  const setSavingStatus = useEditorStore(s => s.setSavingStatus)
+
   const { mutateAsync: saveFileContentDiff } = useMutation(
     saveFileContentDiffMutationOptions(projectId, fileId),
   )
@@ -171,11 +174,14 @@ export function useDiffSave({
 
         if (!diff) return
 
+        setSavingStatus(fileId, 'saving')
         const savedContent = await saveFileContentDiff({ diff, baseRevision })
         shadowContentRef.current = content
         shadowRevisionRef.current = savedContent.revision
         onSaveCompleteRef.current?.()
+        setSavingStatus(fileId, 'saved')
       } catch (error) {
+        setSavingStatus(fileId, 'error')
         onSaveErrorRef.current?.(
           error instanceof Error ? error : new Error(String(error)),
         )

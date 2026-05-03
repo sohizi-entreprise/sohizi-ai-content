@@ -116,9 +116,7 @@ export const updateFileContentRequestSchema = z.object({
 export const compactTextDiffSchema = z.object({
     version: z.literal(1),
     baseLength: z.number().int().nonnegative(),
-    baseHash: z.number().int(),
     targetLength: z.number().int().nonnegative(),
-    targetHash: z.number().int(),
     edits: z.array(z.object({
       start: z.number().int().nonnegative(),
       deleteCount: z.number().int().nonnegative(),

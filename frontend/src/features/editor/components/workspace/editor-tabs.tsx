@@ -73,7 +73,7 @@ export function EditorTabs({ tabs, activeTabId, pane }: EditorTabsProps) {
   if (tabs.length === 0) return null
 
   return (
-    <div className="flex h-9 shrink-0 items-center overflow-x-auto overflow-y-hidden border-b border-border bg-background">
+    <div className="flex h-9 shrink-0 items-center overflow-x-auto overflow-y-hidden border-b border-border bg-background [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-none">
       <div className="flex items-center">
         {tabs.map((tab) => (
           <div

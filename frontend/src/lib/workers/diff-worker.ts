@@ -25,9 +25,7 @@ self.onmessage = function (e: MessageEvent) {
 type CompactTextDiff = {
   version: 1
   baseLength: number
-  baseHash: number
   targetLength: number
-  targetHash: number
   edits: Array<{
     start: number
     deleteCount: number
@@ -81,20 +79,7 @@ function createCompactTextDiff(
   return {
     version: 1,
     baseLength: oldText.length,
-    baseHash: hashText(oldText),
     targetLength: newText.length,
-    targetHash: hashText(newText),
     edits,
   }
-}
-
-function hashText(value: string) {
-  let hash = 0
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash = Math.imul(31, hash) + value.charCodeAt(index)
-    hash |= 0
-  }
-
-  return hash
 }

@@ -19,8 +19,9 @@ import { Separator } from '@/components/ui/separator'
 import React from 'react'
 import { Editor } from '@tiptap/core'
 import { useEditorState } from '@tiptap/react'
+import { useEditorStore } from '../../stores/editor-store'
 
-export default function TextEditorToolbar({editor, tabName}: {editor: Editor, tabName: string}) {
+export default function TextEditorToolbar({editor, tabId}: {editor: Editor, tabId: string}) {
 
     const editorState = useEditorState({
         editor,
@@ -40,6 +41,8 @@ export default function TextEditorToolbar({editor, tabName}: {editor: Editor, ta
             isAlignRight: editor.isActive({ textAlign: 'right' }),
         }),
     })
+
+    const savingStatus = useEditorStore(s => s.savingStatus[tabId])
 
     const options = [
         {
@@ -145,7 +148,7 @@ export default function TextEditorToolbar({editor, tabName}: {editor: Editor, ta
             ))
         }
         <div className="ml-auto text-xs text-muted-foreground">
-          {tabName} --saving
+          <SavingStatus status={savingStatus} />
         </div>
       </div>
   )
@@ -180,3 +183,16 @@ function ToolbarButton({
       </Button>
     )
   }
+
+function SavingStatus({ status }: { status: 'saving' | 'saved' | 'error' }) {
+    switch (status) {
+        case 'saving':
+            return <span className="text-xs text-muted-foreground">Saving...</span>
+        case 'saved':
+            return <span className="text-xs text-muted-foreground">Saved</span>
+        case 'error':
+            return <span className="text-xs text-muted-foreground">Error</span>
+        default:
+            return null
+    }
+}

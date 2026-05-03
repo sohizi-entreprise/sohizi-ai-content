@@ -16,9 +16,7 @@ export const getFileContent = async (
 export type CompactTextDiff = {
   version: 1
   baseLength: number
-  baseHash: number
   targetLength: number
-  targetHash: number
   edits: Array<{
     start: number
     deleteCount: number

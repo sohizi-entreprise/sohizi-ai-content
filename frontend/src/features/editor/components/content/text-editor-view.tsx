@@ -154,7 +154,7 @@ export function TextEditorView({
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-background">
       {/* Toolbar */}
-      <TextEditorToolbar editor={editor} tabName={tab.name} />
+      <TextEditorToolbar editor={editor} tabId={tab.id} />
 
       {/* Editor content */}
       <div className="flex-1 overflow-auto overscroll-none">

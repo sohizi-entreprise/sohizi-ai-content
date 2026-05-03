@@ -58,9 +58,7 @@ export const deleteFileNode = async(projectId: string, fileId: string) => {
 type CompactTextDiff = {
     version: 1;
     baseLength: number;
-    baseHash: number;
     targetLength: number;
-    targetHash: number;
     edits: Array<{
         start: number;
         deleteCount: number;
@@ -116,7 +114,7 @@ function applyCompactTextDiff(content: string, diff: CompactTextDiff) {
     if (diff.version !== 1) {
         throw new FileSystemInputError('Unsupported diff version');
     }
-    if (content.length !== diff.baseLength || hashText(content) !== diff.baseHash) {
+    if (content.length !== diff.baseLength) {
         throw new FileSystemInputError('File content changed before diff could be applied');
     }
 
@@ -132,22 +130,11 @@ function applyCompactTextDiff(content: string, diff: CompactTextDiff) {
         nextContent = `${nextContent.slice(0, edit.start)}${edit.insert}${nextContent.slice(end)}`;
     }
 
-    if (nextContent.length !== diff.targetLength || hashText(nextContent) !== diff.targetHash) {
+    if (nextContent.length !== diff.targetLength) {
         throw new FileSystemInputError('Diff target length does not match applied content');
     }
 
     return nextContent;
-}
-
-function hashText(value: string) {
-    let hash = 0;
-
-    for (let index = 0; index < value.length; index += 1) {
-        hash = Math.imul(31, hash) + value.charCodeAt(index);
-        hash |= 0;
-    }
-
-    return hash;
 }
 
 export const listFileTreePerLevel = async(projectId: string, parentId: string) => {
