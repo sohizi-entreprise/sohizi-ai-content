@@ -1,3 +1,5 @@
+import { UserContent, AssistantContent, ToolContent, ModelMessage, FinishReason } from 'ai';
+
 export type ProjectStatus = 'DRAFT' | 'OUTLINE_GENERATED' | 'OUTLINE_CONFIRMED' | 'SHOTS_GENERATED';
 export type GenerationRequestStatus = 'ENQUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELED';
 export type GenerationRequestType = 
@@ -16,57 +18,30 @@ export type TimeOfDay = 'dawn' | 'day' | 'sunset' | 'night' | 'unspecified';
 
 export type EntityType = 'CHARACTER' | 'LOCATION' | 'PROP' | 'COSTUME';
 
-export type ProjectRequirements = {
-  format: ProjectFormat;
-  audience: Audience;
-  genre: string;
-  tone: string;
-  maxDuration?: string;
-  constraints?: {
-    mustInclude: string[];
-    mustAvoid: string[];
-    forbiddenPhrases: string[];
-  };
-};
+export type ModelCategory = 'text' | 'image' | 'video' | 'audio';
 
-export type MsgTextPart = {
-  type: 'text'
-  text: string
+export type ModelRecommendedUsage = 'lead-agent' | 'summary-agent'
+
+export type MsgContent = UserContent | AssistantContent | ToolContent
+
+export type PricingTier = {
+  up_to: number | null;
+  rate: number;
 }
 
-export type MsgToolCallPart = {
-  type: 'tool-call'
-  toolName: string
-  toolCallId: string
-  input: unknown
+export type TokenPricing = {
+  currency: "USD";
+  unit: "per_1m_tokens";
+  basis?: "request_tokens" | "billable_tokens";
+  input: PricingTier[];
+  output: PricingTier[];
+  cached_input?: PricingTier[];
 }
 
-export type ToolResult = {
-  type: 'text'
-  value: string
-} | {
-  type: 'error-text'
-  value: string
-}
-
-export type MsgToolResultPart = {
-  type: 'tool-result'
-  toolName: string
-  toolCallId: string
-  output: ToolResult
-}
-
-export type MsgContent = MsgTextPart | MsgToolCallPart | MsgToolResultPart
-
-export type MsgContext = {
-  blocks?: string[]
-  selections?: string[]
-}
-
-export type MsgMetadata = {
-  reasoningText?: string
-  attachments?: Record<string, unknown>
-  context?: MsgContext
+export type TextTokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens?: number;
 }
 
 export type ChatMetadata = {
@@ -88,7 +63,35 @@ export type CursorPaginationResult<T> = {
   hasMore: boolean;
 };
 
-export type AgentRunFinishReason = 'response' | 'error' | 'tool-calls' | 'aborted' | 'max-iterations' | 'not-finished';
+export type Runstatus = 'idle' | 'running' | 'finished' | 'error' | 'aborted' | 'paused'
+
+export type TodoItem = {
+  id: string;
+  task: string;
+  status: 'pending' | 'in_progress' | 'done';
+}
+
+export type CompleteReason = FinishReason | 'abort';
+
+export type TokenUsage = {
+  input: number;
+  output: number;
+  reasoning: number;
+  cached: number;
+  total: number;
+  modelId: string;
+}
+
+export type AgentState = {
+  messages: ModelMessage[];
+  usage: TokenUsage | null;
+  status: Runstatus;
+  finishReason: CompleteReason | 'need-approval' | null;
+  error: string | null;
+  todos: TodoItem[];
+}
+
+// export type AgentRunFinishReason = 'response' | 'error' | 'tool-calls' | 'aborted' | 'max-iterations' | 'not-finished';
 
 export type ProseNode = {
   type: string
@@ -105,64 +108,5 @@ export type SceneContent =
 
 export type ProseDocument = { type: 'doc'; content: ProseNode[] }
 
-export type DocumentId = 'synopsis' | 'script' | 'story_bible' | 'shots';
-
-export type StoryBibleEntityType = 'character' | 'location' | 'prop';
-
-export type TaskType = 'SCENE_GENERATION' | 'SHOT_GENERATION' | 'ENTITY_GENERATION' | 'IMAGE_GENERATION' | 'BATCH_GENERATION'
-export type SseEventType = 'TASK_UPDATE' | 'CHAT_CHUNK'
 
 
-export type ProjectPhase = 'DRAFT' | 'CONCEPT' | 'SYNOPSIS' | 'BUILDING' | 'EDITING';
-export type ShotType = 'establishing' | 'wide' | 'medium' | 'closeup' | 'insert' | 'unspecified';
-export type ShotAngle = 'eye_level' | 'low' | 'high' | 'over_shoulder' | 'top_down' | 'unspecified';
-export type ShotMovement = 'static' | 'slow_zoom_in' | 'slow_zoom_out' | 'pan_left' | 'pan_right' | 'tilt_up' | 'tilt_down' | 'unspecified';
-
-export type ShotSubject = {
-  characterId: string;
-  costumeId?: string;
-  equippedPropIds?: string[];
-  actionAndPose: string;
-}
-
-export type SpeechTrack = {
-  characterId: string;
-  voiceModelId: string;
-  speechType: 'narration' | 'dialogue' | 'thought' | 'internal_monologue';
-  text: string;
-  ttsParameters: {
-    emotion: string;
-    pacing: string;
-  };
-}
-
-export type ShotVisuals = {
-  subjects: ShotSubject[]
-  environment: {
-    locationId: string
-    setting: string
-    timeOfDay: string
-    weatherOrAtmosphere: string
-  },
-  cameraPlan : {
-    shotType: ShotType
-    cameraAngle: ShotAngle
-    lensAndDepth: string
-    movement: ShotMovement
-    focusSubject?: string
-  },
-  style: {
-    lighting: string
-    colorPalette: string[]
-    medium: string
-    pipelineModifiers: string
-  }
-}
-
-export type ShotAudio = {
-  speechTracks: SpeechTrack[];
-  soundDesign: {
-    ambientSfx: string
-    actionSfx: string
-  }
-}

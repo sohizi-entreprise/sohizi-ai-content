@@ -1,27 +1,12 @@
-import { ModelMessage, ToolModelMessage } from "ai";
+import { AssistantContent, ModelMessage, ToolModelMessage } from "ai";
 import { InvokeRequest, LlmClient } from "../utils/llm-client";
-import { CompleteReason, LlmChunk, streamEvents, TokenUsage, ToolCall, ToolResultComplete } from "../utils/llm-response";
+import { LlmChunk, streamEvents, ToolCall, ToolResultComplete } from "../utils/llm-response";
 import { v4 as uuidv4 } from 'uuid';
 import { getTool } from "../tools/tool-registry";
 import { mergeGenerators } from "../utils/merge-generators";
 import { Session } from "./session";
+import { AgentState, CompleteReason, TokenUsage } from "@/type";
 
-type Runstatus = 'idle' | 'running' | 'finished' | 'error' | 'aborted' | 'paused'
-
-type TodoItem = {
-    id: string;
-    task: string;
-    status: 'pending' | 'in_progress' | 'done';
-}
-
-export type AgentState = {
-    messages: ModelMessage[];
-    usage: TokenUsage | null;
-    status: Runstatus;
-    finishReason: CompleteReason | 'need-approval' | null;
-    error: string | null;
-    todos: TodoItem[];
-}
 
 type CallbackEvent = 'finish' | 'start'
 type CallbackHandler = (state: AgentState) => void;
@@ -39,13 +24,13 @@ export class Agent {
     private callbacks: Map<CallbackEvent, Set<CallbackHandler>>
     private readonly session: Session;
 
-    constructor(name: string, llmClient: LlmClient, systemPrompt: string, session: Session) {
-        this.llmClient = llmClient;
-        this.state = this.getInitialState(systemPrompt);
+    constructor(name: string, systemPrompt: string, session: Session) {
+        this.llmClient = session.llmClient;
         this.name = name;
         this.runId = null;
         this.callbacks = new Map();
         this.session = session;
+        this.state = this.getInitialState(systemPrompt);
     }
 
     async* runLoop(prompt: string, abortSignal: AbortSignal, maxSteps: number = 25): AsyncGenerator<AgentChunk, void, unknown> {
@@ -61,6 +46,7 @@ export class Agent {
             // yield {name: this.name, runId: this.runId!, type: streamEvents.complete, usage: this.state.usage!, text: '', finishReason: this.state.finishReason!};
         }
         this.triggerCallback('finish');
+        this.session.persistState(this.state);
     }
 
     async* runStep(abortSignal: AbortSignal): AsyncGenerator<AgentChunk, void, unknown> {
@@ -77,7 +63,7 @@ export class Agent {
 
         for await (const chunk of this.llmClient.invoke(request)) {
             if(chunk.type === streamEvents.complete){
-                console.log(chunk)
+                // console.log(chunk)
             }
             switch (chunk.type) {
                 case streamEvents.complete:
@@ -95,28 +81,24 @@ export class Agent {
             }
         }
 
-        const assistant_message: ModelMessage = {
-            role: 'assistant',
-            content: [
-                {
-                    type: 'text',
-                    text,
-                },
-                {
-                    type: 'reasoning',
-                    text: reasoning_text,
-                },
-                ...tool_calls.map((tool_call) => ({
-                    type: 'tool-call' as const,
-                    toolName: tool_call.toolName,
-                    input: tool_call.input,
-                    toolCallId: tool_call.toolCallId,
-                })),
-            ],
+        const content: AssistantContent = []
+        if(reasoning_text){
+            content.push({type: 'reasoning', text: reasoning_text});
+        }
+        if(text){
+            content.push({type: 'text', text});
+        }
+        for(const tool_call of tool_calls){
+            content.push({type: 'tool-call', toolName: tool_call.toolName, input: tool_call.input, toolCallId: tool_call.toolCallId});
         }
 
-        if(text || tool_calls.length > 0){
-            this.state.messages.push(assistant_message);
+        const assistant_message: ModelMessage = {
+            role: 'assistant',
+            content,
+        }
+
+        if(content.length > 0){
+            this.registerMessage(assistant_message);
         }
 
         if(tool_calls.length > 0){
@@ -166,6 +148,11 @@ export class Agent {
     }
 
     private getInitialState(systemPrompt: string): AgentState {
+        const existingState = this.session.checkpoint.state;
+        if(existingState){
+            const messages = existingState.messages.filter((message) => message.role !== 'system');
+            return {...existingState, status: 'idle', messages: [{role: 'system', content: systemPrompt}, ...messages]};
+        }
         return {
             messages: [{
                 role: 'system',
@@ -180,9 +167,9 @@ export class Agent {
     }
 
     private appendUserMessage(message: string) {
-        this.state.messages.push({
+        this.registerMessage({
             role: 'user',
-            content: message,
+            content: [{type: 'text', text: message}],
         });
     }
 
@@ -243,8 +230,8 @@ export class Agent {
             ],
         };
 
-        this.state.messages.push(msg);
-        this.incrementUsage({...result.usage, modelId: this.session.modelConfig.modelId});
+        this.registerMessage(msg);
+        this.incrementUsage({...result.usage, modelId: this.session.model.id});
     }
 
     private appendBadToolNames(data: {toolCallId: string, toolName: string}[]){
@@ -262,7 +249,16 @@ export class Agent {
                 },
             ],
         }));
-        this.state.messages.push(...msgs);
+        this.registerMessage(msgs);
+    }
+
+    private registerMessage(message: ModelMessage | ModelMessage[]) {
+        if(Array.isArray(message)){
+            this.state.messages.push(...message);
+        }else{
+            this.state.messages.push(message);
+        }
+        this.session.registerMessage(message);
     }
 
     private buildEvent(chunk: LlmChunk): AgentChunk {

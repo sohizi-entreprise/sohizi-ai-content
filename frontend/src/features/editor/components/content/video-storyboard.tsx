@@ -6,11 +6,6 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Plus, ChevronDown, Grid2X2, List } from 'lucide-react'
-import { ScenePanel } from '../storyboard/scene-panel'
-import { ShotCard } from '../storyboard/shot-card'
-import { PreviewPanel } from '../storyboard/preview-panel'
-import { Timeline } from '../storyboard/timeline'
-import { MOCK_SCENES } from '../../mock-data'
 import type { EditorTab } from '../../types'
 
 interface VideoStoryboardProps {
@@ -39,7 +34,7 @@ function ShotsGrid() {
         </Button>
       </div>
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-4">
+        {/* <div className="p-3 space-y-4">
           {MOCK_SCENES.map((scene) => (
             <div key={scene.id}>
               <div className="mb-2 flex items-center gap-2">
@@ -60,7 +55,7 @@ function ShotsGrid() {
               </div>
             </div>
           ))}
-        </div>
+        </div> */}
       </ScrollArea>
     </div>
   )
@@ -75,7 +70,7 @@ export function VideoStoryboard(_props: VideoStoryboardProps) {
           <ResizablePanelGroup direction="horizontal" className="h-full w-full">
             {/* Left: Scene metadata */}
             <ResizablePanel defaultSize={22} minSize={18} maxSize={35}>
-              <ScenePanel />
+           
             </ResizablePanel>
             <ResizableHandle />
 
@@ -88,7 +83,7 @@ export function VideoStoryboard(_props: VideoStoryboardProps) {
             {/* Right: Preview */}
             <ResizablePanel defaultSize={28} minSize={20}>
               <div className="h-full p-2">
-                <PreviewPanel />
+               
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -97,7 +92,7 @@ export function VideoStoryboard(_props: VideoStoryboardProps) {
 
         {/* Bottom: Timeline */}
         <ResizablePanel defaultSize={35} minSize={15} maxSize={50}>
-          <Timeline />
+       
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

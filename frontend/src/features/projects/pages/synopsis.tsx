@@ -9,11 +9,11 @@ import { useParams } from '@tanstack/react-router'
 import { useConceptStore } from '../store/concept-store'
 import { useResumableStream } from '@/hooks/use-resumable-stream'
 import { ChatContainer } from '@/features/chat/components/chat-container'
-import { useConversationStore } from '@/features/chat/store/conversation-store'
 import { useGetSSE } from '@/hooks/use-get-sse'
 import { sseEditorEventHandlers } from '@/features/chat/event-handlers'
 import SynopsisEditor from '../components/synopsis-editor'
 import { TextSkeleton } from '@/features/text-editor'
+import { useChatStore } from '@/features/chat/store/chat-store'
 
 export default function SynopsisPage() {
     const { projectId } = useParams({ from: '/dashboard/projects/$projectId/synopsis' })
@@ -67,7 +67,7 @@ export default function SynopsisPage() {
 
 function RenderChat({projectId}: {projectId: string}) {
 
-    const conversationId = useConversationStore(state => state.currentConversation?.id)
+    const conversationId = useChatStore(state => state.activeConversationId)
 
     const subscribe = useGetSSE({
         eventFuncMap: sseEditorEventHandlers,

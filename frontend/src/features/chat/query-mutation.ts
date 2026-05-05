@@ -1,39 +1,53 @@
-import { queryOptions, mutationOptions } from '@tanstack/react-query'
+import { queryOptions, mutationOptions, infiniteQueryOptions, keepPreviousData } from '@tanstack/react-query'
 import * as requests from './requests'
-import { SendMessageInput } from './types'
 
 const keysFactory = {
-    conversations: (projectId: string) => ['conversations', projectId],
-    conversationMessages: (projectId: string, id: string) => ['conversationMessages', projectId, id],
+    conversations: (projectId: string, options?: requests.CursorPaginationOptions) => ['conversations', projectId, options],
+    messages: (projectId: string, conversationId: string, options?: requests.CursorPaginationOptions) => ['messages', projectId, conversationId, options],
+    models: (projectId: string) => ['models', projectId],
 }
 
-export const createConversationMutationOptions = (projectId: string) => mutationOptions({
-    mutationFn: () => requests.createConversation(projectId),
+export const deleteConversationMutationOptions = (projectId: string) => mutationOptions({
+    mutationFn: (conversationId: string) => requests.deleteConversation(projectId, conversationId),
     meta: {
         invalidateQueries: [keysFactory.conversations(projectId)],
     },
-})
-
-export const deleteConversationMutationOptions = (projectId: string, id: string) => mutationOptions({
-    mutationFn: () => requests.deleteConversation(projectId, id),
-    meta: {
-        invalidateQueries: [keysFactory.conversations(projectId)],
+    onSuccess(_data, conversationId, _onMutateResult, context) {
+        context.client.removeQueries({ queryKey: keysFactory.messages(projectId, conversationId) })
     },
 })
 
-export const listConversationsQueryOptions = (projectId: string) => queryOptions({
-    queryKey: keysFactory.conversations(projectId),
-    queryFn: () => requests.listConversations(projectId),
+export const listConversationsQueryOptions = (
+    projectId: string,
+    options?: requests.CursorPaginationOptions,
+) => infiniteQueryOptions({
+    queryKey: keysFactory.conversations(projectId, options),
+    queryFn: ({ pageParam }) => requests.listConversations(projectId, { ...options, cursor: pageParam }),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: options?.cursor as string | undefined,
+    select: (data) => data.pages.flatMap(page => page.data),
+    placeholderData: keepPreviousData,
 })
 
-export const getConversationMessagesQueryOptions = (projectId: string, id: string) => queryOptions({
-    queryKey: keysFactory.conversationMessages(projectId, id),
-    queryFn: () => requests.getConversationMessages(projectId, id),
+
+export const listMessagesInfiniteQueryOptions = (projectId: string, conversationId: string | null) => infiniteQueryOptions({
+    queryKey: keysFactory.messages(projectId, conversationId ?? 'empty'),
+    queryFn: ({ pageParam }) => {
+        if (!conversationId) return Promise.reject(new Error('Conversation ID is required'))
+        return requests.getConversationMessages(projectId, conversationId, { cursor: pageParam })
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined as string | undefined,
+    select: (data) => data.pages.flatMap(page => page.data),
+    enabled: !!conversationId,
+    placeholderData: conversationId ? keepPreviousData : undefined,
 })
 
-export const sendMessageMutationOptions = (projectId: string) => mutationOptions({
-    mutationFn: (data: SendMessageInput) => requests.sendMessage(projectId, data),
-    // meta: {
-    //     invalidateQueries: [keysFactory.conversationMessages(projectId, id)],
-    // },
+export const listModelsQueryOptions = (projectId: string) => queryOptions({
+    queryKey: keysFactory.models(projectId),
+    queryFn: () => requests.listModels(projectId),
 })
+
+export const getMessageQueryKey = (projectId: string, conversationId: string) => keysFactory.messages(projectId, conversationId)
+export const getConversationQueryKey = (projectId: string) => keysFactory.conversations(projectId)
+

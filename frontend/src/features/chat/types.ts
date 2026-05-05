@@ -34,6 +34,13 @@ export type MessageRole = 'user' | 'assistant' | 'tool'
 export type MsgTextPart = {
   type: 'text'
   text: string
+  isStreaming?: boolean
+}
+
+export type ReasoningPart = {
+  type: 'reasoning'
+  text: string
+  isStreaming?: boolean
 }
 
 export type MsgToolCallPart = {
@@ -41,7 +48,7 @@ export type MsgToolCallPart = {
   toolName: string
   toolCallId: string
   input: unknown
-  isLoading?: boolean
+  isStreaming?: boolean
 }
 
 export type ToolResult = {
@@ -57,6 +64,7 @@ export type MsgToolResultPart = {
   toolName: string
   toolCallId: string
   output: ToolResult
+  isStreaming?: boolean
 }
 
 export type MsgContext = {
@@ -70,14 +78,12 @@ export type MsgMetadata = {
   context?: MsgContext;
 }
 
-export type MsgContent = MsgTextPart | MsgToolCallPart | MsgToolResultPart
+export type MsgContent = MsgTextPart | MsgToolCallPart | MsgToolResultPart | ReasoningPart
 
 export type Message = {
   id: string
-  runId: string
   role: MessageRole
   content: MsgContent[]
-  metadata?: MsgMetadata
   createdAt: string
 }
 
@@ -251,3 +257,41 @@ export type ProjectInfo = {
   maxDuration?: string
   constraints?: Record<string, unknown>
 }
+
+// ============================================================================
+// TO BE KEPT
+// ============================================================================
+
+export type ChatCompletionRequest = {
+  modelId: string;
+  userPrompt: string;
+  conversationId: string | null;
+  editorContext?: Record<string, unknown>;
+}
+
+export type ChatStreamChunk = {
+  name: string;
+  runId: string;
+} & (
+  | { type: 'text_delta'; text: string }
+  | { type: 'reasoning_delta'; text: string }
+  | { type: 'usage'; usage: TokenUsage }
+  | { type: 'tool_call_delta'; toolCallId: string; input: string }
+  | { type: 'tool_call_start'; toolCallId: string; toolName: string; input: string }
+  | { type: 'tool_call_end'; toolCallId: string }
+  | { type: 'tool_call'; toolCallId: string; toolName: string; input: unknown }
+  | { type: 'complete'; text: string; finishReason: 'error' | 'not-finished' | 'response' | 'tool-calls' | 'aborted' | 'max-iterations'; usage: TokenUsage; error?: string; reasoningText?: string }
+  | { type: 'error'; error: string }
+  | { type: 'abort' }
+  | { type: 'identifier'; conversationId: string, conversationTitle: string }
+)
+
+export type LlmModel = {
+  id: string;
+  provider: string;
+  name: string;
+}
+
+
+
+

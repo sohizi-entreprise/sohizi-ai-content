@@ -23,14 +23,6 @@ export interface EditorTab {
   content?: string
 }
 
-export interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: string
-  reasoning?: string
-}
-
 export type ActivityBarItem = 'files' | 'search' | 'settings' | 'git' | 'extensions'
 
 export type ContentType = 'text' | 'video'

@@ -24,7 +24,6 @@ import { useEffect } from 'react'
 import '../../text-editor/styles/synopsis-editor.css'
 import { TextSkeleton } from '@/features/text-editor'
 import { useChatStore } from '@/features/chat/store/chat-store'
-import { useConversationStore } from '@/features/chat/store/conversation-store'
 import { respondToChanges } from '@/features/text-editor/extensions/diff-store'
 
 type SynopsisEditorProps = {
@@ -37,7 +36,6 @@ export default function SynopsisEditor({projectId, className}: SynopsisEditorPro
     const isGeneratingSynopsis = useConceptStore(state => state.isGenerating.synopsis)
     const setEditorBridge = useChatStore(state => state.setEditorBridge)
     const resetChatStore = useChatStore(state => state.reset)
-    const setBridgeConversation = useConversationStore(state => state.setBridge)
 
     const autosave = useAutosave({
         duration: 1000,
@@ -56,7 +54,7 @@ export default function SynopsisEditor({projectId, className}: SynopsisEditorPro
     const handleChange = (content: JSONContent) => {
         autosave({ type: 'synopsis', content })
     }
-    const initialContent = data.synopsis || undefined
+    const initialContent = undefined
 
     const editor = useEditor({
         immediatelyRender: false,
@@ -112,7 +110,6 @@ export default function SynopsisEditor({projectId, className}: SynopsisEditorPro
             resetChatStore()
             // Set the editor bridge
             setEditorBridge(bridge)
-            setBridgeConversation(bridge)
         }
     }, [bridge])
 

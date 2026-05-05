@@ -14,14 +14,15 @@ import {
     foreignKey,
   } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
-import { AgentRunFinishReason, 
-         ChatMetadata, 
-         MsgContent, 
-         MsgMetadata, 
-         ProseDocument, 
+import { 
+  AgentState,
+  ModelCategory,
+         ModelRecommendedUsage,
+         MsgContent,
+         ProseDocument,
+         TokenPricing, 
   } from '@/type';
 import { FileFormat } from '@/features/file-system/constants';
-import { ModelMessage, UserContent, AssistantContent, ToolContent } from 'ai';
 
 type FileNodeRelationshipType = 'appears_in' | 'derived_from' | 'wears' | 'located_in' | 'uses' | 'depends_on';
 
@@ -151,6 +152,8 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
   }, (table) => [
     uniqueIndex('file_node_relationships_project_id_file_node_id_related_file_node_id_unique').on(table.projectId, table.fileNodeId, table.relatedFileNodeId),
   ])
+
+  // ======================== CONVERSATION =========================
   
   // Chat enums
   export const chatMessageRoleEnum = pgEnum('chat_message_role', ['user', 'assistant', 'tool']);
@@ -162,22 +165,25 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
       .references(() => projects.id, { onDelete: 'cascade' })
       .notNull(),
     title: varchar('title', { length: 255 }).default('New Chat').notNull(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
     ...timestamps,
   }, (table) => ([
     index('conversations_project_id_idx').on(table.projectId),
   ]))
 
-  export const agent_runs = pgTable('agent_runs', {
+  export const checkpoints = pgTable('checkpoints', {
     id: uuid('id').defaultRandom().primaryKey(),
+    projectId: uuid('project_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
     conversationId: uuid('conversation_id')
       .references(() => conversations.id, { onDelete: 'cascade' })
       .notNull(),
-    finishReason: varchar('finish_reason', { length: 50 }).default('not-finished').notNull().$type<AgentRunFinishReason>(),
-    error: text('error'),
-    metadata: jsonb('metadata').$type<ChatMetadata>(),
+    state: jsonb('state').$type<AgentState>(),
     ...timestamps,
   }, (table) => ([
-    index('agent_runs_conversation_id_idx').on(table.conversationId),
+    index('checkpoints_conversation_id_idx').on(table.conversationId),
+    uniqueIndex('checkpoints_project_id_conversation_id_unique').on(table.projectId, table.conversationId),
   ]))
 
   export const messages = pgTable('messages', {
@@ -185,37 +191,37 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     conversationId: uuid('conversation_id')
       .references(() => conversations.id, { onDelete: 'cascade' })
       .notNull(),
-    runId: uuid('run_id')
-      .references(() => agent_runs.id, { onDelete: 'cascade' })
-      .notNull(),
     role: chatMessageRoleEnum('role').notNull(),
-    content: jsonb('content').$type<MsgContent[]>().notNull(),
-    metadata: jsonb('metadata').$type<MsgMetadata>().default({}),
+    content: jsonb('content').$type<MsgContent>().notNull(),
     ...timestamps,
   }, (table) => ([
     index('messages_conversation_id_idx').on(table.conversationId),
-    index('messages_run_id_idx').on(table.runId),
   ]))
-
-
-  export const agentRunsRelations = relations(agent_runs, ({ one, many }) => ({
-    conversation: one(conversations, {
-      fields: [agent_runs.conversationId],
-      references: [conversations.id],
-    }),
-    messages: many(messages),
-  }))
 
   export const messagesRelations = relations(messages, ({ one }) => ({
     conversation: one(conversations, {
       fields: [messages.conversationId],
       references: [conversations.id],
     }),
-    agentRun: one(agent_runs, {
-      fields: [messages.runId],
-      references: [agent_runs.id]
-    }),
   }))
+
+  // ========================= MODELS ==========================
+
+  // Model tables
+  export const llmModels = pgTable('llm_models', {
+    id: varchar('id', { length: 50 }).primaryKey(),
+    provider: varchar('provider', { length: 50 }).notNull(),
+    name: varchar('name', { length: 50 }).notNull(),
+    apiName: varchar('api_name', { length: 50 }).notNull(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+    pricing: jsonb('pricing').$type<TokenPricing>(),
+    category: varchar('category', { length: 50 }).array().notNull().$type<ModelCategory[]>(),
+    recommendedUsage: varchar('recommended_usage', { length: 50 }).array().$type<ModelRecommendedUsage[]>(),
+    enabled: boolean('enabled').default(true).notNull(),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('llm_models_provider_api_name_unique').on(table.provider, table.apiName),
+  ]))
 
   // Type exports for use in app
   export type Project = typeof projects.$inferSelect
@@ -225,7 +231,8 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
   export type GenerationRequest = typeof generationRequests.$inferSelect
   export type Conversation = typeof conversations.$inferSelect
   export type Message = typeof messages.$inferSelect
-  export type AgentRun = typeof agent_runs.$inferSelect
   export type ChatMessageRole = (typeof chatMessageRoleEnum.enumValues)[number]
+  export type LlmModel = typeof llmModels.$inferSelect
+  export type Checkpoint = typeof checkpoints.$inferSelect
   
   

@@ -5,7 +5,8 @@
     "test": "bun test",
     "dev": "bun run --watch src/index.ts",
     "db:generate": "npx drizzle-kit generate",
-    "db:migrate": "npx drizzle-kit migrate"
+    "db:migrate": "npx drizzle-kit migrate",
+    "db:seed:models": "bun run src/features/credit-system/seed-models.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.7",

@@ -1,12 +1,14 @@
 import { useRef, useCallback, useEffect } from 'react'
-import { IconMicrophone, IconMicrophoneOff, IconCaretUpFilled, IconLoader2 } from '@tabler/icons-react'
+import { IconCaretUpFilled, IconLoader2 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useChatStore } from '../store/chat-store'
-import { useVoiceInput } from '../hooks/use-voice-input'
 import { ContextWindowDonut } from './context-window-donut'
 import { MentionsInput, Mention } from 'react-mentions-ts'
-import { useShallow } from 'zustand/shallow'
+import { ChatCompletionRequest } from '../types'
+import ChatSelectModel from './chat-select-model'
+import { toast } from 'sonner'
+import { useSendMessage } from '../hooks/use-chat'
 
 // Helper to extract selection IDs from mention markup
 // Matches pattern: &&[display](id)
@@ -31,64 +33,62 @@ export type sendParams = {
 }
 
 type ChatInputProps = {
-  onSend?: (params: sendParams) => void
+  projectId: string
   placeholder?: string
-  disabled?: boolean
-  isLoading?: boolean
   className?: string
 }
 
 export function ChatInput({
-  onSend,
+  projectId,
   placeholder = 'Ask anything... Use @ for characters, # for locations',
-  disabled = false,
-  isLoading = false,
   className,
 }: ChatInputProps) {
 
   // Store
-  const {characters, locations} = useChatStore(useShallow((state) => state.attachedContext))
-  const setInputContent = useChatStore((state) => state.setInputContent)
-  const appendInputContent = useChatStore((state) => state.appendInputContent)
-  const inputContent = useChatStore((state) => state.inputContent)
+  const setInputContent = useChatStore((state) => state.setUserPrompt)
+  const appendInputContent = useChatStore((state) => state.appendUserPrompt)
+  const inputContent = useChatStore((state) => state.userPrompt)
   const editorBridge = useChatStore(state => state.editorBridge)
+  const isStreaming = useChatStore(state => state.isStreaming)
+  const conversation = useChatStore(state => state.activeConversation)
+  const model = useChatStore(state => state.model)
+
+  const sendMessage = useSendMessage(projectId)
+
+  const conversationId = conversation?.id ?? null
+  const modelId = model?.id
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Voice input
-  const voice = useVoiceInput({
-    onTranscript: (transcript, isFinal) => {
-      if (isFinal) {
-        setInputContent(inputContent + transcript + ' ')
-      }
-    },
-  })
+  const disableSendButton = !inputContent.trim() || isStreaming
 
   // Send message
-  const handleSend = () => {
+  const handleSend = async () => {
     const content = inputContent.trim()
-    if (!content || disabled) return
+    if (disableSendButton) return
 
-    const payload: sendParams = {
-      prompt: content,
-      context: {
-        blocks: [],
-        selections: [],
-      },
+    if(!modelId){
+      toast.error('Please select a model')
+      return
     }
 
-    onSend?.(payload)
+    const payload: ChatCompletionRequest = {
+      userPrompt: content,
+      conversationId,
+      modelId
+    }
+
+    // Send request
+    await sendMessage(payload)
   }
 
   // Handle keyboard events
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+  const handleKeyDown = async(e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
       if (e.key === 'Enter') {
         e.preventDefault()
-        handleSend()
+        await handleSend()
       }
   }
-
-  const disableBtn = disabled || !inputContent.trim() || isLoading
 
   useEffect(() => {
     if (!editorBridge?.isReady) return
@@ -152,8 +152,8 @@ export function ChatInput({
                       placeholder={placeholder}
                       onKeyDown={handleKeyDown}
       >
-        <Mention trigger="@" data={characters} renderSuggestion={(entry) => <div>{entry.display}</div>} />
-        <Mention trigger="#" data={locations} />
+        <Mention trigger="@" data={[]} />
+        <Mention trigger="#" data={[]} />
         <Mention trigger="&&" data={[]}/>
       </MentionsInput>
 
@@ -161,36 +161,19 @@ export function ChatInput({
         {/* Token usage donut */}
         <ContextWindowDonut usage={{percentage: 40}} size="sm" />
 
-        {/* Voice input */}
-        {voice.isSupported && (
-          <Button
-            size="icon-sm"
-            onClick={voice.toggleRecording}
-            disabled={disableBtn}
-            className={cn(
-              'size-6 bg-white/5 rounded-full text-gray-400 hover:bg-white/10 hover:text-white',
-              voice.isRecording && 'text-red-500 animate-pulse'
-            )}
-            aria-label={voice.isRecording ? 'Stop recording' : 'Start voice input'}
-          >
-            {voice.isRecording ? (
-              <IconMicrophoneOff className="size-4" />
-            ) : (
-              <IconMicrophone className="size-4" />
-            )}
-          </Button>
-        )}
+        <ChatSelectModel projectId={projectId} />
 
+        
         {/* Send button */}
         <Button
           variant="default"
           onClick={handleSend}
-          disabled={disableBtn}
+          disabled={disableSendButton}
           className="size-6 rounded-full"
           aria-label="Send message"
         >
           {
-            isLoading ? (
+            isStreaming ? (
               <IconLoader2 className="size-4 animate-spin" />
             ) : (
               <IconCaretUpFilled className="size-4" />

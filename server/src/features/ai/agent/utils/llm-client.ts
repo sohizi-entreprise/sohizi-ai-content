@@ -1,7 +1,8 @@
 import { Output, streamText, generateText, ModelMessage, ToolSet, LanguageModelUsage } from "ai";
 import { openai } from "@/lib/llm-providers";
 import { z } from "zod";
-import { LlmChunk, streamEvents, TokenUsage, CompleteReason } from "./llm-response";
+import { LlmChunk, streamEvents } from "./llm-response";
+import { TokenUsage, CompleteReason } from "@/type";
 
 export type ModelConfig = {
     temperature?: number;

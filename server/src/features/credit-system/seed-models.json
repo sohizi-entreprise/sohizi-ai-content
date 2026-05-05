@@ -1,0 +1,77 @@
+[
+    {
+        "provider": "openai",
+        "name": "GPT-5.2",
+        "apiName": "gpt-5.2",
+        "category": ["text"],
+        "recommended_usage": ["lead-agent"],
+        "pricing": {
+            "currency": "USD",
+            "unit": "per_1m_tokens",
+            "basis": "request_tokens",
+            "input": [{ "up_to": null, "rate": 1.75 }],
+            "output": [{ "up_to": null, "rate": 14 }],
+            "cached_input": [{ "up_to": null, "rate": 0.175 }]
+        }
+    },
+    {
+        "provider": "openai",
+        "name": "GPT-5.1",
+        "apiName": "gpt-5.1",
+        "category": ["text"],
+        "recommended_usage": ["lead-agent"],
+        "pricing": {
+            "currency": "USD",
+            "unit": "per_1m_tokens",
+            "basis": "request_tokens",
+            "input": [{ "up_to": null, "rate": 1.25 }],
+            "output": [{ "up_to": null, "rate": 10 }],
+            "cached_input": [{ "up_to": null, "rate": 0.125 }]
+        }
+    },
+    {
+        "provider": "openai",
+        "name": "GPT-5-mini",
+        "apiName": "gpt-5-mini",
+        "category": ["text"],
+        "recommended_usage": ["summary-agent"],
+        "pricing": {
+            "currency": "USD",
+            "unit": "per_1m_tokens",
+            "basis": "request_tokens",
+            "input": [{ "up_to": null, "rate": 0.25 }],
+            "output": [{ "up_to": null, "rate": 2 }],
+            "cached_input": [{ "up_to": null, "rate": 0.025 }]
+        }
+    },
+    {
+        "provider": "openai",
+        "name": "GPT-5-nano",
+        "apiName": "gpt-5-nano",
+        "category": ["text"],
+        "recommended_usage": ["summary-agent"],
+        "pricing": {
+            "currency": "USD",
+            "unit": "per_1m_tokens",
+            "basis": "request_tokens",
+            "input": [{ "up_to": null, "rate": 0.05 }],
+            "output": [{ "up_to": null, "rate": 0.4 }],
+            "cached_input": [{ "up_to": null, "rate": 0.005 }]
+        }
+    },
+    {
+        "provider": "openai",
+        "name": "GPT-4.1",
+        "apiName": "gpt-4.1",
+        "category": ["text"],
+        "recommended_usage": ["lead-agent"],
+        "pricing": {
+            "currency": "USD",
+            "unit": "per_1m_tokens",
+            "basis": "request_tokens",
+            "input": [{ "up_to": null, "rate": 2 }],
+            "output": [{ "up_to": null, "rate": 8 }],
+            "cached_input": [{ "up_to": null, "rate": 0.5 }]
+        }
+    }
+]

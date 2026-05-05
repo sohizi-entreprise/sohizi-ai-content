@@ -2,15 +2,27 @@ import { useEffect, useRef } from 'react'
 import { IconSparkles } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useConversationStore } from '../store/conversation-store'
-import RenderMessage from './render-message'
+import { useChatStore } from '../store/chat-store'
+import { listMessagesInfiniteQueryOptions } from '../query-mutation'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import ChatBuble from './chat-buble'
+import { useShallow } from 'zustand/shallow'
+import { TextShimmer } from '@/components/ui/loaders'
 
-
-export function ChatMessages({className}: {className?: string}) {
-  const isStreaming = useConversationStore((state) => state.isStreaming)
-  const currentRun = useConversationStore((state) => state.currentRun)
-  const isEmpty = useConversationStore((state) => state.runs.length === 0 && state.currentRun === null)
+//
+export function ChatMessages({projectId, className}: {projectId: string; className?: string}) {
+  const isStreaming = useChatStore((state) => state.isStreaming)
+  const conversation = useChatStore(useShallow((state) => state.activeConversation))
+  const streamingMessages = useChatStore(useShallow((state) => state.streamingMessages))
+  const pendingMessage = useChatStore(useShallow((state) => state.pendingMessage))
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const conversationId = conversation?.id ?? null
+
+  const {data: messages = [], isLoading} = useInfiniteQuery(listMessagesInfiniteQueryOptions(projectId, conversationId))
+
+  const allMessages = mergeMessages([...messages, pendingMessage, ...streamingMessages].filter((message) => message !== null))
+  const isEmpty = isLoading === false && allMessages.length === 0
 
   // Auto-scroll to bottom during streaming so new content is visible
   useEffect(() => {
@@ -22,7 +34,15 @@ export function ChatMessages({className}: {className?: string}) {
     scrollToBottom()
     const raf = requestAnimationFrame(scrollToBottom)
     return () => cancelAnimationFrame(raf)
-  }, [isStreaming, currentRun?.messages])
+  }, [isStreaming])
+
+  if (isLoading && allMessages.length === 0) {
+    return (
+      <div className={cn('flex-1 flex items-center justify-center', className)}>
+        <span className="text-sm text-muted-foreground">Loading messages...</span>
+      </div>
+    )
+  }
 
   if (isEmpty) {
     return (
@@ -39,49 +59,30 @@ export function ChatMessages({className}: {className?: string}) {
   return (
     <ScrollArea className={cn('flex-1', className)} ref={scrollRef}>
       <div className="p-4 space-y-4">
-        <RenderAllRuns />
-        <RenderCurrentRun />
+        {
+          allMessages.map((message) => (
+            <ChatBuble key={message.id} data={message} />
+          ))
+        }
+        {
+          isStreaming && (
+            <TextShimmer text="Processing..." />
+          )
+        }
       </div>
     </ScrollArea>
   )
 }
 
-function RenderAllRuns(){
-  const runs = useConversationStore((state) => state.runs)
-  return (
-    <div className='space-y-6'>
-      {runs.map((run) => (
-        <div key={run.runId} className='space-y-2'>
-          {
-            run.messages.map((message) => (
-              <RenderMessage key={message.id} message={message} />
-            ))
-          }
-        </div>
-      ))}
-    </div>
-  )
+function mergeMessages<T extends { id: string }>(messages: T[]) {
+  const seen = new Set<string>()
+
+  return messages.filter((message) => {
+    if (seen.has(message.id)) return false
+    seen.add(message.id)
+    return true
+  })
 }
 
-function RenderCurrentRun(){
 
-  const currentRun = useConversationStore((state) => state.currentRun)
-  const isStreaming = useConversationStore((state) => state.isStreaming)
-
-  if(!currentRun) return null
-
-  const messages = currentRun.messages
-
-  return (
-    <div className='space-y-4'>
-      {messages.map((message) => (
-        <RenderMessage key={message.id} message={message} />
-      ))}
-      {
-        isStreaming && <p>Planning next steps...</p>
-      }
-    </div>
-  )
-
-}
 

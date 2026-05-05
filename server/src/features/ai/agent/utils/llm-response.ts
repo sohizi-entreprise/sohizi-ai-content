@@ -1,4 +1,4 @@
-import { FinishReason } from "ai";
+import { CompleteReason, TokenUsage } from "@/type";
 
 export const streamEvents = {
     textDelta: 'text_delta',
@@ -15,15 +15,6 @@ export const streamEvents = {
     toolResultComplete: 'tool_result_complete',
 } as const;
 
-
-export type TokenUsage = {
-    input: number;
-    output: number;
-    reasoning: number;
-    cached: number;
-    total: number;
-    modelId: string;
-}
 
 export type ToolResultDelta = {
     type: typeof streamEvents.toolResultDelta;
@@ -53,7 +44,6 @@ export type AgenticToolChunk = {
 
 export type ToolResultEvent = ToolResultDelta | ToolResultComplete;
 
-export type CompleteReason = FinishReason | 'abort';
 
 type TextDelta = {
     type: typeof streamEvents.textDelta;

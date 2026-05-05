@@ -1,8 +1,9 @@
-import { IconPlus, IconHistory } from '@tabler/icons-react'
+import { IconPlus, IconBrandOpenai } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useConversationStore } from '../store/conversation-store'
-import { useCreateConversation } from '../hooks/use-chat'
+import { ChatHistory } from './chat-history'
+import { useChatStore } from '../store/chat-store'
+import { useShallow } from 'zustand/react/shallow'
 
 type ChatHeaderProps = {
   projectId: string
@@ -10,36 +11,35 @@ type ChatHeaderProps = {
 }
 
 export function ChatHeader({ projectId, className }: ChatHeaderProps) {
-  const currentConversation = useConversationStore((state) => state.currentConversation)
-  const toggleHistory = useConversationStore((state) => state.toggleHistory)
 
-  const title = currentConversation?.title || 'Start a new chat'
-  const {handleCreateConversation, isCreatingConversation} = useCreateConversation(projectId)
+  const conversation = useChatStore(useShallow((state) => state.activeConversation))
+  const resetChatStore = useChatStore(useShallow((state) => state.reset))
+  const title = conversation?.title ?? 'New Chat'
+
+  const handleNewConversation = () => {
+    resetChatStore()
+  }
 
   return (
-    <div className={cn('flex items-center justify-between px-4 py-3 border-b', className)}>
-      <h2 className="text-sm font-semibold truncate flex-1">{title}</h2>
+    <div className={cn('flex items-center justify-between px-4 border-b h-9', className)}>
+      <div className="flex items-center gap-2 min-w-0">
+        <IconBrandOpenai className="size-4 text-primary" />
+        <h2 className="text-xs truncate min-w-0 flex-1">
+          {title}
+        </h2>
+      </div>
       
       <div className="flex items-center gap-1">
         <Button
           variant="ghost"
           size="icon"
-          onClick={handleCreateConversation}
+          onClick={handleNewConversation}
           className="size-8"
           aria-label="New chat"
-          disabled={isCreatingConversation}
         >
           <IconPlus className="size-4" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => toggleHistory()}
-          className="size-8"
-          aria-label="Chat history"
-        >
-          <IconHistory className="size-4" />
-        </Button>
+        <ChatHistory projectId={projectId} />
       </div>
     </div>
   )

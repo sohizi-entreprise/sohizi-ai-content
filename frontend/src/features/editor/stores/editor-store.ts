@@ -1,9 +1,7 @@
 import { create } from 'zustand'
 import { getFileExtension } from '../types'
-import { MOCK_CHAT_MESSAGES } from '../mock-data'
 import type {
   ActivityBarItem,
-  ChatMessage,
   EditorTab,
   FileTreeNode,
 } from '../types'
@@ -17,7 +15,6 @@ interface EditorState {
   activePaneTab: Record<Pane, string | null>
   selectedFileId: string | null
   activityBarItem: ActivityBarItem
-  aiMessages: Array<ChatMessage>
   sidebarCollapsed: boolean
   savingStatus: Record<string, 'saving' | 'saved' | 'error'>
 
@@ -40,7 +37,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activePaneTab: { left: null, right: null },
   selectedFileId: null,
   activityBarItem: 'files',
-  aiMessages: MOCK_CHAT_MESSAGES,
   sidebarCollapsed: false,
   savingStatus: {},
 

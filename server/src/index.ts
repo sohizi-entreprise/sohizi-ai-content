@@ -62,6 +62,7 @@ const app = new Elysia()
                 .use(routes.projectRoutes)
                 .use(routes.aiRoutes)
                 .use(routes.fileSystemRoutes)
+                .use(routes.chatRoutes)
                 .listen(3030);
 
 console.log(

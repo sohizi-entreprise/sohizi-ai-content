@@ -7,8 +7,8 @@ import { TopNav } from './top-nav'
 import { ActivityBar } from './activity-bar'
 import { FileExplorer } from '../sidebar/file-explorer'
 import { EditorWorkspace } from '../workspace/editor-workspace'
-import { AIPanel } from './ai-panel'
 import { useEditorStore } from '../../stores/editor-store'
+import { ChatContainer } from '@/features/chat'
 
 interface LayoutProps {
   projectId: string
@@ -26,22 +26,22 @@ function ExpandedLayout({ projectId, rootFolderId }: LayoutProps) {
         <EditorWorkspace />
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel defaultSize={25} minSize={18} maxSize={40}>
-        <AIPanel />
+      <ResizablePanel defaultSize={25} minSize={22} maxSize={40}>
+        <ChatContainer projectId={projectId} editorType="synopsis" />
       </ResizablePanel>
     </ResizablePanelGroup>
   )
 }
 
-function CollapsedLayout() {
+function CollapsedLayout({ projectId }: LayoutProps) {
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full w-full">
       <ResizablePanel defaultSize={75} minSize={40}>
         <EditorWorkspace />
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel defaultSize={25} minSize={18} maxSize={40}>
-        <AIPanel />
+      <ResizablePanel defaultSize={25} minSize={25} maxSize={40}>
+        <ChatContainer projectId={projectId} editorType="synopsis" />
       </ResizablePanel>
     </ResizablePanelGroup>
   )
@@ -56,7 +56,7 @@ export function AppLayout({ projectId, rootFolderId }: LayoutProps) {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <ActivityBar />
         <div className="relative h-full min-w-0 flex-1">
-          {sidebarCollapsed ? <CollapsedLayout /> : <ExpandedLayout projectId={projectId} rootFolderId={rootFolderId} />}
+          {sidebarCollapsed ? <CollapsedLayout projectId={projectId} rootFolderId={rootFolderId} /> : <ExpandedLayout projectId={projectId} rootFolderId={rootFolderId} />}
         </div>
       </div>
     </div>
