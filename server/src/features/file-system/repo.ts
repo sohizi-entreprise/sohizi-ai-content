@@ -10,6 +10,10 @@ const FILE_NODE_UNIQUE_CONSTRAINTS = new Set([
     'file_nodes_project_id_root_name_unique',
 ]);
 
+const escapeLikePattern = (value: string) => {
+    return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
 
 type DbExecutor = Pick<typeof db, 'select' | 'execute' | 'update' | 'insert'>;
 
@@ -73,6 +77,37 @@ export const getFileNodeByName = async(projectId: string, parentId: string | nul
                                 parentId === null ? isNull(fileNodes.parentId) : eq(fileNodes.parentId, parentId),
                            ));
     return result[0];
+}
+
+export const searchFileNodesByName = async(projectId: string, name: string, limit = 15): Promise<FileNode[]> => {
+    const normalizedName = name.trim();
+
+    if (!normalizedName) {
+        return [];
+    }
+
+    const escapedName = escapeLikePattern(normalizedName);
+    const containsPattern = `%${escapedName}%`;
+    const prefixPattern = `${escapedName}%`;
+    const exactName = normalizedName.toLowerCase();
+
+    return db.select()
+             .from(fileNodes)
+             .where(and(
+                eq(fileNodes.projectId, projectId),
+                sql`${fileNodes.name} ILIKE ${containsPattern} ESCAPE '\\'`,
+             ))
+             .orderBy(
+                sql`CASE
+                    WHEN lower(${fileNodes.name}) = ${exactName} THEN 0
+                    WHEN ${fileNodes.name} ILIKE ${prefixPattern} ESCAPE '\\' THEN 1
+                    ELSE 2
+                END`,
+                sql`similarity(${fileNodes.name}, ${normalizedName}) DESC`,
+                sql`length(${fileNodes.name})`,
+                asc(fileNodes.name),
+             )
+             .limit(limit);
 }
 
 export const getFileNodeDepthById = async(projectId: string, id: string) => {
@@ -1031,6 +1066,7 @@ export const semanticSearchProjectChunks = async(
         distance: number;
     }>;
 }
+
 
 
 

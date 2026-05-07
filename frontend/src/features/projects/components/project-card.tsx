@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { MoreVertical, Trash2 } from 'lucide-react'
 import { DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { ProjectListItem } from '../type'
-import ProjectStatus from './project-status'
 import { timeFromNow } from '@/lib/utils'
 
 type ProjectCardProps = ProjectListItem & {
@@ -13,7 +12,7 @@ type ProjectCardProps = ProjectListItem & {
 }
 
 export default function ProjectCard(props: ProjectCardProps) {
-    const { title, genre, durationMin, onDelete, updatedAt, status, display = 'grid' } = props
+    const { title, genre, durationMin, onDelete, updatedAt, display = 'grid' } = props
 
     if (display === 'list') {
         return <ProjectCardList {...props} />
@@ -24,7 +23,6 @@ export default function ProjectCard(props: ProjectCardProps) {
             <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                     <div className="space-y-2 flex-1">
-                        <ProjectStatus status={status}/>
                         <CardTitle className="text-xl font-bold text-white group-hover:text-primary group-hover:scale-102 transition-all duration-300">{title}</CardTitle>
                         <p className="text-sm text-muted-foreground capitalize">
                             {genre}
@@ -56,7 +54,7 @@ export default function ProjectCard(props: ProjectCardProps) {
 
 
 function ProjectCardList(props: ProjectCardProps){
-    const { title, genre, durationMin, onDelete, updatedAt, status } = props
+    const { title, genre, durationMin, onDelete, updatedAt } = props
 
     return (
         <div className='glass-panel py-4 px-6 rounded-2xl transition-all duration-400 hover:border-primary/30! group cursor-pointer flex gap-4 items-center'>
@@ -66,7 +64,6 @@ function ProjectCardList(props: ProjectCardProps){
                     <p className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-slate-400 font-bold uppercase tracking-widest">
                         {genre}
                     </p>
-                    <ProjectStatus status={status}/>
                 </div>
             </div>
         

@@ -17,6 +17,8 @@ import { useDiffSave } from '../../hooks/use-autosave'
 import TextEditorToolbar from './text-editor-toolbar'
 import type { EditorTab } from '../../types'
 import './text-editor.css'
+import TextEditorBubbleMenu from '../text-editor-extensions/bubble-menu'
+import { useEditorInputBridge } from '../../bridge/use-editor-input-bridge'
 
 const SAMPLE_CONTENT = `
 # Welcome to the Markdown Demo
@@ -118,11 +120,12 @@ export function TextEditorView({
   const diffSave = useDiffSave({
     duration: 2000,
     projectId,
-    fileId: tab.id,
-    onSaveComplete: () => {
-      console.log('save complete')
-    },
+    fileId: tab.id
   })
+
+  const setEditor = useEditorInputBridge(state => state.setEditor)
+  const clearEditor = useEditorInputBridge(state => state.clearEditor)
+
   const editor = useEditor({
     immediatelyRender: true,
     extensions: [
@@ -149,6 +152,12 @@ export function TextEditorView({
       })
       // console.log(markdown)
     },
+    onCreate: ({ editor }) => {
+      setEditor(editor)
+    },
+    onDestroy: () => {
+      clearEditor(editor)
+    }
   })
 
   return (
@@ -163,6 +172,7 @@ export function TextEditorView({
             editor={editor}
             className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[400px]"
           />
+          <TextEditorBubbleMenu editor={editor} file={{ id: tab.id, name: tab.name }} />
         </div>
       </div>
     </div>

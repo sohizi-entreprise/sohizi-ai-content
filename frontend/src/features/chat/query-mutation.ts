@@ -5,6 +5,7 @@ const keysFactory = {
     conversations: (projectId: string, options?: requests.CursorPaginationOptions) => ['conversations', projectId, options],
     messages: (projectId: string, conversationId: string, options?: requests.CursorPaginationOptions) => ['messages', projectId, conversationId, options],
     models: (projectId: string) => ['models', projectId],
+    fileNameSearch: (projectId: string, name: string, limit: number) => ['file-name-search', projectId, name, limit],
 }
 
 export const deleteConversationMutationOptions = (projectId: string) => mutationOptions({
@@ -46,6 +47,12 @@ export const listMessagesInfiniteQueryOptions = (projectId: string, conversation
 export const listModelsQueryOptions = (projectId: string) => queryOptions({
     queryKey: keysFactory.models(projectId),
     queryFn: () => requests.listModels(projectId),
+})
+
+export const searchFilesByNameQueryOptions = (projectId: string, name: string, limit = 15) => queryOptions({
+    queryKey: keysFactory.fileNameSearch(projectId, name, limit),
+    queryFn: ({ signal }) => requests.searchFilesByName(projectId, name, limit, { signal }),
+    enabled: name.trim().length > 0,
 })
 
 export const getMessageQueryKey = (projectId: string, conversationId: string) => keysFactory.messages(projectId, conversationId)

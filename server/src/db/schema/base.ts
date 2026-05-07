@@ -94,6 +94,7 @@ export const fileNodes = pgTable('file_nodes', {
       .on(table.projectId, table.name)
       .where(sql`${table.parentId} is null`),
     index('file_nodes_project_id_parent_id_position_idx').on(table.projectId, table.parentId, table.position),
+    index('file_nodes_name_trgm_idx').using('gin', table.name.op('gin_trgm_ops')),
   ])
 
 export const fileNodeContents = pgTable('file_node_contents', {

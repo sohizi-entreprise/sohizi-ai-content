@@ -125,7 +125,6 @@ export type ProjectListItem = {
     format: string
     genre: string
     durationMin: string
-    status: string
     createdAt: string
     updatedAt: string
 }

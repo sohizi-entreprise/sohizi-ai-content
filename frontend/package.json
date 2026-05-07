@@ -101,7 +101,7 @@
     "react-error-boundary": "^6.0.3",
     "react-hook-form": "^7.70.0",
     "react-markdown": "^10.1.0",
-    "react-mentions-ts": "^5.4.7",
+    "react-mentions-ts": "^6.0.0",
     "react-resizable-panels": "2.1.9",
     "recharts": "2.15.4",
     "remark-gfm": "^4.0.1",

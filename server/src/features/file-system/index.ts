@@ -29,6 +29,18 @@ export const fileSystemRoutes = new Elysia({ prefix: '/projects/:projectId/files
       parentId: z.uuid('Invalid parent id'),
     })
   })
+  .get('/search', ({params, query}) => {
+    return fileService.searchFilesByName({
+      projectId: params.projectId,
+      name: query.name,
+      limit: query.limit,
+    })
+  }, {
+    query: z.object({
+      name: z.string().trim().min(1, 'Search query is required'),
+      limit: z.coerce.number().int().positive().optional(),
+    })
+  })
   .guard({
     params: paramsSchema
   })

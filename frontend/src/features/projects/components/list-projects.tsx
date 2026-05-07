@@ -23,7 +23,7 @@ export default function ListProjects() {
             })}>
             {projects?.map((project) => (
                 <Link 
-                    to={getRedirectLink(project.status)} 
+                    to='/dashboard/projects/$projectId/editor' 
                     params={{ projectId: project.id }} 
                     key={project.id} 
                     className='block' 
@@ -75,13 +75,3 @@ function ListProjectEmpty() {
     )
 }
 
-function getRedirectLink(status: string) {
-    switch (true) {
-        case status.startsWith('CONCEPT_'):
-            return '/dashboard/projects/$projectId/concept'
-        case status.startsWith('SYNOPSIS_'):
-            return '/dashboard/projects/$projectId/synopsis'
-        default:
-            return '/dashboard/projects/$projectId/edit/script'
-    }
-}

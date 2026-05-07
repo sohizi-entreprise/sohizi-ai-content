@@ -1,6 +1,5 @@
 import { create, type StateCreator } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import { EditorAIBridge } from '../hooks/use-ai-editor-bridge'
 import { ChatStreamChunk, Conversation, LlmModel, Message, MsgToolCallPart } from '../types'
 
 // ============================================================================
@@ -12,7 +11,6 @@ type ChatState = {
   userPrompt: string
   activeConversation: Conversation | null
   model: LlmModel | null
-  editorBridge: EditorAIBridge | null
   pendingMessage: Message | null
   streamingMessages: Message[]
   isStreaming: boolean
@@ -24,7 +22,6 @@ type ChatActions = {
   setModel: (model: LlmModel) => void
   setActiveConversation: (conversation: Conversation) => void
   clearInput: () => void
-  setEditorBridge: (bridge: EditorAIBridge | null) => void
   reset: () => void
   setPendingMessage: (message: Message | null) => void
   appendChunk: (chunk: ChatStreamChunk) => void
@@ -36,7 +33,6 @@ const initialState: ChatState = {
   userPrompt: '',
   activeConversation: null,
   model: null,
-  editorBridge: null,
   pendingMessage: null,
   streamingMessages: [],
   isStreaming: false,
@@ -54,7 +50,6 @@ export const useChatStore = create<ChatState & ChatActions>()(immer((set) => ({
   setModel: (model) => set({ model }),
   setActiveConversation: (conversation) => set({ activeConversation: conversation }),
   clearInput: () => set({ userPrompt: '' }),
-  setEditorBridge: (bridge) => set({ editorBridge: bridge }),
   reset: () => set(initialState),
   setPendingMessage: (message) => set({ pendingMessage: message }),
   setIsStreaming: (isStreaming) => set({ isStreaming }),
