@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { getContentType } from '../../types'
 import { TextEditorView } from '../content/text-editor-view'
-import { VideoStoryboard } from '../content/video-storyboard'
 import { getFileContentQueryOptions } from '../../query-mutations'
 import type { EditorTab } from '../../types'
+import { VideoEditor } from '@/features/video-editor'
 
 interface ContentRouterProps {
   tab: EditorTab
@@ -16,16 +16,20 @@ export function ContentRouter({ tab }: ContentRouterProps) {
     from: '/dashboard/projects/$projectId/editor',
   })
 
-  const { data, isLoading } = useQuery(
-    getFileContentQueryOptions(projectId, tab.id),
-  )
+  const isVideo = contentType === 'video'
+
+  const baseQueryOptions = getFileContentQueryOptions(projectId, tab.id)
+  const { data, isLoading } = useQuery({
+    ...baseQueryOptions,
+    enabled: !isVideo && (baseQueryOptions.enabled ?? true),
+  })
+
+  if (!isVideo) {
+    return <VideoEditor />
+  }
 
   if (isLoading) {
     return <div>Loading...</div>
-  }
-
-  if (contentType === 'video') {
-    return <VideoStoryboard tab={tab} />
   }
 
   return (
