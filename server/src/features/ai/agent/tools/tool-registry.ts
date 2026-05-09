@@ -5,6 +5,7 @@ import { assignTaskTool } from "./tasks-assign";
 import { exploreFileTool } from "./file-explore";
 import { editFileTool } from "./file-edit";
 import { searchFileTool } from "./file-search";
+import { ToolSet } from "ai";
 
 
 const toolRegistry = new Map<string, BaseTool<z.ZodSchema>>();
@@ -19,8 +20,14 @@ export const getTool = (name: string): BaseTool<z.ZodSchema> | undefined => {
     return toolRegistry.get(name);
 }
 
-registerTool(editFileTool);
+export const listTools = (): ToolSet => {
+    return Object.fromEntries(
+        Array.from(toolRegistry.entries()).map(([name, tool]) => [name, tool.schema])
+    );
+}
+
+// registerTool(editFileTool);
 registerTool(exploreFileTool);
 registerTool(searchFileTool);
 registerTool(manageTodoListTool);
-registerTool(assignTaskTool);
+// registerTool(assignTaskTool);

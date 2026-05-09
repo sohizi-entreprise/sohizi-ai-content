@@ -91,7 +91,7 @@ async function* handleChatRun(projectId: string, request: CompletionRequest) {
 
     const agent = new Agent(
         'main-agent', 
-        `You are a helpful assistant that can help with tasks.`,
+        `You are a helpful assistant that can help with tasks. Before calling any tool, you MUST write exactly one short progress sentence to the user. Only after that sentence, call the tool.`,
         session
     )
     yield* agent.runLoop(

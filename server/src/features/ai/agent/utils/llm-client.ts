@@ -195,7 +195,7 @@ export class LlmClient {
                             type: streamEvents.toolCall,
                             toolCallId: chunk.toolCallId,
                             toolName: chunk.toolName,
-                            input: chunk.input,
+                            input: chunk.input as unknown,
                         }
                         break;
                     }

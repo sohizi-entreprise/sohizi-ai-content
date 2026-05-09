@@ -82,7 +82,7 @@ export type ToolCall = {
     type: typeof streamEvents.toolCall;
     toolCallId: string;
     toolName: string;
-    input: string;
+    input: unknown;
 }
 
 type ErrorChunk = {

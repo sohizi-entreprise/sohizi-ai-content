@@ -136,6 +136,8 @@ export class Agent {
                 this.state.status = 'error';
                 this.state.error = error ?? null;
                 break;
+            case 'tool-calls':
+                break;
             default:
                 this.state.status = 'finished';
                 break;

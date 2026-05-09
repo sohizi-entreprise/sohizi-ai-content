@@ -1,7 +1,9 @@
 import { z, toJSONSchema } from "zod";
 import { AgenticToolChunk, streamEvents, ToolCall, ToolResultComplete } from "../utils/llm-response";
-import { AgentChunk, Agent, AgentState } from "../core/agent";
+import { AgentChunk, Agent } from "../core/agent";
 import { Session } from "../core/session";
+import { AgentState } from "@/type";
+import { Tool, ToolSet } from "ai";
 
 export type ToolResult = {
     success: boolean;
@@ -24,13 +26,17 @@ export class BaseTool<T extends z.ZodSchema>{
         this.params = params;
     }
 
-    get schema(): string{
-        return "TBD"
+    get schema(): Tool{
+        return {
+            title: this.params.name,
+            description: this.params.description,
+            inputSchema: this.params.inputSchema,
+        }
     }
 
     async* execute(toolCall: ToolCall, session: Session, state: AgentState): AsyncGenerator<ToolResultComplete | AgentChunk, void, unknown>{
         try {
-            const args = this.validateInput(toolCall.input);
+            const args = this.validateInput(toolCall.input as z.infer<T>);
             const isGenerator = this.params.execute.constructor.name === "AsyncGeneratorFunction";
             const result = await this.params.execute(args, {session, state});
             if(isGenerator){
@@ -63,10 +69,11 @@ export class BaseTool<T extends z.ZodSchema>{
         }
     }
 
-    private validateInput(input: string): z.core.output<T>{
+    private validateInput(input: z.infer<T>): z.core.output<T>{
+        console.log('input', input);
+        console.log(typeof input);
         try {
-            const parsed = JSON.parse(input);
-            const validated = this.params.inputSchema.safeParse(parsed);
+            const validated = this.params.inputSchema.safeParse(input);
             if(!validated.success){
                 throw new Error(`Your input is invalid: ${validated.error.message}. The expected input is:\n ${JSON.stringify(toJSONSchema(this.params.inputSchema))}.`);
             }

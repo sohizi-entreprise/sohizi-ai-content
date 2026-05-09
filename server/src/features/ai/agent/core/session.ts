@@ -4,6 +4,7 @@ import { LlmClient } from "../utils/llm-client";
 import { AgentState } from "@/type";
 import * as repo from '@/features/chat/repo';
 import { ModelMessage } from "ai";
+import { listTools } from "../tools/tool-registry";
 
 export type SessionInitData = {
     sessionId: string;
@@ -34,7 +35,8 @@ export class Session {
     }
 
     get llmClient(): LlmClient {
-        return new LlmClient(this.model.apiName, {reasoningEffort: 'medium', reasoningSummary: 'auto',})
+        const tools = listTools();
+        return new LlmClient(this.model.apiName, {reasoningEffort: 'medium', reasoningSummary: 'auto'}, tools)
     }
 
     registerMessage(message: ModelMessage | ModelMessage[]) {

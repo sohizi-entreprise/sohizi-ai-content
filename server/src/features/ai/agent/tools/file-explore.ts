@@ -22,8 +22,11 @@ const toolSchema = z.discriminatedUnion('cmd', [
 export const exploreFileTool = buildBaseTool({
     name: "exploreFile",
     description: "Explore the file system and get information about the files and directories.",
-    inputSchema: toolSchema,
-    execute: async(input, {session}) => {
+    inputSchema: z.object({
+        command: toolSchema,
+    }),
+    execute: async(cmd, {session}) => {
+        const input = cmd.command;
         switch (input.cmd) {
             case 'list':
                 return executeListCommand(input, session.projectId);

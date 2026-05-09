@@ -14,8 +14,11 @@ const toolSchema = z.discriminatedUnion('cmd', [
 export const searchFileTool = buildBaseTool({
     name: "searchFile",
     description: "Search the file system using a keyword or a semantic query. Use keyword search for exact keywords or phrases matching. Semantic query when you know the meaning but not the exact wording.",
-    inputSchema: toolSchema,
-    execute: async(input, {session}) => {
+    inputSchema: z.object({
+        command: toolSchema,
+    }),
+    execute: async(cmd, {session}) => {
+        const input = cmd.command;
         switch (input.cmd) {
             case 'grep':
                 return executeGrepCommand(input, session.projectId);

@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { buildBaseTool } from "./tool-definition";
 import { v4 as uuidv4 } from 'uuid';
-import { TodoItem } from "../../editor-agent/tools";
 import { failure, success } from "./utils";
+import { TodoItem } from "@/type";
 
 const addTodoSchema = z.object({
     action: z.literal('add').describe('Add new tasks to the todo list.'),
@@ -33,8 +33,11 @@ const manageTodoListInputSchema = z.discriminatedUnion('action', [addTodoSchema,
 export const manageTodoListTool = buildBaseTool({
     name: "manageTasks",
     description: getDescription(),
-    inputSchema: manageTodoListInputSchema,
-    execute: async(input, {state}) => {
+    inputSchema: z.object({
+        manageTask: manageTodoListInputSchema,
+    }),
+    execute: async(action, {state}) => {
+        const input = action.manageTask;
         switch (input.action) {
             case 'add': {
                 const newTodos = input.tasks.map((task) => ({
