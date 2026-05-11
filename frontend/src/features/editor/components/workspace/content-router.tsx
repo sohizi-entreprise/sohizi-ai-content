@@ -5,6 +5,7 @@ import { TextEditorView } from '../content/text-editor-view'
 import { getFileContentQueryOptions } from '../../query-mutations'
 import type { EditorTab } from '../../types'
 import { VideoEditor } from '@/features/video-editor'
+import { MediaGenerator } from '@/features/media-generator'
 
 interface ContentRouterProps {
   tab: EditorTab
@@ -17,14 +18,26 @@ export function ContentRouter({ tab }: ContentRouterProps) {
   })
 
   const isVideo = contentType === 'video'
+  const isMediaGenerator = tab.name === 'media-generator'
 
   const baseQueryOptions = getFileContentQueryOptions(projectId, tab.id)
   const { data, isLoading } = useQuery({
     ...baseQueryOptions,
-    enabled: !isVideo && (baseQueryOptions.enabled ?? true),
+    enabled:
+      !isVideo && !isMediaGenerator && (baseQueryOptions.enabled ?? true),
   })
 
-  if (!isVideo) {
+  // Temporary
+
+  if (tab.name === 'video-editor') {
+    return <VideoEditor />
+  }
+
+  if (isMediaGenerator) {
+    return <MediaGenerator />
+  }
+
+  if (isVideo) {
     return <VideoEditor />
   }
 

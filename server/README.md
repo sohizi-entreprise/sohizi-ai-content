@@ -26,3 +26,6 @@ Video editor main features:
 Production ready features:
 ---
 [] Server-side video rendering
+
+
+Effects/transitions, keyframing, captions auto-gen.

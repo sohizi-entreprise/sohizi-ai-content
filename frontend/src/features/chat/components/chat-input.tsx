@@ -1,25 +1,27 @@
 import { useCallback } from 'react'
-import { IconCaretUpFilled, IconLoader2 } from '@tabler/icons-react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import { useChatStore } from '../store/chat-store'
-import { ContextWindowDonut } from './context-window-donut'
-import { MentionsInput, Mention, type MentionSearchContext } from 'react-mentions-ts'
-import { ChatCompletionRequest } from '../types'
-import ChatSelectModel from './chat-select-model'
+import { IconArrowNarrowUp, IconLoader2, IconPlus } from '@tabler/icons-react'
+import { Mention, MentionsInput } from 'react-mentions-ts'
 import { toast } from 'sonner'
-import { useSendMessage } from '../hooks/use-chat'
 import { useQueryClient } from '@tanstack/react-query'
+import { useSendMessage } from '../hooks/use-chat'
+import { useChatStore } from '../store/chat-store'
 import { searchFilesByNameQueryOptions } from '../query-mutation'
 import { searchFilesByName } from '../requests'
+import ChatSelectModel from './chat-select-model'
+import { ContextWindowDonut } from './context-window-donut'
+import type { ChatCompletionRequest } from '../types'
+import type { MentionSearchContext } from 'react-mentions-ts'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { useEditorInputBridge } from '@/features/editor/bridge/use-editor-input-bridge'
-
+import { MediaSettingsButton } from '@/features/media-generator'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export type sendParams = {
   prompt: string
   context: {
-    blocks: string[];
-    selections: string[];
+    blocks: Array<string>
+    selections: Array<string>
   }
 }
 
@@ -34,14 +36,13 @@ export function ChatInput({
   placeholder = 'Ask anything... Use @ for characters, # for locations',
   className,
 }: ChatInputProps) {
-
   // Store
   const setInputContent = useChatStore((state) => state.setUserPrompt)
   const inputContent = useChatStore((state) => state.userPrompt)
-  const isStreaming = useChatStore(state => state.isStreaming)
-  const conversation = useChatStore(state => state.activeConversation)
-  const model = useChatStore(state => state.model)
-  const setInput = useEditorInputBridge(state => state.setInput)
+  const isStreaming = useChatStore((state) => state.isStreaming)
+  const conversation = useChatStore((state) => state.activeConversation)
+  const model = useChatStore((state) => state.model)
+  const setInput = useEditorInputBridge((state) => state.setInput)
 
   const sendMessage = useSendMessage(projectId)
   const queryClient = useQueryClient()
@@ -56,7 +57,7 @@ export function ChatInput({
     const content = inputContent.trim()
     if (disableSendButton) return
 
-    if(!modelId){
+    if (!modelId) {
       toast.error('Please select a model')
       return
     }
@@ -64,7 +65,7 @@ export function ChatInput({
     const payload: ChatCompletionRequest = {
       userPrompt: content,
       conversationId,
-      modelId
+      modelId,
     }
 
     // Send request
@@ -72,89 +73,121 @@ export function ChatInput({
   }
 
   // Handle keyboard events
-  const handleKeyDown = async(e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        await handleSend()
-      }
+  const handleKeyDown = async (
+    e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      await handleSend()
+    }
   }
 
   // Handle input change and detect removed selections
-  const handleInputChange = useCallback(({ value: nextValue }: { value: string }) => {
-    setInputContent(nextValue)
-  }, [setInputContent])
+  const handleInputChange = useCallback(
+    ({ value: nextValue }: { value: string }) => {
+      setInputContent(nextValue)
+    },
+    [setInputContent],
+  )
 
-  const searchFileMentions = useCallback(async (query: string, {signal}: MentionSearchContext) => {
-    const search = query.trim()
+  const searchFileMentions = useCallback(
+    async (query: string, { signal }: MentionSearchContext) => {
+      const search = query.trim()
 
-    if (!search) {
-      return []
-    }
+      if (!search) {
+        return []
+      }
 
-    const files = await queryClient.fetchQuery({
-      ...searchFilesByNameQueryOptions(projectId, search),
-      queryFn: () => searchFilesByName(projectId, search, 15, { signal }),
-      staleTime: 1000 * 60 * 1,
-    })
+      const files = await queryClient.fetchQuery({
+        ...searchFilesByNameQueryOptions(projectId, search),
+        queryFn: () => searchFilesByName(projectId, search, 15, { signal }),
+        staleTime: 1000 * 60 * 1,
+      })
 
-    return files.map((file) => ({
-      id: file.id,
-      display: file.name,
-    }))
-  }, [projectId, queryClient])
+      return files.map((file) => ({
+        id: file.id,
+        display: file.name,
+      }))
+    },
+    [projectId, queryClient],
+  )
 
   return (
-    <div className={cn('border bg-white/5 m-4 p-2 rounded-xl overflow-hidden', className)}>
-      <MentionsInput value={inputContent} 
-                      onMentionsChange={handleInputChange}
-                      suggestionsPlacement="above"
-                      inputRef={setInput}
-                      autoResize
-                      classNames={{
-                        input: 'bg-transparent! max-h-50 text-sm',
-                        control: 'bg-transparent! border-none',
-                        highlighterSubstring: '',
-                        highlighter: 'text-green-500'
-                      }}
-                      placeholder={placeholder}
-                      onKeyDown={handleKeyDown}
-      >
-        <Mention trigger="@" data={searchFileMentions} 
-                             debounceMs={200} 
-                             maxSuggestions={15}
-                             className='bg-primary/20 rounded-none'
-                             displayTransform={(_, display) => ` @${display} `}
-                             
-        />
-        <Mention trigger="#" data={[]} />
-        <Mention trigger="&&" data={[]}/>
-      </MentionsInput>
-
-      <div className='flex items-center justify-end gap-2 mt-2'>
+    <div className='m-4'>
+      {/* Top container button */}
+      <div className='border-white-10 border rounded-t-xl p-2 w-[calc(100%-2rem)] mx-auto flex justify-between'>
         {/* Token usage donut */}
-        <ContextWindowDonut usage={{percentage: 40}} size="sm" />
-
-        <ChatSelectModel projectId={projectId} />
-
-        
-        {/* Send button */}
-        <Button
-          variant="default"
-          onClick={handleSend}
-          disabled={disableSendButton}
-          className="size-6 rounded-full"
-          aria-label="Send message"
-        >
-          {
-            isStreaming ? (
-              <IconLoader2 className="size-4 animate-spin" />
-            ) : (
-              <IconCaretUpFilled className="size-4" />
-            )
-          }
-        </Button>
+        <Tooltip>
+          <TooltipTrigger>
+              <ContextWindowDonut usage={{ percentage: 40 }} size="sm" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Context window usage</p>
+          </TooltipContent>
+        </Tooltip>
+        <MediaSettingsButton />
       </div>
-      
+
+      {/* Chat input */}
+      <div
+        className={cn(
+          'border bg-white/5 p-2 rounded-xl overflow-hidden',
+          className,
+        )}
+      >
+        <MentionsInput
+          value={inputContent}
+          onMentionsChange={handleInputChange}
+          suggestionsPlacement="above"
+          inputRef={setInput}
+          autoResize
+          classNames={{
+            input: 'bg-transparent! max-h-50 text-sm',
+            control: 'bg-transparent! border-none',
+            highlighterSubstring: '',
+            highlighter: 'text-green-500',
+          }}
+          placeholder={placeholder}
+          onKeyDown={handleKeyDown}
+        >
+          <Mention
+            trigger="@"
+            data={searchFileMentions}
+            debounceMs={200}
+            maxSuggestions={15}
+            className="bg-primary/20 rounded-none"
+            displayTransform={(_, display) => ` @${display} `}
+          />
+          <Mention trigger="#" data={[]} />
+          <Mention trigger="&&" data={[]} />
+        </MentionsInput>
+
+        <div className="flex items-center justify-between gap-2 mt-2">
+          <Button variant="outline" size="icon" className="size-8 rounded-full border-white/10!">
+            <IconPlus className="size-4" />
+          </Button>
+
+          <div className="flex items-center justify-end gap-2">
+
+            <ChatSelectModel projectId={projectId} />
+
+            {/* Send button */}
+            <Button
+              variant="default"
+              onClick={handleSend}
+              disabled={disableSendButton}
+              className="size-8 rounded-full"
+              aria-label="Send message"
+            >
+              {isStreaming ? (
+                <IconLoader2 className="size-4 animate-spin" />
+              ) : (
+                <IconArrowNarrowUp className="size-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
