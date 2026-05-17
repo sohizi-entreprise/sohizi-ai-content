@@ -1,6 +1,6 @@
 import { BadRequest, Conflict, InternalServerError, NotFound } from '../error';
 import * as projectRepo from '../project/repo';
-import { fileFormat } from './constants';
+import { FileFormat, fileFormat } from './constants';
 import {
     FileSystemConflictError,
     FileSystemInputError,
@@ -16,9 +16,11 @@ import {
 } from './functions';
 import { FileCreationRequest, UpdateFileRequest, UpdateTextFileContentRequest } from './payload';
 import * as fileSystemRepo from './repo';
-import { normalizeFileName } from './utils';
-import { ProseDocument } from 'zSchemas';
+import * as mediaRepo from '../media-engine/repo';
 import { E5SmallLocalEmbedder } from '@/lib/rag/local-embedder';
+import { Asset } from '@/db/schema';
+import * as storage from '../media-engine/storage';
+import { CursorPaginationOptions } from '@/type';
 
 // List file trees -> ok
 // rename file
@@ -43,7 +45,30 @@ export const createFileNode = async(data: FileCreationRequest) => {
 
 export const deleteFileNode = async(projectId: string, fileId: string) => {
     try {
-        await deleteFileNodeFn(projectId, fileId);
+        const fileNode = await fileSystemRepo.getFileNodeById(projectId, fileId);
+        if (!fileNode) {
+            throw new NotFound('File not found');
+        }
+        if (!fileNode.editable) {
+            throw new BadRequest('Cannot delete a built-in file');
+        }
+        const assetFormats: Partial<FileFormat>[] = [fileFormat.AUDIO, fileFormat.VIDEO, fileFormat.IMAGE, fileFormat.DOCUMENT]
+        const isAssetFile = !fileNode.directory && assetFormats.includes(fileNode.format!);
+        let asset: Asset | null = null;
+        if(isAssetFile) {
+            asset = await mediaRepo.getAssetByFileNodeId(projectId, fileId);
+        }
+        const isDeleted = await fileSystemRepo.deleteFileNode(projectId, fileId);
+        if (!isDeleted) {
+            throw new InternalServerError('Failed to delete file. Try again later.');
+        }
+        if(asset) {
+            // The asset will be deleted by the cascade delete of the file node
+            // Delete the asset from the bucket - fire and forget
+            storage.deleteFile(asset.storageKey);
+        }
+        return { ok: true, data: fileId };
+        
     } catch (error) {
         if (error instanceof FileSystemOperationError) {
             throw new BadRequest(error.message);
@@ -51,8 +76,6 @@ export const deleteFileNode = async(projectId: string, fileId: string) => {
         console.error(error);
         throw new InternalServerError('Something went wrong');
     }
-
-    return { ok: true, data: fileId };
 }
 
 type CompactTextDiff = {
@@ -149,7 +172,7 @@ export const listFileTreePerLevel = async(projectId: string, parentId: string) =
     return fileSystemRepo.listDirectoryFiles(projectId, parentId);
 }
 
-export const getFileContent = async(projectId: string, fileNodeId: string) => {
+export const getFileContent = async(projectId: string, fileNodeId: string, paginationOptions?: CursorPaginationOptions) => {
     const fileNode = await fileSystemRepo.getFileNodeById(projectId, fileNodeId);
     if (!fileNode) {
         throw new NotFound('File not found');
@@ -158,24 +181,27 @@ export const getFileContent = async(projectId: string, fileNodeId: string) => {
         throw new BadRequest('File is a directory');
     }
 
-    let fileContent;
-    try {
-        fileContent = await getFileContentFn(projectId, fileNodeId);
-    } catch (error) {
-        if (error instanceof FileSystemNotFoundError) {
-            throw new NotFound(error.message);
-        }
-        throw error;
-    }
-
     switch (fileNode.format) {
-        case fileFormat.JSON:
-            return {content: fileContent.jsonContent, revision: fileContent.revision};
-        default:{
-            const content = fileContent.content ?? "";
-
-            return {content, revision: fileContent.revision};
+        case fileFormat.MARKDOWN:{
+            const textContent = await fileSystemRepo.getFileContentById(projectId, fileNodeId);
+            if (!textContent) {
+                throw new NotFound('File content not found');
+            }
+            return {type: 'markdown',content: textContent.content, revision: textContent.revision};
         }
+        case fileFormat.AUDIO:
+        case fileFormat.VIDEO:
+        case fileFormat.IMAGE:
+        case fileFormat.DOCUMENT: {
+            const asset = await mediaRepo.getAssetByFileNodeId(projectId, fileNodeId);
+            return {type: asset.type, url: asset.url, name: asset.name, metadata: asset.metadata, storageKey: asset.storageKey};
+        }
+        case fileFormat.AI_GENERATED: {
+            const aiGeneratedAssets = await mediaRepo.getAiGeneratedAssetsGroupedByGenerationRequest(projectId, paginationOptions);
+            return {type: 'ai-generated-assets', data: aiGeneratedAssets.data, nextCursor: aiGeneratedAssets.nextCursor, hasMore: aiGeneratedAssets.hasMore};
+        }
+        default:
+            throw new BadRequest('Unsupported file format');
     }
 }
 

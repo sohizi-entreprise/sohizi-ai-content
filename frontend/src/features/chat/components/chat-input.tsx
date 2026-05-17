@@ -15,7 +15,10 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useEditorInputBridge } from '@/features/editor/bridge/use-editor-input-bridge'
 import { MediaSettingsButton } from '@/features/media-generator'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import ChatFilesPreview from './chat-files-preview'
+import { useFileUpload } from '@/hooks/use-file-upload'
+import { useSaveFileBucket } from '@/hooks/use-save-file-bucket'
+import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
 
 export type sendParams = {
   prompt: string
@@ -46,6 +49,8 @@ export function ChatInput({
 
   const sendMessage = useSendMessage(projectId)
   const queryClient = useQueryClient()
+
+  const { getInputProps, onRemoveFile, openFileDialog } = useHandleUploadedFiles({projectId})
 
   const conversationId = conversation?.id ?? null
   const modelId = model?.id
@@ -114,19 +119,6 @@ export function ChatInput({
 
   return (
     <div className='m-4'>
-      {/* Top container button */}
-      <div className='border-white-10 border rounded-t-xl p-2 w-[calc(100%-2rem)] mx-auto flex justify-between'>
-        {/* Token usage donut */}
-        <Tooltip>
-          <TooltipTrigger>
-              <ContextWindowDonut usage={{ percentage: 40 }} size="sm" />
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Context window usage</p>
-          </TooltipContent>
-        </Tooltip>
-        <MediaSettingsButton />
-      </div>
 
       {/* Chat input */}
       <div
@@ -135,6 +127,7 @@ export function ChatInput({
           className,
         )}
       >
+        <ChatFilesPreview className='mb-2' onRemoveFile={onRemoveFile} />
         <MentionsInput
           value={inputContent}
           onMentionsChange={handleInputChange}
@@ -163,20 +156,34 @@ export function ChatInput({
         </MentionsInput>
 
         <div className="flex items-center justify-between gap-2 mt-2">
-          <Button variant="outline" size="icon" className="size-8 rounded-full border-white/10!">
-            <IconPlus className="size-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" 
+                    size="icon" 
+                    className="size-7 rounded-full border-white/10!"
+                    onClick={openFileDialog}
+                    disabled={isStreaming}
+                    aria-label="Upload file"
+            >
+                <IconPlus className="size-4" />
+            </Button>
+            <input {...getInputProps()} className='sr-only'/>
+            <MediaSettingsButton />
+          </div>
 
           <div className="flex items-center justify-end gap-2">
 
-            <ChatSelectModel projectId={projectId} />
+            <div className="flex items-center">
+              <ContextWindowDonut usage={{ percentage: 40 }} size="xs" />
+              <ChatSelectModel projectId={projectId} />
+            </div>
+
 
             {/* Send button */}
             <Button
               variant="default"
               onClick={handleSend}
               disabled={disableSendButton}
-              className="size-8 rounded-full"
+              className="size-6 rounded-full disabled:cursor-not-allowed"
               aria-label="Send message"
             >
               {isStreaming ? (
@@ -192,15 +199,67 @@ export function ChatInput({
   )
 }
 
-// Helper to extract selection IDs from mention markup
-// Matches pattern: &&[display](id)
+function useHandleUploadedFiles({projectId}: {projectId: string}) {
+  const addAttachedFile = useChatStore(s => s.addAttachedFile)
+  const updateAttachedFile = useChatStore(s => s.updateAttachedFile)
+  const removeAttachedFile = useChatStore(s => s.removeAttachedFile)
+  const insertNodeAt = useFileTreeStore(s => s.insertNodeAt)
+  const { saveFile } = useSaveFileBucket()
 
-// function extractSelectionIds(content: string): string[] {
-//   const regex = /&&\[[^\]]*\]\(([^)]+)\)/g
-//   const ids: string[] = []
-//   let match
-//   while ((match = regex.exec(content)) !== null) {
-//     ids.push(match[1])
-//   }
-//   return ids
-// }
+  const DUMMY_FOLDER_ID = 'd77b6506-ae24-4f8a-8a2e-431a0a84cf4b'
+
+    const [
+        _state,
+        {
+            openFileDialog,
+            getInputProps,
+            removeFile
+        }
+    ] = useFileUpload({
+        multiple: true,
+        accept: 'image/*,video/*,audio/*,application/pdf,text/plain',
+        maxSize: 5 * 1024 * 1024, // 5MB
+        maxFiles: 5,
+        onFilesAdded: async (data) => {
+            for (const file of data) {
+                addAttachedFile({
+                    id: file.id,
+                    preview: file.preview,
+                    status: 'pending',
+                    type: file.file.type,
+                })
+
+                saveFile({projectId, folderId: DUMMY_FOLDER_ID, file: file.file as File}, {
+                    onSuccess: (result) => {
+                        updateAttachedFile(file.id, {
+                            status: 'uploaded',
+                            type: file.file.type,
+                            preview: file.preview,
+                            url: file.preview ?? result.storageKey,
+                        })
+                        insertNodeAt(DUMMY_FOLDER_ID, result.fileNode)
+                    },
+                    onError: (error) => {
+                      removeFile(file.id)
+                      removeAttachedFile(file.id)
+                      toast.error(error.message)
+                    }
+                })
+            }
+        },
+        onError: (error) => {
+            toast.error(error)
+        },
+    })
+
+  const onRemoveFile = useCallback((id: string) => {
+      removeAttachedFile(id)
+      removeFile(id)
+    }, [removeAttachedFile, removeFile])
+
+  return {
+    getInputProps,
+    onRemoveFile,
+    openFileDialog
+  }
+}

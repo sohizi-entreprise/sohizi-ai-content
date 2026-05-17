@@ -1,15 +1,17 @@
 import api from '@/lib/axios'
+import { FileContentResponse } from './types'
 
-export type FileContentResponse = {
-  content: string | Record<string, unknown>
-  revision: number
+export type CursorPaginationOptions = {
+  cursor?: string
+  limit?: number
 }
 
 export const getFileContent = async (
   projectId: string,
   fileId: string,
+  paginationOptions?: CursorPaginationOptions
 ): Promise<FileContentResponse> => {
-  const response = await api.get(`/projects/${projectId}/files/${fileId}`)
+  const response = await api.get(`/projects/${projectId}/files/${fileId}`, { params: paginationOptions })
   return response.data
 }
 

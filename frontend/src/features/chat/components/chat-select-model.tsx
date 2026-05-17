@@ -34,7 +34,7 @@ export default function ChatSelectModel({projectId}: {projectId: string}) {
   return (
     <DropdownMenu>
         <DropdownMenuTrigger asChild disabled={isLoading}>
-            <button className="flex items-center gap-2 py-2 px-2 text-sm">
+            <button className="flex items-center gap-2 py-2 px-2 text-xs">
                 {model?.name ?? 'Select Model'}
                 <ChevronDown className="size-4" />
             </button>

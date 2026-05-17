@@ -6,6 +6,29 @@ import { ChatStreamChunk, Conversation, LlmModel, Message, MsgToolCallPart } fro
 // INITIAL STATE
 // ============================================================================
 
+export type AttachedFile = {
+  status: 'pending'
+  id: string
+  type: string
+  preview?: string
+} | {
+  status: 'uploaded'
+  id: string
+  type: string
+  preview?: string
+  url: string
+} | {
+  status: 'failed'
+  id: string
+  type: string
+  preview?: string
+  error: string
+}
+
+type AttachedFileUpdate =
+  | Partial<Omit<Extract<AttachedFile, { status: 'pending' }>, 'id'>>
+  | Omit<Extract<AttachedFile, { status: 'uploaded' }>, 'id'>
+  | Omit<Extract<AttachedFile, { status: 'failed' }>, 'id'>
 
 type ChatState = {
   userPrompt: string
@@ -14,6 +37,7 @@ type ChatState = {
   pendingMessage: Message | null
   streamingMessages: Message[]
   isStreaming: boolean
+  attachedFiles: AttachedFile[]
 }
 
 type ChatActions = {
@@ -27,6 +51,9 @@ type ChatActions = {
   appendChunk: (chunk: ChatStreamChunk) => void
   setIsStreaming: (isStreaming: boolean) => void
   clearStreamingMessages: () => void
+  addAttachedFile: (file: AttachedFile) => void
+  removeAttachedFile: (id: string) => void
+  updateAttachedFile: (id: string, file: AttachedFileUpdate) => void
 }
 
 const initialState: ChatState = {
@@ -36,6 +63,7 @@ const initialState: ChatState = {
   pendingMessage: null,
   streamingMessages: [],
   isStreaming: false,
+  attachedFiles: [],
 }
 
 
@@ -54,6 +82,25 @@ export const useChatStore = create<ChatState & ChatActions>()(immer((set) => ({
   setPendingMessage: (message) => set({ pendingMessage: message }),
   setIsStreaming: (isStreaming) => set({ isStreaming }),
   clearStreamingMessages: () => set({ streamingMessages: [] }),
+  addAttachedFile: (file) => set((state) => {
+    const index = state.attachedFiles.findIndex((f) => f.id === file.id)
+
+    if (index >= 0) {
+      state.attachedFiles[index] = file
+      return
+    }
+    state.attachedFiles.push(file)
+  }),
+  updateAttachedFile: (id, file) => set((state) => {
+    const index = state.attachedFiles.findIndex((f) => f.id === id)
+    if (index < 0) return
+
+    const currentFile = state.attachedFiles[index]
+    state.attachedFiles[index] = { ...currentFile, ...file } as AttachedFile
+  }),
+  removeAttachedFile: (id) => set((state) => {
+    state.attachedFiles = state.attachedFiles.filter((file) => file.id !== id)
+  }),
   appendChunk: (chunk) => set((state) => {
     if (!chunk.runId) return
 

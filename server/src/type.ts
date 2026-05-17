@@ -1,16 +1,7 @@
 import { UserContent, AssistantContent, ToolContent, ModelMessage, FinishReason } from 'ai';
 
-export type ProjectStatus = 'DRAFT' | 'OUTLINE_GENERATED' | 'OUTLINE_CONFIRMED' | 'SHOTS_GENERATED';
-export type GenerationRequestStatus = 'ENQUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELED';
-export type GenerationRequestType = 
-| 'GENERATE_SCENE' 
-| 'GENERATE_ENTITY'
-| 'GENERATE_CONCEPT'
-| 'GENERATE_SYNOPSIS'
-| 'GENERATE_STORY_BIBLE'
-// | 'CHAT_COMPLETION'
-;
-export type CharacterRole = 'protagonist' | 'antagonist' | 'supporting' | 'narrator' | 'unknown';
+export type GenerationRequestStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'aborted';
+export type GenerationRequestType = 'image' | 'video' | 'audio';
 
 export type ProjectFormat = 'storytime' | 'explainer' | 'documentary' | 'presenter';
 export type Audience = 'general' | 'kids' | 'teens' | 'adult';
@@ -108,5 +99,34 @@ export type SceneContent =
 
 export type ProseDocument = { type: 'doc'; content: ProseNode[] }
 
+export type AssetType = 'image' | 'video' | 'audio' | 'document';
+export type AssetSource = 'user-uploaded' | 'ai-generated';
+export type AssetVariantType = 'original' | 'thumbnail' | 'preview' | 'delivery';
+export type AssetStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type ImageAssetFormat = 'jpg' | 'jpeg' | 'png' | 'gif' | 'webp';
+export type VideoAssetFormat = 'mp4' | 'mov' | 'webm';
+export type AudioAssetFormat = 'mp3' | 'wav' | 'm4a';
+export type DocumentAssetFormat = 'pdf' | 'doc' | 'docx' | 'txt' | 'md'
+export type ImageAssetMetadata = {
+  format: ImageAssetFormat;
+  width: number;
+  height: number;
+}
+export type VideoAssetMetadata = {
+  format: VideoAssetFormat;
+  width: number;
+  height: number;
+  duration: number;
+}
+export type AudioAssetMetadata = {
+  duration: number;
+  format: AudioAssetFormat;
+}
+export type DocumentAssetMetadata = {
+  format: DocumentAssetFormat;
+}
 
-
+export type AssetMetadata = {
+  size: number;
+  contentType: string;
+}

@@ -17,7 +17,7 @@ function PaneContent({ pane }: { pane: 'left' | 'right' }) {
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
       <EditorTabs tabs={paneTabs} activeTabId={activeTab?.id ?? null} pane={pane} />
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-y-auto">
         {activeTab ? (
           <ContentRouter tab={activeTab} />
         ) : (

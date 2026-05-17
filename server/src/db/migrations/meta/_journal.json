@@ -36,6 +36,20 @@
       "when": 1778000155679,
       "tag": "0004_rainy_amphibian",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1778954102634,
+      "tag": "0005_fixed_steve_rogers",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778960000000,
+      "tag": "0006_editable_default_true",
+      "breakpoints": true
     }
   ]
 }

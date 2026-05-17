@@ -16,6 +16,13 @@ import {
 import { relations, sql } from 'drizzle-orm'
 import { 
   AgentState,
+  AssetMetadata,
+  AssetSource,
+  AssetStatus,
+  AssetType,
+  AssetVariantType,
+  GenerationRequestStatus,
+  GenerationRequestType,
   ModelCategory,
          ModelRecommendedUsage,
          MsgContent,
@@ -54,13 +61,14 @@ export const generationRequests = pgTable('generation_requests', {
   projectId: uuid('project_id')
     .references(() => projects.id, { onDelete: 'cascade' })
     .notNull(),
-  status: varchar('status', {length: 50}).default('ENQUEUED').notNull().$type<string>(),
-  type: varchar('type', {length: 50}).notNull().$type<string>(),
-  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  status: varchar('status', {length: 50}).default('pending').notNull().$type<GenerationRequestStatus>(),
+  type: varchar('type', {length: 50}).notNull().$type<GenerationRequestType>(),
+  request: jsonb('request').$type<Record<string, unknown>>(),
   error: text('error'),
   ...timestamps,
 }, (table) => ([
-  index('generation_requests_status_idx').on(table.status),
+  index('generation_requests_project_created_at_idx').on(table.projectId, table.createdAt),
+  index('generation_requests_status_created_at_idx').on(table.status, table.createdAt),
 ]))
 
   // Tables
@@ -224,6 +232,55 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     uniqueIndex('llm_models_provider_api_name_unique').on(table.provider, table.apiName),
   ]))
 
+  // ========================= ASSETS ==========================
+
+  export const assets = pgTable('assets', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    projectId: uuid('project_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    type: varchar('type', { length: 50 }).notNull().$type<AssetType>(),
+    url: text('url').notNull(),
+    storageKey: text('storage_key').notNull(),
+    source: varchar('source', { length: 50 }).notNull().$type<AssetSource>(),
+    generationRequestId: uuid('generation_request_id')
+      .references(() => generationRequests.id, { onDelete: 'set null' }), // for AI generated assets
+    fileNodeId: uuid('file_node_id')
+      .references(() => fileNodes.id, { onDelete: 'cascade' }),
+    metadata: jsonb('metadata').$type<AssetMetadata>(),
+    ...timestamps,
+  }, (table) => ([
+    index('assets_project_type_created_at_idx').on(
+      table.projectId,
+      table.type,
+      table.createdAt,
+    ),
+    index('assets_project_source_created_at_idx').on(
+      table.projectId,
+      table.source,
+      table.createdAt,
+    ),
+    index('assets_generation_request_id_idx').on(table.generationRequestId)
+  ]))
+
+  export const assetVariants = pgTable('asset_variants', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    assetId: uuid('asset_id')
+      .references(() => assets.id, { onDelete: 'cascade' })
+      .notNull(),
+    type: varchar('type', { length: 50 }).notNull().$type<AssetVariantType>(),
+    storageKey: varchar('storage_key', { length: 255 }).notNull(),
+    url: text('url').notNull(),
+    metadata: jsonb('metadata').$type<AssetMetadata>(),
+    size: integer('size').notNull(),
+    status: varchar('status', { length: 50 }).notNull().$type<AssetStatus>(),
+    blurhash: text('blurhash'),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('asset_variants_asset_id_type_unique').on(table.assetId, table.type),
+  ]))
+
   // Type exports for use in app
   export type Project = typeof projects.$inferSelect
   export type FileNode = typeof fileNodes.$inferSelect
@@ -235,5 +292,7 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
   export type ChatMessageRole = (typeof chatMessageRoleEnum.enumValues)[number]
   export type LlmModel = typeof llmModels.$inferSelect
   export type Checkpoint = typeof checkpoints.$inferSelect
+  export type Asset = typeof assets.$inferSelect
+  export type AssetVariant = typeof assetVariants.$inferSelect
   
   

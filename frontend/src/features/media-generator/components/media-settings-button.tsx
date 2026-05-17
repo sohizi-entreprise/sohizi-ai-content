@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MediaSettingsDialog } from './media-settings-dialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { IconSettingsSpark } from '@tabler/icons-react'
+import { IconImageGeneration } from '@tabler/icons-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 type MediaSettingsButtonProps = {
@@ -23,8 +23,7 @@ export function MediaSettingsButton({ className }: MediaSettingsButtonProps) {
             onClick={() => setOpen(true)}
             className={cn("h-6 rounded-full px-3 text-sm text-zinc-200 hover:bg-white/10 hover:text-white", className)}
           >
-            <IconSettingsSpark className="size-4" />
-            Media
+            <IconImageGeneration className="size-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>

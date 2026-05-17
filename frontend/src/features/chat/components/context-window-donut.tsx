@@ -1,14 +1,14 @@
 import { cn } from '@/lib/utils'
-import type { TokenUsage } from '../types'
 
 type ContextWindowDonutProps = {
   usage: {percentage: number}
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xs'
   showLabel?: boolean
   className?: string
 }
 
 const sizeConfig = {
+  xs: { diameter: 14, strokeWidth: 2 },
   sm: { diameter: 20, strokeWidth: 3 },
   md: { diameter: 28, strokeWidth: 4 },
   lg: { diameter: 36, strokeWidth: 5 },
@@ -29,7 +29,7 @@ export function ContextWindowDonut({
   const getStrokeColor = () => {
     if (usage.percentage >= 90) return 'stroke-red-500/50'
     if (usage.percentage >= 70) return 'stroke-yellow-500/50'
-    return 'stroke-primary/50'
+    return 'stroke-gray-400'
   }
 
   return (
@@ -74,20 +74,3 @@ export function ContextWindowDonut({
   )
 }
 
-// Helper to calculate token usage from content
-export function calculateTokenUsage(
-  content: string,
-  contextItems: { content: string }[],
-  maxTokens: number = 128000
-): TokenUsage {
-  // Rough estimation: ~4 characters per token
-  const contentTokens = Math.ceil(content.length / 4)
-  const contextTokens = contextItems.reduce(
-    (acc, item) => acc + Math.ceil(item.content.length / 4),
-    0
-  )
-  const used = contentTokens + contextTokens
-  const percentage = Math.min((used / maxTokens) * 100, 100)
-
-  return { used, total: maxTokens, percentage }
-}

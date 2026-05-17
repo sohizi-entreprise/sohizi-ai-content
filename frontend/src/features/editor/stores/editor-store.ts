@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { getFileExtension } from '../types'
 import type {
   ActivityBarItem,
   EditorTab,
@@ -239,3 +238,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setSelectedFileId: (id) => set({ selectedFileId: id }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 }))
+
+function getFileExtension(filename: string): string {
+  const idx = filename.lastIndexOf('.')
+  return idx >= 0 ? filename.slice(idx) : ''
+}

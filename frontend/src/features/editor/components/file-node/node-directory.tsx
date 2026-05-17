@@ -8,6 +8,7 @@ import {
   FolderPlus,
   Pencil,
   Trash,
+  Upload,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from "../../stores/editor-store"
@@ -15,7 +16,11 @@ import { useFileTreeStore } from '../../stores/file-tree-store'
 import { FileNodeMenu } from "./node-menu"
 import { useCallback } from "react"
 import * as requests from '@/features/projects/request'
+import { toast } from "sonner"
+import { useFileUpload } from "@/hooks/use-file-upload"
+import { useSaveFileBucket } from "@/hooks/use-save-file-bucket"
 
+const MAX_CHILDREN_PER_DIRECTORY = 100
 
 export function DirectoryNode(props: NodeProps) {
   const { node, style, dragHandle } = props
@@ -93,6 +98,7 @@ export function DirectoryNode(props: NodeProps) {
 function DirectoryMenu({node, tree, onCreateFile}: NodeProps){
 
   const handleLoadChildren = useLoadChildren()
+  const { openFileDialog, getInputProps } = useHandleUploadFile({projectId: node.data.projectId, node})
 
   if (node.isEditing) return null
 
@@ -118,6 +124,10 @@ function DirectoryMenu({node, tree, onCreateFile}: NodeProps){
       case 'delete':
         tree.delete(node.id)
         break;
+
+      case 'upload-file':
+        openFileDialog()
+        break;
     
       default:
         break;
@@ -126,21 +136,28 @@ function DirectoryMenu({node, tree, onCreateFile}: NodeProps){
 
   const options = getOptions(node.data)
 
-  return <FileNodeMenu onChange={onChange} options={options} />
+  return (
+    <div>
+      <FileNodeMenu onChange={onChange} options={options} />
+      <input {...getInputProps()} className='sr-only' />
+    </div>
+  ) 
 }
 
 function getOptions(node: FileTreeNode): {label: string, value: string, icon: React.ReactNode}[] {
   if (node.editable) {
     return [
-      {label: 'New file', value: 'new-file', icon: <FilePlus className="size-4" />},
       {label: 'New folder', value: 'new-folder', icon: <FolderPlus className="size-4" />},
+      {label: 'New file', value: 'new-file', icon: <FilePlus className="size-4" />},
+      {label: 'Upload file', value: 'upload-file', icon: <Upload className="size-4" />},
       {label: 'Rename', value: 'rename', icon: <Pencil className="size-4" />},
       {label: 'Delete', value: 'delete', icon: <Trash className="size-4" />},
     ]
   }
   return [
-    {label: 'New file', value: 'new-file', icon: <FilePlus className="size-4" />},
     {label: 'New folder', value: 'new-folder', icon: <FolderPlus className="size-4" />},
+    {label: 'New file', value: 'new-file', icon: <FilePlus className="size-4" />},
+    {label: 'Upload file', value: 'upload-file', icon: <Upload className="size-4" />},
   ]
 }
 
@@ -163,4 +180,50 @@ export function useLoadChildren() {
     },
     [projectId, appendChildren, markDirLoaded, isDirLoaded],
   )
+}
+
+function useHandleUploadFile(params: {projectId: string } & Pick<NodeProps, 'node'>){
+  const { projectId, node } = params
+  const insertNodeAt = useFileTreeStore(s => s.insertNodeAt)
+  const { saveFile } = useSaveFileBucket()
+  const [
+        _state,
+        {
+            openFileDialog,
+            getInputProps,
+        }
+    ] = useFileUpload({
+            multiple: false,
+            accept: 'image/*,video/*,audio/*,application/pdf,text/plain,.docx',
+            maxSize: 5 * 1024 * 1024, // 5MB
+            onFilesAdded: async (data) => {
+              const totalChildren = node.children?.length ?? 0
+              if (totalChildren === MAX_CHILDREN_PER_DIRECTORY) {
+                toast.error('Maximum number of children reached')
+                return
+              }
+              
+                for (const file of data) {
+
+                    saveFile({projectId, folderId: node.id, file: file.file as File}, {
+                        onSuccess: (result) => {
+                          const fileNode = result.fileNode
+                          insertNodeAt(node.id, fileNode, totalChildren)
+                        },
+                        onError: (error) => {
+                            toast.error(error.message)
+                        }
+                    })
+                }
+            },
+            onError: (error) => {
+                toast.error(error)
+            },
+        })
+
+    return {
+      openFileDialog,
+      getInputProps
+    }
+
 }

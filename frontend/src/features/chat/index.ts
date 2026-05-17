@@ -3,7 +3,7 @@ export { ChatContainer } from './components/chat-container'
 export { ChatHeader } from './components/chat-header'
 export { ChatMessages } from './components/chat-messages'
 export { ChatInput } from './components/chat-input'
-export { ContextWindowDonut, calculateTokenUsage } from './components/context-window-donut'
+export { ContextWindowDonut } from './components/context-window-donut'
 
 // Hooks
 export { useVoiceInput } from './hooks/use-voice-input'

@@ -23,16 +23,51 @@ export interface EditorTab {
   content?: string
 }
 
+export type MarkdownContent = {
+  type: 'markdown'
+  content: string
+  revision: number
+}
+
+export type AssetContent = {
+  type: 'document' | 'video' | 'audio' | 'image'
+  url: string
+  name: string
+  metadata: {
+    size: number
+    contentType: string
+  }
+  storageKey: string
+}
+
+export type AssetType = 'document' | 'video' | 'audio' | 'image'
+
+export type AiGeneratedAssetGroup = {
+  requestId: string;
+  request: Record<string, unknown> | null;
+  createdAt: Date;
+  assets: Array<{
+      id: string;
+      name: string;
+      url: string;
+      type: AssetType;
+      createdAt: string;
+      storageKey: string;
+  }>;
+}
+
+export type AiGeneratedAssetsContent = {
+  type: 'ai-generated-assets'
+  data: AiGeneratedAssetGroup[]
+  nextCursor: string | null
+  hasMore: boolean
+}
+
+export type FileContentResponse = MarkdownContent | AssetContent | AiGeneratedAssetsContent
+
+// ==================
+
 export type ActivityBarItem = 'files' | 'search' | 'settings' | 'git' | 'extensions'
 
 export type ContentType = 'text' | 'video'
 
-export function getContentType(extension: string): ContentType {
-  const videoExtensions = ['.vid', '.mp4', '.mov', '.project', '.storyboard']
-  return videoExtensions.includes(extension) ? 'video' : 'text'
-}
-
-export function getFileExtension(filename: string): string {
-  const idx = filename.lastIndexOf('.')
-  return idx >= 0 ? filename.slice(idx) : ''
-}

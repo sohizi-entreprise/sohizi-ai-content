@@ -4,7 +4,7 @@ import {
   saveFileContent,
   saveFileContentDiff,
 } from './requests'
-import type { CompactTextDiff } from './requests'
+import type { CompactTextDiff, CursorPaginationOptions } from './requests'
 
 type SaveFileContentDiffVariables = {
   diff: CompactTextDiff
@@ -12,19 +12,20 @@ type SaveFileContentDiffVariables = {
 }
 
 const keysFactory = {
-  fileContent: (projectId: string, fileId: string) => [
+  fileContent: (projectId: string, fileId: string, paginationOptions?: CursorPaginationOptions) => [
     'project',
     projectId,
     'files',
     fileId,
     'content',
+    { ...(paginationOptions ?? {}) },
   ],
 }
 
-export const getFileContentQueryOptions = (projectId: string, fileId: string) =>
+export const getFileContentQueryOptions = (projectId: string, fileId: string, paginationOptions?: CursorPaginationOptions) =>
   queryOptions({
-    queryKey: keysFactory.fileContent(projectId, fileId),
-    queryFn: () => getFileContent(projectId, fileId),
+    queryKey: keysFactory.fileContent(projectId, fileId, paginationOptions),
+    queryFn: () => getFileContent(projectId, fileId, paginationOptions),
     enabled: !!projectId && !!fileId,
   })
 

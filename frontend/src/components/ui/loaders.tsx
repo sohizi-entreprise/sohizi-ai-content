@@ -1,11 +1,12 @@
+import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 
-export function DotsLoader() {
+export function DotsLoader({bgColor}: {bgColor?: string}) {
     return (
         <span className="flex gap-1">
-            <span className="size-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]" />
-            <span className="size-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]" />
-            <span className="size-1.5 rounded-full bg-muted-foreground animate-bounce" />
+            <span className={cn("size-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]", bgColor)} />
+            <span className={cn("size-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]", bgColor)} />
+            <span className={cn("size-1.5 rounded-full bg-muted-foreground animate-bounce", bgColor)} />
         </span>
     )
 }
