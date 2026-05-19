@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useChatStore } from '../store/chat-store'
 import { listMessagesInfiniteQueryOptions } from '../query-mutation'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import ChatBuble from './chat-buble'
+import ChatBuble, { insertToolResultsIntoAssistantMessages } from './chat-buble'
 import { useShallow } from 'zustand/shallow'
 import { TextShimmer } from '@/components/ui/loaders'
 
@@ -21,7 +21,9 @@ export function ChatMessages({projectId, className}: {projectId: string; classNa
 
   const {data: messages = [], isLoading} = useInfiniteQuery(listMessagesInfiniteQueryOptions(projectId, conversationId))
 
-  const allMessages = mergeMessages([...messages, pendingMessage, ...streamingMessages].filter((message) => message !== null))
+  const allMessages = insertToolResultsIntoAssistantMessages(
+    mergeMessages([...messages, pendingMessage, ...streamingMessages].filter((message) => message !== null))
+  )
   const isEmpty = isLoading === false && allMessages.length === 0
 
   // Auto-scroll to bottom during streaming so new content is visible

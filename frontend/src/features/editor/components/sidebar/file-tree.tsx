@@ -1,23 +1,23 @@
-import { useCallback } from 'react'
-import {
-  DeleteHandler,
-  MoveHandler,
-  RenameHandler,
-  Tree,
-  type NodeRendererProps,
-} from 'react-arborist'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { Tree } from 'react-arborist'
 import { useMutation } from '@tanstack/react-query'
-import type { FileTreeNode, NodeProps } from '../../types'
 import { useFileTreeStore } from '../../stores/file-tree-store'
-import {
-  createFileNodeMutationOptions,
-  renameFileNodeMutationOptions,
-  moveFileNodeMutationOptions,
-  deleteFileNodeMutationOptions,
-} from '@/features/projects/query-mutation'
 import { DirectoryNode, useLoadChildren } from '../file-node/node-directory'
 import { DocumentNode } from '../file-node/node-file'
 import useFileTreeBridge from '../../bridge/use-file-tree-bridge'
+import type {
+  DeleteHandler,
+  MoveHandler,
+  NodeRendererProps,
+  RenameHandler,
+} from 'react-arborist'
+import type { FileTreeNode, NodeProps } from '../../types'
+import {
+  createFileNodeMutationOptions,
+  deleteFileNodeMutationOptions,
+  moveFileNodeMutationOptions,
+  renameFileNodeMutationOptions,
+} from '@/features/projects/query-mutation'
 
 type FileTreeProps = {
   projectId: string
@@ -25,7 +25,6 @@ type FileTreeProps = {
 }
 
 function Node(props: NodeProps) {
-
   const isDir = props.node.data.directory
 
   if (isDir) {
@@ -33,11 +32,11 @@ function Node(props: NodeProps) {
   }
 
   return <DocumentNode {...props} />
-  
 }
 
-
 export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [treeHeight, setTreeHeight] = useState(0)
   const treeData = useFileTreeStore((s) => s.treeData)
   const removeNode = useFileTreeStore((s) => s.removeNode)
   const updateNode = useFileTreeStore((s) => s.updateNode)
@@ -53,9 +52,15 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
 
   const handleLoadChildren = useLoadChildren()
 
-  const createFileNode = useCallback((parentId: string, index: number, isDir: boolean = false) => {
-    runCommand({ type: 'create', data: { projectId, parentId, index, isDir } })
-  }, [projectId, runCommand])
+  const createFileNode = useCallback(
+    (parentId: string, index: number, isDir: boolean = false) => {
+      runCommand({
+        type: 'create',
+        data: { projectId, parentId, index, isDir },
+      })
+    },
+    [projectId, runCommand],
+  )
 
   const onRename: RenameHandler<FileTreeNode> = async ({ id, name }) => {
     if (!name.trim()) {
@@ -84,7 +89,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
       createMutation.mutate(payload, {
         onSettled(created, error) {
           removeNode(id)
-          if(error || !created) {
+          if (error || !created) {
             console.error('Failed to create file node:', error)
             return
           }
@@ -109,7 +114,11 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
     }
   }
 
-  const onMove: MoveHandler<FileTreeNode> = async ({ dragIds, parentId, index }) => {
+  const onMove: MoveHandler<FileTreeNode> = async ({
+    dragIds,
+    parentId,
+    index,
+  }) => {
     const fileId = dragIds[0]
     if (!fileId) return
 
@@ -181,40 +190,64 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
 
   const nodeRenderer = useCallback(
     (props: NodeRendererProps<FileTreeNode>) => (
-      <Node {...props} onCreateFile={createFileNode} />
+      <div className="pr-4">
+        <Node {...props} onCreateFile={createFileNode} />
+      </div>
     ),
     [createFileNode],
   )
 
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const updateTreeHeight = () => {
+      setTreeHeight(Math.floor(container.getBoundingClientRect().height))
+    }
+
+    updateTreeHeight()
+    const resizeObserver = new ResizeObserver(updateTreeHeight)
+    resizeObserver.observe(container)
+    const animationFrameId = window.requestAnimationFrame(updateTreeHeight)
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId)
+      resizeObserver.disconnect()
+    }
+  }, [storeRootFolderId])
+
   if (!storeRootFolderId) return null
 
   return (
-    <Tree<FileTreeNode>
-      ref={setTree}
-      data={treeData}
-      idAccessor="id"
-      childrenAccessor="children"
-      openByDefault={false}
-      indent={16}
-      rowHeight={28}
-      width="100%"
-      height={600}
-      paddingBottom={20}
-      disableDrag={disableDrag}
-      disableDrop={(args) => {
-        if (args.parentNode && !args.parentNode.data.directory) return true
-        return false
-      }}
-      onRename={onRename}
-      onMove={onMove}
-      onDelete={onDelete}
-    >
-      {nodeRenderer}
-    </Tree>
+    <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden **:[scrollbar-color:var(--color-primary)_transparent]!">
+      <Tree<FileTreeNode>
+        ref={setTree}
+        data={treeData}
+        idAccessor="id"
+        childrenAccessor="children"
+        openByDefault={false}
+        indent={16}
+        rowHeight={28}
+        width="100%"
+        height={treeHeight || undefined}
+        paddingBottom={20}
+        disableDrag={disableDrag}
+        disableDrop={(args) => !args.parentNode.data.directory}
+        onRename={onRename}
+        onMove={onMove}
+        onDelete={onDelete}
+        className="pr-6!"
+      >
+        {nodeRenderer}
+      </Tree>
+    </div>
   )
 }
 
-function findNodeInTree(nodes: FileTreeNode[], id: string): FileTreeNode | null {
+function findNodeInTree(
+  nodes: Array<FileTreeNode>,
+  id: string,
+): FileTreeNode | null {
   for (const node of nodes) {
     if (node.id === id) return node
     if (node.children) {

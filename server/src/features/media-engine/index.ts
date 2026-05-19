@@ -4,6 +4,7 @@ import {
     generateImageSchema,
     generateAudioSchema,
     generateVideoSchema,
+    getRequestStatusesSchema,
     getUploadUrlSchema,
     projectIdParamSchema,
     uploadSuccessSchema,
@@ -39,4 +40,10 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media' })
         return mediaService.getPendingRequests(params.projectId);
     }, {
         params: projectIdParamSchema,
+    })
+    .post('/:projectId/requests/status', ({ params, body }) => {
+        return mediaService.getRequestStatuses(params.projectId, body);
+    }, {
+        params: projectIdParamSchema,
+        body: getRequestStatusesSchema,
     })

@@ -88,6 +88,26 @@ export const getPendingRequests = async (projectId: string) => {
         .orderBy(desc(generationRequests.createdAt));
 }
 
+export const getGenerationRequestsByIds = async (projectId: string, requestIds: string[]) => {
+    return db
+        .select({
+            id: generationRequests.id,
+            status: generationRequests.status,
+            type: generationRequests.type,
+            request: generationRequests.request,
+            error: generationRequests.error,
+            createdAt: generationRequests.createdAt,
+            updatedAt: generationRequests.updatedAt,
+        })
+        .from(generationRequests)
+        .where(
+            and(
+                eq(generationRequests.projectId, projectId),
+                inArray(generationRequests.id, requestIds),
+            ),
+        );
+}
+
 export const createAsset = async (payload: CreateAssetPayload) => {
     const result = await db.insert(assets).values(payload).returning();
     return result[0];

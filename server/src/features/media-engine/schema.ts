@@ -1,13 +1,14 @@
 import { z } from 'zod'
+import { mediaConstants } from '@/constants'
 
-const imageSizePresets = ['auto', 'square', 'landscape', 'portrait', '2k-square', '2k-landscape', '4k-landscape', '4k-portrait'] as const;
+const imageSizePresets = mediaConstants.imageSizePresets;
 
 export const generateImageSchema = z.object({
     projectId: z.uuid(),
     prompt: z.string().min(1),
     model: z.string().min(1),
     aspectRatio: z.enum(imageSizePresets).default('auto'),
-    referenceImages: z.array(z.string().url()).optional(),
+    referenceImages: z.array(z.url()).optional(),
     numVariations: z.number().int().min(1).max(4).default(1),
 })
 
@@ -38,6 +39,10 @@ export const uploadSuccessSchema = z.object({
     storageKey: z.string().min(1)
 })
 
+export const getRequestStatusesSchema = z.object({
+    requestIds: z.array(z.uuid('Invalid request id')).min(1),
+})
+
 export const projectIdParamSchema = z.object({
     projectId: z.uuid('Invalid project id'),
 })
@@ -46,3 +51,4 @@ export type GenerateImageInput = z.infer<typeof generateImageSchema>
 export type GenerateAudioInput = z.infer<typeof generateAudioSchema>
 export type GenerateVideoInput = z.infer<typeof generateVideoSchema>
 export type GetUploadUrlInput = z.infer<typeof getUploadUrlSchema>
+export type GetRequestStatusesInput = z.infer<typeof getRequestStatusesSchema>

@@ -1,12 +1,32 @@
 import { inngest } from '@/lib/inngest';
 import * as repo from './repo';
 import * as storage from './storage';
-import type { GenerateImageInput, GenerateAudioInput, GenerateVideoInput, GetUploadUrlInput, uploadSuccessSchema } from './schema';
+import type { GenerateImageInput, GenerateAudioInput, GenerateVideoInput, GetUploadUrlInput, GetRequestStatusesInput, uploadSuccessSchema } from './schema';
 import { BadRequest, NotFound } from '../error';
 import { getProjectById } from '../project/repo';
 import z from 'zod';
 import { getFileNodeById, listDirectoryFiles, ORDER_GAP } from '../file-system/repo';
 import { AssetType } from '@/type';
+
+export const models = {
+    image: [
+        'flux.2-max',
+        'gpt-image-2',
+        'gpt-image-1.5',
+        'gemini-3.1-flash-image-preview',
+        'gemini-3-pro-image-preview',
+        'seedream-4.5',
+        'seedream-5-lite'
+    ],
+    video: [
+        'wan-2.6',
+        'kling-v3',
+        'seedance-2.0'
+    ],
+    videoToVideo: [
+        'seedance-2.0'
+    ],
+}
 
 export async function generateImage(data: GenerateImageInput) {
     const genRequest = await repo.createGenerationRequest({
@@ -173,6 +193,14 @@ export async function getPendingRequests(projectId: string) {
         throw new NotFound('Project not found');
     }
     return repo.getPendingRequests(projectId);
+}
+
+export async function getRequestStatuses(projectId: string, data: GetRequestStatusesInput) {
+    const project = await getProjectById(projectId);
+    if (!project) {
+        throw new NotFound('Project not found');
+    }
+    return repo.getGenerationRequestsByIds(projectId, data.requestIds);
 }
 
 function getAssetType(contentType: string): AssetType {

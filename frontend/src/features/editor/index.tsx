@@ -1,14 +1,16 @@
 import { useEffect } from 'react'
-import { AppLayout } from './components/layout/app-layout'
 import { useQuery } from '@tanstack/react-query'
-import { getProjectQueryOptions } from '../projects/query-mutation'
 import { useParams } from '@tanstack/react-router'
+import { getProjectQueryOptions } from '../projects/query-mutation'
 import { useFileTreeStore } from './stores/file-tree-store'
+import { AppLayout } from './components/layout/app-layout'
 
 export function VideoProductionEditor() {
-  const { projectId } = useParams({ from: '/dashboard/projects/$projectId/editor' })
+  const { projectId } = useParams({
+    from: '/dashboard/projects/$projectId/editor',
+  })
 
-  const {data, isLoading} = useQuery(getProjectQueryOptions(projectId))
+  const { data, isLoading } = useQuery(getProjectQueryOptions(projectId))
   const init = useFileTreeStore((s) => s.init)
 
   useEffect(() => {

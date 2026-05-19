@@ -19,6 +19,7 @@ import { Suspense, useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Link } from '@tanstack/react-router'
 import { IconX } from '@tabler/icons-react'
+import NotificationButton from './notification-button'
 
 export function TopNav() {
   return (
@@ -41,6 +42,8 @@ export function TopNav() {
       <div className="flex items-center gap-2">
 
         <ThemeToggle />
+
+        <NotificationButton />
 
         <div className="size-7 rounded-full bg-primary/20 ring-2 ring-primary/40 flex items-center justify-center">
           <span className="text-xs font-medium text-primary">JD</span>

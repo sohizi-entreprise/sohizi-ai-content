@@ -5,6 +5,9 @@ import { assignTaskTool } from "./tasks-assign";
 import { exploreFileTool } from "./file-explore";
 import { editFileTool } from "./file-edit";
 import { searchFileTool } from "./file-search";
+import { generateImageTool } from "./generate-image";
+import { generateAudioDialogueTool, generateMusicTool, generateSoundEffectTool, generateSpeechTool } from "./generate-audio";
+import { generateVideoTool } from "./generate-video";
 import { ToolSet } from "ai";
 
 
@@ -30,4 +33,10 @@ export const listTools = (): ToolSet => {
 registerTool(exploreFileTool);
 registerTool(searchFileTool);
 registerTool(manageTodoListTool);
+registerTool(generateImageTool);
+registerTool(generateVideoTool);
+registerTool(generateSpeechTool);
+registerTool(generateSoundEffectTool);
+registerTool(generateMusicTool);
+registerTool(generateAudioDialogueTool);
 // registerTool(assignTaskTool);
