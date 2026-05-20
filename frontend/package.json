@@ -79,6 +79,7 @@
     "@xzdarcy/react-timeline-editor": "^1.0.0",
     "@xzdarcy/timeline-engine": "^1.0.0",
     "axios": "^1.13.2",
+    "better-auth": "^1.6.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

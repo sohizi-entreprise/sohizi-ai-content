@@ -5,6 +5,7 @@ import * as errors from './features/error'
 import { cors } from '@elysiajs/cors'
 import { inngest, functions } from "@/lib/inngest";
 import { serve } from "inngest/bun";
+import { auth } from "@/lib/auth";
 
 const corsConfig = {
   origin: ['http://localhost:3000'],
@@ -12,6 +13,21 @@ const corsConfig = {
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }
+
+const betterAuthPlugin = new Elysia({ name: "better-auth" })
+  .mount(auth.handler)
+  .macro({
+    auth: {
+      async resolve({ status, request: { headers } }) {
+        const session = await auth.api.getSession({ headers });
+        if (!session) return status(401);
+        return {
+          user: session.user,
+          session: session.session,
+        };
+      },
+    },
+  });
 
 const handler = serve({
   client: inngest,
@@ -25,6 +41,7 @@ const inngestHandler = new Elysia().all("/api/inngest", ({ request }: { request:
 
 const app = new Elysia()
                 .use(cors(corsConfig))
+                .use(betterAuthPlugin)
                 .error({...errors})
                 .onError(({code, error, request})=>{
                   const url = new URL(request.url)
