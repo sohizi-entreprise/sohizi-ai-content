@@ -74,6 +74,7 @@ export async function* completeChat(
         },
         body: JSON.stringify(data),
         signal: options?.signal,
+        credentials: 'include',
     })
 
     if (!response.ok) {

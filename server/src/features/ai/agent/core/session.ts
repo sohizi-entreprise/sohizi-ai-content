@@ -8,6 +8,8 @@ import { listTools } from "../tools/tool-registry";
 
 export type SessionInitData = {
     sessionId: string;
+    userId: string;
+    organizationId: string;
     model: LlmModel;
     projectId: string;
     conversationId: string;
@@ -18,6 +20,8 @@ export type SessionInitData = {
 export class Session {
     public readonly model: LlmModel;
     public readonly id: string;
+    public readonly userId: string;
+    public readonly organizationId: string;
     public readonly projectId: string;
     public readonly embedder: EmbedderInterface;
     public readonly conversationId: string;
@@ -26,6 +30,8 @@ export class Session {
 
     constructor(data: SessionInitData) {
         this.id = data.sessionId;
+        this.userId = data.userId;
+        this.organizationId = data.organizationId;
         this.model = data.model;
         this.projectId = data.projectId;
         this.embedder = data.embedder;

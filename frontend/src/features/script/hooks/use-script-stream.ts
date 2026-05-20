@@ -131,6 +131,7 @@ export function useScriptStream(
                 },
                 body: JSON.stringify({prompt: userPrompt}),
                 signal: abortController.signal,
+                credentials: "include",
             });
 
             if (!res.ok) throw new Error(`Failed to start script generation: ${res.status}`);

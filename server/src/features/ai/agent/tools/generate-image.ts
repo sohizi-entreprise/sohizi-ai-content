@@ -28,7 +28,7 @@ export const generateImageTool = buildBaseTool({
                 aspectRatio,
                 referenceImages,
                 numVariations,
-            });
+            }, session.userId);
             const msg = `Image submitted successfully. Here is the request ID: ${requestId}. This can take up to 2 min to complete. User will be notified when the image is ready.`;
             return { success: true, output: msg };
         }catch(error){

@@ -9,9 +9,10 @@ import type { Message } from "@/db/schema";
 // CONVERSATIONS
 // ============================================================================
 
-export const createConversation = async (projectId: string, title: string = 'New Chat') => {
+export const createConversation = async (projectId: string, userId: string, title: string = 'New Chat') => {
   const result = await db.insert(conversations).values({
     projectId,
+    userId,
     title
   }).returning();
   return result[0];

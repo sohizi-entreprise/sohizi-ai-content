@@ -11,12 +11,12 @@ import { RepositoryError } from "../error";
 
 const DEFAULT_PROJECTS_PAGE_SIZE = 20;
 
-export const createProject = async (data: z.infer<typeof createProjectSchema>) => {
+export const createProject = async (data: z.infer<typeof createProjectSchema>, organizationId: string) => {
   const metadata = {format: data.brief.format, genre: data.additionalSettings.genre?.value || ''};
   const result = await db.transaction(async (tx) => {
-    // Create the project
     const response = await tx.insert(projects).values({
         title: data.title,
+        organizationId,
         metadata: metadata,
       }).returning();
     const project = response[0]
@@ -46,6 +46,7 @@ export const updateProject = async (id: string, data: {title: string}) => {
 export const getProjectById = async (id: string) => {
   const result = await db.select({
                             id: projects.id,
+                            organizationId: projects.organizationId,
                             title: projects.title,
                             createdAt: projects.createdAt,
                             updatedAt: projects.updatedAt,
@@ -95,7 +96,8 @@ export const getProjectWithRootFiles = async (id: string) => {
 }
 
 export const listProjects = async (
-  options: CursorPaginationOptions = {}
+  options: CursorPaginationOptions = {},
+  organizationId: string
 ): Promise<CursorPaginationResult<{
   id: string;
   title: string;
@@ -107,7 +109,11 @@ export const listProjects = async (
   const { cursor, limit = DEFAULT_PROJECTS_PAGE_SIZE } = options;
   const pageSize = Math.max(limit, 1);
 
-  const baseQuery = db
+  const baseConditions = cursor
+    ? and(eq(projects.organizationId, organizationId), lt(projects.createdAt, new Date(cursor)))
+    : eq(projects.organizationId, organizationId);
+
+  const rows = await db
     .select({
       id: projects.id,
       title: projects.title,
@@ -116,11 +122,8 @@ export const listProjects = async (
       format: sql<string>`${projects.metadata}->>'format'`,
       genre: sql<string>`${projects.metadata}->>'genre'`,
     })
-    .from(projects);
-
-  const rows = await (cursor
-    ? baseQuery.where(lt(projects.createdAt, new Date(cursor)))
-    : baseQuery)
+    .from(projects)
+    .where(baseConditions)
     .orderBy(desc(projects.createdAt))
     .limit(pageSize + 1);
 

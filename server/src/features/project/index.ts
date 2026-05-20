@@ -3,6 +3,9 @@ import { z } from 'zod'
 import * as projectService from './service'
 import * as projectOptions from '@/constants/project-options'
 import { createProjectSchema, updateProjectSchema} from "./schema";
+import { assertProjectAccess } from '@/lib/authorize'
+import { authMiddleware } from '@/lib/auth-middleware'
+import { BadRequest } from '../error'
 
 export const projectRoutes = new Elysia({ prefix: '/projects' })
   .get('/options', () => {
@@ -14,30 +17,41 @@ export const projectRoutes = new Elysia({ prefix: '/projects' })
       audiences: projectOptions.projectAudiences,
     }
   })
-  .post('', ({ body }) => {
-    return projectService.startProject(body);
+  .use(authMiddleware)
+  .post('', ({ body, session }) => {
+    const organizationId = session.activeOrganizationId
+    if (!organizationId) {
+      throw new BadRequest('No active organization. Please select an organization first.')
+    }
+    return projectService.startProject(body, organizationId);
   }, {
     body: createProjectSchema,
   })
-  .get('', ({ query }) => {
+  .get('', ({ query, session }) => {
+    const organizationId = session.activeOrganizationId
+    if (!organizationId) {
+      throw new BadRequest('No active organization. Please select an organization first.')
+    }
     return projectService.listProjects({
       cursor: query.cursor,
       limit: query.limit,
-    });
+    }, organizationId);
   }, {
     query: z.object({
       cursor: z.string().optional(),
       limit: z.coerce.number().optional(),
     }),
   })
-  .get('/:projectId', ({ params }) => {
+  .get('/:projectId', async ({ params, user }) => {
+    await assertProjectAccess(user.id, params.projectId)
     return projectService.getProject(params.projectId);
   }, {
     params: z.object({
       projectId: z.uuid("Invalid project id"),
     }),
   })
-  .put('/:projectId', ({ body, params }) => {
+  .put('/:projectId', async ({ body, params, user }) => {
+    await assertProjectAccess(user.id, params.projectId)
     return projectService.updateProject(params.projectId, body);
   }, {
     params: z.object({
@@ -45,7 +59,8 @@ export const projectRoutes = new Elysia({ prefix: '/projects' })
     }),
     body: updateProjectSchema,
   })
-  .delete('/:projectId', ({ params, query }) => {
+  .delete('/:projectId', async ({ params, query, user }) => {
+    await assertProjectAccess(user.id, params.projectId)
     return projectService.deleteProject({
       id: params.projectId,
       title: query.title,

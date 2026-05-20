@@ -5,6 +5,7 @@ import { and, eq, inArray, desc, lt, sql } from "drizzle-orm";
 
 type CreateGenerationRequestPayload = {
     projectId: string;
+    userId: string;
     type: GenerationRequestType;
     request: Record<string, unknown>;
 }
@@ -68,7 +69,7 @@ export const getGenerationRequestById = async (projectId: string, requestId: str
     return result[0];
 }
 
-export const getPendingRequests = async (projectId: string) => {
+export const getPendingRequests = async (projectId: string, userId: string) => {
     return db
         .select({
             id: generationRequests.id,
@@ -82,6 +83,7 @@ export const getPendingRequests = async (projectId: string) => {
         .where(
             and(
                 eq(generationRequests.projectId, projectId),
+                eq(generationRequests.userId, userId),
                 inArray(generationRequests.status, ['pending', 'processing']),
             ),
         )

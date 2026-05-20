@@ -1,6 +1,8 @@
 import { Elysia, sse } from 'elysia'
 import { z } from 'zod'
 import * as aiService from './service'
+import { assertProjectAccess } from '@/lib/authorize'
+import { authMiddleware } from '@/lib/auth-middleware'
 
 const projectParams = z.object({
     projectId: z.uuid('Invalid project id'),
@@ -8,9 +10,11 @@ const projectParams = z.object({
 
 export const aiRoutes = new Elysia({ prefix: '/projects/:projectId/ai' })
   .guard({
-    params: projectParams
+    params: projectParams,
   })
-  .post('/chat', async function*({params, body}) {
+  .use(authMiddleware)
+  .post('/chat', async function*({params, body, user}) {
+    await assertProjectAccess(user.id, params.projectId)
     const payload = {
         projectId: params.projectId,
         ...body,

@@ -6,9 +6,8 @@ import { createProjectSchema, deleteProjectSchema, updateProjectSchema} from "./
 import { CursorPaginationOptions } from "@/type";
 import { RepositoryError } from '../error';
 
-export const startProject = async (data: z.infer<typeof createProjectSchema>) => {
-    // Save the project in db
-    const project = await projectRepo.createProject(data);
+export const startProject = async (data: z.infer<typeof createProjectSchema>, organizationId: string) => {
+    const project = await projectRepo.createProject(data, organizationId);
     return project;
 }
 
@@ -47,8 +46,8 @@ export const updateProject = async (id: string, data: z.infer<typeof updateProje
     return updatedProject;
 }
 
-export const listProjects = async (options: CursorPaginationOptions) => {
-    const projects = await projectRepo.listProjects(options);
+export const listProjects = async (options: CursorPaginationOptions, organizationId: string) => {
+    const projects = await projectRepo.listProjects(options, organizationId);
     return projects;
 }
 

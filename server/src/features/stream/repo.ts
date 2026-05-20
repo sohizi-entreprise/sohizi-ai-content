@@ -5,6 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 type CreationPayload = {
     projectId: string;
+    userId: string;
     type: GenerationRequestType;
     metadata: Record<string, unknown>;
 }

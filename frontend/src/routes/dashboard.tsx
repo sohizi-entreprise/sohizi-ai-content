@@ -41,9 +41,11 @@ function RouteComponent() {
       return
     }
 
-    authClient.organization.list().then(({ data }) => {
+    authClient.organization.list().then(async ({ data }) => {
       if (!data || data.length === 0) {
         setShowOrgModal(true)
+      } else if (!session.session.activeOrganizationId) {
+        await organization.setActive({ organizationId: data[0].id })
       }
       setReady(true)
     })
@@ -85,12 +87,16 @@ function OrgSetupModal({
     setLoading(true)
 
     const slug = toSlug(name)
-    const { error: orgError } = await organization.create({ name, slug })
+    const { data: orgData, error: orgError } = await organization.create({ name, slug })
 
     if (orgError) {
       setError(orgError.message || 'Failed to create organization')
       setLoading(false)
       return
+    }
+
+    if (orgData) {
+      await organization.setActive({ organizationId: orgData.id })
     }
 
     setLoading(false)

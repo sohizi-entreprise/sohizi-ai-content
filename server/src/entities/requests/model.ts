@@ -2,6 +2,7 @@ import { t } from "elysia"
 
 export const CreateGenerationRequestDTO = t.Object({
   projectId: t.String(),
+  userId: t.String(),
   type: t.String(),
   prompt: t.Union([t.String(), t.Null()]),
 })

@@ -2,6 +2,8 @@ import { Elysia } from 'elysia'
 import { z } from 'zod'
 import * as fileService from './service'
 import { fileCreationRequestSchema, fileNodeInsertPositionSchema, updateTextFileContentRequestSchema } from './payload';
+import { assertProjectAccess } from '@/lib/authorize'
+import { authMiddleware } from '@/lib/auth-middleware'
 
 const projectParams = z.object({
     projectId: z.uuid('Invalid project id'),
@@ -14,8 +16,13 @@ const paramsSchema = z.object({
 
 export const fileSystemRoutes = new Elysia({ prefix: '/projects/:projectId/files' })
   .guard({
-        params: projectParams
+        params: projectParams,
     })
+  .use(authMiddleware)
+  .resolve(async ({ params, user }) => {
+    await assertProjectAccess(user.id, params.projectId)
+    return {}
+  })
   .post('', ({body}) => {
     return fileService.createFileNode(body)
   }, {

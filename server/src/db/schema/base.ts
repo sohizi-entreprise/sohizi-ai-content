@@ -14,6 +14,7 @@ import {
     foreignKey,
   } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
+import { user, organization } from './auth'
 import { 
   AgentState,
   AssetMetadata,
@@ -61,6 +62,9 @@ export const generationRequests = pgTable('generation_requests', {
   projectId: uuid('project_id')
     .references(() => projects.id, { onDelete: 'cascade' })
     .notNull(),
+  userId: text('user_id')
+    .references(() => user.id, { onDelete: 'cascade' })
+    .notNull(),
   status: varchar('status', {length: 50}).default('pending').notNull().$type<GenerationRequestStatus>(),
   type: varchar('type', {length: 50}).notNull().$type<GenerationRequestType>(),
   request: jsonb('request').$type<Record<string, unknown>>(),
@@ -69,15 +73,21 @@ export const generationRequests = pgTable('generation_requests', {
 }, (table) => ([
   index('generation_requests_project_created_at_idx').on(table.projectId, table.createdAt),
   index('generation_requests_status_created_at_idx').on(table.status, table.createdAt),
+  index('generation_requests_user_id_idx').on(table.userId),
 ]))
 
   // Tables
 export const projects = pgTable('projects', {
     id: uuid('id').defaultRandom().primaryKey(),
+    organizationId: text('organization_id')
+      .references(() => organization.id, { onDelete: 'cascade' })
+      .notNull(),
     title: varchar('title', {length: 100}).notNull(),
     metadata: jsonb('metadata').$type<ProjectMetadata>().notNull(),
     ...timestamps,
-  })
+  }, (table) => ([
+    index('projects_organization_id_idx').on(table.organizationId),
+  ]))
 
 export const fileNodes = pgTable('file_nodes', {
     id: uuid('id').defaultRandom().primaryKey(),
@@ -173,11 +183,15 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     projectId: uuid('project_id')
       .references(() => projects.id, { onDelete: 'cascade' })
       .notNull(),
+    userId: text('user_id')
+      .references(() => user.id, { onDelete: 'cascade' })
+      .notNull(),
     title: varchar('title', { length: 255 }).default('New Chat').notNull(),
     metadata: jsonb('metadata').$type<Record<string, unknown>>(),
     ...timestamps,
   }, (table) => ([
     index('conversations_project_id_idx').on(table.projectId),
+    index('conversations_user_id_idx').on(table.userId),
   ]))
 
   export const checkpoints = pgTable('checkpoints', {

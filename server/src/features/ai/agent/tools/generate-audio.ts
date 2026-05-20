@@ -8,12 +8,12 @@ const generateAudioPromptSchema = z.object({
     prompt: z.string().min(1).describe('The prompt to generate the audio'),
 })
 
-async function submitAudioGeneration(audioType: AudioType, prompt: string, projectId: string) {
+async function submitAudioGeneration(audioType: AudioType, prompt: string, projectId: string, userId: string) {
     const { requestId } = await mediaEngineService.generateAudio({
         projectId,
         prompt,
         audioType,
-    });
+    }, userId);
 
     return `Audio submitted successfully. Here is the request ID: ${requestId}. This can take up to 2 min to complete. User will be notified when the audio is ready.`;
 }
@@ -28,7 +28,7 @@ export const generateSpeechTool = buildBaseTool({
     inputSchema: generateAudioPromptSchema,
     execute: async ({ prompt }, {session}) => {
         try {
-            const output = await submitAudioGeneration('speech', prompt, session.projectId);
+            const output = await submitAudioGeneration('speech', prompt, session.projectId, session.userId);
             return { success: true, output };
         } catch (error) {
             return { success: false, output: `Failed to generate speech: ${getErrorMessage(error)}` };
@@ -42,7 +42,7 @@ export const generateSoundEffectTool = buildBaseTool({
     inputSchema: generateAudioPromptSchema,
     execute: async ({ prompt }, {session}) => {
         try {
-            const output = await submitAudioGeneration('sound-effect', prompt, session.projectId);
+            const output = await submitAudioGeneration('sound-effect', prompt, session.projectId, session.userId);
             return { success: true, output };
         } catch (error) {
             return { success: false, output: `Failed to generate sound effect: ${getErrorMessage(error)}` };
@@ -56,7 +56,7 @@ export const generateMusicTool = buildBaseTool({
     inputSchema: generateAudioPromptSchema,
     execute: async ({ prompt }, {session}) => {
         try {
-            const output = await submitAudioGeneration('music', prompt, session.projectId);
+            const output = await submitAudioGeneration('music', prompt, session.projectId, session.userId);
             return { success: true, output };
         } catch (error) {
             return { success: false, output: `Failed to generate music: ${getErrorMessage(error)}` };
@@ -70,7 +70,7 @@ export const generateAudioDialogueTool = buildBaseTool({
     inputSchema: generateAudioPromptSchema,
     execute: async ({ prompt }, {session}) => {
         try {
-            const output = await submitAudioGeneration('dialogue', prompt, session.projectId);
+            const output = await submitAudioGeneration('dialogue', prompt, session.projectId, session.userId);
             return { success: true, output };
         } catch (error) {
             return { success: false, output: `Failed to generate dialogue: ${getErrorMessage(error)}` };

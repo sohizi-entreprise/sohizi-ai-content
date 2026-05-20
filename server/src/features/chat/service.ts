@@ -7,9 +7,10 @@ import { Session, SessionInitData } from '../ai/agent/core/session';
 import { E5SmallLocalEmbedder } from '@/lib/rag/local-embedder';
 import { v4 as uuidv4 } from 'uuid';
 import { generateTitle } from '../ai/agent/utils/generate-title';
+import { getProjectById } from '../project/repo';
 
-export const listConversations = async (projectId: string, options?: CursorPaginationOptions) => {
-  const conversations = await repo.listConversations(projectId, options);
+export const listConversations = async (projectId: string, userId: string, options?: CursorPaginationOptions) => {
+  const conversations = await repo.listConversations(projectId, userId, options);
   return conversations;
 }
 
@@ -28,14 +29,12 @@ export const listModelsForLeadAgent = async () => {
   return models;
 }
 
-export const handleChatCompletion = async(projectId: string, request: CompletionRequest) => {
-    return handleChatRun(projectId, request)
+export const handleChatCompletion = async(projectId: string, userId: string, request: CompletionRequest) => {
+    return handleChatRun(projectId, userId, request)
 }
 
-async function* handleChatRun(projectId: string, request: CompletionRequest) {
+async function* handleChatRun(projectId: string, userId: string, request: CompletionRequest) {
     const { modelId, userPrompt, conversationId, editorContext } = request;
-    // If it's a new conversation, generate a title based on the user prompt
-    // N.B. We need to register the cost of everything
     const model = await repo.getModelById(modelId);
     if (!model) {
         throw new BadRequest('Model not found');
@@ -43,6 +42,13 @@ async function* handleChatRun(projectId: string, request: CompletionRequest) {
     if (!model.recommendedUsage?.includes('lead-agent')) {
         throw new BadRequest('Model not supported for lead agent');
     }
+
+    const project = await getProjectById(projectId);
+    if (!project) {
+        throw new BadRequest('Project not found');
+    }
+    const organizationId = project.organizationId;
+
     let sessionInitData: Omit<SessionInitData, 'embedder'>;
     const sessionId = uuidv4();
     let conversationTitle = derivedTitle(userPrompt);
@@ -52,13 +58,15 @@ async function* handleChatRun(projectId: string, request: CompletionRequest) {
         if(success) {
             conversationTitle = title;
         }
-        const {conversation, checkpoint} = await repo.createConversationWithCheckpoint(projectId, conversationTitle);
+        const {conversation, checkpoint} = await repo.createConversationWithCheckpoint(projectId, userId, conversationTitle);
         if(!conversation || !checkpoint) {
             throw new InternalServerError('Failed to create conversation or checkpoint');
         }
 
         sessionInitData = {
             sessionId,
+            userId,
+            organizationId,
             model,
             projectId,
             conversationId: conversation.id,
@@ -76,6 +84,8 @@ async function* handleChatRun(projectId: string, request: CompletionRequest) {
         conversationTitle = conversation.title;
         sessionInitData = {
             sessionId,
+            userId,
+            organizationId,
             model,
             projectId,
             conversationId: conversation.id,

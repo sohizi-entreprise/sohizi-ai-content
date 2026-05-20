@@ -27,7 +27,7 @@ export const generateVideoTool = buildBaseTool({
                 duration,
                 aspectRatio,
                 referenceImage,
-            });
+            }, session.userId);
             const msg = `Video submitted successfully. Here is the request ID: ${requestId}. This can take few minutes to complete. User will be notified when the video is ready.`;
             return { success: true, output: msg };
         } catch (error) {

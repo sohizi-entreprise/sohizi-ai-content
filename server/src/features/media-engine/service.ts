@@ -28,9 +28,10 @@ export const models = {
     ],
 }
 
-export async function generateImage(data: GenerateImageInput) {
+export async function generateImage(data: GenerateImageInput, userId: string) {
     const genRequest = await repo.createGenerationRequest({
         projectId: data.projectId,
+        userId,
         type: 'image',
         request: {
             prompt: data.prompt,
@@ -57,9 +58,10 @@ export async function generateImage(data: GenerateImageInput) {
     return { requestId: genRequest.id };
 }
 
-export async function generateAudio(data: GenerateAudioInput) {
+export async function generateAudio(data: GenerateAudioInput, userId: string) {
     const genRequest = await repo.createGenerationRequest({
         projectId: data.projectId,
+        userId,
         type: 'audio',
         request: {
             prompt: data.prompt,
@@ -80,9 +82,10 @@ export async function generateAudio(data: GenerateAudioInput) {
     return { requestId: genRequest.id };
 }
 
-export async function generateVideo(data: GenerateVideoInput) {
+export async function generateVideo(data: GenerateVideoInput, userId: string) {
     const genRequest = await repo.createGenerationRequest({
         projectId: data.projectId,
+        userId,
         type: 'video',
         request: {
             prompt: data.prompt,
@@ -187,12 +190,12 @@ export async function uploadSuccess(data: z.infer<typeof uploadSuccessSchema>) {
     }
 }
 
-export async function getPendingRequests(projectId: string) {
+export async function getPendingRequests(projectId: string, userId: string) {
     const project = await getProjectById(projectId);
     if (!project) {
         throw new NotFound('Project not found');
     }
-    return repo.getPendingRequests(projectId);
+    return repo.getPendingRequests(projectId, userId);
 }
 
 export async function getRequestStatuses(projectId: string, data: GetRequestStatusesInput) {

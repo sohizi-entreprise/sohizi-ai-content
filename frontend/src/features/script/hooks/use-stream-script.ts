@@ -206,6 +206,7 @@ export function useStreamScript(
                     "Content-Type": "application/json",
                 },
                 signal: abortController.signal,
+                credentials: "include",
             });
 
             if (!res.ok) throw new Error(`Failed to start script generation: ${res.status}`);

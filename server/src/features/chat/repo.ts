@@ -8,18 +8,20 @@ import { AgentState, CursorPaginationOptions, CursorPaginationResult, MsgContent
 // CONVERSATIONS
 // ============================================================================
 
-export const createConversation = async (projectId: string, title: string = 'New Chat') => {
+export const createConversation = async (projectId: string, userId: string, title: string = 'New Chat') => {
   const result = await db.insert(conversations).values({
     projectId,
+    userId,
     title
   }).returning();
   return result[0];
 }
 
-export const createConversationWithCheckpoint = async (projectId: string, title: string = 'New Chat') => {
+export const createConversationWithCheckpoint = async (projectId: string, userId: string, title: string = 'New Chat') => {
   return await db.transaction(async (tx) => {
     const convResponse = await tx.insert(conversations).values({
       projectId,
+      userId,
       title
     }).returning();
     const conversation = convResponse[0];
@@ -47,6 +49,7 @@ const MAX_CONVERSATIONS_PAGE_SIZE = 100;
 
 export const listConversations = async (
   projectId: string,
+  userId: string,
   options?: CursorPaginationOptions
 ): Promise<ListConversationsResult> => {
   const limit = Math.min(
@@ -55,17 +58,21 @@ export const listConversations = async (
   );
   const cursor = options?.cursor;
 
+  const baseConditions = cursor
+    ? and(
+        eq(conversations.projectId, projectId),
+        eq(conversations.userId, userId),
+        lt(conversations.updatedAt, new Date(cursor))
+      )
+    : and(
+        eq(conversations.projectId, projectId),
+        eq(conversations.userId, userId)
+      );
+
   const rows = await db
     .select()
     .from(conversations)
-    .where(
-      cursor
-        ? and(
-            eq(conversations.projectId, projectId),
-            lt(conversations.updatedAt, new Date(cursor))
-          )
-        : eq(conversations.projectId, projectId)
-    )
+    .where(baseConditions)
     .orderBy(desc(conversations.updatedAt))
     .limit(limit + 1);
 
