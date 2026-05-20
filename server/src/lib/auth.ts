@@ -24,7 +24,6 @@ export const auth = betterAuth({
     },
   },
   emailVerification: {
-    sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url }) => {
       await resend.emails.send({
         from: process.env.EMAIL_FROM || "noreply@sohizi.com",
