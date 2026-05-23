@@ -6,6 +6,7 @@ import { cors } from '@elysiajs/cors'
 import { inngest, functions } from "@/lib/inngest";
 import { serve } from "inngest/bun";
 import { auth } from "@/lib/auth";
+import { billingService, InsufficientCreditsError } from "@/features/billing";
 
 const corsConfig = {
   origin: ['http://localhost:3000'],
@@ -42,7 +43,7 @@ const inngestHandler = new Elysia().all("/api/inngest", ({ request }: { request:
 const app = new Elysia()
                 .use(cors(corsConfig))
                 .use(betterAuthPlugin)
-                .error({...errors})
+                .error({...errors, InsufficientCreditsError})
                 .onError(({code, error, request})=>{
                   const url = new URL(request.url)
                   switch(code){
@@ -53,6 +54,8 @@ const app = new Elysia()
                     case "NotFound":
                     case "InternalServerError":
                       return error
+                    case "InsufficientCreditsError":
+                      return (error as InsufficientCreditsError).toResponse()
                     case "VALIDATION":
                       return new errors.BadRequest(error.message)
                     default:
@@ -81,7 +84,10 @@ const app = new Elysia()
                 .use(routes.fileSystemRoutes)
                 .use(routes.chatRoutes)
                 .use(routes.mediaEngineRoutes)
+                .use(routes.billingRoutes)
                 .listen(3030);
+
+billingService.startSweeper();
 
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`

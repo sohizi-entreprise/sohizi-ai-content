@@ -90,7 +90,7 @@ type ErrorChunk = {
     error: string;
 }
 
-type Complete = {
+export type LlmCompleteChunk = {
     type: typeof streamEvents.complete;
     text: string;
     finishReason: CompleteReason;
@@ -99,4 +99,4 @@ type Complete = {
     reasoningText?: string;
 }
 
-export type LlmChunk = TextDelta | ReasoningDelta | Usage | ToolCallStart | ToolCallDelta | ToolCallEnd | ToolCall | ErrorChunk | Complete;
+export type LlmChunk = TextDelta | ReasoningDelta | Usage | ToolCallStart | ToolCallDelta | ToolCallEnd | ToolCall | ErrorChunk | LlmCompleteChunk;

@@ -3,8 +3,11 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { organization, emailOTP } from "better-auth/plugins"
 import { db } from "@/db"
 import { Resend } from "resend"
+import { billingService } from "@/features/billing/service"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+
+const WELCOME_CREDITS = 500n
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -43,7 +46,22 @@ export const auth = betterAuth({
     errorURL: (process.env.FRONTEND_URL) + "/auth-error",
   },
   plugins: [
-    organization(),
+    organization({
+      organizationHooks: {
+        afterCreateOrganization: async ({ organization }) => {
+          try {
+            await billingService.topup({
+              organizationId: organization.id,
+              amount: WELCOME_CREDITS,
+              idempotencyKey: `org-welcome:${organization.id}`,
+              metadata: { reason: 'welcome_credits' },
+            })
+          } catch (error) {
+            console.error(`[auth] Failed to grant welcome credits to org ${organization.id}:`, error)
+          }
+        },
+      },
+    }),
     emailOTP({
       sendVerificationOnSignUp: true,
       async sendVerificationOTP({ email, otp, type }) {

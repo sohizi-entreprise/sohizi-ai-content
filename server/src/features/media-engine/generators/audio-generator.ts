@@ -1,5 +1,45 @@
 import { randomUUID } from 'crypto';
-import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
+import { ElevenLabsClient, ElevenLabsError } from '@elevenlabs/elevenlabs-js';
+import {
+    MediaError,
+    MediaConfigurationError,
+    MediaGenerationFailedError,
+    MediaRateLimitError,
+    MediaServiceUnavailableError,
+    MediaProviderError,
+    wrapAsMediaError,
+} from '../errors';
+
+type ElevenLabsErrorDetail = {
+    type?: string;
+    code?: string;
+    message?: string;
+    request_id?: string;
+}
+
+/**
+ * Wraps ElevenLabs SDK errors into appropriate MediaError subclasses.
+ * Uses the error's statusCode and detail.type for reliable classification.
+ */
+function wrapElevenLabsError(error: unknown, context: string): MediaError {
+    if (error instanceof ElevenLabsError) {
+        const detail = (error.body as { detail?: ElevenLabsErrorDetail })?.detail;
+        const message = detail?.message || error.message;
+        const fullMessage = `${context}: ${message}`;
+
+        if (detail?.type === 'rate_limit_error' || error.statusCode === 429) {
+            return new MediaRateLimitError(fullMessage, error);
+        }
+
+        if (error.statusCode === 502 || error.statusCode === 503 || error.statusCode === 504) {
+            return new MediaServiceUnavailableError(fullMessage, error);
+        }
+
+        return new MediaProviderError(fullMessage, error.statusCode, error);
+    }
+
+    return wrapAsMediaError(error, { context });
+}
 
 type Cost = {
     cost: number | null;
@@ -50,13 +90,18 @@ export class AudioGenerator {
 
     async generateSpeech(prompt: string): Promise<AudioGenerationResponse> {
         const voiceId = this.getVoiceId();
-        const response = await this.withRawResponse(
-            this.getClient().textToSpeech.convert(voiceId, {
-                text: prompt,
-                modelId: process.env.ELEVENLABS_SPEECH_MODEL_ID ?? DEFAULT_SPEECH_MODEL_ID,
-                outputFormat: DEFAULT_OUTPUT_FORMAT,
-            }),
-        );
+        let response;
+        try {
+            response = await this.withRawResponse(
+                this.getClient().textToSpeech.convert(voiceId, {
+                    text: prompt,
+                    modelId: process.env.ELEVENLABS_SPEECH_MODEL_ID ?? DEFAULT_SPEECH_MODEL_ID,
+                    outputFormat: DEFAULT_OUTPUT_FORMAT,
+                }),
+            );
+        } catch (error) {
+            throw wrapElevenLabsError(error, 'Speech generation failed');
+        }
 
         return this.toAudioResponse(response, {
             filenamePrefix: 'speech',
@@ -66,13 +111,18 @@ export class AudioGenerator {
 
     async generateSpeechWithTiming(prompt: string, timing: AudioTiming): Promise<AudioGenerationResponse> {
         const voiceId = this.getVoiceId();
-        const response = await this.withRawResponse(
-            this.getClient().textToSpeech.convertWithTimestamps(voiceId, {
-                text: prompt,
-                modelId: process.env.ELEVENLABS_SPEECH_MODEL_ID ?? DEFAULT_SPEECH_MODEL_ID,
-                outputFormat: DEFAULT_OUTPUT_FORMAT,
-            }),
-        );
+        let response;
+        try {
+            response = await this.withRawResponse(
+                this.getClient().textToSpeech.convertWithTimestamps(voiceId, {
+                    text: prompt,
+                    modelId: process.env.ELEVENLABS_SPEECH_MODEL_ID ?? DEFAULT_SPEECH_MODEL_ID,
+                    outputFormat: DEFAULT_OUTPUT_FORMAT,
+                }),
+            );
+        } catch (error) {
+            throw wrapElevenLabsError(error, 'Speech with timing generation failed');
+        }
 
         const audio = this.getAudioBase64(response.data);
         return {
@@ -86,12 +136,17 @@ export class AudioGenerator {
     }
 
     async generateSoundEffect(prompt: string): Promise<AudioGenerationResponse> {
-        const response = await this.withRawResponse(
-            this.getClient().textToSoundEffects.convert({
-                text: prompt,
-                modelId: process.env.ELEVENLABS_SOUND_MODEL_ID ?? DEFAULT_SOUND_MODEL_ID,
-            }),
-        );
+        let response;
+        try {
+            response = await this.withRawResponse(
+                this.getClient().textToSoundEffects.convert({
+                    text: prompt,
+                    modelId: process.env.ELEVENLABS_SOUND_MODEL_ID ?? DEFAULT_SOUND_MODEL_ID,
+                }),
+            );
+        } catch (error) {
+            throw wrapElevenLabsError(error, 'Sound effect generation failed');
+        }
 
         return this.toAudioResponse(response, {
             filenamePrefix: 'sound-effect',
@@ -100,12 +155,17 @@ export class AudioGenerator {
 
     async generateMusic(prompt: string): Promise<AudioGenerationResponse> {
         const musicLengthMs = this.getMusicLengthMs();
-        const response = await this.withRawResponse(
-            this.getClient().music.composeDetailed({
-                prompt,
-                musicLengthMs,
-            }),
-        );
+        let response;
+        try {
+            response = await this.withRawResponse(
+                this.getClient().music.composeDetailed({
+                    prompt,
+                    musicLengthMs,
+                }),
+            );
+        } catch (error) {
+            throw wrapElevenLabsError(error, 'Music generation failed');
+        }
 
         return this.toAudioResponse(response, {
             filenamePrefix: 'music',
@@ -113,12 +173,17 @@ export class AudioGenerator {
     }
 
     async generateDialogue(prompt: string): Promise<AudioGenerationResponse> {
-        const response = await this.withRawResponse(
-            this.getClient().textToDialogue.convert({
-                inputs: this.getDialogueInputs(prompt),
-                modelId: process.env.ELEVENLABS_DIALOGUE_MODEL_ID ?? DEFAULT_DIALOGUE_MODEL_ID,
-            }),
-        );
+        let response;
+        try {
+            response = await this.withRawResponse(
+                this.getClient().textToDialogue.convert({
+                    inputs: this.getDialogueInputs(prompt),
+                    modelId: process.env.ELEVENLABS_DIALOGUE_MODEL_ID ?? DEFAULT_DIALOGUE_MODEL_ID,
+                }),
+            );
+        } catch (error) {
+            throw wrapElevenLabsError(error, 'Dialogue generation failed');
+        }
 
         return this.toAudioResponse(response, {
             filenamePrefix: 'dialogue',
@@ -141,7 +206,7 @@ export class AudioGenerator {
 
         const apiKey = process.env.ELEVENLABS_API_KEY;
         if (!apiKey) {
-            throw new Error('ELEVENLABS_API_KEY is required to generate audio.');
+            throw new MediaConfigurationError('ELEVENLABS_API_KEY is required to generate audio.');
         }
 
         this.client = new ElevenLabsClient({ apiKey });
@@ -205,7 +270,7 @@ export class AudioGenerator {
             return this.base64ToBlob(audio);
         }
 
-        throw new Error('ElevenLabs returned an unsupported audio response.');
+        throw new MediaGenerationFailedError('ElevenLabs returned an unsupported audio response.');
     }
 
     private base64ToBlob(base64Audio: string): Blob {
@@ -223,7 +288,7 @@ export class AudioGenerator {
         const data = response as { audioBase64?: string; audio_base64?: string };
         const audio = data.audioBase64 ?? data.audio_base64;
         if (!audio) {
-            throw new Error('ElevenLabs timestamp response did not include audio.');
+            throw new MediaGenerationFailedError('ElevenLabs timestamp response did not include audio.');
         }
         return audio;
     }

@@ -1,0 +1,1 @@
+ALTER TABLE "organization_wallets" DROP COLUMN "version";

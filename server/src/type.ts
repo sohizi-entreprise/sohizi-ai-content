@@ -130,3 +130,9 @@ export type AssetMetadata = {
   size: number;
   contentType: string;
 }
+
+export type TemplateAndSkillStatus = 'draft' | 'published'
+// public: visible to all users, private: visible to only the organization, app-level: displayed on the to all users in the app
+export type TemplateAndSkillVisibility = 'public' | 'private'
+
+export type CategoryType = 'genre' | 'format' | 'audience' | 'platform'

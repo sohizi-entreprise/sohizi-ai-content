@@ -1,5 +1,37 @@
 import OpenAI from 'openai';
-import { VideoSeconds, VideoSize } from 'openai/resources/videos';
+import { VideoSize } from 'openai/resources/videos';
+import {
+    MediaError,
+    MediaGenerationFailedError,
+    MediaValidationError,
+    MediaRateLimitError,
+    MediaServiceUnavailableError,
+    MediaProviderError,
+    mediaErrorFromResponse,
+    wrapAsMediaError,
+} from '../errors';
+
+/**
+ * Wraps OpenAI SDK errors into appropriate MediaError subclasses.
+ * Uses the error's status property for reliable classification.
+ */
+function wrapOpenAIError(error: unknown, context: string): MediaError {
+    if (error instanceof OpenAI.APIError) {
+        const fullMessage = `${context}: ${error.message}`;
+
+        if (error.status === 429) {
+            return new MediaRateLimitError(fullMessage, error);
+        }
+
+        if (error.status === 502 || error.status === 503 || error.status === 504) {
+            return new MediaServiceUnavailableError(fullMessage, error);
+        }
+
+        return new MediaProviderError(fullMessage, error.status, error);
+    }
+
+    return wrapAsMediaError(error, { context });
+}
 
 export type ImageSizePreset =
   | 'auto'
@@ -78,17 +110,24 @@ export class MediaGenerator {
     async textToImage(request: TextToImageRequest): Promise<MediaResponse> {
         const { model, prompt, aspectRatio='auto', numVariations=1 } = request;
         const client = this.getClient();
-        const response = await client.images.generate({
-            model: model,
-            prompt: prompt,
-            size: imageSizeMap[aspectRatio],
-            n: numVariations,
-        });
+
+        let response;
+        try {
+            response = await client.images.generate({
+                model: model,
+                prompt: prompt,
+                size: imageSizeMap[aspectRatio],
+                n: numVariations,
+            });
+        } catch (error) {
+            throw wrapOpenAIError(error, 'Image generation failed');
+        }
+
         const metadata = (response as unknown as {metadata: {cost: number, cost_currency: string}}).metadata;
         const data = response.data;
 
         if(!data || !metadata){
-            throw new Error('Failed to generate image');
+            throw new MediaGenerationFailedError('Image generation returned no data');
         }
         const urls = data.map((item) => item.url!);
         const cost = {
@@ -107,22 +146,29 @@ export class MediaGenerator {
         const files = await Promise.all(images.map(async (url) => {
             const file = await this.getFileFromUrl(url);
             if(!file){
-                throw new Error(`Failed to get file from url: ${url}`);
+                throw new MediaValidationError(`Failed to fetch reference image from URL: ${url}`);
             }
             return file;
         }));
-        const response = await client.images.edit({
-            model: model,
-            prompt: prompt,
-            size: imageSizeMap[aspectRatio],
-            n: numVariations,
-            image: files
-        });
+
+        let response;
+        try {
+            response = await client.images.edit({
+                model: model,
+                prompt: prompt,
+                size: imageSizeMap[aspectRatio],
+                n: numVariations,
+                image: files
+            });
+        } catch (error) {
+            throw wrapOpenAIError(error, 'Image edit failed');
+        }
+
         const metadata = (response as unknown as {metadata: {cost: number, cost_currency: string}}).metadata;
         const data = response.data;
 
         if(!data || !metadata){
-            throw new Error('Failed to generate image');
+            throw new MediaGenerationFailedError('Image edit returned no data');
         }
         const urls = data.map((item) => item.url!);
         const cost = {
@@ -137,26 +183,34 @@ export class MediaGenerator {
 
     async submitVideoGeneration(request: VideoRequest): Promise<VideoSubmissionResponse> {
         const { model, prompt, duration, inputReference, numVariations=1, idempotencyKey, resolution='1080p', aspectRatio='16:9' } = request;
-        const submitRes = await fetch(`${this.baseURL}/videos`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${process.env.LUMEN_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model,
-              prompt,
-              aspect_ratio: aspectRatio,
-              seconds: duration,
-              n: numVariations,
-              idempotency_key: idempotencyKey,
-              resolution,
-              input_reference: inputReference,
-            })
-          });
-        if(!submitRes.ok){
-            throw new Error(`Failed to submit video generation: ${submitRes.statusText}`);
+
+        let submitRes;
+        try {
+            submitRes = await fetch(`${this.baseURL}/videos`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${process.env.LUMEN_API_KEY}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  model,
+                  prompt,
+                  aspect_ratio: aspectRatio,
+                  seconds: duration,
+                  n: numVariations,
+                  idempotency_key: idempotencyKey,
+                  resolution,
+                  input_reference: inputReference,
+                })
+              });
+        } catch (error) {
+            throw wrapAsMediaError(error, { context: 'Video submission failed' });
         }
+
+        if(!submitRes.ok){
+            throw mediaErrorFromResponse(submitRes.status, submitRes.statusText, 'Video submission failed');
+        }
+
         const data = await submitRes.json();
         return {
             id: data.id as string,
@@ -168,13 +222,20 @@ export class MediaGenerator {
     }
 
     async pollVideoGeneration(videoId: string): Promise<VideoGenerationResponse> {
-        const pollRes = await fetch(`${this.baseURL}/videos/${videoId}`, {
-            headers: { 'Authorization': `Bearer ${process.env.LUMEN_API_KEY}` }
-        });
-        const result = await pollRes.json();
-        if(!pollRes.ok){
-            throw new Error(`Failed to poll video generation: ${pollRes.statusText}`);
+        let pollRes;
+        try {
+            pollRes = await fetch(`${this.baseURL}/videos/${videoId}`, {
+                headers: { 'Authorization': `Bearer ${process.env.LUMEN_API_KEY}` }
+            });
+        } catch (error) {
+            throw wrapAsMediaError(error, { context: 'Video poll failed' });
         }
+
+        if(!pollRes.ok){
+            throw mediaErrorFromResponse(pollRes.status, pollRes.statusText, 'Video poll failed');
+        }
+
+        const result = await pollRes.json();
         if (result.status === 'completed') {
             return {
                 url: result.output.url,

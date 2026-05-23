@@ -12,6 +12,7 @@ import {
     uniqueIndex,
     customType,
     foreignKey,
+    bigint,
   } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import { user, organization } from './auth'
@@ -22,12 +23,15 @@ import {
   AssetStatus,
   AssetType,
   AssetVariantType,
+  CategoryType,
   GenerationRequestStatus,
   GenerationRequestType,
   ModelCategory,
          ModelRecommendedUsage,
          MsgContent,
          ProseDocument,
+         TemplateAndSkillStatus,
+         TemplateAndSkillVisibility,
          TokenPricing, 
   } from '@/type';
 import { FileFormat } from '@/features/file-system/constants';
@@ -84,9 +88,15 @@ export const projects = pgTable('projects', {
       .notNull(),
     title: varchar('title', {length: 100}).notNull(),
     metadata: jsonb('metadata').$type<ProjectMetadata>().notNull(),
+    isTemplate: boolean('is_template').default(false).notNull(),
+    fromTemplateId: uuid('from_template_id'),
     ...timestamps,
   }, (table) => ([
     index('projects_organization_id_idx').on(table.organizationId),
+    foreignKey({
+      columns: [table.fromTemplateId],
+      foreignColumns: [table.id],
+    }).onDelete('set null'),
   ]))
 
 export const fileNodes = pgTable('file_nodes', {
@@ -295,6 +305,140 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     uniqueIndex('asset_variants_asset_id_type_unique').on(table.assetId, table.type),
   ]))
 
+  // ========================= BILLING ==========================
+
+  export const billingReservationStatusEnum = pgEnum('billing_reservation_status', [
+    'reserved',
+    'settled',
+    'refunded',
+    'expired',
+  ])
+
+  export const billingLedgerKindEnum = pgEnum('billing_ledger_kind', [
+    'reserve',
+    'settle_diff',
+    'refund',
+    'topup',
+    'expire',
+    'overage_uncovered',
+  ])
+
+  export const organizationWallets = pgTable('organization_wallets', {
+    organizationId: text('organization_id')
+      .primaryKey()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    balance: bigint('balance', { mode: 'bigint' }).default(sql`0`).notNull(),
+    ...timestamps,
+  })
+
+  export const billingReservations = pgTable('billing_reservations', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    organizationId: text('organization_id')
+      .references(() => organization.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    operation: varchar('operation', { length: 100 }).notNull(),
+    estimatedCredits: bigint('estimated_credits', { mode: 'bigint' }).notNull(),
+    actualCredits: bigint('actual_credits', { mode: 'bigint' }),
+    status: billingReservationStatusEnum('status').default('reserved').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('billing_reservations_idempotency_key_unique').on(table.idempotencyKey),
+    index('billing_reservations_status_expires_at_idx').on(table.status, table.expiresAt),
+    index('billing_reservations_org_status_idx').on(table.organizationId, table.status),
+  ]))
+
+  export const billingLedger = pgTable('billing_ledger', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    reservationId: uuid('reservation_id').references(() => billingReservations.id, { onDelete: 'set null' }),
+    organizationId: text('organization_id')
+      .references(() => organization.id, { onDelete: 'cascade' })
+      .notNull(),
+    delta: bigint('delta', { mode: 'bigint' }).notNull(),
+    kind: billingLedgerKindEnum('kind').notNull(),
+    balanceAfter: bigint('balance_after', { mode: 'bigint' }).notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  }, (table) => ([
+    uniqueIndex('billing_ledger_idempotency_key_unique').on(table.idempotencyKey),
+    index('billing_ledger_org_created_at_idx').on(table.organizationId, table.createdAt),
+    index('billing_ledger_reservation_id_idx').on(table.reservationId),
+  ]))
+
+
+// ======================== SKILLS & TEMPLATES ==========================
+// Maybe let's have some tags for skills and templates
+export const skills = pgTable('skills', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description').notNull(),
+    instructions: text('instructions').notNull(),
+    fileNodeId: uuid('file_node_id')
+      .references(() => fileNodes.id, { onDelete: 'cascade' }),
+    status: varchar('status', { length: 50 }).notNull().default('draft').$type<TemplateAndSkillStatus>(),
+    visibility: varchar('visibility', { length: 50 }).notNull().default('private').$type<TemplateAndSkillVisibility>(),
+    ...timestamps,
+  }, (table) => ([
+    index('skills_visibility_status_idx').on(table.visibility, table.status),
+    index('skills_file_node_id_idx').on(table.fileNodeId),
+  ]))
+
+
+export const templates = pgTable('templates', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    projectId: uuid('project_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
+    name: varchar('name', { length: 150 }).notNull(),
+    slug: varchar('slug', { length: 150 }).notNull(),
+    description: text('description'),
+    thumbnail: text('thumbnail'),
+    status: varchar('status', {length: 50}).$type<TemplateAndSkillStatus>().default('draft').notNull(),
+    visibility: varchar('visibility', { length: 50 }).notNull().default('private').$type<TemplateAndSkillVisibility>(),
+    displayPriority: integer('display_priority').default(0).notNull(),
+    ...timestamps,
+  }, (table) => ([
+    index('templates_status_idx').on(table.status),
+    index('templates_project_id_idx').on(table.projectId),
+    uniqueIndex('templates_slug_unique').on(table.slug),
+  ]))
+
+export const categories = pgTable('categories', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 150 }).notNull(),
+  description: text('description'),
+  type: varchar('type', { length: 50 }).notNull().$type<CategoryType>(),
+  displayPriority: integer('display_priority').default(0).notNull(),
+  ...timestamps,
+}, (table) => ([
+  uniqueIndex('categories_slug_unique').on(table.slug),
+  index('categories_type_idx').on(table.type),
+]))
+
+export const projectCategories = pgTable('project_categories', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+  categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'cascade' }).notNull(),
+  ...timestamps,
+}, (table) => ([
+  uniqueIndex('project_categories_project_id_category_id_unique').on(table.projectId, table.categoryId),
+]))
+
+export const skillCategories = pgTable('skill_categories', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  skillId: uuid('skill_id').references(() => skills.id, { onDelete: 'cascade' }).notNull(),
+  categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'cascade' }).notNull(),
+  ...timestamps,
+}, (table) => ([
+  uniqueIndex('skill_categories_skill_id_category_id_unique').on(table.skillId, table.categoryId),
+]))
+
+
   // Type exports for use in app
   export type Project = typeof projects.$inferSelect
   export type FileNode = typeof fileNodes.$inferSelect
@@ -308,5 +452,10 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
   export type Checkpoint = typeof checkpoints.$inferSelect
   export type Asset = typeof assets.$inferSelect
   export type AssetVariant = typeof assetVariants.$inferSelect
+  export type OrganizationWallet = typeof organizationWallets.$inferSelect
+  export type BillingReservation = typeof billingReservations.$inferSelect
+  export type BillingLedgerEntry = typeof billingLedger.$inferSelect
+  export type BillingReservationStatus = (typeof billingReservationStatusEnum.enumValues)[number]
+  export type BillingLedgerKind = (typeof billingLedgerKindEnum.enumValues)[number]
   
   

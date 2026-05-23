@@ -1,16 +1,21 @@
 import { NonRetriableError } from 'inngest';
 import { inngest } from '@/lib/inngest';
-import { AudioGenerator } from './generators/audio-generator';
-import { MediaGenerator } from './generators/media-generator';
 import * as repo from './repo';
 import * as storage from './storage';
-import type { ImageSizePreset } from './generators/media-generator';
+import { MediaGenerator, type ImageSizePreset } from './generators/media-generator';
 import { v4 as uuidv4 } from 'uuid';
 import { Asset } from '@/db/schema';
+import { billingService } from '@/features/billing';
+import { imageBillable } from './generators/billable-image';
+import { audioBillable } from './generators/billable-audio';
+import { videoBillable, videoActualCredits } from './generators/billable-video';
+import { isMediaError } from './errors';
 
 type ImageEventData = {
     requestId: string;
     projectId: string;
+    organizationId: string;
+    userId: string;
     prompt: string;
     model: string;
     aspectRatio: ImageSizePreset;
@@ -21,6 +26,8 @@ type ImageEventData = {
 type AudioEventData = {
     requestId: string;
     projectId: string;
+    organizationId: string;
+    userId: string;
     prompt: string;
     audioType: 'speech' | 'sound-effect' | 'music' | 'dialogue';
 }
@@ -28,6 +35,8 @@ type AudioEventData = {
 type VideoEventData = {
     requestId: string;
     projectId: string;
+    organizationId: string;
+    userId: string;
     prompt: string;
     model: string;
     duration: number;
@@ -37,28 +46,52 @@ type VideoEventData = {
 
 const MAX_VIDEO_POLL_ATTEMPTS = 60;
 const VIDEO_POLL_INTERVAL = '10s';
+// TTLs mirror the values declared on the billables; reservations need at
+// least 2x the wall-clock budget for the sweeper-safety check to pass.
+const SYNC_RESERVATION_TTL_MS = 30 * 60 * 1000;        // 30 minutes
+const VIDEO_RESERVATION_TTL_MS = 60 * 60 * 1000;       // 1 hour
 
-function isRetryable(error: unknown): boolean {
-    if (error instanceof Error) {
-        const msg = error.message;
-        return msg.includes('429') || msg.includes('503')
-            || msg.includes('rate limit') || msg.includes('Rate limit')
-            || msg.includes('service unavailable') || msg.includes('Service Unavailable');
+/**
+ * Determines if an error should trigger a retry.
+ * Only MediaError instances with isRetriable=true are retriable.
+ * All other errors (including generic Errors) are non-retriable.
+ */
+function shouldRetry(error: unknown): boolean {
+    if (isMediaError(error)) {
+        return error.isRetriable;
     }
     return false;
 }
 
+/**
+ * Wraps errors appropriately for Inngest:
+ * - MediaError with isRetriable=true: rethrow to trigger retry
+ * - MediaError with isRetriable=false: wrap in NonRetriableError
+ * - Any other error: wrap in NonRetriableError (no retry for unknown errors)
+ */
 function wrapNonRetryable(error: unknown): never {
-    if (isRetryable(error)) throw error;
-    throw new NonRetriableError(
-        error instanceof Error ? error.message : String(error),
-        { cause: error instanceof Error ? error : undefined },
-    );
+    if (shouldRetry(error)) {
+        throw error;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    const cause = error instanceof Error ? error : undefined;
+
+    throw new NonRetriableError(message, { cause });
 }
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
     return String(error);
+}
+
+async function safeRefund(reservationId: string | undefined | null, reason: string): Promise<void> {
+    if (!reservationId) return;
+    try {
+        await billingService.refund(reservationId, reason);
+    } catch (err) {
+        console.error('[billing] refund failed', reservationId, err);
+    }
 }
 
 // ─── Image Generation ────────────────────────────────────────────────
@@ -69,49 +102,85 @@ export const handleImageGeneration = inngest.createFunction(
         retries: 3,
         triggers: [{ event: 'media/generate.image' }],
         onFailure: async ({ event, error, step }) => {
-            const data = event.data.event.data as Partial<ImageEventData>;
+            const data = event.data.event.data as Partial<ImageEventData> & { _reservationId?: string };
             const requestId = data.requestId;
-            if (!requestId) return;
-
-            await step.run('mark-generation-failed', () =>
-                repo.updateGenerationRequest(requestId, {
-                    status: 'failed',
-                    error: getErrorMessage(error),
-                }),
-            );
+            if (requestId) {
+                await step.run('mark-generation-failed', () =>
+                    repo.updateGenerationRequest(requestId, {
+                        status: 'failed',
+                        error: getErrorMessage(error),
+                    }),
+                );
+            }
+            const reservationId = data._reservationId;
+            if (reservationId) {
+                await step.run('refund-credits', () => safeRefund(reservationId, 'image-generation-failed'));
+            }
         },
     },
     async ({ event, step }) => {
         const data = event.data as ImageEventData;
-        const { requestId, projectId, prompt, model, aspectRatio, referenceImages, numVariations } = data;
+        const { requestId, projectId, organizationId, userId, prompt, model, aspectRatio, referenceImages, numVariations } = data;
 
         await step.run('mark-processing', () =>
             repo.updateGenerationRequest(requestId, { status: 'processing' }),
         );
 
-        const generator = new MediaGenerator(model);
+        const billableInput = {
+            model,
+            prompt,
+            aspectRatio,
+            numVariations,
+            images: referenceImages,
+        };
 
-        const result = await step.run('generate-image', async () => {
-            try {
-                if (referenceImages && referenceImages.length > 0) {
-                    return await generator.imageToImage({
-                        model,
-                        prompt,
-                        images: referenceImages,
-                        aspectRatio,
-                        numVariations,
-                    });
-                }
-                return await generator.textToImage({
-                    model,
-                    prompt,
-                    aspectRatio,
-                    numVariations,
-                });
-            } catch (error) {
-                wrapNonRetryable(error);
-            }
+        const reservation = await step.run('reserve-credits', async () => {
+            const estimatedCredits = await imageBillable.estimateCost(billableInput);
+            const idempotencyKey = imageBillable.idempotencyKey(billableInput, { organizationId, userId });
+            const res = await billingService.reserve({
+                organizationId,
+                userId,
+                operation: imageBillable.operation,
+                estimatedCredits,
+                ttlMs: SYNC_RESERVATION_TTL_MS,
+                idempotencyKey,
+                metadata: { requestId, projectId, kind: 'image' },
+            });
+            return { id: res.id, estimatedCredits: estimatedCredits.toString() };
         });
+
+        let result;
+        try {
+            result = await step.run('generate-image', async () => {
+                try {
+                    const billCtx = {
+                        organizationId,
+                        userId,
+                        signal: new AbortController().signal,
+                        reservationId: reservation.id,
+                    };
+                    const billable = await imageBillable.execute(billableInput, billCtx);
+                    return {
+                        urls: billable.output.urls,
+                        providerCostUsd: billable.output.providerCostUsd,
+                        actualCredits: billable.actualCredits.toString(),
+                    };
+                } catch (error) {
+                    wrapNonRetryable(error);
+                }
+            });
+        } catch (error) {
+            await step.run('refund-on-error', () => safeRefund(reservation.id, 'image-execute-error'));
+            throw error;
+        }
+
+        await step.run('settle-credits', () =>
+            billingService.settle({
+                reservationId: reservation.id,
+                actualCredits: BigInt(result.actualCredits),
+                metadata: { requestId, providerCostUsd: result.providerCostUsd },
+            }),
+        );
 
         const uploads = await step.run('upload-to-gcs', async () => {
             const uploaded = [];
@@ -146,7 +215,7 @@ export const handleImageGeneration = inngest.createFunction(
             return assets;
         });
 
-        return { requestId, assets };
+        return { requestId, assets, reservationId: reservation.id };
     },
 );
 
@@ -158,57 +227,90 @@ export const handleAudioGeneration = inngest.createFunction(
         retries: 3,
         triggers: [{ event: 'media/generate.audio' }],
         onFailure: async ({ event, error, step }) => {
-            const data = event.data.event.data as Partial<AudioEventData>;
+            const data = event.data.event.data as Partial<AudioEventData> & { _reservationId?: string };
             const requestId = data.requestId;
-            if (!requestId) return;
-
-            await step.run('mark-generation-failed', () =>
-                repo.updateGenerationRequest(requestId, {
-                    status: 'failed',
-                    error: getErrorMessage(error),
-                }),
-            );
+            if (requestId) {
+                await step.run('mark-generation-failed', () =>
+                    repo.updateGenerationRequest(requestId, {
+                        status: 'failed',
+                        error: getErrorMessage(error),
+                    }),
+                );
+            }
+            const reservationId = data._reservationId;
+            if (reservationId) {
+                await step.run('refund-credits', () => safeRefund(reservationId, 'audio-generation-failed'));
+            }
         },
     },
     async ({ event, step }) => {
         const data = event.data as AudioEventData;
-        const { requestId, projectId, prompt, audioType } = data;
+        const { requestId, projectId, organizationId, userId, prompt, audioType } = data;
 
         await step.run('mark-processing', () =>
             repo.updateGenerationRequest(requestId, { status: 'processing' }),
         );
 
-        const audioGenerator = new AudioGenerator();
+        const billableInput = { audioType, prompt };
 
-        const upload = await step.run('generate-and-upload-audio', async () => {
-            let audioResult;
-            try {
-                switch (audioType) {
-                    case 'speech':
-                        audioResult = await audioGenerator.generateSpeech(prompt);
-                        break;
-                    case 'sound-effect':
-                        audioResult = await audioGenerator.generateSoundEffect(prompt);
-                        break;
-                    case 'music':
-                        audioResult = await audioGenerator.generateMusic(prompt);
-                        break;
-                    case 'dialogue':
-                        audioResult = await audioGenerator.generateDialogue(prompt);
-                        break;
-                    default:
-                        throw new NonRetriableError(`Unknown audio type: ${audioType}`);
-                }
-            } catch (error) {
-                if (error instanceof NonRetriableError) throw error;
-                wrapNonRetryable(error);
-            }
-
-            const file = audioResult.file;
-            const buffer = Buffer.from(await file.arrayBuffer());
-            const destPath = storage.buildStoragePath('audios', file.name);
-            return storage.uploadFromBuffer(buffer, destPath, file.type);
+        const reservation = await step.run('reserve-credits', async () => {
+            const estimatedCredits = await audioBillable.estimateCost(billableInput);
+            const idempotencyKey = audioBillable.idempotencyKey(billableInput, { organizationId, userId });
+            const res = await billingService.reserve({
+                organizationId,
+                userId,
+                operation: audioBillable.operation,
+                estimatedCredits,
+                ttlMs: SYNC_RESERVATION_TTL_MS,
+                idempotencyKey,
+                metadata: { requestId, projectId, kind: 'audio', audioType },
+            });
+            return { id: res.id, estimatedCredits: estimatedCredits.toString() };
         });
+
+        let upload;
+        let actualCreditsStr = '0';
+        let providerCostUsd = 0;
+        try {
+            const generated = await step.run('generate-and-upload-audio', async () => {
+                let billable;
+                try {
+                    billable = await audioBillable.execute(billableInput, {
+                        organizationId,
+                        userId,
+                        signal: new AbortController().signal,
+                        reservationId: reservation.id,
+                    });
+                } catch (error) {
+                    if (error instanceof NonRetriableError) throw error;
+                    wrapNonRetryable(error);
+                }
+
+                const file = billable.output.response.file;
+                const buffer = Buffer.from(await file.arrayBuffer());
+                const destPath = storage.buildStoragePath('audios', file.name);
+                const uploaded = await storage.uploadFromBuffer(buffer, destPath, file.type);
+                return {
+                    upload: uploaded,
+                    actualCredits: billable.actualCredits.toString(),
+                    providerCostUsd: billable.output.providerCostUsd,
+                };
+            });
+            upload = generated.upload;
+            actualCreditsStr = generated.actualCredits;
+            providerCostUsd = generated.providerCostUsd;
+        } catch (error) {
+            await step.run('refund-on-error', () => safeRefund(reservation.id, 'audio-execute-error'));
+            throw error;
+        }
+
+        await step.run('settle-credits', () =>
+            billingService.settle({
+                reservationId: reservation.id,
+                actualCredits: BigInt(actualCreditsStr),
+                metadata: { requestId, providerCostUsd },
+            }),
+        );
 
         const asset = await step.run('save-asset', async () => {
             const fileMetadata = await storage.getFileMetadata(upload.storageKey);
@@ -227,7 +329,7 @@ export const handleAudioGeneration = inngest.createFunction(
             return asset;
         });
 
-        return { requestId, asset };
+        return { requestId, asset, reservationId: reservation.id };
     },
 );
 
@@ -239,53 +341,95 @@ export const handleVideoGeneration = inngest.createFunction(
         retries: 3,
         triggers: [{ event: 'media/generate.video' }],
         onFailure: async ({ event, error, step }) => {
-            const data = event.data.event.data as Partial<VideoEventData>;
+            const data = event.data.event.data as Partial<VideoEventData> & { _reservationId?: string };
             const requestId = data.requestId;
-            if (!requestId) return;
-
-            await step.run('mark-generation-failed', () =>
-                repo.updateGenerationRequest(requestId, {
-                    status: 'failed',
-                    error: getErrorMessage(error),
-                }),
-            );
+            if (requestId) {
+                await step.run('mark-generation-failed', () =>
+                    repo.updateGenerationRequest(requestId, {
+                        status: 'failed',
+                        error: getErrorMessage(error),
+                    }),
+                );
+            }
+            const reservationId = data._reservationId;
+            if (reservationId) {
+                await step.run('refund-credits', () => safeRefund(reservationId, 'video-generation-failed'));
+            }
         },
     },
     async ({ event, step }) => {
         const data = event.data as VideoEventData;
-        const { requestId, projectId, prompt, model, duration, aspectRatio, referenceImage } = data;
+        const { requestId, projectId, organizationId, userId, prompt, model, duration, aspectRatio, referenceImage } = data;
 
         await step.run('mark-processing', () =>
             repo.updateGenerationRequest(requestId, { status: 'processing' }),
         );
 
-        const generator = new MediaGenerator(model);
+        const billableInput = {
+            model,
+            prompt,
+            duration,
+            aspectRatio,
+            referenceImage,
+        };
 
-        const submission = await step.run('submit-video', async () => {
-            try {
-                const inputReference = referenceImage
-                    ? { image_url: referenceImage }
-                    : undefined;
-
-                return await generator.submitVideoGeneration({
-                    model,
-                    prompt,
-                    duration,
-                    aspectRatio,
-                    inputReference,
-                });
-            } catch (error) {
-                wrapNonRetryable(error);
-            }
+        const reservation = await step.run('reserve-credits', async () => {
+            const estimatedCredits = await videoBillable.estimateCost(billableInput);
+            const idempotencyKey = videoBillable.idempotencyKey(billableInput, { organizationId, userId });
+            const res = await billingService.reserve({
+                organizationId,
+                userId,
+                operation: videoBillable.operation,
+                estimatedCredits,
+                ttlMs: VIDEO_RESERVATION_TTL_MS,
+                idempotencyKey,
+                metadata: { requestId, projectId, kind: 'video' },
+            });
+            return { id: res.id, estimatedCredits: estimatedCredits.toString() };
         });
 
+        let submission;
+        try {
+            submission = await step.run('submit-video', async () => {
+                try {
+                    const handle = await videoBillable.submit(billableInput, {
+                        organizationId,
+                        userId,
+                        signal: new AbortController().signal,
+                        reservationId: reservation.id,
+                    });
+                    return {
+                        id: handle.submission.id,
+                        estimatedProviderCostUsd: handle.estimatedProviderCostUsd,
+                    };
+                } catch (error) {
+                    wrapNonRetryable(error);
+                }
+            });
+        } catch (error) {
+            await step.run('refund-on-submit-error', () => safeRefund(reservation.id, 'video-submit-error'));
+            throw error;
+        }
+
         let videoUrl = '';
+        let providerCostUsd = submission.estimatedProviderCostUsd;
 
         for (let attempt = 0; attempt < MAX_VIDEO_POLL_ATTEMPTS; attempt++) {
             await step.sleep(`wait-for-video-${attempt}`, VIDEO_POLL_INTERVAL);
 
+            // Keep the reservation alive while we poll. Sweeper would
+            // otherwise refund + expire our reservation under us.
+            await step.run(`renew-reservation-${attempt}`, async () => {
+                const current = await billingService.getReservation(reservation.id);
+                if (!current || current.status !== 'reserved') return;
+                const remainingMs = current.expiresAt.getTime() - Date.now();
+                if (remainingMs > VIDEO_RESERVATION_TTL_MS * 0.2) return;
+                await billingService.extend(reservation.id, VIDEO_RESERVATION_TTL_MS);
+            });
+
             const pollResult = await step.run(`poll-video-${attempt}`, async () => {
                 try {
+                    const generator = new MediaGenerator(model);
                     return await generator.pollVideoGeneration(submission.id);
                 } catch (error) {
                     wrapNonRetryable(error);
@@ -294,6 +438,9 @@ export const handleVideoGeneration = inngest.createFunction(
 
             if (pollResult.status === 'completed') {
                 videoUrl = pollResult.url;
+                if (typeof pollResult.cost?.cost === 'number' && pollResult.cost.cost > 0) {
+                    providerCostUsd = pollResult.cost.cost;
+                }
                 break;
             }
 
@@ -304,6 +451,7 @@ export const handleVideoGeneration = inngest.createFunction(
                         error: 'Video generation failed at provider',
                     }),
                 );
+                await step.run('refund-on-provider-failure', () => safeRefund(reservation.id, 'video-provider-failed'));
                 return { requestId, status: 'failed' };
             }
         }
@@ -315,8 +463,17 @@ export const handleVideoGeneration = inngest.createFunction(
                     error: 'Video generation timed out',
                 }),
             );
+            await step.run('refund-on-timeout', () => safeRefund(reservation.id, 'video-poll-timeout'));
             return { requestId, status: 'failed' };
         }
+
+        await step.run('settle-credits', () =>
+            billingService.settle({
+                reservationId: reservation.id,
+                actualCredits: videoActualCredits(providerCostUsd),
+                metadata: { requestId, providerCostUsd },
+            }),
+        );
 
         const upload = await step.run('upload-to-gcs', async () => {
             const destPath = storage.buildStoragePath('videos', `video-${submission.id}.mp4`);
@@ -340,6 +497,6 @@ export const handleVideoGeneration = inngest.createFunction(
             return asset;
         });
 
-        return { requestId, asset };
+        return { requestId, asset, reservationId: reservation.id };
     },
 );

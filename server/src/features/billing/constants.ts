@@ -7,6 +7,11 @@ export const SUBSCRIPTION_TARGET_MARGIN = 0.60; // 60% target margin
 export const TOPUP_TARGET_MARGIN = 0.70; // 70% target margin
 export const PAYMENT_FEE_RESERVE = 0.03; // 3% payment fee rate
 
+// Multiplier applied to all cost estimates before reserving credits.
+// Overbooking protects against under-charging: it is safer to reserve a bit
+// too much and refund the difference on settle than to under-reserve and
+// lose money on the overage.
+export const ESTIMATE_OVERBOOKING_FACTOR = 1.15; // 15% overbooking
 
 export const UNITS = {
     TEXT: 'text',

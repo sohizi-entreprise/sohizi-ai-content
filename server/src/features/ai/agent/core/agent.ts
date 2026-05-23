@@ -1,11 +1,17 @@
 import { AssistantContent, ModelMessage, ToolModelMessage } from "ai";
-import { InvokeRequest, LlmClient } from "../utils/llm-client";
+import type { BillableLlmClient, BillableLlmInput } from "../utils/llm-client";
 import { LlmChunk, streamEvents, ToolCall, ToolResultComplete } from "../utils/llm-response";
 import { v4 as uuidv4 } from 'uuid';
 import { getTool } from "../tools/tool-registry";
 import { mergeGenerators } from "../utils/merge-generators";
 import { Session } from "./session";
 import { AgentState, CompleteReason, TokenUsage } from "@/type";
+import { billingService, withBillingStream } from "@/features/billing";
+
+// Rough chars-per-token heuristic for input estimation when reserving credits.
+// Real tokenization is model-specific; this is intentionally conservative.
+const CHARS_PER_TOKEN = 4;
+const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096;
 
 
 type CallbackEvent = 'finish' | 'start'
@@ -17,7 +23,8 @@ export type AgentChunk = {
 } & LlmChunk
 
 export class Agent {
-    private readonly llmClient: LlmClient;
+    private readonly billableLlm: BillableLlmClient;
+    private readonly billedLlmStream: ReturnType<typeof withBillingStream<BillableLlmInput, LlmChunk>>;
     public state: AgentState;
     private readonly name: string;
     private runId: string | null;
@@ -25,7 +32,8 @@ export class Agent {
     private readonly session: Session;
 
     constructor(name: string, systemPrompt: string, session: Session) {
-        this.llmClient = session.llmClient;
+        this.billableLlm = session.billableLlmClient;
+        this.billedLlmStream = withBillingStream(this.billableLlm, billingService);
         this.name = name;
         this.runId = null;
         this.callbacks = new Map();
@@ -52,19 +60,32 @@ export class Agent {
     async* runStep(abortSignal: AbortSignal): AsyncGenerator<AgentChunk, void, unknown> {
         // Future implementation: context summarization + pruning && user limit checking
         // Future persist messages to the database [checkpoints]
-        const request: InvokeRequest = {
-            messages: this.state.messages,
-            abortSignal,
-        }
         this.runId = uuidv4();
         const tool_calls: ToolCall[] = [];
         let reasoning_text = '';
         let text = '';
 
-        for await (const chunk of this.llmClient.invoke(request)) {
-            if(chunk.type === streamEvents.complete){
-                // console.log(chunk)
-            }
+        const billableInput: BillableLlmInput = {
+            messages: this.state.messages,
+            estimatedInputTokens: this.estimateInputTokens(this.state.messages),
+            estimatedOutputTokens: DEFAULT_OUTPUT_TOKEN_ESTIMATE,
+        };
+
+        // `withBillingStream` reserves up-front, settles on the terminal
+        // `complete` chunk, and refunds on error / early termination.
+        // The agent sees only LLM chunks; billing is invisible to this loop.
+        const billedStream = this.billedLlmStream(billableInput, {
+            organizationId: this.session.organizationId,
+            userId: this.session.userId,
+            signal: abortSignal,
+            metadata: {
+                sessionId: this.session.id,
+                conversationId: this.session.conversationId,
+                runId: this.runId,
+            },
+        });
+
+        for await (const chunk of billedStream) {
             switch (chunk.type) {
                 case streamEvents.complete:
                     this.incrementUsage(chunk.usage);
@@ -284,5 +305,10 @@ export class Agent {
 
     private triggerCallback(event: CallbackEvent) {
         this.callbacks.get(event)?.forEach(handler => handler(this.state));
+    }
+
+    private estimateInputTokens(messages: ModelMessage[]): number {
+        const chars = JSON.stringify(messages).length;
+        return Math.max(1, Math.ceil(chars / CHARS_PER_TOKEN));
     }
 }

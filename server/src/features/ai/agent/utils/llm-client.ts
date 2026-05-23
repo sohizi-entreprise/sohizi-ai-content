@@ -1,8 +1,12 @@
 import { Output, streamText, generateText, ModelMessage, ToolSet, LanguageModelUsage } from "ai";
 import { openai } from "@/lib/llm-providers";
 import { z } from "zod";
-import { LlmChunk, streamEvents } from "./llm-response";
+import { LlmChunk, LlmCompleteChunk, streamEvents } from "./llm-response";
 import { TokenUsage, CompleteReason } from "@/type";
+import type { Billable, BillableContext, BillableResult, BillableStream, Credits } from "@/features/billing/types";
+import type { LlmModel } from "@/db/schema";
+import { calculateTextCredits } from "@/features/billing/credits";
+import { TOPUP_TARGET_MARGIN, PAYMENT_FEE_RESERVE, ESTIMATE_OVERBOOKING_FACTOR } from "@/features/billing/constants";
 
 export type ModelConfig = {
     temperature?: number;
@@ -19,6 +23,7 @@ export type InvokeRequest = {
     outputSchema?: z.ZodSchema;
     stream?: boolean;
 }
+
 
 export class LlmClient {
     private readonly model: string;
@@ -235,4 +240,139 @@ export class LlmClient {
             modelId: this.model,
         }
     }
+}
+
+export type BillableLlmInput = {
+    messages: ModelMessage[];
+    outputSchema?: z.ZodSchema;
+    stream?: boolean;
+    estimatedInputTokens: number;
+    estimatedOutputTokens: number;
+}
+
+export type BillableLlmOutput = {
+    text: string;
+    finishReason: CompleteReason;
+    usage: TokenUsage;
+    reasoningText?: string;
+    error?: string;
+}
+
+export type BillableLlmConfig = {
+    model: LlmModel;
+    modelConfig?: ModelConfig;
+    tools?: ToolSet;
+    timeoutMs?: number;
+    ttlMs?: number;
+}
+
+const DEFAULT_TIMEOUT_MS = 120_000; // 2 minutes
+
+/**
+ * A BillableLlmClient satisfies both:
+ *  - `Billable<...>`        → usable with `withBilling(...)` (buffered one-shot calls)
+ *  - `BillableStream<...>`  → usable with `withBillingStream(...)` (live streaming;
+ *                             the agent loop forwards chunks to the SSE client)
+ *
+ * Estimation, idempotency, and per-token cost math live here so callers
+ * never re-implement billing logic.
+ */
+export type BillableLlmClient =
+    & Billable<BillableLlmInput, BillableLlmOutput>
+    & BillableStream<BillableLlmInput, LlmChunk>
+
+export function createBillableLlmClient(config: BillableLlmConfig): BillableLlmClient {
+    const { model, modelConfig, tools, timeoutMs = DEFAULT_TIMEOUT_MS, ttlMs } = config;
+    const client = new LlmClient(model.apiName, modelConfig, tools);
+
+    const creditsFromUsage = (usage: TokenUsage): Credits => {
+        const actualCredits = calculateTextCredits(model, {
+            inputTokens: usage.input,
+            outputTokens: usage.output,
+            cachedInputTokens: usage.cached,
+        }, {
+            targetMargin: TOPUP_TARGET_MARGIN,
+            paymentFeeReserve: PAYMENT_FEE_RESERVE,
+        });
+        return BigInt(actualCredits);
+    };
+
+    async function* stream(input: BillableLlmInput, abortSignal: AbortSignal): AsyncGenerator<LlmChunk, void, unknown> {
+        yield* client.invoke({
+            messages: input.messages,
+            abortSignal,
+            outputSchema: input.outputSchema,
+            stream: input.stream,
+        });
+    }
+
+    return {
+        operation: `llm:${model.apiName}`,
+        timeoutMs,
+        ttlMs,
+
+        stream,
+
+        terminalCredits(chunk: LlmChunk): Credits | null {
+            if (chunk.type === streamEvents.complete) {
+                return creditsFromUsage(chunk.usage);
+            }
+            return null;
+        },
+
+        estimateCost(input: BillableLlmInput): Credits {
+            const estimatedUsage = {
+                inputTokens: input.estimatedInputTokens,
+                outputTokens: input.estimatedOutputTokens,
+            };
+            const credits = calculateTextCredits(model, estimatedUsage, {
+                targetMargin: TOPUP_TARGET_MARGIN,
+                paymentFeeReserve: PAYMENT_FEE_RESERVE,
+            });
+            const overbooked = Math.ceil(credits * ESTIMATE_OVERBOOKING_FACTOR);
+            return BigInt(overbooked);
+        },
+
+        async execute(input: BillableLlmInput, ctx: BillableContext): Promise<BillableResult<BillableLlmOutput>> {
+            // Drain the stream looking for the terminal complete chunk; usage,
+            // text, and finishReason are all carried on that chunk so we don't
+            // need to buffer intermediate chunks.
+            let finalChunk: LlmCompleteChunk | null = null;
+            for await (const chunk of stream(input, ctx.signal)) {
+                if (chunk.type === streamEvents.complete) {
+                    finalChunk = chunk;
+                }
+            }
+
+            if (!finalChunk) {
+                throw new Error('LLM invocation did not produce a complete chunk');
+            }
+
+            return {
+                output: {
+                    text: finalChunk.text,
+                    finishReason: finalChunk.finishReason,
+                    usage: finalChunk.usage,
+                    reasoningText: finalChunk.reasoningText,
+                    error: finalChunk.error,
+                },
+                actualCredits: creditsFromUsage(finalChunk.usage),
+            };
+        },
+
+        idempotencyKey(input: BillableLlmInput, ctx: { organizationId: string; userId?: string | null }): string {
+            const messageHash = simpleHash(JSON.stringify(input.messages));
+            return `llm:${ctx.organizationId}:${model.apiName}:${messageHash}`;
+        },
+    };
+}
+
+function simpleHash(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return Math.abs(hash).toString(36);
 }

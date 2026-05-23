@@ -12,6 +12,21 @@ import {
 import { assertProjectAccess } from '@/lib/authorize'
 import { authMiddleware } from '@/lib/auth-middleware'
 
+export {
+    MediaError,
+    MediaRateLimitError,
+    MediaServiceUnavailableError,
+    MediaProviderError,
+    MediaValidationError,
+    MediaConfigurationError,
+    MediaGenerationFailedError,
+    MediaTimeoutError,
+    mediaErrorFromResponse,
+    wrapAsMediaError,
+    isMediaError,
+    type WrapErrorOptions,
+} from './errors'
+
 export const mediaEngineRoutes = new Elysia({ prefix: '/media' })
     .use(authMiddleware)
     .post('/generate/image', async ({ body, user }) => {

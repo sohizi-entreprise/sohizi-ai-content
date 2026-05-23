@@ -28,7 +28,16 @@ export const models = {
     ],
 }
 
+async function resolveOrganizationId(projectId: string): Promise<string> {
+    const project = await getProjectById(projectId);
+    if (!project) {
+        throw new NotFound('Project not found');
+    }
+    return project.organizationId;
+}
+
 export async function generateImage(data: GenerateImageInput, userId: string) {
+    const organizationId = await resolveOrganizationId(data.projectId);
     const genRequest = await repo.createGenerationRequest({
         projectId: data.projectId,
         userId,
@@ -47,6 +56,8 @@ export async function generateImage(data: GenerateImageInput, userId: string) {
         data: {
             requestId: genRequest.id,
             projectId: data.projectId,
+            organizationId,
+            userId,
             prompt: data.prompt,
             model: data.model,
             aspectRatio: data.aspectRatio,
@@ -59,6 +70,7 @@ export async function generateImage(data: GenerateImageInput, userId: string) {
 }
 
 export async function generateAudio(data: GenerateAudioInput, userId: string) {
+    const organizationId = await resolveOrganizationId(data.projectId);
     const genRequest = await repo.createGenerationRequest({
         projectId: data.projectId,
         userId,
@@ -74,6 +86,8 @@ export async function generateAudio(data: GenerateAudioInput, userId: string) {
         data: {
             requestId: genRequest.id,
             projectId: data.projectId,
+            organizationId,
+            userId,
             prompt: data.prompt,
             audioType: data.audioType,
         },
@@ -83,6 +97,7 @@ export async function generateAudio(data: GenerateAudioInput, userId: string) {
 }
 
 export async function generateVideo(data: GenerateVideoInput, userId: string) {
+    const organizationId = await resolveOrganizationId(data.projectId);
     const genRequest = await repo.createGenerationRequest({
         projectId: data.projectId,
         userId,
@@ -101,6 +116,8 @@ export async function generateVideo(data: GenerateVideoInput, userId: string) {
         data: {
             requestId: genRequest.id,
             projectId: data.projectId,
+            organizationId,
+            userId,
             prompt: data.prompt,
             model: data.model,
             duration: data.duration,

@@ -1,6 +1,6 @@
 import { EmbedderInterface } from "@/lib/rag";
 import { Checkpoint, LlmModel } from "@/db/schema";
-import { LlmClient } from "../utils/llm-client";
+import { createBillableLlmClient, type BillableLlmClient } from "../utils/llm-client";
 import { AgentState } from "@/type";
 import * as repo from '@/features/chat/repo';
 import { ModelMessage } from "ai";
@@ -40,9 +40,13 @@ export class Session {
         this.messages = [];
     }
 
-    get llmClient(): LlmClient {
+    get billableLlmClient(): BillableLlmClient {
         const tools = listTools();
-        return new LlmClient(this.model.apiName, {reasoningEffort: 'medium', reasoningSummary: 'auto'}, tools)
+        return createBillableLlmClient({
+            model: this.model,
+            modelConfig: { reasoningEffort: 'medium', reasoningSummary: 'auto' },
+            tools,
+        });
     }
 
     registerMessage(message: ModelMessage | ModelMessage[]) {
