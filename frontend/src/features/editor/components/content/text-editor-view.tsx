@@ -13,12 +13,25 @@ import {
 } from '@tiptap/extension-details'
 import { Markdown } from '@tiptap/markdown'
 import { useParams } from '@tanstack/react-router'
+import { useMemo } from 'react'
 import { useDiffSave } from '../../hooks/use-autosave'
-import TextEditorToolbar from './text-editor-toolbar'
-import type { EditorTab } from '../../types'
-import './text-editor.css'
 import TextEditorBubbleMenu from '../text-editor-extensions/bubble-menu'
 import { useEditorInputBridge } from '../../bridge/use-editor-input-bridge'
+import { serializeMarkdownWithTextAlign } from '../../extensions/markdown-text-align'
+import {
+  PatchAdditionMark,
+  PatchDeletionMark,
+} from '../../extensions/patch-diff'
+import {
+  FileMention,
+  createFileMentionSuggestion,
+  preprocessFileMentions,
+} from '../../extensions/file-mention'
+import { ImageLayout } from '../../extensions/image-layout'
+import TextEditorToolbar from './text-editor-toolbar'
+import type { EditorTab } from '../../types'
+import { useFileMentionSearch } from '@/hooks/use-file-mention-search'
+import './text-editor.css'
 
 const SAMPLE_CONTENT = `
 # Welcome to the Markdown Demo
@@ -61,6 +74,7 @@ End
 const editorExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
+    trailingNode: false,
   }),
   Placeholder.configure({
     placeholder: 'Start writing...',
@@ -100,6 +114,9 @@ const editorExtensions = [
   TextAlign.configure({
     types: ['heading', 'paragraph'],
   }),
+  PatchAdditionMark,
+  PatchDeletionMark,
+  ImageLayout,
 ]
 
 interface TextEditorViewProps {
@@ -120,23 +137,35 @@ export function TextEditorView({
   const diffSave = useDiffSave({
     duration: 2000,
     projectId,
-    fileId: tab.id
+    fileId: tab.id,
   })
 
-  const setEditor = useEditorInputBridge(state => state.setEditor)
-  const clearEditor = useEditorInputBridge(state => state.clearEditor)
+  const setEditor = useEditorInputBridge((state) => state.setEditor)
+  const clearEditor = useEditorInputBridge((state) => state.clearEditor)
+
+  const searchFiles = useFileMentionSearch(projectId)
+  const fileMentionSuggestion = useMemo(
+    () => createFileMentionSuggestion(searchFiles),
+    [searchFiles],
+  )
 
   const editor = useEditor({
     immediatelyRender: true,
     extensions: [
       ...editorExtensions,
+      FileMention.configure({
+        HTMLAttributes: {
+          class: 'file-mention',
+        },
+        suggestion: fileMentionSuggestion,
+      }),
       Markdown.configure({
         markedOptions: {
           gfm: true,
         },
       }),
     ],
-    content: baseMarkdown,
+    content: preprocessFileMentions(baseMarkdown),
     contentType: 'markdown',
     editorProps: {
       attributes: {
@@ -144,7 +173,10 @@ export function TextEditorView({
       },
     },
     onUpdate: ({ editor: updatedEditor }) => {
-      const markdown = updatedEditor.getMarkdown()
+      const markdown = serializeMarkdownWithTextAlign(updatedEditor.getJSON(), [
+        ...editorExtensions,
+        FileMention,
+      ])
       diffSave({
         oldText: baseMarkdown,
         newText: markdown,
@@ -152,12 +184,12 @@ export function TextEditorView({
       })
       // console.log(markdown)
     },
-    onCreate: ({ editor }) => {
-      setEditor(editor)
+    onCreate: ({ editor: createdEditor }) => {
+      setEditor(createdEditor)
     },
     onDestroy: () => {
       clearEditor(editor)
-    }
+    },
   })
 
   return (
@@ -172,7 +204,10 @@ export function TextEditorView({
             editor={editor}
             className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[400px]"
           />
-          <TextEditorBubbleMenu editor={editor} file={{ id: tab.id, name: tab.name }} />
+          <TextEditorBubbleMenu
+            editor={editor}
+            file={{ id: tab.id, name: tab.name }}
+          />
         </div>
       </div>
     </div>

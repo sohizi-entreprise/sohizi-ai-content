@@ -166,6 +166,164 @@
   box-shadow: 0 18px 60px color-mix(in oklch, var(--background) 35%, transparent);
 }
 
+.tiptap-editor-content .image-layout-node {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.tiptap-editor-content .image-layout-delete {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  display: inline-flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--background) 90%, transparent);
+  color: var(--muted-foreground);
+  opacity: 0;
+  transition:
+    color 160ms ease,
+    opacity 160ms ease,
+    background 160ms ease;
+}
+
+.tiptap-editor-content .image-layout-node:hover .image-layout-delete,
+.tiptap-editor-content .image-layout-delete:focus-visible {
+  opacity: 1;
+}
+
+.tiptap-editor-content .image-layout-delete:hover {
+  background: color-mix(in oklch, var(--destructive) 12%, transparent);
+  color: var(--destructive);
+}
+
+.tiptap-editor-content .image-layout-media {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.tiptap-editor-content .image-layout-node-double-horizontal .image-layout-media {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tiptap-editor-content .image-layout-node-with-content {
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.tiptap-editor-content .image-layout-node-image-right-content .image-layout-media {
+  order: 2;
+}
+
+.tiptap-editor-content .image-layout-node-image-right-content .image-layout-content {
+  order: 1;
+}
+
+.tiptap-editor-content .image-layout-content {
+  min-height: 12rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: color-mix(in oklch, var(--muted) 14%, transparent);
+  padding: 1rem;
+}
+
+.tiptap-editor-content .image-layout-content > * + * {
+  margin-top: 0.85rem;
+}
+
+.tiptap-editor-content .image-upload-slot {
+  position: relative;
+  display: flex;
+  min-height: 12rem;
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px dashed var(--border);
+  border-radius: 0.85rem;
+  background: color-mix(in oklch, var(--muted) 18%, transparent);
+  color: var(--muted-foreground);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.tiptap-editor-content .image-upload-slot:hover,
+.tiptap-editor-content .image-upload-slot-dragging {
+  border-color: color-mix(in oklch, var(--primary) 70%, var(--border));
+  background: color-mix(in oklch, var(--primary) 10%, transparent);
+  color: var(--foreground);
+}
+
+.tiptap-editor-content .image-upload-slot:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.tiptap-editor-content .image-upload-slot img {
+  height: 100%;
+  max-height: 24rem;
+  width: 100%;
+  object-fit: cover;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.tiptap-editor-content .image-upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.tiptap-editor-content .image-upload-hint,
+.tiptap-editor-content .image-upload-replace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.tiptap-editor-content .image-upload-replace {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--background) 88%, transparent);
+  padding: 0.25rem 0.55rem;
+  color: var(--foreground);
+}
+
+@media (max-width: 720px) {
+  .tiptap-editor-content .image-layout-node-double-horizontal .image-layout-media,
+  .tiptap-editor-content .image-layout-node-with-content {
+    grid-template-columns: 1fr;
+  }
+
+  .tiptap-editor-content .image-layout-node-image-right-content .image-layout-media,
+  .tiptap-editor-content .image-layout-node-image-right-content .image-layout-content {
+    order: initial;
+  }
+}
+
 .tiptap-editor-content .tableWrapper {
   margin: 1.5rem 0;
   overflow-x: auto;
@@ -246,4 +404,34 @@
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+/* Patch diff marks */
+.tiptap-editor-content .patch-diff-addition {
+  background: oklch(0.92 0.12 145 / 0.5);
+  color: oklch(0.35 0.15 145);
+  text-decoration: none;
+  border-radius: 3px;
+  padding: 0.125em 0.25em;
+}
+
+.tiptap-editor-content .patch-diff-deletion {
+  background: oklch(0.92 0.1 25 / 0.4);
+  color: oklch(0.5 0.15 25);
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.55 0.2 25);
+  text-decoration-thickness: 2px;
+  border-radius: 3px;
+  padding: 0.125em 0.25em;
+}
+
+/* File mentions */
+.tiptap-editor-content .file-mention {
+  background: color-mix(in oklch, var(--primary) 15%, transparent);
+  color: var(--primary);
+  border-radius: 0.25rem;
+  padding: 0.1em 0.3em;
+  font-weight: 500;
+  font-size: 0.92em;
+  cursor: default;
 }

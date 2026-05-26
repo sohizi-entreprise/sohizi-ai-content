@@ -1,16 +1,20 @@
 import { useCallback, useRef, useState } from 'react'
-import { Plus, Upload } from 'lucide-react'
+import { Loader2, Plus, Upload } from 'lucide-react'
 import { useVideoEditorStore } from '../store/editor-store'
+import { uploadMediaAsset } from '../requests'
 import { secondsToFrames } from '../utils/time'
+import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface MediaDropzoneProps {
+  projectId: string
   className?: string
 }
 
-export function MediaDropzone({ className }: MediaDropzoneProps) {
+export function MediaDropzone({ projectId, className }: MediaDropzoneProps) {
   const [active, setActive] = useState(false)
+  const [uploading, setUploading] = useState(0)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const fps = useVideoEditorStore((s) => s.fps)
@@ -18,47 +22,60 @@ export function MediaDropzone({ className }: MediaDropzoneProps) {
   const addAudioClip = useVideoEditorStore((s) => s.addAudioClip)
   const addTextClip = useVideoEditorStore((s) => s.addTextClip)
   const addImageClip = useVideoEditorStore((s) => s.addImageClip)
+  const rootFolderId = useFileTreeStore((s) => s.rootFolderId)
 
   const ingestFiles = useCallback(
     async (files: FileList | null) => {
       if (!files || files.length === 0) return
+      const folderId = rootFolderId
+      if (!folderId) return
+
       for (const file of Array.from(files)) {
         try {
+          setUploading((c) => c + 1)
+
+          const localUrl = URL.createObjectURL(file)
+
           if (file.type.startsWith('video/')) {
-            const url = URL.createObjectURL(file)
-            const seconds = await probeMediaDuration(url, 'video')
+            const seconds = await probeMediaDuration(localUrl, 'video')
+            const asset = await uploadMediaAsset(projectId, folderId, file)
+            URL.revokeObjectURL(localUrl)
             addVideoClip({
-              url,
-              fileName: file.name,
+              url: asset.url,
+              fileName: asset.name,
               durationInFrames: secondsToFrames(seconds, fps),
             })
           } else if (file.type.startsWith('audio/')) {
-            const url = URL.createObjectURL(file)
-            const seconds = await probeMediaDuration(url, 'audio')
+            const seconds = await probeMediaDuration(localUrl, 'audio')
+            const asset = await uploadMediaAsset(projectId, folderId, file)
+            URL.revokeObjectURL(localUrl)
             addAudioClip({
-              url,
-              fileName: file.name,
+              url: asset.url,
+              fileName: asset.name,
               durationInFrames: secondsToFrames(seconds, fps),
             })
           } else if (file.type.startsWith('image/')) {
-            const url = URL.createObjectURL(file)
-            const dims = await probeImageDimensions(url)
+            const dims = await probeImageDimensions(localUrl)
+            const asset = await uploadMediaAsset(projectId, folderId, file)
+            URL.revokeObjectURL(localUrl)
             addImageClip({
-              url,
-              fileName: file.name,
+              url: asset.url,
+              fileName: asset.name,
               width: dims.width,
               height: dims.height,
               durationInFrames: fps * 5,
             })
           } else {
-            // ignore unsupported
+            URL.revokeObjectURL(localUrl)
           }
         } catch {
           // skip on failure
+        } finally {
+          setUploading((c) => c - 1)
         }
       }
     },
-    [fps, addVideoClip, addAudioClip, addImageClip],
+    [fps, projectId, rootFolderId, addVideoClip, addAudioClip, addImageClip],
   )
 
   const handleAddText = () => {
@@ -93,15 +110,22 @@ export function MediaDropzone({ className }: MediaDropzoneProps) {
         className,
       )}
     >
-      <Upload className="size-3.5 text-muted-foreground" />
+      {uploading > 0 ? (
+        <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+      ) : (
+        <Upload className="size-3.5 text-muted-foreground" />
+      )}
       <span className="text-[11px] text-muted-foreground">
-        Drop video, image, or audio files here, or
+        {uploading > 0
+          ? `Uploading ${uploading} file${uploading > 1 ? 's' : ''}...`
+          : 'Drop video, image, or audio files here, or'}
       </span>
       <Button
         variant="ghost"
         size="sm"
         className="h-7 gap-1 text-xs text-primary"
         onClick={() => inputRef.current?.click()}
+        disabled={uploading > 0}
       >
         <Plus className="size-3" />
         Add media

@@ -1,16 +1,30 @@
-import { TreeApi } from "react-arborist"
-import { FileTreeNode } from "../types"
-import { z } from "zod"
-import { useFileTreeStore } from "../stores/file-tree-store"
-import { create } from "zustand"
-
+import { z } from 'zod'
+import { create } from 'zustand'
+import { useFileTreeStore } from '../stores/file-tree-store'
+import type { FileNodeFormat, FileTreeNode } from '../types'
+import type { TreeApi } from 'react-arborist'
 
 type TreeType = TreeApi<FileTreeNode>
 
-const createCommand = z.object({type: z.literal('create'), data: z.object({projectId: z.string(), parentId: z.string(), index: z.number(), isDir: z.boolean()})})
-const deleteCommand = z.object({type: z.literal('delete'), data: z.object({projectId: z.string(), ids: z.array(z.string())})})
+const createCommand = z.object({
+  type: z.literal('create'),
+  data: z.object({
+    projectId: z.string(),
+    parentId: z.string(),
+    index: z.number(),
+    isDir: z.boolean(),
+    format: z.string().optional(),
+  }),
+})
+const deleteCommand = z.object({
+  type: z.literal('delete'),
+  data: z.object({ projectId: z.string(), ids: z.array(z.string()) }),
+})
 
-const commandSchema = z.discriminatedUnion('type', [createCommand, deleteCommand,])
+const commandSchema = z.discriminatedUnion('type', [
+  createCommand,
+  deleteCommand,
+])
 
 type Command = z.infer<typeof commandSchema>
 
@@ -35,8 +49,14 @@ const useFileTreeBridgeStore = create<FileTreeBridgeState>((set, get) => ({
 
     switch (command.type) {
       case 'create': {
-        const { projectId, parentId, index, isDir } = command.data
-        const tempNode = createTempNode(projectId, parentId, index, isDir)
+        const { projectId, parentId, index, isDir, format } = command.data
+        const tempNode = createTempNode(
+          projectId,
+          parentId,
+          index,
+          isDir,
+          format,
+        )
         useFileTreeStore.getState().insertNodeAt(parentId, tempNode, index)
         setTimeout(() => {
           get().tree?.edit(tempNode.id)
@@ -49,17 +69,23 @@ const useFileTreeBridgeStore = create<FileTreeBridgeState>((set, get) => ({
 
 export default useFileTreeBridgeStore
 
-function createTempNode(projectId: string, parentId: string, index: number, isDir: boolean = false) {
-    const tempId = `temp-${Date.now()}`
-    const tempNode: FileTreeNode = {
-      id: tempId,
-      name: '',
-      directory: isDir,
-      projectId,
-      format: isDir ? null : 'markdown',
-      parentId,
-      position: index * 1000,
-      editable: true,
-    }
-    return tempNode
+function createTempNode(
+  projectId: string,
+  parentId: string,
+  index: number,
+  isDir: boolean = false,
+  format: FileNodeFormat = 'markdown',
+) {
+  const tempId = `temp-${Date.now()}`
+  const tempNode: FileTreeNode = {
+    id: tempId,
+    name: '',
+    directory: isDir,
+    projectId,
+    format: isDir ? null : format,
+    parentId,
+    position: index * 1000,
+    editable: true,
+  }
+  return tempNode
 }

@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import { FileContentResponse } from './types'
+import type { FileContentResponse, Skill } from './types'
 
 export type CursorPaginationOptions = {
   cursor?: string
@@ -47,6 +47,23 @@ export const saveFileContentDiff = async (
   const response = await api.put(
     `/projects/${projectId}/files/${fileId}/content`,
     { diff, baseRevision },
+  )
+  return response.data
+}
+
+export type SaveSkillPayload = {
+  description?: string
+  instructions?: string
+}
+
+export const saveSkill = async (
+  projectId: string,
+  fileId: string,
+  skill: SaveSkillPayload,
+): Promise<Skill> => {
+  const response = await api.put(
+    `/projects/${projectId}/files/${fileId}/skill`,
+    skill,
   )
   return response.data
 }

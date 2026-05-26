@@ -14,13 +14,14 @@ import {
     updateFileContent as updateFileContentFn,
     updateFileNode as updateFileNodeFn,
 } from './functions';
-import { FileCreationRequest, UpdateFileRequest, UpdateTextFileContentRequest } from './payload';
+import { FileCreationRequest, UpdateFileRequest, UpdateSkillRequest, UpdateTextFileContentRequest } from './payload';
 import * as fileSystemRepo from './repo';
 import * as mediaRepo from '../media-engine/repo';
 import { E5SmallLocalEmbedder } from '@/lib/rag/local-embedder';
 import { Asset } from '@/db/schema';
 import * as storage from '../media-engine/storage';
 import { CursorPaginationOptions } from '@/type';
+import * as videoEditorRepo from '../video-editor/repo';
 
 // List file trees -> ok
 // rename file
@@ -200,6 +201,20 @@ export const getFileContent = async(projectId: string, fileNodeId: string, pagin
             const aiGeneratedAssets = await mediaRepo.getAiGeneratedAssetsGroupedByGenerationRequest(projectId, paginationOptions);
             return {type: 'ai-generated-assets', data: aiGeneratedAssets.data, nextCursor: aiGeneratedAssets.nextCursor, hasMore: aiGeneratedAssets.hasMore};
         }
+        case fileFormat.SKILL: {
+            const skill = await fileSystemRepo.getSkillByFileID(fileNodeId);
+            if (!skill) {
+                throw new NotFound('Skill not found');
+            }
+            return {type: 'skill', data: skill};
+        }
+        case fileFormat.VIDEO_EDITOR:{
+            const videoEditor = await videoEditorRepo.getFullCompositionByFileNodeId(fileNodeId);
+            if (!videoEditor) {
+                throw new NotFound('Video editor not found');
+            }
+            return {type: 'video-editor', data: videoEditor};
+        }
         default:
             throw new BadRequest('Unsupported file format');
     }
@@ -246,6 +261,27 @@ export const updateFileNode = async(projectId: string, request: UpdateFileReques
         }
         throw error;
     }
+}
+
+// ======= SKILLS content management ================================
+
+export const getSkillByFileID = async(projectId: string, fileId: string) => {
+    await validateProject(projectId);
+
+    const skill = await fileSystemRepo.getSkillByFileID(fileId);
+    if (!skill) {
+        throw new NotFound('Skill not found');
+    }
+    return skill;
+}
+
+export const updateSkill = async(projectId: string, fileId: string, request: UpdateSkillRequest) => {
+    await validateProject(projectId);
+    const skill = await fileSystemRepo.updateSkill(fileId, request);
+    if (!skill) {
+        throw new NotFound('Skill not found');
+    }
+    return skill;
 }
 
 async function validateProject(projectId: string) {

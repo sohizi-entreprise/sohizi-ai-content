@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia'
 import { z } from 'zod'
 import * as fileService from './service'
-import { fileCreationRequestSchema, fileNodeInsertPositionSchema, updateTextFileContentRequestSchema } from './payload';
+import { fileCreationRequestSchema, fileNodeInsertPositionSchema, updateSkillRequestSchema, updateTextFileContentRequestSchema } from './payload';
 import { assertProjectAccess } from '@/lib/authorize'
 import { authMiddleware } from '@/lib/auth-middleware'
 
@@ -61,6 +61,11 @@ export const fileSystemRoutes = new Elysia({ prefix: '/projects/:projectId/files
     return fileService.updateFileContent(params.projectId, params.id, body)
   }, {
     body: updateTextFileContentRequestSchema
+  })
+  .put('/:id/skill', ({params, body})=>{
+    return fileService.updateSkill(params.projectId, params.id, body)
+  }, {
+    body: updateSkillRequestSchema
   })
   .put('/:id/rename', ({params, body})=>{
     return fileService.updateFileNode(params.projectId, { id: params.id, name: body.name })

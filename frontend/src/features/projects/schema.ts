@@ -28,6 +28,10 @@ export const createProjectSchema = z.object({
   additionalSettings: additionalSettingsSchema,
 })
 
+export const createTemplateSchema = z.object({
+  name: z.string().min(3, 'Name must be at least 3 characters').max(150, 'Name must be less than 150 characters'),
+})
+
 export const UpdateProject = z.object({
     name: z.string().min(1, 'Project name is required').optional(),
     synopsis: z.unknown().optional(),

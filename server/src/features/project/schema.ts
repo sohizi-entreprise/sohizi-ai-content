@@ -23,10 +23,15 @@ export const additionalSettingsSchema = z.object({
 })
 
 export const createProjectSchema = z.object({
-    title: z.string().default('Untitled'),
+    title: z.string().min(3, 'Title must be at least 3 characters').max(150, 'Title must be less than 150 characters'),
     brief: projectBriefSchema,
     modelId: z.string().nullable(),
     additionalSettings: additionalSettingsSchema,
+    templateId: z.uuid('Invalid template id'),
+})
+
+export const createTemplateSchema = z.object({
+    name: z.string().min(3, 'Name must be at least 3 characters').max(150, 'Name must be less than 150 characters'),
 })
 
 export const updateProjectSchema = z.object({

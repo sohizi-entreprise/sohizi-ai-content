@@ -6,10 +6,22 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '
 import { Button } from '@/components/ui/button'
 import { Link, useSearch } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
+import { useSession } from '@/lib/auth-client'
 
 
 export default function ListProjects() {
-    const { data: projects = [] } = useSuspenseInfiniteQuery(getListProjectsQueryOptions({cursor: undefined, limit: 20}))
+    const { data: session } = useSession()
+    const organizationId = session?.session.activeOrganizationId ?? undefined
+
+    if (!organizationId) {
+        return <ListProjectEmpty />
+    }
+
+    return <ListProjectsContent organizationId={organizationId} />
+}
+
+function ListProjectsContent({ organizationId }: { organizationId: string }) {
+    const { data: projects = [] } = useSuspenseInfiniteQuery(getListProjectsQueryOptions({cursor: undefined, limit: 20, organizationId}))
     const { mutate: deleteProject } = useMutation(deleteProjectMutationOptions)
     const { display } = useSearch({ from: '/dashboard/main/projects' })
     

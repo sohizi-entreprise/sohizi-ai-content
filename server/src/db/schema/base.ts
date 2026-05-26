@@ -18,6 +18,7 @@ import { relations, sql } from 'drizzle-orm'
 import { user, organization } from './auth'
 import { 
   AgentState,
+  AspectRatio,
   AssetMetadata,
   AssetSource,
   AssetStatus,
@@ -27,13 +28,15 @@ import {
   GenerationRequestStatus,
   GenerationRequestType,
   ModelCategory,
-         ModelRecommendedUsage,
-         MsgContent,
-         ProseDocument,
-         TemplateAndSkillStatus,
-         TemplateAndSkillVisibility,
-         TokenPricing, 
-  } from '@/type';
+  ModelRecommendedUsage,
+  MsgContent,
+  ProseDocument,
+  TemplateAndSkillStatus,
+  TemplateAndSkillVisibility,
+  TokenPricing,
+  VideoClipProperties,
+  VideoTrackType,
+} from '@/type';
 import { FileFormat } from '@/features/file-system/constants';
 
 type FileNodeRelationshipType = 'appears_in' | 'derived_from' | 'wears' | 'located_in' | 'uses' | 'depends_on';
@@ -87,7 +90,6 @@ export const projects = pgTable('projects', {
       .references(() => organization.id, { onDelete: 'cascade' })
       .notNull(),
     title: varchar('title', {length: 100}).notNull(),
-    metadata: jsonb('metadata').$type<ProjectMetadata>().notNull(),
     isTemplate: boolean('is_template').default(false).notNull(),
     fromTemplateId: uuid('from_template_id'),
     ...timestamps,
@@ -99,6 +101,19 @@ export const projects = pgTable('projects', {
     }).onDelete('set null'),
   ]))
 
+export const projectBriefs = pgTable('project_briefs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id')
+    .references(() => projects.id, { onDelete: 'cascade' })
+    .unique()
+    .notNull(),
+  content: text('content').notNull(),
+  additionalSettings: jsonb('additional_settings').$type<Record<string, unknown>>(),
+  ...timestamps,
+}, (table) => ([
+  index('project_briefs_project_id_idx').on(table.projectId),
+]))
+
 export const fileNodes = pgTable('file_nodes', {
     id: uuid('id').defaultRandom().primaryKey(),
     projectId: uuid('project_id')
@@ -108,7 +123,8 @@ export const fileNodes = pgTable('file_nodes', {
     directory: boolean('directory').default(false).notNull(),
     parentId: uuid('parent_id'),
     position: integer('position').default(0).notNull(),
-    editable: boolean('editable').default(true).notNull(),
+    editable: boolean('editable').default(true).notNull(), // If you can rename/delete the file itself
+    contentEditable: boolean('content_editable').default(true).notNull(), // If you can edit the content of the file
     format: varchar('format', {length: 50}).$type<FileFormat>(),
     ...timestamps,
   }, (table) => [
@@ -305,6 +321,28 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     uniqueIndex('asset_variants_asset_id_type_unique').on(table.assetId, table.type),
   ]))
 
+  export const projectBriefAttachments = pgTable('project_brief_attachments', {
+    id: uuid('id').defaultRandom().primaryKey(),
+  
+    projectBriefId: uuid('project_brief_id')
+      .references(() => projectBriefs.id, { onDelete: 'cascade' })
+      .notNull(),
+  
+    assetId: uuid('asset_id')
+      .references(() => assets.id, { onDelete: 'cascade' })
+      .notNull(),
+  
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('project_brief_attachments_brief_asset_unique').on(
+      table.projectBriefId,
+      table.assetId,
+    ),
+    index('project_brief_attachments_asset_id_idx').on(table.assetId),
+  ]));
+
   // ========================= BILLING ==========================
 
   export const billingReservationStatusEnum = pgEnum('billing_reservation_status', [
@@ -370,6 +408,65 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
   ]))
 
 
+// ========================= VIDEO EDITOR ==========================
+
+  export const videoCompositions = pgTable('video_compositions', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    projectId: uuid('project_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
+    fileNodeId: uuid('file_node_id')
+      .references(() => fileNodes.id, { onDelete: 'cascade' }),
+    fps: integer('fps').default(30).notNull(),
+    durationInFrames: integer('duration_in_frames').default(900).notNull(),
+    aspectRatio: varchar('aspect_ratio', { length: 10 }).default('16:9').notNull().$type<AspectRatio>(),
+    width: integer('width').default(1920).notNull(),
+    height: integer('height').default(1080).notNull(),
+    version: integer('version').default(1).notNull(),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('video_compositions_file_node_id_unique').on(table.fileNodeId),
+    index('video_compositions_project_id_idx').on(table.projectId),
+  ]))
+
+  export const videoTracks = pgTable('video_tracks', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    compositionId: uuid('composition_id')
+      .references(() => videoCompositions.id, { onDelete: 'cascade' })
+      .notNull(),
+    type: varchar('type', { length: 50 }).notNull().$type<VideoTrackType>(),
+    position: integer('position').default(0).notNull(),
+    muted: boolean('muted').default(false).notNull(),
+    hidden: boolean('hidden').default(false).notNull(),
+    ...timestamps,
+  }, (table) => ([
+    index('video_tracks_composition_id_position_idx').on(table.compositionId, table.position),
+  ]))
+
+  export const videoClips = pgTable('video_clips', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    trackId: uuid('track_id')
+      .references(() => videoTracks.id, { onDelete: 'cascade' })
+      .notNull(),
+    compositionId: uuid('composition_id')
+      .references(() => videoCompositions.id, { onDelete: 'cascade' })
+      .notNull(),
+    type: varchar('type', { length: 50 }).notNull().$type<VideoTrackType>(),
+    startFrame: integer('start_frame').notNull(),
+    endFrame: integer('end_frame').notNull(),
+    sourceStartFrame: integer('source_start_frame').default(0).notNull(),
+    sourceDurationInFrames: integer('source_duration_in_frames').notNull(),
+    assetId: uuid('asset_id')
+      .references(() => assets.id, { onDelete: 'set null' }),
+    properties: jsonb('properties').$type<VideoClipProperties>().notNull(),
+    ...timestamps,
+  }, (table) => ([
+    index('video_clips_composition_id_start_end_idx').on(table.compositionId, table.startFrame, table.endFrame),
+    index('video_clips_track_id_start_frame_idx').on(table.trackId, table.startFrame),
+    index('video_clips_composition_id_type_idx').on(table.compositionId, table.type),
+    index('video_clips_asset_id_idx').on(table.assetId),
+  ]))
+
 // ======================== SKILLS & TEMPLATES ==========================
 // Maybe let's have some tags for skills and templates
 export const skills = pgTable('skills', {
@@ -399,7 +496,7 @@ export const templates = pgTable('templates', {
     thumbnail: text('thumbnail'),
     status: varchar('status', {length: 50}).$type<TemplateAndSkillStatus>().default('draft').notNull(),
     visibility: varchar('visibility', { length: 50 }).notNull().default('private').$type<TemplateAndSkillVisibility>(),
-    displayPriority: integer('display_priority').default(0).notNull(),
+    displayPriority: integer('display_priority').default(10_000).notNull(),
     ...timestamps,
   }, (table) => ([
     index('templates_status_idx').on(table.status),
@@ -457,5 +554,8 @@ export const skillCategories = pgTable('skill_categories', {
   export type BillingLedgerEntry = typeof billingLedger.$inferSelect
   export type BillingReservationStatus = (typeof billingReservationStatusEnum.enumValues)[number]
   export type BillingLedgerKind = (typeof billingLedgerKindEnum.enumValues)[number]
-  
+  export type VideoComposition = typeof videoCompositions.$inferSelect
+  export type VideoTrack = typeof videoTracks.$inferSelect
+  export type VideoClip = typeof videoClips.$inferSelect
+  export type Template = typeof templates.$inferSelect
   

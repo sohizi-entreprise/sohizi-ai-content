@@ -136,3 +136,62 @@ export type TemplateAndSkillStatus = 'draft' | 'published'
 export type TemplateAndSkillVisibility = 'public' | 'private'
 
 export type CategoryType = 'genre' | 'format' | 'audience' | 'platform'
+
+// ========================= VIDEO EDITOR ==========================
+
+export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:5'
+
+export type VideoTrackType = 'video' | 'audio' | 'text' | 'image'
+
+export type VideoClipProperties =
+  | VideoMediaClipProperties
+  | AudioMediaClipProperties
+  | TextClipProperties
+  | ImageMediaClipProperties
+
+export type VideoMediaClipProperties = {
+  url: string
+  fileName: string
+  width?: number
+  height?: number
+  volume: number
+  opacity: number
+  speed: number
+  borderRadius: number
+}
+
+export type AudioMediaClipProperties = {
+  url: string
+  fileName: string
+  volume: number
+  speed: number
+}
+
+export type TextClipProperties = {
+  text: string
+  fontSize: number
+  color: string
+  fontFamily: string
+  fontWeight: string | number
+  align: 'left' | 'center' | 'right'
+  opacity: number
+  xRatio: number
+  yRatio: number
+  widthRatio: number
+  heightRatio: number
+}
+
+export type ImageMediaClipProperties = {
+  url: string
+  fileName: string
+  width?: number
+  height?: number
+  opacity: number
+  borderRadius: number
+  blur: number
+  brightness: number
+  xRatio: number
+  yRatio: number
+  widthRatio: number
+  heightRatio: number
+}

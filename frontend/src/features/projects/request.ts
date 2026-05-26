@@ -1,11 +1,10 @@
 import api from '@/lib/axios'
 import { isAxiosError } from 'axios'
-import { ProjectResponse, UpdateProjectInput, ProjectListItem, ProjectOptions, NarrativeArc, Entity, ListEntitiesResponse, ProseDocument, FileNode } from './type'
-import { JSONContent } from '@tiptap/core'
+import { ProjectResponse, UpdateProjectInput, ProjectListItem, ProjectOptions, FileNode, Template, CreateTemplateInput, CreateTemplateResponse, PaginatedResponse, PublicTemplate } from './type'
 import { createProjectSchema } from './schema'
 import { z } from 'zod'
 
-export const listProjects = async (cursor?: string, limit?: number): Promise<{data: ProjectListItem[], nextCursor: string | null, hasMore: boolean}> => {
+export const listProjects = async (cursor?: string, limit?: number): Promise<PaginatedResponse<ProjectListItem>> => {
   const response = await api.get('/projects', { params: { cursor, limit } })
   return response.data
 }
@@ -87,59 +86,23 @@ export const deleteFileNode = async (projectId: string, fileId: string): Promise
   return response.data
 }
 
-export const selectNarrativeArc = async (id: string, data: NarrativeArc[]): Promise<{ ok: boolean }> => {
-  const response = await api.put(`/projects/${id}/narrative-arcs`, data)
+export const createTemplate = async (data: CreateTemplateInput): Promise<CreateTemplateResponse> => {
+  const response = await api.post('/projects/templates', data)
   return response.data
 }
 
-export type ScriptComponentType = 'concept' | 'synopsis' | 'outline' | 'script' | 'world_bible_outline' | 'world_bible' | 'characters' | 'scenes'
-
-export const generateContent = async (id: string, componentType: ScriptComponentType): Promise<{ ok: boolean; streamId: string }> => {
-  const response = await api.post(`/projects/${id}/generate/${componentType}`)
+export const listTemplates = async (
+  cursor?: string,
+  limit?: number,
+): Promise<PaginatedResponse<Template>> => {
+  const response = await api.get('/projects/templates', { params: { cursor, limit } })
   return response.data
 }
 
-export const cancelGenerateStream = async (id: string): Promise<{ ok: boolean }> => {
-  const response = await api.delete(`/projects/${id}/generate/stream`)
-  return response.data
-}
-
-export const listEntities = async (projectId: string, cursor?: string, limit?: number, entityType?: Entity['type']): Promise<ListEntitiesResponse> => {
-  const response = await api.get(`/projects/${projectId}/entities`, { params: { cursor, limit, entityType } })
-  return response.data
-}
-
-export const getEntity = async (projectId: string, entityId: string): Promise<JSONContent> => {
-  const response = await api.get(`/projects/${projectId}/entities/${entityId}`)
-  return response.data
-}
-
-export const updateEntity = async (id: string, entityId: string, data: Entity['metadata']): Promise<Entity> => {
-  const response = await api.put(`/projects/${id}/entities/${entityId}`, data)
-  return response.data
-}
-
-export const deleteEntity = async (projectId: string, entityId: string): Promise<{ ok: boolean }> => {
-  const response = await api.delete(`/projects/${projectId}/entities/${entityId}`)
-  return response.data
-}
-
-export const regenerateEntity = async (projectId: string, entityId: string): Promise<{ ok: boolean, streamId: string }> => {
-  const response = await api.post(`/projects/${projectId}/entities/${entityId}/regenerate`)
-  return response.data
-}
-
-export const getScenes = async (projectId: string): Promise<JSONContent> => {
-  const response = await api.get(`/projects/${projectId}/scenes`)
-  return response.data
-}
-
-export const getStoryBible = async (projectId: string): Promise<ProseDocument> => {
-  const response = await api.get(`/projects/${projectId}/story-bible`)
-  return response.data
-}
-
-export const saveStoryBible = async (projectId: string, prose: ProseDocument): Promise<ProseDocument> => {
-  const response = await api.put(`/projects/${projectId}/story-bible`, prose)
+export const listPublicTemplates = async (
+  cursor?: string,
+  limit?: number,
+): Promise<PaginatedResponse<PublicTemplate>> => {
+  const response = await api.get('/projects/templates/published', { params: { cursor, limit } })
   return response.data
 }

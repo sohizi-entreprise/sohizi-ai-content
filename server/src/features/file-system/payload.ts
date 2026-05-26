@@ -146,9 +146,23 @@ export const updateTextFileContentRequestSchema = z.object({
     }
 })
 
+export const updateSkillRequestSchema = z.object({
+    description: z.string().optional(),
+    instructions: z.string().optional(),
+}).superRefine((data, ctx) => {
+    if (data.description === undefined && data.instructions === undefined) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'At least one update field must be provided',
+            path: ['description', 'instructions'],
+        })
+    }
+})
+
 export type UpdateFilePositionRequest = z.infer<typeof updateFilePositionRequestSchema>;
 export type UpdateFileRequest = z.infer<typeof updateFileRequestSchema>;
 export type UpdateFileContentRequest = z.infer<typeof updateFileContentRequestSchema>;
 export type UpdateTextFileContentRequest = z.infer<typeof updateTextFileContentRequestSchema>;
 export type FileCreationRequest = z.infer<typeof fileCreationRequestSchema>;
 export type FileNodeInsertPosition = z.infer<typeof fileNodeInsertPositionSchema>;
+export type UpdateSkillRequest = z.infer<typeof updateSkillRequestSchema>;

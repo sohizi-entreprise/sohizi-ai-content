@@ -11,7 +11,7 @@ import type {
   NodeRendererProps,
   RenameHandler,
 } from 'react-arborist'
-import type { FileTreeNode, NodeProps } from '../../types'
+import type { FileNodeFormat, FileTreeNode, NodeProps } from '../../types'
 import {
   createFileNodeMutationOptions,
   deleteFileNodeMutationOptions,
@@ -53,10 +53,15 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   const handleLoadChildren = useLoadChildren()
 
   const createFileNode = useCallback(
-    (parentId: string, index: number, isDir: boolean = false) => {
+    (
+      parentId: string,
+      index: number,
+      isDir: boolean = false,
+      format?: FileNodeFormat,
+    ) => {
       runCommand({
         type: 'create',
-        data: { projectId, parentId, index, isDir },
+        data: { projectId, parentId, index, isDir, format },
       })
     },
     [projectId, runCommand],
@@ -82,7 +87,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
         directory: node.directory,
         parentId,
         position,
-        format: node.directory ? null : 'markdown',
+        format: node.directory ? null : (node.format ?? 'markdown'),
         // editable: node.editable
       }
 
@@ -219,7 +224,10 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   if (!storeRootFolderId) return null
 
   return (
-    <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden **:[scrollbar-color:var(--color-primary)_transparent]!">
+    <div
+      ref={containerRef}
+      className="min-h-0 flex-1 overflow-hidden **:[scrollbar-color:var(--color-primary)_transparent]!"
+    >
       <Tree<FileTreeNode>
         ref={setTree}
         data={treeData}

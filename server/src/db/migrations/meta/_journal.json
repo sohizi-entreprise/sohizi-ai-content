@@ -85,6 +85,13 @@
       "when": 1779520472638,
       "tag": "0011_late_kulan_gath",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1779649282638,
+      "tag": "0012_nice_warbound",
+      "breakpoints": true
     }
   ]
 }

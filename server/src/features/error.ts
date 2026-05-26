@@ -60,7 +60,7 @@ export class InternalServerError extends BaseError {
 	}
 }
 
-type RepositoryErrorType = 'NotFound' | 'DbError'
+type RepositoryErrorType = 'NotFound' | 'DbError' | 'Conflict'
 
 export class RepositoryError extends Error {
 	constructor(public message: string, public type: RepositoryErrorType) {

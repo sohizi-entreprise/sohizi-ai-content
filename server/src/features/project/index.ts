@@ -2,7 +2,7 @@ import { Elysia } from 'elysia'
 import { z } from 'zod'
 import * as projectService from './service'
 import * as projectOptions from '@/constants/project-options'
-import { createProjectSchema, updateProjectSchema} from "./schema";
+import { createProjectSchema, createTemplateSchema, updateProjectSchema} from "./schema";
 import { assertProjectAccess } from '@/lib/authorize'
 import { authMiddleware } from '@/lib/auth-middleware'
 import { BadRequest } from '../error'
@@ -16,6 +16,17 @@ export const projectRoutes = new Elysia({ prefix: '/projects' })
       tones: projectOptions.projectTones,
       audiences: projectOptions.projectAudiences,
     }
+  })
+  .get('/templates/published', ({ query }) => {
+    return projectService.listPublishedTemplates({
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+  }, {
+    query: z.object({
+      cursor: z.string().optional(),
+      limit: z.coerce.number().optional(),
+    }),
   })
   .use(authMiddleware)
   .post('', ({ body, session }) => {
@@ -33,6 +44,30 @@ export const projectRoutes = new Elysia({ prefix: '/projects' })
       throw new BadRequest('No active organization. Please select an organization first.')
     }
     return projectService.listProjects({
+      cursor: query.cursor,
+      limit: query.limit,
+    }, organizationId);
+  }, {
+    query: z.object({
+      cursor: z.string().optional(),
+      limit: z.coerce.number().optional(),
+    }),
+  })
+  .post('/templates', ({ body, session }) => {
+    const organizationId = session.activeOrganizationId
+    if (!organizationId) {
+      throw new BadRequest('No active organization. Please select an organization first.')
+    }
+    return projectService.createTemplate(body, organizationId);
+  }, {
+    body: createTemplateSchema,
+  })
+  .get('/templates', ({ query, session }) => {
+    const organizationId = session.activeOrganizationId
+    if (!organizationId) {
+      throw new BadRequest('No active organization. Please select an organization first.')
+    }
+    return projectService.listTemplates({
       cursor: query.cursor,
       limit: query.limit,
     }, organizationId);

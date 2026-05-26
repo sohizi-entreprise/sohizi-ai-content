@@ -1,20 +1,16 @@
 import { infiniteQueryOptions, queryOptions, mutationOptions } from '@tanstack/react-query'
 import * as requests from './request'
-import { Entity, NarrativeArc, ProseDocument, UpdateProjectInput } from './type'
-import type { ScriptComponentType } from './request'
+import { CreateTemplateInput, UpdateProjectInput } from './type'
 import { createProjectSchema } from './schema'
 import { z } from 'zod'
 
 const keysFactory = {
-    projects: () => ['projects'],
+    projects: (organizationId?: string) => organizationId ? ['projects', organizationId] : ['projects'],
     project: (id: string) => ['project', id],
     fileTree: (projectId: string, parentId: string) => ['project', projectId, 'file-tree', parentId],
-    entities: (projectId: string, limit?: number, entityType?: Entity['type']) =>
-        ['project', projectId, 'entities', { limit, entityType }],
-    entity: (projectId: string, entityId?: string) => ['project', projectId, 'entities', entityId],
     projectOptions: () => ['projectOptions'],
-    scenes: (projectId: string) => ['project', projectId, 'scenes'],
-    storyBible: (projectId: string) => ['project', projectId, 'story-bible'],
+    templates: () => ['templates'],
+    publicTemplates: () => ['templates', 'public'],
 }
 
 export const listProjectsQueryOptions = queryOptions({
@@ -22,12 +18,12 @@ export const listProjectsQueryOptions = queryOptions({
     queryFn: () => requests.listProjects(),
 })
 
-export const getListProjectsQueryOptions = ({cursor, limit}: {cursor?: string, limit?: number})  => infiniteQueryOptions({
-    queryKey: keysFactory.projects(),
+export const getListProjectsQueryOptions = ({cursor, limit, organizationId}: {cursor?: string, limit?: number, organizationId: string})  => infiniteQueryOptions({
+    queryKey: keysFactory.projects(organizationId),
     queryFn: ({ pageParam }) => requests.listProjects(pageParam, limit),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: cursor,
-    select: (data) => data.pages.flatMap(page => page.data)
+    select: (data) => data.pages.flatMap(page => page.data),
 })
 
 export const getProjectQueryOptions = (id: string) => queryOptions({
@@ -108,88 +104,29 @@ export const deleteFileNodeMutationOptions = (projectId: string) => mutationOpti
 })
 
 
-// ===========
-
-export const getSelectNarrativeArcMutationOptions = (id: string) => mutationOptions({
-    mutationFn: (data: NarrativeArc[]) => requests.selectNarrativeArc(id, data),
-    meta: {
-        invalidateQueries: [keysFactory.project(id)],
-    }
-})
-
-export const getGenerateContentMutationOptions = (id: string) => mutationOptions({
-    mutationFn: (componentType: ScriptComponentType) => requests.generateContent(id, componentType),
-})
-
-export const getCancelGenerateStreamMutationOptions = (id: string) => mutationOptions({
-    mutationFn: () => requests.cancelGenerateStream(id),
-})
-
-export const getInfiniteListEntitiesQueryOptions = (
-    projectId: string,
-    cursor?: string,
-    limit?: number,
-    entityType?: Entity['type']
-) => infiniteQueryOptions({
-    queryKey: keysFactory.entities(projectId, limit, entityType),
-    initialPageParam: cursor,
-    queryFn: ({ pageParam }) => requests.listEntities(projectId, pageParam, limit, entityType),
+// =========== TEMPLATES ===========
+export const getListTemplatesQueryOptions = ({cursor, limit}: {cursor?: string, limit?: number})  => infiniteQueryOptions({
+    queryKey: keysFactory.templates(),
+    queryFn: ({ pageParam }) => requests.listTemplates(pageParam, limit),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    select: (data) => data.pages.flatMap(page => page.items),
+    initialPageParam: cursor,
+    select: (data) => data.pages.flatMap(page => page.data)
 })
 
-export const getEntityQueryOptions = (projectId: string, entityId?: string) => queryOptions({
-    queryKey: keysFactory.entity(projectId, entityId),
-    queryFn: () => {
-        if (!entityId) throw new Error('Entity ID is required')
-        return requests.getEntity(projectId, entityId)
-    },
-    enabled: !!projectId && !!entityId,
+export const getListPublicTemplatesQueryOptions = ({cursor, limit}: {cursor?: string, limit?: number})  => infiniteQueryOptions({
+    queryKey: keysFactory.publicTemplates(),
+    queryFn: ({ pageParam }) => requests.listPublicTemplates(pageParam, limit),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: cursor,
+    select: (data) => data.pages.flatMap(page => page.data)
 })
 
-export const getUpdateEntityMutationOptions = (projectId: string, entityId: string) => mutationOptions({
-    mutationFn: (data: Entity['metadata']) => requests.updateEntity(projectId, entityId, data),
+export const createTemplateMutationOptions = mutationOptions({
+    mutationFn: (data: CreateTemplateInput) => requests.createTemplate(data),
     meta: {
         invalidateQueries: [
-            keysFactory.entity(projectId, entityId),
-            keysFactory.project(projectId),
+            keysFactory.templates(),
+            keysFactory.projects(),
         ],
-    },
-})
-
-export const getDeleteEntityMutationOptions = (projectId: string, entityId: string) => mutationOptions({
-    mutationFn: () => requests.deleteEntity(projectId, entityId),
-    meta: {
-        invalidateQueries: [
-            keysFactory.project(projectId),
-            keysFactory.entities(projectId),
-            keysFactory.entity(projectId, entityId),
-        ],
-    },
-})
-
-export const getRegenerateEntityMutationOptions = (projectId: string, entityId: string) => mutationOptions({
-    mutationFn: () => requests.regenerateEntity(projectId, entityId),
-    meta: {
-        invalidateQueries: [
-            keysFactory.entity(projectId, entityId),
-        ],
-    },
-})
-
-export const getGetScenesQueryOptions = (projectId: string) => queryOptions({
-    queryKey: keysFactory.scenes(projectId),
-    queryFn: () => requests.getScenes(projectId),
-})
-
-export const getStoryBibleQueryOptions = (projectId: string) => queryOptions({
-    queryKey: keysFactory.storyBible(projectId),
-    queryFn: () => requests.getStoryBible(projectId),
-})
-
-export const saveStoryBibleMutationOptions = (projectId: string) => mutationOptions({
-    mutationFn: (prose: ProseDocument) => requests.saveStoryBible(projectId, prose),
-    meta: {
-        invalidateQueries: [keysFactory.storyBible(projectId)],
     },
 })

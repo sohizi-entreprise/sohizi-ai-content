@@ -2,11 +2,8 @@ import { useCallback } from 'react'
 import { IconArrowNarrowUp, IconLoader2, IconPlus } from '@tabler/icons-react'
 import { Mention, MentionsInput } from 'react-mentions-ts'
 import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
 import { useSendMessage } from '../hooks/use-chat'
 import { useChatStore } from '../store/chat-store'
-import { searchFilesByNameQueryOptions } from '../query-mutation'
-import { searchFilesByName } from '../requests'
 import ChatSelectModel from './chat-select-model'
 import { ContextWindowDonut } from './context-window-donut'
 import type { ChatCompletionRequest } from '../types'
@@ -19,6 +16,7 @@ import ChatFilesPreview from './chat-files-preview'
 import { useFileUpload } from '@/hooks/use-file-upload'
 import { useSaveFileBucket } from '@/hooks/use-save-file-bucket'
 import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
+import { useFileMentionSearch } from '@/hooks/use-file-mention-search'
 
 export type sendParams = {
   prompt: string
@@ -48,7 +46,7 @@ export function ChatInput({
   const setInput = useEditorInputBridge((state) => state.setInput)
 
   const sendMessage = useSendMessage(projectId)
-  const queryClient = useQueryClient()
+  const searchFiles = useFileMentionSearch(projectId)
 
   const { getInputProps, onRemoveFile, openFileDialog } = useHandleUploadedFiles({projectId})
 
@@ -97,24 +95,9 @@ export function ChatInput({
 
   const searchFileMentions = useCallback(
     async (query: string, { signal }: MentionSearchContext) => {
-      const search = query.trim()
-
-      if (!search) {
-        return []
-      }
-
-      const files = await queryClient.fetchQuery({
-        ...searchFilesByNameQueryOptions(projectId, search),
-        queryFn: () => searchFilesByName(projectId, search, 15, { signal }),
-        staleTime: 1000 * 60 * 1,
-      })
-
-      return files.map((file) => ({
-        id: file.id,
-        display: file.name,
-      }))
+      return searchFiles(query, { signal })
     },
-    [projectId, queryClient],
+    [searchFiles],
   )
 
   return (

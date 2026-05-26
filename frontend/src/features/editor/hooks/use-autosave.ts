@@ -3,10 +3,12 @@ import { useMutation } from '@tanstack/react-query'
 import {
   saveFileContentDiffMutationOptions,
   saveFileContentMutationOptions,
+  saveSkillMutationOptions,
 } from '../query-mutations'
-import type { CompactTextDiff } from '../requests'
-import DiffWorker from '@/lib/workers/diff-worker?worker'
 import { useEditorStore } from '../stores/editor-store'
+import type { CompactTextDiff } from '../requests'
+import type { SaveSkillPayload } from '../requests'
+import DiffWorker from '@/lib/workers/diff-worker?worker'
 
 export type AutosavePayload = {
   content: string
@@ -36,6 +38,7 @@ export function useAutoSave({
   const pendingContentRef = useRef<string | null>(null)
   const onSaveCompleteRef = useRef(onSaveComplete)
   const onSaveErrorRef = useRef(onSaveError)
+  const setSavingStatus = useEditorStore((s) => s.setSavingStatus)
   const { mutateAsync: saveFileContent } = useMutation(
     saveFileContentMutationOptions(projectId, fileId),
   )
@@ -54,7 +57,9 @@ export function useAutoSave({
       try {
         await saveFileContent(content)
         onSaveCompleteRef.current?.()
+        setSavingStatus(fileId, 'saved')
       } catch (error) {
+        setSavingStatus(fileId, 'error')
         onSaveErrorRef.current?.(
           error instanceof Error ? error : new Error(String(error)),
         )
@@ -69,7 +74,7 @@ export function useAutoSave({
         }
       }
     },
-    [fileId, projectId, saveFileContent],
+    [fileId, projectId, saveFileContent, setSavingStatus],
   )
 
   const save = useCallback(
@@ -80,12 +85,93 @@ export function useAutoSave({
 
       if (!projectId || !fileId) return
 
+      setSavingStatus(fileId, 'saving')
+
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null
         void runSave(content)
       }, duration)
     },
-    [duration, fileId, projectId, runSave],
+    [duration, fileId, projectId, runSave, setSavingStatus],
+  )
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+    }
+  }, [])
+
+  return save
+}
+
+export function useSkillAutosave({
+  duration,
+  projectId,
+  fileId,
+  onSaveComplete,
+  onSaveError,
+}: UseAutosaveOptions) {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isSavingRef = useRef(false)
+  const pendingSkillRef = useRef<SaveSkillPayload | null>(null)
+  const onSaveCompleteRef = useRef(onSaveComplete)
+  const onSaveErrorRef = useRef(onSaveError)
+  const setSavingStatus = useEditorStore((s) => s.setSavingStatus)
+  const { mutateAsync: saveSkill } = useMutation(
+    saveSkillMutationOptions(projectId, fileId),
+  )
+
+  onSaveCompleteRef.current = onSaveComplete
+  onSaveErrorRef.current = onSaveError
+
+  const runSave = useCallback(
+    async (skill: SaveSkillPayload) => {
+      if (isSavingRef.current) {
+        pendingSkillRef.current = skill
+        return
+      }
+
+      isSavingRef.current = true
+      try {
+        await saveSkill(skill)
+        onSaveCompleteRef.current?.()
+        setSavingStatus(fileId, 'saved')
+      } catch (error) {
+        setSavingStatus(fileId, 'error')
+        onSaveErrorRef.current?.(
+          error instanceof Error ? error : new Error(String(error)),
+        )
+      } finally {
+        isSavingRef.current = false
+
+        const pendingSkill = pendingSkillRef.current
+        pendingSkillRef.current = null
+
+        if (pendingSkill !== null && projectId && fileId) {
+          void runSave(pendingSkill)
+        }
+      }
+    },
+    [fileId, projectId, saveSkill, setSavingStatus],
+  )
+
+  const save = useCallback(
+    (skill: SaveSkillPayload) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+
+      if (!projectId || !fileId) return
+
+      setSavingStatus(fileId, 'saving')
+
+      timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = null
+        void runSave(skill)
+      }, duration)
+    },
+    [duration, fileId, projectId, runSave, setSavingStatus],
   )
 
   useEffect(() => {
@@ -124,7 +210,7 @@ export function useDiffSave({
   const onSaveErrorRef = useRef(onSaveError)
   const workerRef = useRef<Worker | null>(null)
 
-  const setSavingStatus = useEditorStore(s => s.setSavingStatus)
+  const setSavingStatus = useEditorStore((s) => s.setSavingStatus)
 
   const { mutateAsync: saveFileContentDiff } = useMutation(
     saveFileContentDiffMutationOptions(projectId, fileId),
@@ -172,7 +258,10 @@ export function useDiffSave({
           content,
         )
 
-        if (!diff) return
+        if (!diff) {
+          setSavingStatus(fileId, 'saved')
+          return
+        }
 
         setSavingStatus(fileId, 'saving')
         const savedContent = await saveFileContentDiff({ diff, baseRevision })
@@ -207,7 +296,7 @@ export function useDiffSave({
         }
       }
     },
-    [fileId, projectId, saveFileContentDiff],
+    [fileId, projectId, saveFileContentDiff, setSavingStatus],
   )
 
   const save = useCallback(
@@ -221,6 +310,8 @@ export function useDiffSave({
 
       if (!projectId || !fileId) return
 
+      setSavingStatus(fileId, 'saving')
+
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null
 
@@ -229,7 +320,7 @@ export function useDiffSave({
         void runSave(newText, oldText, baseRevision)
       }, duration)
     },
-    [duration, fileId, projectId, runSave],
+    [duration, fileId, projectId, runSave, setSavingStatus],
   )
 
   useEffect(() => {

@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Link } from '@tanstack/react-router'
 import { IconX } from '@tabler/icons-react'
 import NotificationButton from './notification-button'
+import { useSession } from '@/lib/auth-client'
 
 export function TopNav() {
   return (
@@ -54,7 +55,18 @@ export function TopNav() {
 }
 
 const ProjectDropdown = () => {
-  const { data: projects = [] } = useSuspenseInfiniteQuery(getListProjectsQueryOptions({cursor: undefined, limit: 20}))
+  const { data: session } = useSession()
+  const organizationId = session?.session.activeOrganizationId ?? undefined
+
+  if (!organizationId) {
+    return <Skeleton className="w-20 h-7" />
+  }
+
+  return <ProjectDropdownContent organizationId={organizationId} />
+}
+
+const ProjectDropdownContent = ({ organizationId }: { organizationId: string }) => {
+  const { data: projects = [] } = useSuspenseInfiniteQuery(getListProjectsQueryOptions({cursor: undefined, limit: 20, organizationId}))
   const currentProjectTitle = useFileTreeStore(state => state.project?.title)
   const [open, setOpen] = useState(false)
 

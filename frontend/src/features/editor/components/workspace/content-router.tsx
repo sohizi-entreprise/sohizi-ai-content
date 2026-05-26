@@ -6,6 +6,7 @@ import type { EditorTab } from '../../types'
 import { VideoEditor } from '@/features/video-editor'
 import { MediaGenerator } from '@/features/media-generator'
 import AssetViewer from '../content/asset-viewer'
+import { SkillEditorView } from '../content/skill-editor-view'
 
 interface ContentRouterProps {
   tab: EditorTab
@@ -18,10 +19,8 @@ export function ContentRouter({ tab }: ContentRouterProps) {
 
   const isMediaGenerator = tab.name === 'media-generator'
 
-  // Temporary
-
-  if (tab.name === 'video-editor') {
-    return <VideoEditor />
+  if (tab.name === 'video-editor' || tab.format === 'video-editor') {
+    return <VideoEditor projectId={projectId} fileNodeId={tab.id} key={tab.id} />
   }
 
   if (isMediaGenerator) {
@@ -50,6 +49,12 @@ function ServerRenderedContent({ tab, projectId }: ContentRouterProps & { projec
         initialContent={data.content as string}
         initialRevision={data.revision ?? 1}
         key={tab.id}
+      />
+    case 'skill':
+      return <SkillEditorView
+        tab={tab}
+        description={data.data.description}
+        instruction={data.data.instructions}
       />
     case 'audio':
     case 'video':

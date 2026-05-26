@@ -12,7 +12,7 @@ type ProjectCardProps = ProjectListItem & {
 }
 
 export default function ProjectCard(props: ProjectCardProps) {
-    const { title, genre, durationMin, onDelete, updatedAt, display = 'grid' } = props
+    const { title, onDelete, updatedAt, display = 'grid' } = props
 
     if (display === 'list') {
         return <ProjectCardList {...props} />
@@ -24,9 +24,9 @@ export default function ProjectCard(props: ProjectCardProps) {
                 <div className="flex items-start justify-between gap-2">
                     <div className="space-y-2 flex-1">
                         <CardTitle className="text-xl font-bold text-white group-hover:text-primary group-hover:scale-102 transition-all duration-300">{title}</CardTitle>
-                        <p className="text-sm text-muted-foreground capitalize">
+                        {/* <p className="text-sm text-muted-foreground capitalize">
                             {genre}
-                        </p>
+                        </p> */}
                     </div>
                     <ProjectCardAction onDelete={onDelete}/>
                 </div>
@@ -43,9 +43,9 @@ export default function ProjectCard(props: ProjectCardProps) {
                     <p className="text-xs text-muted-foreground font-medium uppercase">
                         Upd. {timeFromNow(updatedAt)}
                     </p>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
+                    {/* <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
                         {durationMin} MIN
-                    </p>
+                    </p> */}
                 </div>
             </CardFooter>
         </Card>
@@ -54,23 +54,23 @@ export default function ProjectCard(props: ProjectCardProps) {
 
 
 function ProjectCardList(props: ProjectCardProps){
-    const { title, genre, durationMin, onDelete, updatedAt } = props
+    const { title, onDelete, updatedAt } = props
 
     return (
         <div className='glass-panel py-4 px-6 rounded-2xl transition-all duration-400 hover:border-primary/30! group cursor-pointer flex gap-4 items-center'>
             <div className='flex-1'>
                 <div className="text-xl font-bold text-white group-hover:text-primary transition-all duration-300 group-hover:scale-102 mb-2">{title}</div>
                 <div className='flex items-center gap-2'>
-                    <p className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-slate-400 font-bold uppercase tracking-widest">
+                    {/* <p className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-slate-400 font-bold uppercase tracking-widest">
                         {genre}
-                    </p>
+                    </p> */}
                 </div>
             </div>
         
             <div className='w-fit space-y-1'>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest text-right">
+                {/* <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest text-right">
                     {durationMin} MIN
-                </p>
+                </p> */}
                 <div className='bg-primary w-full h-[2px] rounded-full'/>
                 <p className="text-xs text-muted-foreground font-medium uppercase">
                         Upd. {timeFromNow(updatedAt)}

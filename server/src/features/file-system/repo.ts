@@ -1,14 +1,17 @@
 import { db } from "@/db";
-import { fileNodeContentChunks, fileNodeContents, fileNodes, type FileNode } from "@/db/schema";
+import { fileNodeContentChunks, fileNodeContents, fileNodes, skills, videoCompositions, type FileNode } from "@/db/schema";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { DatabaseError } from "pg";
-import { FileCreationRequest, FileNodeInsertPosition, UpdateFileContentRequest, UpdateFileRequest } from "./payload";
+import { FileCreationRequest, FileNodeInsertPosition, UpdateFileContentRequest, UpdateFileRequest, UpdateSkillRequest } from "./payload";
 
 export const ORDER_GAP = 1000;
+
 const FILE_NODE_UNIQUE_CONSTRAINTS = new Set([
     'file_nodes_project_id_parent_id_name_unique',
     'file_nodes_project_id_root_name_unique',
 ]);
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const escapeLikePattern = (value: string) => {
     return value.replace(/[\\%_]/g, (match) => `\\${match}`);
@@ -406,7 +409,6 @@ export const updateFileContentAtRevision = async(
 export const createFileWithContentAtPosition = async(
     projectId: string,
     data: FileCreationRequest,
-    content: UpdateFileContentRequest,
     anchorId: string | null,
     position: FileNodeInsertPosition,
 ) => {
@@ -422,13 +424,7 @@ export const createFileWithContentAtPosition = async(
         }
 
         const insertedFile = file[0];
-        await tx.insert(fileNodeContents).values({
-            projectId,
-            fileNodeId: insertedFile.id,
-            content: content.content,
-            jsonContent: content.jsonContent,
-            proseContent: content.proseContent,
-        }).returning();
+        await createContentBasedOnFormat(tx, insertedFile, projectId);
 
         const insertionPlan = buildInsertionPlan(
             siblings,
@@ -450,8 +446,34 @@ export const createFileWithContentAtPosition = async(
     });
 }
 
+async function createContentBasedOnFormat(tx: DbTransaction, fileNode: FileNode, projectId: string) {
+    switch(fileNode.format){
+        case 'markdown':
+            await tx.insert(fileNodeContents).values({
+                projectId,
+                fileNodeId: fileNode.id,
+                content: '',
+            })
+            break;
+        case 'skill':
+            await tx.insert(skills).values({
+                name: fileNode.name,
+                fileNodeId: fileNode.id,
+                description: '',
+                instructions: '',
+            })
+            break;
+        case 'video-editor':
+            await tx.insert(videoCompositions).values({
+                projectId,
+                fileNodeId: fileNode.id,
+            })
+            break;
+    }
+}
+
 export const createFileWithContent = async(projectId: string, data: FileCreationRequest, content: UpdateFileContentRequest) => {
-    return createFileWithContentAtPosition(projectId, data, content, null, 'end');
+    return createFileWithContentAtPosition(projectId, data, null, 'end');
 }
 
 export const insertFileNodeInDirectory = async(
@@ -1067,7 +1089,23 @@ export const semanticSearchProjectChunks = async(
     }>;
 }
 
+export const getSkillByFileID = async(fileId: string) => {
+    const response = await db.select().from(skills).where(and(
+        eq(skills.fileNodeId, fileId),
+    ));
+    return response[0] ?? null;
+}
 
+export const updateSkill = async(fileId: string, request: UpdateSkillRequest) => {
+    const payload = {
+        ...(request.description !== undefined ? { description: request.description } : {}),
+        ...(request.instructions !== undefined ? { instructions: request.instructions } : {}),
+    };
+    const response = await db.update(skills).set(payload).where(and(
+        eq(skills.fileNodeId, fileId),
+    )).returning();
+    return response[0];
+}
 
 
 // ================================

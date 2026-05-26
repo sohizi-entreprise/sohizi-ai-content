@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { IconBulb, IconCheck, IconCirclePlusFilled, IconPencil, IconSearch } from '@tabler/icons-react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import CreateTemplate from './create-template'
 
 export default function ProjectHeader() {
     const searchQuery = useSearch({ from: '/dashboard/main/projects' })
@@ -37,6 +38,7 @@ export default function ProjectHeader() {
                         New Project
                     </Button>
                 </Link>
+                <CreateTemplate />
             </div>
         </div>
 

@@ -1,13 +1,13 @@
 import { BaseTool } from "./tool-definition";
 import { z } from "zod";
 import { manageTodoListTool } from "./tasks-manage";
-import { assignTaskTool } from "./tasks-assign";
 import { exploreFileTool } from "./file-explore";
-import { editFileTool } from "./file-edit";
 import { searchFileTool } from "./file-search";
 import { generateImageTool } from "./generate-image";
 import { generateAudioDialogueTool, generateMusicTool, generateSoundEffectTool, generateSpeechTool } from "./generate-audio";
 import { generateVideoTool } from "./generate-video";
+import { timelineExploreTool } from "./timeline-explore";
+import { timelineEditTool } from "./timeline-edit";
 import { ToolSet } from "ai";
 
 
@@ -39,4 +39,6 @@ registerTool(generateSpeechTool);
 registerTool(generateSoundEffectTool);
 registerTool(generateMusicTool);
 registerTool(generateAudioDialogueTool);
+registerTool(timelineExploreTool);
+registerTool(timelineEditTool);
 // registerTool(assignTaskTool);

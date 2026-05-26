@@ -28,7 +28,7 @@ function toSlug(name: string) {
 }
 
 function RouteComponent() {
-  const { data: session, isPending } = useSession()
+  const { data: session, isPending, refetch } = useSession()
   const [ready, setReady] = useState(false)
   const [showOrgModal, setShowOrgModal] = useState(false)
   const navigate = useNavigate()
@@ -46,10 +46,11 @@ function RouteComponent() {
         setShowOrgModal(true)
       } else if (!session.session.activeOrganizationId) {
         await organization.setActive({ organizationId: data[0].id })
+        await refetch()
       }
       setReady(true)
     })
-  }, [session, isPending, navigate])
+  }, [session, isPending, navigate, refetch])
 
   if (isPending || !ready) {
     return (
@@ -63,7 +64,10 @@ function RouteComponent() {
     <div className='h-full'>
         <OrgSetupModal
           open={showOrgModal}
-          onCreated={() => setShowOrgModal(false)}
+          onCreated={async () => {
+            await refetch()
+            setShowOrgModal(false)
+          }}
         />
         <Outlet />
     </div>
@@ -75,7 +79,7 @@ function OrgSetupModal({
   onCreated,
 }: {
   open: boolean
-  onCreated: () => void
+  onCreated: () => void | Promise<void>
 }) {
   const [name, setName] = useState('')
   const [error, setError] = useState('')
@@ -97,10 +101,10 @@ function OrgSetupModal({
 
     if (orgData) {
       await organization.setActive({ organizationId: orgData.id })
+      await onCreated()
     }
 
     setLoading(false)
-    onCreated()
   }
 
   return (

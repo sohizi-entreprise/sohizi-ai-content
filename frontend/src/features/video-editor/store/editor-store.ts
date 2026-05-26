@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer'
 import { temporal } from 'zundo'
 import { makeId } from '../utils/ids'
 import { ASPECT_RATIO_DIMENSIONS } from './types'
+import type { HydrationData } from '../transforms'
 import type { StateCreator } from 'zustand'
 import type { TemporalState } from 'zundo'
 import type {
@@ -19,9 +20,16 @@ import type {
 
 type ResizeSide = 'left' | 'right'
 
-type EditorState = ProjectState
+type EditorState = ProjectState & {
+  compositionId: string | null
+  fileNodeId: string | null
+  projectId: string | null
+  isHydrated: boolean
+}
 
 interface EditorActions {
+  hydrate: (data: HydrationData & { projectId: string }) => void
+  resetStore: () => void
   addTrack: (type: TrackType, name?: string) => string
   removeTrack: (trackId: string) => void
   toggleTrackMuted: (trackId: string) => void
@@ -97,6 +105,10 @@ const DEFAULT_ASPECT: AspectRatio = '16:9'
 const defaultDims = ASPECT_RATIO_DIMENSIONS[DEFAULT_ASPECT]
 
 const initialState: EditorState = {
+  compositionId: null,
+  fileNodeId: null,
+  projectId: null,
+  isHydrated: false,
   fps: DEFAULT_FPS,
   durationInFrames: DEFAULT_FPS * 30,
   currentFrame: 0,
@@ -174,6 +186,28 @@ const creator: StateCreator<
   EditorState & EditorActions
 > = (set) => ({
   ...initialState,
+
+  hydrate: (data) => {
+    set((state) => {
+      state.compositionId = data.compositionId
+      state.fileNodeId = data.fileNodeId
+      state.projectId = data.projectId
+      state.fps = data.fps
+      state.durationInFrames = data.durationInFrames
+      state.aspectRatio = data.aspectRatio
+      state.width = data.width
+      state.height = data.height
+      state.tracks = data.tracks
+      state.currentFrame = 0
+      state.selection = { clipIds: [] }
+      state.isPlaying = false
+      state.isHydrated = true
+    })
+  },
+
+  resetStore: () => {
+    set(() => ({ ...initialState }))
+  },
 
   addTrack: (type, name) => {
     const id = makeId(`track_${type}`)
@@ -655,11 +689,19 @@ const creator: StateCreator<
 export const useVideoEditorStore = create<EditorState & EditorActions>()(
   temporal(immer(creator), {
     partialize: (state) => {
-      const { currentFrame, viewport, isPlaying, selection, ...rest } = state
+      const {
+        currentFrame, viewport, isPlaying, selection,
+        compositionId, fileNodeId, projectId, isHydrated,
+        ...rest
+      } = state
       void currentFrame
       void viewport
       void isPlaying
       void selection
+      void compositionId
+      void fileNodeId
+      void projectId
+      void isHydrated
       return rest
     },
     limit: 100,

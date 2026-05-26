@@ -85,6 +85,7 @@ const app = new Elysia()
                 .use(routes.chatRoutes)
                 .use(routes.mediaEngineRoutes)
                 .use(routes.billingRoutes)
+                .use(routes.videoEditorRoutes)
                 .listen(3030);
 
 billingService.startSweeper();
