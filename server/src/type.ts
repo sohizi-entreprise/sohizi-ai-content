@@ -195,3 +195,22 @@ export type ImageMediaClipProperties = {
   widthRatio: number
   heightRatio: number
 }
+
+export type FileOperationType = 'overwrite' | 'append' | 'patch'
+
+export type OverwriteOperation = {
+  type: 'overwrite';
+  content: string;
+}
+export type AppendOperation = {
+  type: 'append';
+  content: string;
+}
+export type PatchOperation = {
+  type: 'patch';
+  oldText: string;
+  newText: string;
+  replaceAll: boolean;
+}
+
+export type FilePendingOperation = OverwriteOperation | AppendOperation | PatchOperation

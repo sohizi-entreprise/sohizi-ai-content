@@ -13,6 +13,7 @@ import {
     customType,
     foreignKey,
     bigint,
+    serial,
   } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import { user, organization } from './auth'
@@ -36,6 +37,8 @@ import {
   TokenPricing,
   VideoClipProperties,
   VideoTrackType,
+  FilePendingOperation,
+  FileOperationType,
 } from '@/type';
 import { FileFormat } from '@/features/file-system/constants';
 
@@ -242,6 +245,7 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
       .notNull(),
     role: chatMessageRoleEnum('role').notNull(),
     content: jsonb('content').$type<MsgContent>().notNull(),
+    position: serial('position').notNull(),
     ...timestamps,
   }, (table) => ([
     index('messages_conversation_id_idx').on(table.conversationId),
@@ -533,6 +537,17 @@ export const skillCategories = pgTable('skill_categories', {
   ...timestamps,
 }, (table) => ([
   uniqueIndex('skill_categories_skill_id_category_id_unique').on(table.skillId, table.categoryId),
+]))
+
+// Those are patches that users can approve or reject
+export const pendingFileOperations = pgTable('pending_file_operations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  fileNodeId: uuid('file_node_id').references(() => fileNodes.id, { onDelete: 'cascade' }).notNull(),
+  operation: varchar('operation', { length: 50 }).$type<FileOperationType>().notNull(),
+  payload: jsonb('payload').$type<FilePendingOperation>().notNull(),
+  ...timestamps,
+}, (table) => ([
+  index('pending_file_operations_file_node_id_idx').on(table.fileNodeId),
 ]))
 
 

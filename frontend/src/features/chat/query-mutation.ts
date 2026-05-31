@@ -39,7 +39,7 @@ export const listMessagesInfiniteQueryOptions = (projectId: string, conversation
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
-    select: (data) => data.pages.flatMap(page => page.data),
+    select: (data) => [...data.pages].reverse().flatMap(page => page.data),
     enabled: !!conversationId,
     placeholderData: conversationId ? keepPreviousData : undefined,
 })

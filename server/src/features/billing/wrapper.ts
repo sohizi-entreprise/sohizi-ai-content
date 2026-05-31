@@ -99,6 +99,7 @@ export function withBilling<TInput, TOutput>(
     const idempotencyKey = billable.idempotencyKey(input, {
       organizationId: ctx.organizationId,
       userId: ctx.userId,
+      metadata: ctx.metadata,
     })
 
     const reservation = await billing.reserve({
@@ -112,8 +113,6 @@ export function withBilling<TInput, TOutput>(
     })
 
     if (reservation.status !== 'reserved') {
-      // Idempotent replay of a terminal reservation. The caller is responsible
-      // for fetching the prior outcome; we don't re-execute.
       throw new BillableConfigError(
         `Idempotency replay: reservation ${reservation.id} is already ${reservation.status}`,
       )
@@ -181,6 +180,7 @@ export function withBillingAsync<TInput, TJobHandle>(
     const idempotencyKey = billable.idempotencyKey(input, {
       organizationId: ctx.organizationId,
       userId: ctx.userId,
+      metadata: ctx.metadata,
     })
 
     const reservation = await billing.reserve({
@@ -264,6 +264,7 @@ export function withBillingStream<TInput, TChunk>(
     const idempotencyKey = billable.idempotencyKey(input, {
       organizationId: ctx.organizationId,
       userId: ctx.userId,
+      metadata: ctx.metadata,
     })
 
     const reservation = await billing.reserve({

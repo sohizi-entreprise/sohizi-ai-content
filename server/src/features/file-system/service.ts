@@ -253,7 +253,7 @@ export const updateFileNode = async(projectId: string, request: UpdateFileReques
             throw new BadRequest(error.message);
         }
         if (error instanceof FileSystemNotFoundError) {
-            console.log(error.message);
+            console.error(error.message);
             throw new NotFound(error.message);
         }
         if (error instanceof FileSystemOperationError) {

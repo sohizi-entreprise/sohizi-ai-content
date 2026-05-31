@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { conversations, messages, checkpoints, llmModels } from "@/db/schema";
-import { eq, desc, asc, and, lt, gt, arrayContains } from "drizzle-orm";
+import { eq, desc, and, lt, arrayContains } from "drizzle-orm";
 import { AgentState, CursorPaginationOptions, CursorPaginationResult, MsgContent } from "@/type";
 
 
@@ -178,23 +178,19 @@ export const ListMessagesByConversationId = async (
       cursor
         ? and(
             eq(messages.conversationId, conversationId),
-            gt(messages.createdAt, new Date(cursor))
+            lt(messages.position, Number(cursor))
           )
         : eq(messages.conversationId, conversationId)
     )
-    .orderBy(asc(messages.createdAt))
+    .orderBy(desc(messages.position))
     .limit(limit + 1);
 
   const hasMore = rows.length > limit;
-  const page = rows.slice(0, limit);
+  const page = rows.slice(0, limit).reverse();
   const nextCursor =
-    hasMore && page.length > 0 ? page[page.length - 1].createdAt.toISOString() : null;
+    hasMore && page.length > 0 ? String(page[0].position) : null;
 
-  return {
-    data: page,
-    nextCursor,
-    hasMore,
-  };
+  return { data: page, nextCursor, hasMore };
 }
 
 export const listModelsForLeadAgent = async () => {

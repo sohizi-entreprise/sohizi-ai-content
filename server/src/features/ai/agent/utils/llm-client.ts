@@ -360,9 +360,10 @@ export function createBillableLlmClient(config: BillableLlmConfig): BillableLlmC
             };
         },
 
-        idempotencyKey(input: BillableLlmInput, ctx: { organizationId: string; userId?: string | null }): string {
+        idempotencyKey(input: BillableLlmInput, ctx: { organizationId: string; userId?: string | null; metadata?: Record<string, unknown> }): string {
+            const runId = ctx.metadata?.runId ?? crypto.randomUUID();
             const messageHash = simpleHash(JSON.stringify(input.messages));
-            return `llm:${ctx.organizationId}:${model.apiName}:${messageHash}`;
+            return `llm:${ctx.organizationId}:${model.apiName}:${messageHash}:${runId}`;
         },
     };
 }

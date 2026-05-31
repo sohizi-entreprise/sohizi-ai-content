@@ -8,6 +8,7 @@ import { E5SmallLocalEmbedder } from '@/lib/rag/local-embedder';
 import { v4 as uuidv4 } from 'uuid';
 import { generateTitle } from '../ai/agent/utils/generate-title';
 import { getProjectById } from '../project/repo';
+import { generateSystemPrompt } from '../ai/agent/core/sys-prompt';
 
 export const listConversations = async (projectId: string, userId: string, options?: CursorPaginationOptions) => {
   const conversations = await repo.listConversations(projectId, userId, options);
@@ -99,9 +100,11 @@ async function* handleChatRun(projectId: string, userId: string, request: Comple
 
     const session = new Session({...sessionInitData, embedder})
 
+    const systemPrompt = generateSystemPrompt();
+
     const agent = new Agent(
         'main-agent', 
-        `You are a helpful assistant that can help with tasks. Before calling any tool, you MUST write exactly one short progress sentence to the user. Only after that sentence, call the tool.`,
+        systemPrompt,
         session
     )
     yield* agent.runLoop(

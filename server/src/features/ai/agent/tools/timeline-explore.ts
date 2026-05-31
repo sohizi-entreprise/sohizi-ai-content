@@ -4,7 +4,7 @@ import { success, failure } from "./utils";
 import * as repo from "@/features/video-editor/repo";
 import type { VideoClip } from "@/db/schema";
 
-const compositionId = z.uuid().describe("The video composition ID.");
+const fileNodeId = z.uuid().describe("The file node ID of the video file.");
 const clipId = z.uuid().describe("The clip ID.");
 const trackId = z.uuid().describe("The track ID.");
 
@@ -12,14 +12,14 @@ const overviewCommand = z.object({
   cmd: z.literal('overview').describe(
     "Returns a lightweight summary of the entire composition: canvas settings, track list, and clip counts. Use this first to understand the timeline before drilling into specifics."
   ),
-  compositionId,
+  fileNodeId,
 });
 
 const listClipsCommand = z.object({
   cmd: z.literal('list_clips').describe(
     "List clips with optional filters. Returns: id, type, startFrame, endFrame, and a short label for each clip."
   ),
-  compositionId,
+  fileNodeId,
   trackId: trackId.optional().describe("Filter to a specific track."),
   type: z.enum(['video', 'audio', 'text', 'image']).optional().describe("Filter by clip type."),
   fromFrame: z.number().int().optional().describe("Only return clips that overlap with this frame or later."),
@@ -37,7 +37,7 @@ const atFrameCommand = z.object({
   cmd: z.literal('at_frame').describe(
     "Returns all clips that are visible/active at the given frame number. Useful for understanding what's on screen at a specific time."
   ),
-  compositionId,
+  fileNodeId,
   frame: z.number().int().min(0).describe("The frame number to query."),
 });
 
@@ -64,13 +64,13 @@ export const timelineExploreTool = buildBaseTool({
     const input = cmd.command;
     switch (input.cmd) {
       case 'overview':
-        return executeOverview(input.compositionId);
+        return executeOverview(input.fileNodeId);
       case 'list_clips':
         return executeListClips(input);
       case 'view_clip':
         return executeViewClip(input.clipId);
       case 'at_frame':
-        return executeAtFrame(input.compositionId, input.frame);
+        return executeAtFrame(input.fileNodeId, input.frame);
       case 'view_track':
         return executeViewTrack(input.trackId);
       default:
@@ -79,10 +79,10 @@ export const timelineExploreTool = buildBaseTool({
   },
 });
 
-async function executeOverview(compositionId: string) {
-  const result = await repo.getFullComposition(compositionId);
-  if (!result.composition) {
-    return failure('Composition not found.');
+async function executeOverview(fileNodeId: string) {
+  const result = await repo.getFullCompositionByFileNodeId(fileNodeId);
+  if (!result) {
+    return failure('Video composition not found for this file.');
   }
 
   const { composition: comp, tracks, clips } = result;
@@ -110,7 +110,7 @@ async function executeOverview(compositionId: string) {
         : 'empty';
       const mutedLabel = track.muted ? ' (muted)' : '';
       const hiddenLabel = track.hidden ? ' (hidden)' : '';
-      output += `  ${track.position + 1}. [${track.type}] "${track.name}" — ${trackClips.length} clips, span: ${span}${mutedLabel}${hiddenLabel}\n`;
+      output += `  ${track.position + 1}. [${track.type}] — ${trackClips.length} clips, span: ${span}${mutedLabel}${hiddenLabel}\n`;
     }
   }
 
@@ -118,7 +118,12 @@ async function executeOverview(compositionId: string) {
 }
 
 async function executeListClips(input: z.infer<typeof listClipsCommand>) {
-  const clips = await repo.getClipsByFilters(input.compositionId, {
+  const composition = await repo.getCompositionByFileNodeId(input.fileNodeId);
+  if (!composition) {
+    return failure('Video composition not found for this file.');
+  }
+
+  const clips = await repo.getClipsByFilters(composition.id, {
     trackId: input.trackId,
     type: input.type,
     fromFrame: input.fromFrame,
@@ -159,13 +164,13 @@ async function executeViewClip(clipId: string) {
   return success(output);
 }
 
-async function executeAtFrame(compositionId: string, frame: number) {
-  const comp = await repo.getCompositionById(compositionId);
+async function executeAtFrame(fileNodeId: string, frame: number) {
+  const comp = await repo.getCompositionByFileNodeId(fileNodeId);
   if (!comp) {
-    return failure('Composition not found.');
+    return failure('Video composition not found for this file.');
   }
 
-  const clips = await repo.getClipsAtFrame(compositionId, frame);
+  const clips = await repo.getClipsAtFrame(comp.id, frame);
   const timeSec = (frame / comp.fps).toFixed(1);
 
   if (clips.length === 0) {
@@ -189,7 +194,7 @@ async function executeViewTrack(trackId: string) {
 
   const clips = await repo.getClipsByTrackId(trackId);
 
-  let output = `Track: "${track.name}" [${track.type}]\n`;
+  let output = `Track: [${track.type}]\n`;
   output += `  Position: ${track.position}, Muted: ${track.muted}, Hidden: ${track.hidden}\n`;
   output += `  Composition: ${track.compositionId}\n\n`;
 

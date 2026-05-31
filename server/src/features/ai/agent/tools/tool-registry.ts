@@ -9,6 +9,7 @@ import { generateVideoTool } from "./generate-video";
 import { timelineExploreTool } from "./timeline-explore";
 import { timelineEditTool } from "./timeline-edit";
 import { ToolSet } from "ai";
+import { editFileTool } from "./file-edit";
 
 
 const toolRegistry = new Map<string, BaseTool<z.ZodSchema>>();
@@ -29,7 +30,7 @@ export const listTools = (): ToolSet => {
     );
 }
 
-// registerTool(editFileTool);
+registerTool(editFileTool);
 registerTool(exploreFileTool);
 registerTool(searchFileTool);
 registerTool(manageTodoListTool);

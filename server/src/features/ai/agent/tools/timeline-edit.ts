@@ -4,11 +4,11 @@ import { success, failure } from "./utils";
 import * as repo from "@/features/video-editor/repo";
 import type { VideoClipProperties } from "@/type";
 
-const compositionId = z.uuid().describe("The video composition ID.");
+const fileNodeId = z.uuid().describe("The file node ID of the video file.");
 
 const updateCompositionCommand = z.object({
   cmd: z.literal('update_composition').describe("Update composition-level settings like fps, aspect ratio, or dimensions."),
-  compositionId,
+  fileNodeId,
   patch: z.object({
     fps: z.number().int().min(1).optional(),
     aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:5']).optional(),
@@ -20,7 +20,7 @@ const updateCompositionCommand = z.object({
 
 const addTrackCommand = z.object({
   cmd: z.literal('add_track').describe("Add a new track to the composition."),
-  compositionId,
+  fileNodeId,
   type: z.enum(['video', 'audio', 'text', 'image']),
   name: z.string().max(100),
   position: z.number().int().min(0).optional().describe("Z-order position. 0 = bottom. Omit to add on top."),
@@ -74,9 +74,27 @@ const removeClipCommand = z.object({
   clipId: z.uuid(),
 });
 
-const singleOpSchema = z.discriminatedUnion('cmd', [
-  updateCompositionCommand,
-  addTrackCommand,
+const updateCompositionBatchOp = z.object({
+  cmd: z.literal('update_composition').describe("Update composition-level settings."),
+  patch: z.object({
+    fps: z.number().int().min(1).optional(),
+    aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:5']).optional(),
+    durationInFrames: z.number().int().min(1).optional(),
+    width: z.number().int().min(1).optional(),
+    height: z.number().int().min(1).optional(),
+  }),
+});
+
+const addTrackBatchOp = z.object({
+  cmd: z.literal('add_track').describe("Add a new track."),
+  type: z.enum(['video', 'audio', 'text', 'image']),
+  name: z.string().max(100),
+  position: z.number().int().min(0).optional(),
+});
+
+const batchOpSchema = z.discriminatedUnion('cmd', [
+  updateCompositionBatchOp,
+  addTrackBatchOp,
   updateTrackCommand,
   removeTrackCommand,
   addClipCommand,
@@ -88,8 +106,8 @@ const batchCommand = z.object({
   cmd: z.literal('batch').describe(
     "Execute multiple timeline operations atomically. All succeed or all fail. Use for compound operations like splitting a clip or swapping track positions."
   ),
-  compositionId,
-  operations: z.array(singleOpSchema).min(1).max(50),
+  fileNodeId,
+  operations: z.array(batchOpSchema).min(1).max(50),
 });
 
 const toolSchema = z.discriminatedUnion('cmd', [
@@ -133,17 +151,25 @@ export const timelineEditTool = buildBaseTool({
 });
 
 async function executeUpdateComposition(input: z.infer<typeof updateCompositionCommand>) {
-  const updated = await repo.updateComposition(input.compositionId, input.patch);
+  const composition = await repo.getCompositionByFileNodeId(input.fileNodeId);
+  if (!composition) {
+    return failure('Video composition not found for this file.');
+  }
+  const updated = await repo.updateComposition(composition.id, input.patch);
   if (!updated) {
-    return failure('Composition not found.');
+    return failure('Failed to update composition.');
   }
   return success(`Composition updated. Version: ${updated.version}`);
 }
 
 async function executeAddTrack(input: z.infer<typeof addTrackCommand>) {
-  const position = input.position ?? await repo.getNextTrackPosition(input.compositionId);
+  const composition = await repo.getCompositionByFileNodeId(input.fileNodeId);
+  if (!composition) {
+    return failure('Video composition not found for this file.');
+  }
+  const position = input.position ?? await repo.getNextTrackPosition(composition.id);
   const track = await repo.createTrack({
-    compositionId: input.compositionId,
+    compositionId: composition.id,
     type: input.type,
     position,
   });
@@ -207,15 +233,21 @@ async function executeRemoveClip(input: z.infer<typeof removeClipCommand>) {
 }
 
 async function executeBatch(input: z.infer<typeof batchCommand>) {
-  const batchOps: repo.BatchOperation[] = input.operations.map((op) => {
+  const composition = await repo.getCompositionByFileNodeId(input.fileNodeId);
+  if (!composition) {
+    return failure('Video composition not found for this file.');
+  }
+  const compositionId = composition.id;
+
+  const batchOps: repo.BatchOperation[] = input.operations.map((op): repo.BatchOperation => {
     switch (op.cmd) {
       case 'update_composition':
-        return { op: 'update_composition', id: op.compositionId, data: op.patch };
+        return { op: 'update_composition', id: compositionId, data: op.patch };
       case 'add_track':
         return {
           op: 'create_track',
           data: {
-            compositionId: input.compositionId,
+            compositionId,
             type: op.type,
             name: op.name,
             position: op.position,
@@ -230,7 +262,7 @@ async function executeBatch(input: z.infer<typeof batchCommand>) {
           op: 'create_clip',
           data: {
             trackId: op.trackId,
-            compositionId: input.compositionId,
+            compositionId,
             type: op.type,
             startFrame: op.startFrame,
             endFrame: op.endFrame,

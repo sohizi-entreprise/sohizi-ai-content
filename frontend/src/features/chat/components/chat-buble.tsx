@@ -49,7 +49,7 @@ export function insertToolResultsIntoAssistantMessages(messages: Message[]) {
 function RenderUserMessage({message}: {message: Message}) {
     const content = message.content.find((part) => part.type === 'text')
     return (
-        <div className="text-sm text-foreground bg-white/10 p-2 rounded-lg">
+        <div className="text-sm text-foreground bg-white/10 p-2 rounded-lg break-all">
             {content?.text || ''}
         </div>
     )
@@ -80,7 +80,7 @@ function RenderAssistantMessage({message}: {message: Message}) {
     }
     }
     return (
-        <div className="text-sm flex flex-col gap-2 p-2">
+        <div className="text-sm flex flex-col gap-2 p-2 w-full overflow-auto">
             <div className="text-gray-400 text-xs">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{reasoning}</ReactMarkdown>
             </div>

@@ -1,17 +1,11 @@
 import { z } from "zod";
-import { fileFormat } from "@/features/file-system/constants";
-import {
-    createFileNode as createFileNodeFn,
-} from "@/features/file-system/functions";
 import { buildBaseTool } from "./tool-definition";
 import type { ToolResult } from "./tool-definition";
-import { writeCommandSchema, patchCommandSchema, deleteCommandSchema, moveCommandSchema, copyCommandSchema, createCommandSchema } from "./command-schema";
+import { writeCommandSchema, patchCommandSchema, deleteCommandSchema, moveCommandSchema, copyCommandSchema, createCommandSchema, renameCommandSchema } from "./command-schema";
 import { FileObject } from "@/features/file-system/objects/file";
-import { PathObject } from "@/features/file-system/objects/path";
 import * as fileSystemRepo from "@/features/file-system/repo";
 import { normalizeFileName } from "@/features/file-system/utils";
-import type { FileNodeInsertPosition } from "@/features/file-system/payload";
-import { failure, success } from "./utils";
+import { failure, success, resolveFileByPathOrId } from "./utils";
 import { getErrorMessage } from "@/utils/get-error-message";
 
 const toolSchema = z.discriminatedUnion('cmd', [
@@ -21,229 +15,296 @@ const toolSchema = z.discriminatedUnion('cmd', [
     moveCommandSchema,
     copyCommandSchema,
     createCommandSchema,
+    renameCommandSchema
 ]);
+
+type OverwriteOperation = {
+    type: 'overwrite';
+    content: string;
+    fileId: string;
+}
+
+type PatchOperation = {
+    type: 'patch';
+    oldText: string;
+    newText: string;
+    replaceAll: boolean;
+    fileId: string;
+}
+
+type RefreshOperation = {
+    type: 'refresh';
+    fileId: string | null;
+}
+
+type WriteOperation = OverwriteOperation | PatchOperation;
 
 export const editFileTool = buildBaseTool({
     name: "editFile",
-    description: "Performs modifications on the file system such as creating file/directory, writing to file, pactching content, deleting file/directory, moving file/directory, copying file content.",
-    inputSchema: toolSchema,
+    description: "Performs modifications on the file system such as creating, deleting, moving and renaming file/directory, writing to file, pactching content, copying file content.",
+    inputSchema: z.object({
+        command: toolSchema,
+    }),
     execute: async(input, {session}) => {
-        switch (input.cmd) {
+        const command = input.command;
+        switch (command.cmd) {
             case 'write':
-                return executeWriteCommand(input, session.projectId);
+                return executeWriteCommand(command, session.projectId);
             case 'patch':
-                return executePatchCommand(input, session.projectId);
+                return executePatchCommand(command, session.projectId);
             case 'delete':
-                return executeDeleteCommand(input, session.projectId);
+                return executeDeleteCommand(command, session.projectId);
             case 'move':
-                return executeMoveCommand(input, session.projectId);
+                return executeMoveCommand(command, session.projectId);
             case 'copy':
-                return executeCopyCommand(input, session.projectId);
-            case 'create':
-                return executeCreateCommand(input, session.projectId);
+                return executeCopyCommand(command, session.projectId);
+            case 'create-file':
+                return executeCreateCommand(command, session.projectId);
+            case 'rename':
+                return executeRenameCommand(command, session.projectId);
+            default:
+                return failure(`Invalid command received. Valid commands are: write, patch, delete, move, copy, create-file.`);
         }
     }
 });
 
 async function executeWriteCommand(input: z.infer<typeof writeCommandSchema>, projectId: string) {
-    const { filepath, content } = input;
-    const pathObject = new PathObject();
-    const { fileObject } = await pathObject.resolveByPath(filepath, projectId);
-    if (!fileObject) {
-        return failure(`File ${filepath} not found`);
+    const { filePathOrId, content, strategy } = input;
+    const result = await resolveFileByPathOrId(filePathOrId, projectId);
+    if(!(result instanceof FileObject)){
+        return result;
     }
 
-    const response = await fileObject.writeContent({ content });
-    if (!response.ok) {
-        return failure(response.error ?? `Failed to write content to ${filepath}`);
+    const fileObjectRef = result;
+
+    if(fileObjectRef.isDirectory){
+        return failure(`Cannot write to directory.`);
     }
 
-    return success(`Content written to ${filepath} successfully. Do not repeat the content in your response, the user will see it directly.`);
+    const operation: WriteOperation = {
+        type: 'overwrite',
+        content,
+        fileId: fileObjectRef.id,
+    };
+    // TODO: stream the operation to the user
+
+    return success(`Content written and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`);
 }
 
 async function executePatchCommand(input: z.infer<typeof patchCommandSchema>, projectId: string) {
-    const { filepath, oldText, newText, replaceAll } = input;
-    const pathObject = new PathObject();
-    const { fileObject } = await pathObject.resolveByPath(filepath, projectId);
-    if (!fileObject) {
-        return failure(`File ${filepath} not found`);
+    const { filePathOrId, oldText, newText, replaceAll } = input;
+    const result = await resolveFileByPathOrId(filePathOrId, projectId);
+    if(!(result instanceof FileObject)){
+        return result;
     }
 
-    const response = await fileObject.patchContent({ oldText, newText, replaceAll });
-    if (!response.ok) {
-        return failure(response.error ?? `Failed to patch content in ${filepath}`);
+    const fileObjectRef = result;
+
+    if(fileObjectRef.isDirectory){
+        return failure(`Cannot patch directory.`);
     }
 
-    return success(`Content patched in ${filepath} successfully. Do not repeat the content in your response, the user will see it directly.`);
+    const operation: PatchOperation = {
+        type: 'patch',
+        oldText,
+        newText,
+        replaceAll,
+        fileId: fileObjectRef.id,
+    };
+
+    return success(`Content patched and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`);
 }
 
 async function executeDeleteCommand(input: z.infer<typeof deleteCommandSchema>, projectId: string): Promise<ToolResult> {
-    const { filepath } = input;
-    const pathObject = new PathObject();
-    const { fileObject, isRoot } = await pathObject.resolveByPath(filepath, projectId);
-    if (isRoot) {
+    const { filePathOrId } = input;
+    const result = await resolveFileByPathOrId(filePathOrId, projectId);
+    if(!(result instanceof FileObject)){
+        return result;
+    }
+
+    const fileObjectRef = result;
+
+    if (fileObjectRef.isRoot) {
         return failure('Cannot target the root directory directly.');
     }
-    if (!fileObject) {
-        return failure(`File ${filepath} not found`);
-    }
 
-    const response = await fileObject.delete();
+    const response = await fileObjectRef.delete();
     if (!response.ok) {
-        return failure(response.error ?? `Failed to delete ${filepath}`);
+        return failure(response.error ?? `Failed to delete file ${filePathOrId}`);
     }
+    const parent = await fileObjectRef.getParent();
+    if (!parent){
+        return failure(`Failed to delete file ${filePathOrId} because the parent directory is not found.`);
+    }
+    const operation: RefreshOperation = {
+        type: 'refresh',
+        fileId: parent.id,
+    };
 
-    return success(`Deleted ${filepath} successfully.`);
+    return success(`Deleted file ${filePathOrId} successfully.`);
 }
 
 async function executeMoveCommand(input: z.infer<typeof moveCommandSchema>, projectId: string): Promise<ToolResult> {
-    const { oldPath, newPath, position } = input;
-    const pathObject = new PathObject();
-    const { fileObject: sourceFile, isRoot: isSourceRoot } = await pathObject.resolveByPath(oldPath, projectId);
-    if (isSourceRoot) {
-        return failure('Cannot target the root directory directly.');
-    }
-    if (!sourceFile) {
-        return failure(`File ${oldPath} not found`);
+    const { fileIdOrPath, newParentPathOrId, position, newName } = input;
+    const result = await resolveFileByPathOrId(fileIdOrPath, projectId);
+    if(!(result instanceof FileObject)){
+        return result;
     }
 
-    try {
-        const { parentPath, name } = pathObject.splitParentAndName(newPath);
-        const { fileObject: destinationDirectory, isRoot: isDestinationRoot } = await pathObject.resolveDirectoryByPath(parentPath, projectId);
-        if (!isDestinationRoot && !destinationDirectory) {
-            return failure(`Path "${parentPath}" is not found`);
+    const fileRef = result;
+
+    if(fileRef.isRoot){
+        return failure(`Cannot move root directory.`);
+    }
+
+    const resultNewParent = await resolveFileByPathOrId(newParentPathOrId, projectId);
+    if(!(resultNewParent instanceof FileObject)){
+        return resultNewParent;
+    }
+
+    const newParentRef = resultNewParent;
+    let anchorId: string | null = null;
+    if(position.anchorFilePathOrId){
+        const anchorResult = await resolveFileByPathOrId(position.anchorFilePathOrId, projectId);
+        if(!(anchorResult instanceof FileObject)){
+            return anchorResult;
         }
-
-        const normalizedName = normalizeAndValidateName(name);
-        const anchorId = await resolveAnchorId(projectId, isDestinationRoot, destinationDirectory, position.anchorFile, position.insertMode);
-
-        const response = await sourceFile.moveTo(
-            isDestinationRoot ? null : destinationDirectory,
-            position.insertMode,
-            anchorId,
-            normalizedName,
-        );
-        if (!response.ok) {
-            return failure(response.error ?? `Failed to move ${oldPath}`);
-        }
-
-        return success(`Moved ${oldPath} to ${pathObject.buildChildPath(parentPath, normalizedName)} successfully.`);
-    } catch (error) {
-        return failure(getErrorMessage(error, `Failed to move ${oldPath}`));
+        anchorId = anchorResult.id;
     }
+
+    const currentParent = await fileRef.getParent();
+    if(!currentParent){
+        return failure(`Failed to move ${fileIdOrPath} because the current parent is not found.`);
+    }
+    const response = await fileRef.moveTo(
+        newParentRef,
+        position.insertMode,
+        anchorId,
+        newName,
+    );
+    if (!response.ok) {
+        return failure(response.error ?? `Failed to move ${fileIdOrPath} to ${newParentPathOrId}`);
+    }
+    
+    const operation: RefreshOperation[] = [
+        {
+            type: 'refresh',
+            fileId: currentParent.id,
+        },
+        {
+            type: 'refresh',
+            fileId: newParentRef.id,
+        },
+    ];
+
+    return success(`Moved ${fileIdOrPath} to ${newParentPathOrId} successfully.`);
+
 }
 
 async function executeCopyCommand(input: z.infer<typeof copyCommandSchema>, projectId: string): Promise<ToolResult> {
-    const { fromPath, toPath } = input;
-    const pathObject = new PathObject();
-    const { fileObject: sourceFile } = await pathObject.resolveByPath(fromPath, projectId);
-    if (!sourceFile) {
-        return failure(`File ${fromPath} not found`);
+    const { fromPathOrId, toPathOrId } = input;
+    
+    const resultFromFile = await resolveFileByPathOrId(fromPathOrId, projectId);
+    if(!(resultFromFile instanceof FileObject)){
+        return resultFromFile;
     }
 
-    const { fileObject: targetFile } = await pathObject.resolveByPath(toPath, projectId);
-    if (!targetFile) {
-        return failure(`File ${toPath} not found`);
+    const sourceFileRef = resultFromFile;
+    const resultFromTarget = await resolveFileByPathOrId(toPathOrId, projectId);
+    if(!(resultFromTarget instanceof FileObject)){
+        return resultFromTarget;
     }
+    const targetFileRef = resultFromTarget;
 
-    const response = await sourceFile.copyTo(targetFile);
+    const response = await sourceFileRef.copyTo(targetFileRef);
     if (!response.ok) {
-        return failure(response.error ?? `Failed to copy ${fromPath} to ${toPath}`);
+        return failure(response.error ?? `Failed to copy ${fromPathOrId} to ${toPathOrId}`);
     }
 
-    return success(`Copied content from ${fromPath} to ${toPath} successfully.`);
+    const operations: RefreshOperation[] = [
+        {
+            type: 'refresh',
+            fileId: sourceFileRef.id,
+        },
+        {
+            type: 'refresh',
+            fileId: targetFileRef.id,
+        },
+    ];
+
+    return success(`Copied content from ${fromPathOrId} to ${toPathOrId} successfully.`);
 }
+
 
 async function executeCreateCommand(input: z.infer<typeof createCommandSchema>, projectId: string): Promise<ToolResult> {
-    const { filepath, dir, name, position } = input;
+    const { parentPathOrId, dir, name, position } = input;
 
     try {
-        const parentPathObject = new PathObject();
-        const { fileObject: parentDirectory, isRoot: isParentRoot } = await parentPathObject.resolveDirectoryByPath(filepath, projectId);
-        if (!isParentRoot && !parentDirectory) {
-            return failure(`Path "${filepath}" is not found`);
+        const result = await resolveFileByPathOrId(parentPathOrId, projectId);
+        if(!(result instanceof FileObject)){
+            return result;
         }
+        const parentFolder = result;
 
-        const parentId = isParentRoot ? null : parentDirectory?.id ?? null;
+        if(!parentFolder.isDirectory){
+            return failure(`Parent path "${parentPathOrId}" is not a directory.`);
+        }
+        const parentId = parentFolder.id;
+
         const normalizedName = normalizeAndValidateName(name);
-        const nextPosition = await fileSystemRepo.getNextFileNodePosition(projectId, parentId);
+        let anchorId: string | null = null;
 
-        const createdFileNode = await createFileNodeFn({
-            projectId,
-            name: normalizedName,
-            directory: dir,
-            parentId,
-            position: nextPosition,
-            format: dir ? null : fileFormat.MARKDOWN,
-        });
-
-        const createdFile = new FileObject(createdFileNode);
-        const anchorId = await resolveAnchorId(
-            projectId,
-            isParentRoot,
-            parentDirectory,
-            position.anchorFile,
-            position.insertMode,
-        );
-        if (position.insertMode !== 'end' || anchorId !== null) {
-            const moveResponse = await createdFile.moveTo(
-                isParentRoot ? null : parentDirectory,
-                position.insertMode,
-                anchorId,
-            );
-            if (!moveResponse.ok) {
-                return failure(moveResponse.error ?? `Failed to position ${normalizedName} in ${filepath}`);
+        if(position.anchorFilePathOrId){
+            const anchorResult = await resolveFileByPathOrId(position.anchorFilePathOrId, projectId);
+            if(!(anchorResult instanceof FileObject)){
+                return anchorResult;
             }
+            anchorId = anchorResult.id;
         }
 
-        return success(`Created ${dir ? 'directory' : 'file'} ${parentPathObject.buildChildPath(filepath, normalizedName)} successfully.`);
+        const newFileNode = await fileSystemRepo.createFileWithContentAtPosition(
+            projectId,
+            {
+                projectId,
+                name: normalizedName,
+                directory: dir,
+                parentId,
+                position: 0,
+                editable: true,
+                format: 'markdown'
+            },
+            anchorId,
+            position.insertMode,
+        )
+
+        if(!newFileNode){
+            return failure(`Failed to create '${name}' inside folder '${parentPathOrId}'`);
+        }
+        
+
+        return success(`Created ${dir ? 'directory' : 'file'} [ID: ${newFileNode.id}]${dir ? '' : ' (format: ' + newFileNode.format + ')'} successfully.`);
     } catch (error) {
-        return failure(getErrorMessage(error, `Failed to create ${name} in ${filepath}`));
+        return failure(getErrorMessage(error, `Failed to create '${name}' inside folder '${parentPathOrId}'`));
     }
 }
 
-
-async function resolveAnchorId(
-    projectId: string,
-    isRoot: boolean,
-    parentDirectory: Awaited<ReturnType<PathObject['resolveByPath']>>['fileObject'],
-    anchorFile: string | undefined,
-    position: FileNodeInsertPosition,
-) {
-    if (position === 'start' || position === 'end') {
-        return null;
+async function executeRenameCommand(input: z.infer<typeof renameCommandSchema>, projectId: string): Promise<ToolResult> {
+    const { filePathOrId, newName } = input;
+    const result = await resolveFileByPathOrId(filePathOrId, projectId);
+    if(!(result instanceof FileObject)){
+        return result;
     }
+    const fileRef = result;
 
-    if (!anchorFile) {
-        throw new Error(`anchorFile is required when insertMode is ${position}.`);
+    const response = await fileRef.rename(newName);
+    if (!response.ok) {
+        return failure(response.error ?? `Failed to rename ${filePathOrId} to ${newName}`);
     }
-
-    const normalizedAnchorFile = normalizeAndValidateName(anchorFile);
-
-    if (isRoot) {
-        const anchorNode = await fileSystemRepo.getFileNodeByName(projectId, null, normalizedAnchorFile);
-        if (!anchorNode) {
-            throw new Error(`Anchor file "${anchorFile}" was not found in the target directory.`);
-        }
-
-        return anchorNode.id;
-    }
-
-    if (!parentDirectory) {
-        throw new Error('Invalid target directory.');
-    }
-
-    const childrenResponse = await parentDirectory.getDirectChildren();
-    if (!childrenResponse.ok) {
-        throw new Error(childrenResponse.error ?? 'Failed to load target directory children.');
-    }
-
-    const anchorNode = childrenResponse.data?.find((child) => child.name === normalizedAnchorFile);
-    if (!anchorNode) {
-        throw new Error(`Anchor file "${anchorFile}" was not found in the target directory.`);
-    }
-
-    return anchorNode.id;
+    const operation: RefreshOperation = {
+        type: 'refresh',
+        fileId: fileRef.id,
+    };
+    return success(`Renamed ${filePathOrId} to ${newName} successfully.`);
 }
 
 function normalizeAndValidateName(name: string) {

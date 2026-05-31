@@ -1,8 +1,10 @@
 import { db } from "@/db";
-import { fileNodeContentChunks, fileNodeContents, fileNodes, skills, videoCompositions, type FileNode } from "@/db/schema";
+import { fileNodeContentChunks, fileNodeContents, fileNodes, pendingFileOperations, skills, videoCompositions, type FileNode } from "@/db/schema";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { DatabaseError } from "pg";
 import { FileCreationRequest, FileNodeInsertPosition, UpdateFileContentRequest, UpdateFileRequest, UpdateSkillRequest } from "./payload";
+import { FileFormat } from "./constants";
+import { FilePendingOperation } from "@/type";
 
 export const ORDER_GAP = 1000;
 
@@ -110,6 +112,13 @@ export const searchFileNodesByName = async(projectId: string, name: string, limi
                 sql`length(${fileNodes.name})`,
                 asc(fileNodes.name),
              )
+             .limit(limit);
+}
+
+export const searchFileNodesByFormat = async(projectId: string, format: FileFormat, limit = 15): Promise<FileNode[]> => {
+    return db.select()
+             .from(fileNodes)
+             .where(and(eq(fileNodes.projectId, projectId), eq(fileNodes.format, format)))
              .limit(limit);
 }
 
@@ -672,6 +681,20 @@ export const getFileNodePathById = async(projectId: string, fileNodeId: string) 
     return row?.path ?? null;
 }
 
+/**
+ * Accepts raw tsquery syntax from the agent (supports &, |, !, <N>, :* operators).
+ * Falls back to AND-ing plain words if no operators are present.
+ */
+function buildTsQuery(input: string): string {
+    const hasOperators = /[&|!<>:*()]/.test(input);
+    if (hasOperators) {
+        return input;
+    }
+    const tokens = input.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return '';
+    return tokens.map(t => `'${t}'`).join(' & ');
+}
+
 export const searchDirectoryChunksByKeyword = async(
     projectId: string,
     fileNodeId: string,
@@ -685,7 +708,7 @@ export const searchDirectoryChunksByKeyword = async(
         return [];
     }
 
-    const query = sql`websearch_to_tsquery('simple', ${normalizedKeyword})`;
+    const tsquery = buildTsQuery(normalizedKeyword);
     const result = await db.execute(sql`
         WITH RECURSIVE subtree AS (
             SELECT
@@ -710,13 +733,13 @@ export const searchDirectoryChunksByKeyword = async(
                 chunks.file_node_id,
                 chunks.chunk_index,
                 chunks.chunk_text,
-                ts_rank_cd(chunks.search_text, ${query}) AS rank
+                ts_rank_cd(chunks.search_text, to_tsquery('simple', ${tsquery})) AS rank
             FROM file_node_content_chunks chunks
             JOIN subtree ON subtree.id = chunks.file_node_id
             WHERE chunks.project_id = ${projectId}
               AND NOT subtree.is_cycle
               AND subtree.directory = false
-              AND chunks.search_text @@ ${query}
+              AND chunks.search_text @@ to_tsquery('simple', ${tsquery})
             ORDER BY rank DESC, chunks.chunk_index ASC
             LIMIT ${limit}
         ),
@@ -788,7 +811,7 @@ export const searchProjectChunksByKeyword = async(
         return [];
     }
 
-    const query = sql`websearch_to_tsquery('simple', ${normalizedKeyword})`;
+    const tsquery = buildTsQuery(normalizedKeyword);
     const result = await db.execute(sql`
         WITH RECURSIVE hits AS (
             SELECT
@@ -796,10 +819,10 @@ export const searchProjectChunksByKeyword = async(
                 chunks.file_node_id,
                 chunks.chunk_index,
                 chunks.chunk_text,
-                ts_rank_cd(chunks.search_text, ${query}) AS rank
+                ts_rank_cd(chunks.search_text, to_tsquery('simple', ${tsquery})) AS rank
             FROM file_node_content_chunks chunks
             WHERE chunks.project_id = ${projectId}
-              AND chunks.search_text @@ ${query}
+              AND chunks.search_text @@ to_tsquery('simple', ${tsquery})
             ORDER BY rank DESC, chunks.chunk_index ASC
             LIMIT ${limit}
         ),
@@ -1105,6 +1128,28 @@ export const updateSkill = async(fileId: string, request: UpdateSkillRequest) =>
         eq(skills.fileNodeId, fileId),
     )).returning();
     return response[0];
+}
+
+export const createPendingFileOperation = async(fileNodeId: string, payload: FilePendingOperation) => {
+    const response = await db.insert(pendingFileOperations).values({
+        fileNodeId,
+        operation: payload.type,
+        payload,
+    }).returning();
+    return response[0];
+}
+
+export const listPendingFileOperations = async(fileNodeId: string) => {
+    const response = await db.select().from(pendingFileOperations).where(eq(pendingFileOperations.fileNodeId, fileNodeId));
+    return response;
+}
+
+export const deletePendingFileOperation = async(id: string) => {
+    const response = await db.delete(pendingFileOperations).where(eq(pendingFileOperations.id, id));
+    if(response.rowCount === 0) {
+        return false;
+    }
+    return true;
 }
 
 

@@ -3,20 +3,21 @@ import { PathObject } from "@/features/file-system/objects/path";
 import { buildBaseTool } from "./tool-definition";
 import { listCommandSchema, 
          existsCommandSchema, 
-         readCommandSchema, 
-         statCommandSchema,
-         diffCommandSchema
+         readCommandSchema,
+         describeCommandSchema
         } from "./command-schema";
-import { failure, success } from "./utils";
+import { failure, success, resolveFileByPathOrId } from "./utils";
 import { formatReadOutput } from "@/features/file-system/utils";
+import { FileObject } from "@/features/file-system/objects/file";
+import { fileFormat } from "@/features/file-system/constants";
+import * as fileSystemRepo from "@/features/file-system/repo";
 
 
 const toolSchema = z.discriminatedUnion('cmd', [
     listCommandSchema,
     existsCommandSchema,
     readCommandSchema,
-    statCommandSchema,
-    // diffCommandSchema,
+    describeCommandSchema,
 ]);
 
 export const exploreFileTool = buildBaseTool({
@@ -34,30 +35,30 @@ export const exploreFileTool = buildBaseTool({
                 return executeExistsCommand(input, session.projectId);
             case 'read':
                 return executeReadCommand(input, session.projectId);
-            case 'stat':
-                return executeStatCommand(input, session.projectId);
+            case 'describe':
+                return executeDescribeCommand(input, session.projectId);
             default:
-                return failure('Invalid command received. Valid commands are: list, exists, read, stat.');
+                return failure('Invalid command received. Valid commands are: list, exists, read, describe.');
         }
     }
 });
 
 async function executeListCommand(input: z.infer<typeof listCommandSchema>, projectId: string) {
-    const pathObject = new PathObject();
-    const { fileObject, isRoot } = await pathObject.resolveDirectoryByPath(input.filepath, projectId);
-    // TODO: we will put all the folder inside a created root folder when a new project is created.
-    if (!fileObject) {
-        return failure(`Path "${input.filepath}" is not found`);
+    const result = await resolveFileByPathOrId(input.filePathOrId, projectId);
+    if(!(result instanceof FileObject)){
+        return result;
     }
+    const fileObject = result;
+    
     const response = await fileObject.getDirectChildren()
     if(!response.ok || response.data === null) {
-        return failure(response.error ?? `Failed to list ${input.filepath}`);
+        return failure(response.error ?? `Failed to list directory ${input.filePathOrId}`);
     }
     const children = response.data;
     let output = `Total files: ${children.length}\n---\n`;
     for (let i = 0; i < children.length; i++) {
         const file = children[i];
-        output += `${i + 1}. (${file.isDirectory ? 'directory' : 'file'}) ${file.name} ${file.format ? `[format: ${file.format}]` : ''}\n`;
+        output += `${i + 1}. [ID: ${file.id}] - (${file.isDirectory ? 'directory' : 'file'}) - Name: ${file.name} ${file.format ? `- [format: ${file.format}]` : ''}\n`;
     }
     return success(output);
 }
@@ -68,35 +69,74 @@ async function executeExistsCommand(input: z.infer<typeof existsCommandSchema>, 
     if(!fileObject) {
         return failure(`Path "${input.filepath}" is not found`);
     }
-    return success(`${input.filepath} exists. It's a ${fileObject.isDirectory ? 'directory' : 'file'}.`);
+    return success(`${input.filepath} exists. It's a ${fileObject.isDirectory ? 'directory' : 'file'}. The ID is ${fileObject.id}.`);
 }
 
 async function executeReadCommand(input: z.infer<typeof readCommandSchema>, projectId: string) {
-    const pathObject = new PathObject();
-    const { fileObject } = await pathObject.resolveByPath(input.filepath, projectId);
-    if(!fileObject) {
-        return failure(`Path "${input.filepath}" is not found`);
+    const result = await resolveFileByPathOrId(input.filePathOrId, projectId);
+    if(!(result instanceof FileObject)){
+        return result;
     }
-    const response = await fileObject.getContent();
-    if(!response.ok || response.data === null) {
-        return failure(response.error ?? `The content of the file "${input.filepath}" is not found.`);
-    }
+    const fileObject = result;
+    
+    let content = '';
+    switch(fileObject.format) {
+        case fileFormat.MARKDOWN: {
+            const response = await fileObject.getContent();
+            if(!response.ok || response.data === null) {
+                return failure(response.error ?? `The content of the file is not found.`);
+            }
+            content= formatReadOutput(response.data.content ?? '', input.offset, input.limit);
+            break;
+        }
+        case fileFormat.SKILL:{
+            const skill = await fileSystemRepo.getSkillByFileID(fileObject.id);
+            if(!skill) {
+                return failure(`Skill not found for file ${fileObject.id}`);
+            }
+            content = formatSkill(skill);
+            break;
 
-    const output = formatReadOutput(response.data.content ?? '', input.offset, input.limit);
-    return success(output);
+        }
+        case fileFormat.AI_GENERATED:{
+            content = 'Reading the content of ai-generated files is not yet supported.';
+            break;
+        }
+        case fileFormat.VIDEO_EDITOR:{
+            content = 'This file is a video timeline. Use the `timelineExplore` tool with this file\'s ID to explore the video timeline.';
+            break;
+        }
+        case fileFormat.IMAGE:
+        case fileFormat.VIDEO:
+        case fileFormat.DOCUMENT:
+        case fileFormat.AUDIO:
+            content = `You cannot read the ${fileObject.format} file directly. You need to assign this task to a specialist sub-agent using \`assignTask\` tool.`;
+            break;
+        default:
+            return failure('You are trying to read the content of a file which format is not supported by this tool.');
+    }
+    return success(content);
 }
 
-async function executeStatCommand(input: z.infer<typeof statCommandSchema>, projectId: string) {
-    const pathObject = new PathObject();
-    const { fileObject, isRoot } = await pathObject.resolveByPath(input.filepath, projectId);
-    if(!fileObject) {
-        return failure(`Path "${input.filepath}" is not found`);
+async function executeDescribeCommand(input: z.infer<typeof describeCommandSchema>, projectId: string) {
+    const result = await resolveFileByPathOrId(input.filePathOrId, projectId);
+    if(!(result instanceof FileObject)){
+        return result;
     }
-    const response = await fileObject.stats();
-    if(!response.ok || response.data === null) {
-        return failure(response.error ?? `Failed to get stats of ${input.filepath}`);
-    }
-    const data = response.data;
-    return success(JSON.stringify(data, null, 2));
+    const fileObject = result;
+    const response = await fileObject.describe();
+    return success(JSON.stringify(response.data, null, 2));
+}
+
+function formatSkill(data: {name: string, description: string, instructions: string}) {
+    return `
+Skill details:
+
+---
+name: ${data.name}
+description: ${data.description}
+---
+${data.instructions}
+`.trim()
 }
 

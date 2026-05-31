@@ -13,6 +13,7 @@ import {
 import { FileNodeInsertPosition } from "../payload";
 import { ChunkHit } from "../types";
 import { countLines, countWords, normalizeFileName, serializeFileContent } from "../utils";
+import { getFileNodeById } from "../repo";
 
 
 type FileObjectResponse<T> = {
@@ -67,6 +68,10 @@ export class FileObject {
         return this.fileNode.directory;
     }
 
+    get isRoot(){
+        return this.fileNode.parentId === null && this.fileNode.directory === true;
+    }
+
     async getContent(): Promise<FileObjectResponse<FileNodeContent | null>> {
         if (this.fileNode.directory) {
             return err(`Cannot get content of a directory ${this.fileNode.name}`);
@@ -91,6 +96,17 @@ export class FileObject {
         } catch (error) {
             return err(getErrorMessage(error, `Failed to get children of ${this.fileNode.name}`));
         }
+    }
+
+    async getParent(): Promise<FileObject | null | undefined> {
+        if (!this.fileNode.parentId) {
+            return null;
+        }
+        const parent = await getFileNodeById(this.fileNode.projectId, this.fileNode.parentId);
+        if (!parent) {
+            return;
+        }
+        return new FileObject(parent);
     }
 
     async searchByKeyword(keyword: string, limit = 20): Promise<FileObjectResponse<ChunkHit[] | null>> {
@@ -295,4 +311,27 @@ export class FileObject {
         });
     }
 
+    async describe(): Promise<FileObjectResponse<Record<string, any> | null>> {
+        if (this.fileNode.directory) {
+            const response = await this.getDirectChildren();
+            if (response.error) {
+                return err(response.error);
+            }
+            const children = response.data;
+            return ok({
+                type: 'directory',
+                childrenCount: children?.length ?? 0,
+                isEditable: this.fileNode.editable,
+                lastUpdated: this.fileNode.updatedAt,
+                createdAt: this.fileNode.createdAt,
+            });
+        }
+        return ok({
+            type: 'file',
+            format: this.fileNode.format ?? 'unknown',
+            isEditable: this.fileNode.editable,
+            lastUpdated: this.fileNode.updatedAt,
+            createdAt: this.fileNode.createdAt,
+        });
+    }
 }

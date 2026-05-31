@@ -42,19 +42,31 @@ export class Agent {
     }
 
     async* runLoop(prompt: string, abortSignal: AbortSignal, maxSteps: number = 25): AsyncGenerator<AgentChunk, void, unknown> {
-        this.triggerCallback('start');
-        this.updateStateForStart();
-        this.appendUserMessage(prompt);
-        for(let step = 1; step <= maxSteps; step++){
-            if(['finished', 'error', 'aborted', 'paused'].includes(this.state.status)){
-                break;
+        try {
+            this.updateStateForStart();
+            this.appendUserMessage(prompt);
+            this.triggerCallback('start');
+
+            for(let step = 1; step <= maxSteps; step++){
+                if(['finished', 'error', 'aborted', 'paused'].includes(this.state.status)){
+                    break;
+                }
+                yield* this.runStep(abortSignal);
+                // TODO: Send a final complete event
+                // yield {name: this.name, runId: this.runId!, type: streamEvents.complete, usage: this.state.usage!, text: '', finishReason: this.state.finishReason!};
             }
-            yield* this.runStep(abortSignal);
-            // TODO: Send a final complete event
-            // yield {name: this.name, runId: this.runId!, type: streamEvents.complete, usage: this.state.usage!, text: '', finishReason: this.state.finishReason!};
+        } catch (error) {
+            const errorMessage = this.captureStepError(error);
+            yield this.buildErrorEvent(errorMessage);
+        } finally {
+            try {
+                this.triggerCallback('finish');
+            } catch (error) {
+                console.error('Agent finish callback failed', error);
+            }
+            await this.session.persistState(this.state);
+            yield this.buildUsageEvent();
         }
-        this.triggerCallback('finish');
-        this.session.persistState(this.state);
     }
 
     async* runStep(abortSignal: AbortSignal): AsyncGenerator<AgentChunk, void, unknown> {
@@ -64,6 +76,9 @@ export class Agent {
         const tool_calls: ToolCall[] = [];
         let reasoning_text = '';
         let text = '';
+        let stepError: string | null = null;
+        let assistantMessageRegistered = false;
+        let toolCallsStarted = false;
 
         const billableInput: BillableLlmInput = {
             messages: this.state.messages,
@@ -85,45 +100,65 @@ export class Agent {
             },
         });
 
-        for await (const chunk of billedStream) {
-            switch (chunk.type) {
-                case streamEvents.complete:
-                    this.incrementUsage(chunk.usage);
-                    this.updateStatus(chunk.finishReason, chunk.error);
-                    text = chunk.text;
-                    reasoning_text = chunk.reasoningText ?? '';
-                    break;
-                case streamEvents.toolCall:
-                    tool_calls.push(chunk);
-                    yield this.buildEvent(chunk);
-                    break;
-                default:
-                    yield this.buildEvent(chunk);
+        const registerAssistantMessage = () => {
+            if(assistantMessageRegistered) return;
+
+            const content = this.buildAssistantContent(reasoning_text, text, tool_calls, stepError);
+            if(content.length > 0){
+                this.registerMessage({
+                    role: 'assistant',
+                    content,
+                });
             }
-        }
+            assistantMessageRegistered = true;
+        };
 
-        const content: AssistantContent = []
-        if(reasoning_text){
-            content.push({type: 'reasoning', text: reasoning_text});
-        }
-        if(text){
-            content.push({type: 'text', text});
-        }
-        for(const tool_call of tool_calls){
-            content.push({type: 'tool-call', toolName: tool_call.toolName, input: tool_call.input, toolCallId: tool_call.toolCallId});
-        }
+        try {
+            for await (const chunk of billedStream) {
+                switch (chunk.type) {
+                    case streamEvents.textDelta:
+                        text += chunk.text;
+                        yield this.buildEvent(chunk);
+                        break;
+                    case streamEvents.reasoningDelta:
+                        reasoning_text += chunk.text;
+                        yield this.buildEvent(chunk);
+                        break;
+                    case streamEvents.error:
+                        stepError = chunk.error;
+                        this.captureStepError(chunk.error);
+                        yield this.buildEvent(chunk);
+                        break;
+                    case streamEvents.complete:
+                        this.incrementUsage(chunk.usage);
+                        this.updateStatus(chunk.finishReason, chunk.error);
+                        text = chunk.text || text;
+                        reasoning_text = chunk.reasoningText ?? reasoning_text;
+                        stepError = chunk.finishReason === 'error' ? chunk.error ?? stepError ?? 'Unknown agent error' : stepError;
+                        break;
+                    case streamEvents.toolCall:
+                        tool_calls.push(chunk);
+                        yield this.buildEvent(chunk);
+                        break;
+                    default:
+                        yield this.buildEvent(chunk);
+                }
+            }
 
-        const assistant_message: ModelMessage = {
-            role: 'assistant',
-            content,
-        }
+            registerAssistantMessage();
 
-        if(content.length > 0){
-            this.registerMessage(assistant_message);
-        }
-
-        if(tool_calls.length > 0){
-            yield* this.runToolCalls(tool_calls);
+            if(tool_calls.length > 0 && !stepError && !['error', 'aborted'].includes(this.state.status)){
+                toolCallsStarted = true;
+                yield* this.runToolCalls(tool_calls);
+            }
+        } catch (error) {
+            stepError = this.captureStepError(error);
+            yield this.buildErrorEvent(stepError);
+        } finally {
+            registerAssistantMessage();
+            if(stepError && tool_calls.length > 0 && !toolCallsStarted){
+                this.appendToolCallErrors(tool_calls, `Tool call was not executed because the step failed: ${stepError}`);
+            }
         }
     }
     
@@ -155,7 +190,7 @@ export class Agent {
                 break;
             case 'error':
                 this.state.status = 'error';
-                this.state.error = error ?? null;
+                this.state.error = error ?? 'Unknown agent error';
                 break;
             case 'tool-calls':
                 break;
@@ -214,12 +249,15 @@ export class Agent {
     private async* runToolCalls(tool_calls: ToolCall[]): AsyncGenerator<AgentChunk, void, unknown> {
         const generators: AsyncGenerator<ToolResultComplete | AgentChunk, void, unknown>[] = [];
         const invalidTools: {toolCallId: string, toolName: string}[] = [];
+        const validToolCalls: ToolCall[] = [];
+        const completedToolCallIds = new Set<string>();
         for(const tool_call of tool_calls){
             const tool = getTool(tool_call.toolName);
             if(!tool){
                 invalidTools.push({toolCallId: tool_call.toolCallId, toolName: tool_call.toolName});
                 continue;
             }
+            validToolCalls.push(tool_call);
             generators.push(tool.execute(tool_call, this.session, this.state));
         }
 
@@ -227,15 +265,79 @@ export class Agent {
             this.appendBadToolNames(invalidTools);
         }
 
-        for await (const chunk of mergeGenerators(...generators)){
-            if(chunk.type === streamEvents.toolResultComplete){
-                this.updateToolResults(chunk);
-            }else{
-                yield chunk;
+        try {
+            for await (const chunk of mergeGenerators(...generators)){
+                if(chunk.type === streamEvents.toolResultComplete){
+                    completedToolCallIds.add(chunk.toolCallId);
+                    this.updateToolResults(chunk);
+                }else{
+                    yield chunk;
+                }
             }
+        } catch (error) {
+            const errorMessage = this.errorToMessage(error);
+            const incompleteToolCalls = validToolCalls.filter((toolCall) => !completedToolCallIds.has(toolCall.toolCallId));
+            this.appendToolCallErrors(incompleteToolCalls, errorMessage);
+            throw error;
         }
     }
 
+    private buildAssistantContent(reasoningText: string, text: string, toolCalls: ToolCall[], stepError: string | null): AssistantContent {
+        const content: AssistantContent = [];
+        if(reasoningText){
+            content.push({type: 'reasoning', text: reasoningText});
+        }
+        if(text){
+            content.push({type: 'text', text});
+        }
+        if(stepError){
+            content.push({type: 'text', text: `Step failed: ${stepError}`});
+        }
+        for(const tool_call of toolCalls){
+            content.push({type: 'tool-call', toolName: tool_call.toolName, input: tool_call.input, toolCallId: tool_call.toolCallId});
+        }
+        return content;
+    }
+
+    private captureStepError(error: unknown): string {
+        const message = this.errorToMessage(error);
+        if(error instanceof Error && error.name === 'AbortError'){
+            this.state.status = 'aborted';
+            this.state.finishReason = 'abort';
+        }else{
+            this.state.status = 'error';
+            this.state.finishReason = 'error';
+        }
+        this.state.error = message;
+        return message;
+    }
+
+    private errorToMessage(error: unknown): string {
+        if(error instanceof Error){
+            return error.message;
+        }
+        return String(error);
+    }
+
+    private appendToolCallErrors(toolCalls: ToolCall[], errorMessage: string) {
+        if(toolCalls.length === 0) return;
+
+        const msgs: ToolModelMessage[] = toolCalls.map((toolCall) => ({
+            role: 'tool',
+            content: [
+                {
+                    type: 'tool-result',
+                    toolCallId: toolCall.toolCallId,
+                    toolName: toolCall.toolName,
+                    output: {
+                        type: 'error-text',
+                        value: errorMessage,
+                    },
+                },
+            ],
+        }));
+        this.registerMessage(msgs);
+    }
 
     private updateToolResults(result: ToolResultComplete) {
         const msg: ToolModelMessage = {
@@ -287,9 +389,41 @@ export class Agent {
     private buildEvent(chunk: LlmChunk): AgentChunk {
         return {
             name: this.name,
-            runId: this.runId!,
+            runId: this.ensureRunId(),
             ...chunk,
         }
+    }
+
+    private buildErrorEvent(error: string): AgentChunk {
+        return this.buildEvent({
+            type: streamEvents.error,
+            error,
+        });
+    }
+
+    private buildUsageEvent(): AgentChunk {
+        return this.buildEvent({
+            type: streamEvents.usage,
+            usage: this.state.usage ?? this.emptyUsage(),
+        });
+    }
+
+    private emptyUsage(): TokenUsage {
+        return {
+            input: 0,
+            output: 0,
+            reasoning: 0,
+            cached: 0,
+            total: 0,
+            modelId: this.session.model.id,
+        };
+    }
+
+    private ensureRunId(): string {
+        if(!this.runId){
+            this.runId = uuidv4();
+        }
+        return this.runId;
     }
 
     registerCallback(event: CallbackEvent, handler: CallbackHandler) {

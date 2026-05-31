@@ -70,19 +70,11 @@ export class BaseTool<T extends z.ZodSchema>{
     }
 
     private validateInput(input: z.infer<T>): z.core.output<T>{
-        console.log('input', input);
-        console.log(typeof input);
-        try {
-            const validated = this.params.inputSchema.safeParse(input);
-            if(!validated.success){
-                throw new Error(`Your input is invalid: ${validated.error.message}. The expected input is:\n ${JSON.stringify(toJSONSchema(this.params.inputSchema))}.`);
-            }
-            return validated.data;
-            
-        } catch (error) {
-            throw new Error(`Your provided input is not a valid JSON object`)
-            
+        const validated = this.params.inputSchema.safeParse(input);
+        if(!validated.success){
+            throw new Error(`Your input is invalid: ${validated.error.message}. The expected input is:\n ${JSON.stringify(toJSONSchema(this.params.inputSchema))}.`);
         }
+        return validated.data;
     }
 
     private buildEvent(toolCall: ToolCall, result: ToolResult): ToolResultComplete{

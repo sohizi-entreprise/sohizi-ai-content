@@ -1,0 +1,1 @@
+ALTER TABLE "messages" ADD COLUMN "position" serial NOT NULL;

@@ -31,7 +31,7 @@ export interface Billable<TInput, TOutput> {
   ttlMs?: number
   estimateCost(input: TInput): Credits | Promise<Credits>
   execute(input: TInput, ctx: BillableContext): Promise<BillableResult<TOutput>>
-  idempotencyKey(input: TInput, ctx: { organizationId: string; userId?: string | null }): string
+  idempotencyKey(input: TInput, ctx: { organizationId: string; userId?: string | null; metadata?: Record<string, unknown> }): string
 }
 
 /**
@@ -52,7 +52,7 @@ export interface BillableStream<TInput, TChunk> {
    * the actual credits to settle. Return `null` for non-terminal chunks.
    */
   terminalCredits(chunk: TChunk): Credits | null
-  idempotencyKey(input: TInput, ctx: { organizationId: string; userId?: string | null }): string
+  idempotencyKey(input: TInput, ctx: { organizationId: string; userId?: string | null; metadata?: Record<string, unknown> }): string
 }
 
 /**
@@ -66,7 +66,7 @@ export interface BillableAsync<TInput, TJobHandle> {
   ttlMs?: number
   estimateCost(input: TInput): Credits | Promise<Credits>
   submit(input: TInput, ctx: BillableContext): Promise<TJobHandle>
-  idempotencyKey(input: TInput, ctx: { organizationId: string; userId?: string | null }): string
+  idempotencyKey(input: TInput, ctx: { organizationId: string; userId?: string | null; metadata?: Record<string, unknown> }): string
 }
 
 export interface ReserveInput {
