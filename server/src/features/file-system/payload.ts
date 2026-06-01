@@ -126,6 +126,7 @@ export const compactTextDiffSchema = z.object({
 
 export const updateTextFileContentRequestSchema = z.object({
     content: z.string().optional(),
+    diffApplied: z.boolean().default(false),
     diff: compactTextDiffSchema.optional(),
     baseRevision: z.number().int().positive().optional(),
 }).superRefine((data, ctx) => {

@@ -55,13 +55,6 @@
   text-underline-offset: 0.18em;
 }
 
-.tiptap-editor-content mark {
-  border-radius: 0.25rem;
-  background: color-mix(in oklch, var(--primary) 18%, transparent);
-  color: var(--foreground);
-  padding: 0.08rem 0.18rem;
-}
-
 .tiptap-editor-content a {
   color: var(--primary);
   text-decoration: underline;
@@ -404,6 +397,28 @@
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+/* Diff blocks (headings, lists, etc. wrapped in [-...-] / {+...+}) */
+.tiptap-editor-content .diff-block-addition {
+  border-left: 3px solid oklch(0.55 0.15 145);
+  background: oklch(0.92 0.12 145 / 0.35);
+  border-radius: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  margin: 0.35rem 0;
+}
+
+.tiptap-editor-content .diff-block-deletion {
+  border-left: 3px solid oklch(0.55 0.2 25);
+  background: oklch(0.92 0.1 25 / 0.35);
+  border-radius: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  margin: 0.35rem 0;
+}
+
+.tiptap-editor-content .diff-block-deletion :is(h1, h2, h3, p, li) {
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.55 0.2 25);
 }
 
 /* Patch diff marks */

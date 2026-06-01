@@ -269,6 +269,27 @@ export type ChatCompletionRequest = {
   editorContext?: Record<string, unknown>;
 }
 
+export type DeleteOperation = {
+  type: 'delete';
+  fileId: string;
+  fileName: string;
+}
+
+export type RefreshOperation = {
+  type: 'refresh';
+  fileId: string;
+  fileName: string;
+}
+
+export type PatchOperation = {
+  type: 'patch';
+  content: string;
+  fileId: string;
+  fileName: string;
+}
+
+export type FilePendingOperation = DeleteOperation | PatchOperation | RefreshOperation
+
 export type ChatStreamChunk = {
   name: string;
   runId: string;
@@ -284,6 +305,7 @@ export type ChatStreamChunk = {
   | { type: 'error'; error: string }
   | { type: 'abort' }
   | { type: 'identifier'; conversationId: string, conversationTitle: string }
+  | { type: 'operation'; operation: FilePendingOperation }
 )
 
 export type LlmModel = {

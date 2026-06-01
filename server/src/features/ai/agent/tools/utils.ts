@@ -2,9 +2,10 @@ import type { ToolResult } from "./tool-definition";
 import { validate as validateUuid } from 'uuid';
 import { FileObject } from "@/features/file-system/objects/file";
 import { PathObject } from "@/features/file-system/objects/path";
+import { FilePendingOperation } from "@/type";
 
-export function success(output: string): ToolResult {
-    return { success: true, output };
+export function success(output: string, operation?: FilePendingOperation[]): ToolResult {
+    return { success: true, output, operation };
 }
 
 export function failure(output: string): ToolResult {
@@ -36,4 +37,16 @@ export async function resolveFileByPathOrId(filePathOrId: string | undefined, pr
         return failure('File not found');
     }
     return fileObjectRef;
+}
+
+export function formatSkill(data: {name: string, description: string, instructions: string}) {
+    return `
+Skill details:
+
+---
+name: ${data.name}
+description: ${data.description}
+---
+${data.instructions}
+`.trim()
 }

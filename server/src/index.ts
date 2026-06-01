@@ -8,6 +8,10 @@ import { serve } from "inngest/bun";
 import { auth } from "@/lib/auth";
 import { billingService, InsufficientCreditsError } from "@/features/billing";
 
+
+// 2. Set the global to false BEFORE importing your AI logic
+globalThis.AI_SDK_LOG_WARNINGS = false;
+
 const corsConfig = {
   origin: ['http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

@@ -48,6 +48,9 @@ export const fileSystemRoutes = new Elysia({ prefix: '/projects/:projectId/files
       limit: z.coerce.number().int().positive().optional(),
     })
   })
+  .get('/pending-operations', ({params})=>{
+    return fileService.listPendingFileOperations(params.projectId)
+  })
   .guard({
     params: paramsSchema
   })
@@ -87,4 +90,14 @@ export const fileSystemRoutes = new Elysia({ prefix: '/projects/:projectId/files
       anchorId: z.string().nullable().optional(),
       position: fileNodeInsertPositionSchema,
     })
+  })
+  .get('/:id/pending-operations', ({params})=>{
+    return fileService.getPendingFileOperation(params.projectId, params.id)
+  }, {
+    params: paramsSchema
+  })
+  .delete('/:id/pending-operations', ({params})=>{
+    return fileService.deletePendingFileOperation(params.projectId, params.id)
+  }, {
+    params: paramsSchema
   })

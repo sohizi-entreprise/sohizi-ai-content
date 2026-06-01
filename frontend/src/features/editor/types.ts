@@ -197,3 +197,33 @@ export type VideoClips = {
   sourceStartFrame: number;
   sourceDurationInFrames: number;
 }
+
+// ========================== PENDING OPERATIONS ==========================
+export type PatchOperation = {
+  type: 'patch';
+  content: string;
+  fileId: string;
+  fileName: string;
+}
+
+export type DeleteOperation = {
+  type: 'delete';
+  fileId: string;
+  fileName: string;
+}
+
+export type RefreshOperation = {
+  type: 'refresh';
+  fileId: string;
+  fileName: string;
+}
+
+export type PendingFileOperation = {
+  id: string;
+  fileNodeId: string;
+  operation: 'patch' | 'delete' | 'refresh';
+  payload: PatchOperation | DeleteOperation | RefreshOperation;
+  diffApplied: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

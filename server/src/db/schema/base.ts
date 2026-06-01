@@ -542,12 +542,15 @@ export const skillCategories = pgTable('skill_categories', {
 // Those are patches that users can approve or reject
 export const pendingFileOperations = pgTable('pending_file_operations', {
   id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
   fileNodeId: uuid('file_node_id').references(() => fileNodes.id, { onDelete: 'cascade' }).notNull(),
   operation: varchar('operation', { length: 50 }).$type<FileOperationType>().notNull(),
   payload: jsonb('payload').$type<FilePendingOperation>().notNull(),
+  diffApplied: boolean('diff_applied').default(false).notNull(),
   ...timestamps,
 }, (table) => ([
-  index('pending_file_operations_file_node_id_idx').on(table.fileNodeId),
+  uniqueIndex('pending_file_operations_file_node_id_unique').on(table.fileNodeId),
+  index('pending_file_operations_project_id_idx').on(table.projectId),
 ]))
 
 
@@ -573,4 +576,5 @@ export const pendingFileOperations = pgTable('pending_file_operations', {
   export type VideoTrack = typeof videoTracks.$inferSelect
   export type VideoClip = typeof videoClips.$inferSelect
   export type Template = typeof templates.$inferSelect
+  export type PendingFileOperation = typeof pendingFileOperations.$inferSelect
   

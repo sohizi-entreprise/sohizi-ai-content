@@ -12,6 +12,7 @@ import DiffWorker from '@/lib/workers/diff-worker?worker'
 
 export type AutosavePayload = {
   content: string
+  diffApplied?: boolean
 }
 
 type UseAutosaveOptions = {
@@ -47,7 +48,7 @@ export function useAutoSave({
   onSaveErrorRef.current = onSaveError
 
   const runSave = useCallback(
-    async (content: string) => {
+    async (content: string, diffApplied?: boolean) => {
       if (isSavingRef.current) {
         pendingContentRef.current = content
         return
@@ -55,7 +56,7 @@ export function useAutoSave({
 
       isSavingRef.current = true
       try {
-        await saveFileContent(content)
+        await saveFileContent({ content, diffApplied })
         onSaveCompleteRef.current?.()
         setSavingStatus(fileId, 'saved')
       } catch (error) {
@@ -70,7 +71,7 @@ export function useAutoSave({
         pendingContentRef.current = null
 
         if (pendingContent !== null && projectId && fileId) {
-          void runSave(pendingContent)
+          void runSave(pendingContent, diffApplied)
         }
       }
     },
@@ -79,7 +80,7 @@ export function useAutoSave({
 
   const save = useCallback(
     (payload: AutosavePayload) => {
-      const { content } = payload
+      const { content, diffApplied } = payload
 
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
@@ -89,7 +90,7 @@ export function useAutoSave({
 
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null
-        void runSave(content)
+        void runSave(content, diffApplied)
       }, duration)
     },
     [duration, fileId, projectId, runSave, setSavingStatus],

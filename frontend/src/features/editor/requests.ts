@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { FileContentResponse, Skill } from './types'
+import type { FileContentResponse, Skill, PendingFileOperation } from './types'
 
 export type CursorPaginationOptions = {
   cursor?: string
@@ -30,10 +30,11 @@ export const saveFileContent = async (
   projectId: string,
   fileId: string,
   content: string,
+  diffApplied?: boolean,
 ): Promise<{ content: string; revision: number }> => {
   const response = await api.put(
     `/projects/${projectId}/files/${fileId}/content`,
-    { content },
+    { content, diffApplied },
   )
   return response.data
 }
@@ -65,5 +66,20 @@ export const saveSkill = async (
     `/projects/${projectId}/files/${fileId}/skill`,
     skill,
   )
+  return response.data
+}
+
+export const listPendingOperations = async (projectId: string): Promise<Array<PendingFileOperation>> => {
+  const response = await api.get(`/projects/${projectId}/files/pending-operations`)
+  return response.data
+}
+
+export const getPendingOperation = async (projectId: string, fileId: string): Promise<{operation: PendingFileOperation | null}> => {
+  const response = await api.get(`/projects/${projectId}/files/${fileId}/pending-operations`)
+  return response.data
+}
+
+export const deletePendingOperation = async (projectId: string, fileId: string): Promise<{ok: boolean}> => {
+  const response = await api.delete(`/projects/${projectId}/files/${fileId}/pending-operations`)
   return response.data
 }

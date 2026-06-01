@@ -1,17 +1,18 @@
 import { z, toJSONSchema } from "zod";
-import { AgenticToolChunk, streamEvents, ToolCall, ToolResultComplete } from "../utils/llm-response";
+import { AgenticToolChunk, OperationChunk, streamEvents, ToolCall, ToolResultComplete } from "../utils/llm-response";
 import { AgentChunk, Agent } from "../core/agent";
 import { Session } from "../core/session";
-import { AgentState } from "@/type";
+import { AgentState, FilePendingOperation } from "@/type";
 import { Tool, ToolSet } from "ai";
 
 export type ToolResult = {
     success: boolean;
     output: string;
     metadata?: Record<string, unknown>;
+    operation?: FilePendingOperation[];
 }
 
-type AgenticToolResult = AgentChunk | AgenticToolChunk;
+type AgenticToolResult = AgentChunk | AgenticToolChunk | OperationChunk;
 
 interface BaseToolDefinition<T extends z.ZodSchema> {
     name: string;
@@ -34,7 +35,7 @@ export class BaseTool<T extends z.ZodSchema>{
         }
     }
 
-    async* execute(toolCall: ToolCall, session: Session, state: AgentState): AsyncGenerator<ToolResultComplete | AgentChunk, void, unknown>{
+    async* execute(toolCall: ToolCall, session: Session, state: AgentState): AsyncGenerator<ToolResultComplete | AgentChunk | OperationChunk, void, unknown>{
         try {
             const args = this.validateInput(toolCall.input as z.infer<T>);
             const isGenerator = this.params.execute.constructor.name === "AsyncGeneratorFunction";
@@ -54,8 +55,17 @@ export class BaseTool<T extends z.ZodSchema>{
                         yield chunk;
                     }
                 }
-                yield* (result as AsyncGenerator<AgentChunk, void, unknown>);
+                // yield* (result as AsyncGenerator<AgentChunk, void, unknown>);
             } else {
+                if('operation' in result && result.operation){
+                    const operations = result.operation.map((operation) => ({
+                        type: streamEvents.operation,
+                        operation,
+                    }));
+                    for(const operation of operations){
+                        yield operation;
+                    }
+                }
                 const event = this.buildEvent(toolCall, result as ToolResult);
                 yield event;
             }

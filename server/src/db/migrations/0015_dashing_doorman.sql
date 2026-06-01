@@ -1,0 +1,2 @@
+DROP INDEX "pending_file_operations_file_node_id_operation_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "pending_file_operations_file_node_id_unique" ON "pending_file_operations" USING btree ("file_node_id");

@@ -196,21 +196,25 @@ export type ImageMediaClipProperties = {
   heightRatio: number
 }
 
-export type FileOperationType = 'overwrite' | 'append' | 'patch'
+export type FileOperationType = 'delete' | 'patch' | 'refresh'
 
-export type OverwriteOperation = {
-  type: 'overwrite';
-  content: string;
+export type DeleteOperation = {
+  type: 'delete';
+  fileId: string;
+  fileName: string;
 }
-export type AppendOperation = {
-  type: 'append';
-  content: string;
+
+export type RefreshOperation = {
+  type: 'refresh';
+  fileId: string;
+  fileName: string;
 }
+
 export type PatchOperation = {
   type: 'patch';
-  oldText: string;
-  newText: string;
-  replaceAll: boolean;
+  content: string;
+  fileId: string;
+  fileName: string;
 }
 
-export type FilePendingOperation = OverwriteOperation | AppendOperation | PatchOperation
+export type FilePendingOperation = DeleteOperation | PatchOperation | RefreshOperation

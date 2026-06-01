@@ -1130,22 +1130,44 @@ export const updateSkill = async(fileId: string, request: UpdateSkillRequest) =>
     return response[0];
 }
 
-export const createPendingFileOperation = async(fileNodeId: string, payload: FilePendingOperation) => {
+export const upsertPendingFileOperation = async(projectId: string, fileNodeId: string, payload: FilePendingOperation) => {
     const response = await db.insert(pendingFileOperations).values({
+        projectId,
         fileNodeId,
         operation: payload.type,
         payload,
+    }).onConflictDoUpdate({
+        target: [pendingFileOperations.fileNodeId],
+        set: {
+            payload: payload,
+            operation: payload.type,
+            diffApplied: false,
+        },
     }).returning();
+
     return response[0];
 }
 
-export const listPendingFileOperations = async(fileNodeId: string) => {
-    const response = await db.select().from(pendingFileOperations).where(eq(pendingFileOperations.fileNodeId, fileNodeId));
+export const listPendingFileOperations = async(projectId: string) => {
+    const response = await db.select().from(pendingFileOperations).where(eq(pendingFileOperations.projectId, projectId));
     return response;
 }
 
-export const deletePendingFileOperation = async(id: string) => {
-    const response = await db.delete(pendingFileOperations).where(eq(pendingFileOperations.id, id));
+export const getPendingFileOperation = async(fileNodeId: string) => {
+    const response = await db.select().from(pendingFileOperations).where(eq(pendingFileOperations.fileNodeId, fileNodeId));
+    return response[0] ?? null;
+}
+
+export const deletePendingFileOperation = async(fileNodeId: string) => {
+    const response = await db.delete(pendingFileOperations).where(eq(pendingFileOperations.fileNodeId, fileNodeId));
+    if(response.rowCount === 0) {
+        return false;
+    }
+    return true;
+}
+
+export const markPendingFileOperationDiffApplied = async(fileNodeId: string) => {
+    const response = await db.update(pendingFileOperations).set({ diffApplied: true }).where(eq(pendingFileOperations.fileNodeId, fileNodeId));
     if(response.rowCount === 0) {
         return false;
     }

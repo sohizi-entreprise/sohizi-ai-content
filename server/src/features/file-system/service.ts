@@ -118,7 +118,11 @@ export const updateFileContent = async(projectId: string, fileNodeId: string, da
             return updated;
         }
 
-        return await updateFileContentFn(projectId, fileNodeId, { content: data.content ?? '' });
+        const updatedFileContent = await updateFileContentFn(projectId, fileNodeId, { content: data.content ?? '' });
+        if (data.diffApplied) {
+            await fileSystemRepo.markPendingFileOperationDiffApplied(fileNodeId);
+        }
+        return updatedFileContent;
     } catch (error) {
         if (error instanceof Conflict) {
             throw error;
@@ -284,6 +288,29 @@ export const updateSkill = async(projectId: string, fileId: string, request: Upd
     return skill;
 }
 
+// ============================== PENDING FILE OPERATIONS ==============================
+
+export const listPendingFileOperations = async(projectId: string) => {
+    await validateProject(projectId);
+    return fileSystemRepo.listPendingFileOperations(projectId);
+}
+
+export const getPendingFileOperation = async(projectId: string, fileNodeId: string) => {
+    await validateProject(projectId);
+    const pendingOperation = await fileSystemRepo.getPendingFileOperation(fileNodeId);
+    return {
+        operation: pendingOperation,
+    }
+}
+
+export const deletePendingFileOperation = async(projectId: string, fileNodeId: string) => {
+    await validateProject(projectId);
+    return {
+        ok: await fileSystemRepo.deletePendingFileOperation(fileNodeId),
+    }
+}
+
+// ============================== HELPER FUNCTIONS ==============================
 async function validateProject(projectId: string) {
     const project = await projectRepo.getProjectById(projectId);
     if (!project) {

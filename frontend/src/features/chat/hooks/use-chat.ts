@@ -7,6 +7,8 @@ import { completeChat, type CursorPaginationResult } from '../requests'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { getMessageQueryKey, getConversationQueryKey } from '../query-mutation'
+import { getPendingOperationQueryKey } from '@/features/editor/query-mutations'
+import { PendingFileOperation } from '@/features/editor/types'
 
 type ChatInfiniteData<T> = InfiniteData<CursorPaginationResult<T>, string | undefined>
 
@@ -63,6 +65,26 @@ export const useSendMessage = (projectId: string) => {
           await queryClient.cancelQueries({ queryKey: getMessageQueryKey(projectId, chunk.conversationId) })
           updateMessagesCache(queryClient, projectId, chunk.conversationId, [userMsg])
 
+        }
+        if(chunk.type === 'operation'){
+          const operation = chunk.operation
+          const fileId = operation.fileId
+          if(operation.type === 'patch'){
+            const patchOperation: PendingFileOperation = {
+              id: uuidv4(),
+              fileNodeId: fileId,
+              operation: operation.type,
+              payload: operation,
+              diffApplied: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+            queryClient.setQueryData(getPendingOperationQueryKey(projectId, fileId), {operation: patchOperation})
+          }else{
+            // TODO: handle when file is deleted, created, renamed or moved
+          }
+  
+          continue;
         }
         appendChunk(chunk)
       }

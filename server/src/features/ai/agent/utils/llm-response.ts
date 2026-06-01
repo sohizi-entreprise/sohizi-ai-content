@@ -1,4 +1,4 @@
-import { CompleteReason, TokenUsage } from "@/type";
+import { CompleteReason, FilePendingOperation, TokenUsage } from "@/type";
 
 export const streamEvents = {
     textDelta: 'text_delta',
@@ -13,6 +13,7 @@ export const streamEvents = {
     toolCallEnd: 'tool_call_end',
     toolResultDelta: 'tool_result_delta',
     toolResultComplete: 'tool_result_complete',
+    operation: 'operation',
 } as const;
 
 
@@ -40,6 +41,11 @@ export type AgenticToolChunk = {
     output: string;
     usage: Omit<TokenUsage, 'modelId'>;
     metadata?: Record<string, unknown>;
+}
+
+export type OperationChunk = {
+    type: typeof streamEvents.operation;
+    operation: FilePendingOperation;
 }
 
 export type ToolResultEvent = ToolResultDelta | ToolResultComplete;

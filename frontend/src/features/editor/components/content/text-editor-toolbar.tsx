@@ -29,6 +29,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { IconHighlight } from '@tabler/icons-react'
 
 export default function TextEditorToolbar({
   editor,
@@ -53,6 +54,9 @@ export default function TextEditorToolbar({
       isAlignLeft: currentEditor.isActive({ textAlign: 'left' }),
       isAlignCenter: currentEditor.isActive({ textAlign: 'center' }),
       isAlignRight: currentEditor.isActive({ textAlign: 'right' }),
+      characterCount: currentEditor.storage.characterCount?.characters() || 0,
+      wordCount: currentEditor.storage.characterCount?.words() || 0,
+      isHighlight: currentEditor.isActive('highlight'),
     }),
   })
 
@@ -142,6 +146,13 @@ export default function TextEditorToolbar({
       isActive: editorState.isBulletList,
       separator: true,
     },
+    {
+      label: 'Highlight',
+      icon: <IconHighlight className="size-4" />,
+      onClick: () => editor.chain().focus().toggleHighlight().run(),
+      isActive: editorState.isHighlight,
+      separator: true,
+    },
   ]
 
   const imageLayouts: Array<{ label: string; layout: ImageLayoutType }> = [
@@ -197,7 +208,10 @@ export default function TextEditorToolbar({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      <div className="ml-auto text-xs text-muted-foreground">
+      <div className="ml-auto text-xs text-muted-foreground flex items-center gap-2">
+        <span>
+          {editorState.characterCount} / 75000
+        </span>
         <SavingStatus status={savingStatus} />
       </div>
     </div>

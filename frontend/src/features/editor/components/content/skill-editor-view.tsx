@@ -5,14 +5,11 @@ import { Markdown, MarkdownManager } from '@tiptap/markdown'
 import { useParams } from '@tanstack/react-router'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import { CharacterCount } from '@tiptap/extension-character-count'
 import { useMemo } from 'react'
 import TextEditorBubbleMenu from '../text-editor-extensions/bubble-menu'
 import { useSkillAutosave } from '../../hooks/use-autosave'
 import { serializeMarkdownWithTextAlign } from '../../extensions/markdown-text-align'
-import {
-  PatchAdditionMark,
-  PatchDeletionMark,
-} from '../../extensions/patch-diff'
 import {
   FileMention,
   createFileMentionSuggestion,
@@ -24,6 +21,8 @@ import type { EditorTab } from '../../types'
 import type { JSONContent } from '@tiptap/react'
 import { useFileMentionSearch } from '@/hooks/use-file-mention-search'
 import './text-editor.css'
+import { useEditorInputBridge } from '../../bridge/use-editor-input-bridge'
+import { MAX_CHARACTER_COUNT } from '../../constants'
 
 const SkillDocument = Node.create({
   name: 'doc',
@@ -110,8 +109,6 @@ const markdownContentExtensions = [
   TextAlign.configure({
     types: ['heading', 'paragraph'],
   }),
-  PatchAdditionMark,
-  PatchDeletionMark,
   FileMention,
   ImageLayout,
 ]
@@ -132,11 +129,12 @@ const skillEditorExtensions = [
     document: false,
     heading: { levels: [1, 2, 3] },
   }),
+  CharacterCount.configure({
+    limit: MAX_CHARACTER_COUNT,
+  }),
   TextAlign.configure({
     types: ['heading', 'paragraph'],
   }),
-  PatchAdditionMark,
-  PatchDeletionMark,
   ImageLayout,
   Markdown.configure({
     markedOptions: {
@@ -264,6 +262,9 @@ export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
     fileId: tab.id,
   })
 
+  const setEditor = useEditorInputBridge((state) => state.setEditor)
+  const clearEditor = useEditorInputBridge((state) => state.clearEditor)
+
   const searchFiles = useFileMentionSearch(projectId)
   const fileMentionSuggestion = useMemo(
     () => createFileMentionSuggestion(searchFiles),
@@ -299,6 +300,12 @@ export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
         description: skill.description,
         instructions: skill.instruction,
       })
+    },
+    onCreate: ({ editor: createdEditor }) => {
+      setEditor(createdEditor)
+    },
+    onDestroy: () => {
+      clearEditor(editor)
     },
   })
 

@@ -7,6 +7,8 @@ import * as fileSystemRepo from "@/features/file-system/repo";
 import { normalizeFileName } from "@/features/file-system/utils";
 import { failure, success, resolveFileByPathOrId } from "./utils";
 import { getErrorMessage } from "@/utils/get-error-message";
+import { PatchOperation, RefreshOperation } from "@/type";
+import { Session } from "../core/session";
 
 const toolSchema = z.discriminatedUnion('cmd', [
     writeCommandSchema,
@@ -18,26 +20,6 @@ const toolSchema = z.discriminatedUnion('cmd', [
     renameCommandSchema
 ]);
 
-type OverwriteOperation = {
-    type: 'overwrite';
-    content: string;
-    fileId: string;
-}
-
-type PatchOperation = {
-    type: 'patch';
-    oldText: string;
-    newText: string;
-    replaceAll: boolean;
-    fileId: string;
-}
-
-type RefreshOperation = {
-    type: 'refresh';
-    fileId: string | null;
-}
-
-type WriteOperation = OverwriteOperation | PatchOperation;
 
 export const editFileTool = buildBaseTool({
     name: "editFile",
@@ -49,11 +31,11 @@ export const editFileTool = buildBaseTool({
         const command = input.command;
         switch (command.cmd) {
             case 'write':
-                return executeWriteCommand(command, session.projectId);
+                return executeWriteCommand(command, session);
             case 'patch':
-                return executePatchCommand(command, session.projectId);
+                return executePatchCommand(command, session);
             case 'delete':
-                return executeDeleteCommand(command, session.projectId);
+                return executeDeleteCommand(command, session);
             case 'move':
                 return executeMoveCommand(command, session.projectId);
             case 'copy':
@@ -68,9 +50,9 @@ export const editFileTool = buildBaseTool({
     }
 });
 
-async function executeWriteCommand(input: z.infer<typeof writeCommandSchema>, projectId: string) {
+async function executeWriteCommand(input: z.infer<typeof writeCommandSchema>, session: Session) {
     const { filePathOrId, content, strategy } = input;
-    const result = await resolveFileByPathOrId(filePathOrId, projectId);
+    const result = await resolveFileByPathOrId(filePathOrId, session.projectId);
     if(!(result instanceof FileObject)){
         return result;
     }
@@ -80,20 +62,42 @@ async function executeWriteCommand(input: z.infer<typeof writeCommandSchema>, pr
     if(fileObjectRef.isDirectory){
         return failure(`Cannot write to directory.`);
     }
+    if(fileObjectRef.format === null){
+        return failure(`The file format is corrupted. You cannot write to it.`);
+    }
 
-    const operation: WriteOperation = {
-        type: 'overwrite',
-        content,
+    const currentContent = await session.getFileContent(fileObjectRef.id, fileObjectRef.format);
+
+    let finalContent = currentContent ?? '';
+
+    if(strategy === 'overwrite'){
+        finalContent = content;
+    } else if(strategy === 'append'){
+        finalContent = currentContent + ' ' + content;
+    }
+    
+
+    const operation: PatchOperation = {
+        type: 'patch',
+        content: finalContent,
         fileId: fileObjectRef.id,
+        fileName: fileObjectRef.name,
     };
-    // TODO: stream the operation to the user
 
-    return success(`Content written and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`);
+    await fileSystemRepo.upsertPendingFileOperation(session.projectId, fileObjectRef.id, operation);
+
+    // We update the file cache to make sure that the next read operation will use the latest content.
+    session.updateFileCache(fileObjectRef.id, finalContent);
+
+
+    const message = `Content written and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`
+
+    return success(message, [operation]);
 }
 
-async function executePatchCommand(input: z.infer<typeof patchCommandSchema>, projectId: string) {
+async function executePatchCommand(input: z.infer<typeof patchCommandSchema>, session: Session) {
     const { filePathOrId, oldText, newText, replaceAll } = input;
-    const result = await resolveFileByPathOrId(filePathOrId, projectId);
+    const result = await resolveFileByPathOrId(filePathOrId, session.projectId);
     if(!(result instanceof FileObject)){
         return result;
     }
@@ -103,21 +107,38 @@ async function executePatchCommand(input: z.infer<typeof patchCommandSchema>, pr
     if(fileObjectRef.isDirectory){
         return failure(`Cannot patch directory.`);
     }
+    if(fileObjectRef.format === null){
+        return failure(`The file format is corrupted. You cannot patch it.`);
+    }
+
+    const currentContent = await session.getFileContent(fileObjectRef.id, fileObjectRef.format);
+    let finalContent = currentContent ?? '';
+    if(replaceAll){
+        finalContent = finalContent.replaceAll(oldText, newText);
+    }else{
+        finalContent = finalContent.replace(oldText, newText);
+    }
 
     const operation: PatchOperation = {
         type: 'patch',
-        oldText,
-        newText,
-        replaceAll,
+        content: finalContent,
+        fileName: fileObjectRef.name,
         fileId: fileObjectRef.id,
     };
+    
+    await fileSystemRepo.upsertPendingFileOperation(session.projectId, fileObjectRef.id, operation);
+    
+    // We update the file cache to make sure that the next read operation will use the latest content.
+    session.updateFileCache(fileObjectRef.id, finalContent);
 
-    return success(`Content patched and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`);
+    const msg = `Content patched and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`
+
+    return success(msg, [operation]);
 }
 
-async function executeDeleteCommand(input: z.infer<typeof deleteCommandSchema>, projectId: string): Promise<ToolResult> {
+async function executeDeleteCommand(input: z.infer<typeof deleteCommandSchema>, session: Session): Promise<ToolResult> {
     const { filePathOrId } = input;
-    const result = await resolveFileByPathOrId(filePathOrId, projectId);
+    const result = await resolveFileByPathOrId(filePathOrId, session.projectId);
     if(!(result instanceof FileObject)){
         return result;
     }
@@ -139,9 +160,13 @@ async function executeDeleteCommand(input: z.infer<typeof deleteCommandSchema>, 
     const operation: RefreshOperation = {
         type: 'refresh',
         fileId: parent.id,
+        fileName: parent.name,
     };
 
-    return success(`Deleted file ${filePathOrId} successfully.`);
+    // We update the file cache to make sure that the next read operation will use the latest content.
+    session.updateFileCache(fileObjectRef.id, null);
+
+    return success(`Deleted file ${filePathOrId} successfully.`, [operation]);
 }
 
 async function executeMoveCommand(input: z.infer<typeof moveCommandSchema>, projectId: string): Promise<ToolResult> {
@@ -190,14 +215,16 @@ async function executeMoveCommand(input: z.infer<typeof moveCommandSchema>, proj
         {
             type: 'refresh',
             fileId: currentParent.id,
+            fileName: currentParent.name,
         },
         {
             type: 'refresh',
             fileId: newParentRef.id,
+            fileName: newParentRef.name,
         },
     ];
 
-    return success(`Moved ${fileIdOrPath} to ${newParentPathOrId} successfully.`);
+    return success(`Moved ${fileIdOrPath} to ${newParentPathOrId} successfully.`, operation);
 
 }
 
@@ -221,18 +248,20 @@ async function executeCopyCommand(input: z.infer<typeof copyCommandSchema>, proj
         return failure(response.error ?? `Failed to copy ${fromPathOrId} to ${toPathOrId}`);
     }
 
-    const operations: RefreshOperation[] = [
+    const operation: RefreshOperation[] = [
         {
             type: 'refresh',
             fileId: sourceFileRef.id,
+            fileName: sourceFileRef.name,
         },
         {
             type: 'refresh',
             fileId: targetFileRef.id,
+            fileName: targetFileRef.name,
         },
     ];
 
-    return success(`Copied content from ${fromPathOrId} to ${toPathOrId} successfully.`);
+    return success(`Copied content from ${fromPathOrId} to ${toPathOrId} successfully.`, operation);
 }
 
 
@@ -280,9 +309,14 @@ async function executeCreateCommand(input: z.infer<typeof createCommandSchema>, 
         if(!newFileNode){
             return failure(`Failed to create '${name}' inside folder '${parentPathOrId}'`);
         }
-        
+        const operation: RefreshOperation = {
+            type: 'refresh',
+            fileId: parentFolder.id,
+            fileName: parentFolder.name,
+        };
 
-        return success(`Created ${dir ? 'directory' : 'file'} [ID: ${newFileNode.id}]${dir ? '' : ' (format: ' + newFileNode.format + ')'} successfully.`);
+        return success(`Created ${dir ? 'directory' : 'file'} [ID: ${newFileNode.id}]${dir ? '' : ' (format: ' + newFileNode.format + ')'} successfully.`, [operation]);
+
     } catch (error) {
         return failure(getErrorMessage(error, `Failed to create '${name}' inside folder '${parentPathOrId}'`));
     }
@@ -303,8 +337,9 @@ async function executeRenameCommand(input: z.infer<typeof renameCommandSchema>, 
     const operation: RefreshOperation = {
         type: 'refresh',
         fileId: fileRef.id,
+        fileName: fileRef.name,
     };
-    return success(`Renamed ${filePathOrId} to ${newName} successfully.`);
+    return success(`Renamed ${filePathOrId} to ${newName} successfully.`, [operation]);
 }
 
 function normalizeAndValidateName(name: string) {

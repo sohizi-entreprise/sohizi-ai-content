@@ -10,6 +10,7 @@ TODOS before Jun 10
 [ ] Templating for flexibility
 [ ] Writing tools for AI
 [ ] Searching tools for AI
+[ ] Assign tool
 [ ] Landing pages
 [ ] Polish design
 
@@ -22,3 +23,11 @@ TODOS Jun 11 - Jun 23
 [ ] Add transitions + effects
 [ ] Video rendering engine
 [ ] Export video
+
+======
+[ ] The agent expose some internal errors of the system, when something goes wrong let's rather return a generic error
+[ ] create other extensions for markdown
+[ ] Make the checkpoints robust to bad message ordering
+[ ] Add compression
+[ ] Add memory
+[ ] Polish the diff (especially when you try to reformat a doc)
