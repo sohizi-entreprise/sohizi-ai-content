@@ -5,7 +5,8 @@ import {
   TextClipRenderer,
   VideoClipRenderer,
 } from './clips'
-import type { Track } from '../store/types'
+import type { Clip, Track } from '../store/types'
+import { HyperframeSequence } from './html-clip'
 
 export type MainCompositionProps = {
   tracks: Array<Track>
@@ -37,15 +38,7 @@ export function MainComposition({ tracks }: MainCompositionProps) {
                   durationInFrames={durationInFrames}
                   layout="absolute-fill"
                 >
-                  {clip.type === 'video' ? (
-                    <VideoClipRenderer clip={clip} muted={track.muted} />
-                  ) : clip.type === 'audio' ? (
-                    <AudioClipRenderer clip={clip} muted={track.muted} />
-                  ) : clip.type === 'image' ? (
-                    <ImageClipRenderer clip={clip} />
-                  ) : (
-                    <TextClipRenderer clip={clip} />
-                  )}
+                  <ClipRouter clip={clip} track={track} />
                 </Sequence>
               )
             })}
@@ -54,4 +47,21 @@ export function MainComposition({ tracks }: MainCompositionProps) {
       })}
     </AbsoluteFill>
   )
+}
+
+function ClipRouter({ clip, track }: { clip: Clip, track: Track }) {
+  switch (clip.type) {
+    case 'video':
+      return <VideoClipRenderer clip={clip} muted={track.muted} />
+    case 'audio':
+      return <AudioClipRenderer clip={clip} muted={track.muted} />
+    case 'image':
+      return <ImageClipRenderer clip={clip} />
+    case 'text':
+      return <TextClipRenderer clip={clip} />
+    case 'html':
+      return <HyperframeSequence clip={clip} />
+    default:
+      return null
+  }
 }

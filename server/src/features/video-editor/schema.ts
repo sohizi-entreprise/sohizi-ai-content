@@ -1,14 +1,14 @@
 import { z } from "zod";
 
 const aspectRatios = ['16:9', '9:16', '1:1', '4:5'] as const;
-const trackTypes = ['video', 'audio', 'text', 'image'] as const;
+const trackTypes = ['video', 'audio', 'text', 'image', 'html'] as const;
 
 // ============================================================================
 // COMPOSITIONS
 // ============================================================================
 
 export const createCompositionSchema = z.object({
-  fileNodeId: z.string().uuid(),
+  fileNodeId: z.uuid(),
   fps: z.number().int().min(1).max(120).default(30),
   durationInFrames: z.number().int().min(1).default(900),
   aspectRatio: z.enum(aspectRatios).default('16:9'),
@@ -58,7 +58,7 @@ export const addClipSchema = z.object({
   endFrame: z.number().int().min(1),
   sourceStartFrame: z.number().int().min(0).default(0),
   sourceDurationInFrames: z.number().int().min(1),
-  assetId: z.string().uuid().nullish(),
+  assetId: z.uuid().nullish(),
   properties: clipPropertiesSchema,
 });
 

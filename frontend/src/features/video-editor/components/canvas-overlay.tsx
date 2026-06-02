@@ -41,7 +41,7 @@ export function CanvasOverlay() {
     for (const track of tracks) {
       if (track.hidden) continue
       for (const clip of track.clips) {
-        if (clip.type !== 'text') continue
+        if (!clip || clip.type !== 'text') continue
         if (currentFrame < clip.startFrame || currentFrame >= clip.endFrame) {
           continue
         }

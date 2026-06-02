@@ -6,6 +6,7 @@ import { TextSettings } from './text-settings'
 import { VideoSettings } from './video-settings'
 import { ImageSettings } from './image-settings'
 import { AudioSettings } from './audio-settings'
+import { HtmlSettings } from './html-settings'
 import type { Clip } from '../../store/types'
 import { cn } from '@/lib/utils'
 
@@ -14,6 +15,7 @@ const TYPE_LABEL: Record<Clip['type'], string> = {
   video: 'Video',
   image: 'Image',
   audio: 'Audio',
+  html: 'HTML',
 }
 
 export function SettingsSheet() {
@@ -91,6 +93,8 @@ function SettingsBody({ clip }: { clip: Clip }) {
       return <ImageSettings clip={clip} />
     case 'audio':
       return <AudioSettings clip={clip} />
+    case 'html':
+      return <HtmlSettings clip={clip} />
     default:
       return null
   }

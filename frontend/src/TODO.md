@@ -31,3 +31,5 @@ TODOS Jun 11 - Jun 23
 [ ] Add compression
 [ ] Add memory
 [ ] Polish the diff (especially when you try to reformat a doc)
+[ ] improve tool in the chat design
+[ ] Fix the problem, the app is freezing during streaming

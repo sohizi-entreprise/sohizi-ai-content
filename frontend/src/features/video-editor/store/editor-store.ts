@@ -1,11 +1,11 @@
 import { create, useStore } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { temporal } from 'zundo'
-import { makeId } from '../utils/ids'
 import { ASPECT_RATIO_DIMENSIONS } from './types'
 import type { HydrationData } from '../transforms'
 import type { StateCreator } from 'zustand'
 import type { TemporalState } from 'zundo'
+import { v4 as uuidv4 } from 'uuid'
 import type {
   AspectRatio,
   AudioClip,
@@ -140,7 +140,7 @@ function findOrCreateTrack(state: EditorState, type: TrackType): Track {
   const existing = state.tracks.find((t) => t.type === type)
   if (existing) return existing
   const newTrack: Track = {
-    id: makeId(`track_${type}`),
+    id: uuidv4(),
     type,
     name: `${type[0].toUpperCase()}${type.slice(1)} ${state.tracks.length + 1}`,
     muted: false,
@@ -210,7 +210,7 @@ const creator: StateCreator<
   },
 
   addTrack: (type, name) => {
-    const id = makeId(`track_${type}`)
+    const id = uuidv4()
     set((state) => {
       state.tracks.push({
         id,
@@ -290,7 +290,7 @@ const creator: StateCreator<
     height,
     startFrame,
   }) => {
-    const id = makeId('clip_video')
+    const id = uuidv4()
     set((state) => {
       const track = trackId
         ? (state.tracks.find((t) => t.id === trackId && t.type === 'video') ??
@@ -322,7 +322,7 @@ const creator: StateCreator<
   },
 
   addAudioClip: ({ trackId, url, fileName, durationInFrames, startFrame }) => {
-    const id = makeId('clip_audio')
+    const id = uuidv4()
     set((state) => {
       const track = trackId
         ? (state.tracks.find((t) => t.id === trackId && t.type === 'audio') ??
@@ -350,7 +350,7 @@ const creator: StateCreator<
   },
 
   addTextClip: ({ trackId, text, durationInFrames, startFrame }) => {
-    const id = makeId('clip_text')
+    const id = uuidv4()
     set((state) => {
       const track = trackId
         ? (state.tracks.find((t) => t.id === trackId && t.type === 'text') ??
@@ -393,7 +393,7 @@ const creator: StateCreator<
     height,
     startFrame,
   }) => {
-    const id = makeId('clip_image')
+    const id = uuidv4()
     set((state) => {
       const track = trackId
         ? (state.tracks.find((t) => t.id === trackId && t.type === 'image') ??
@@ -497,7 +497,7 @@ const creator: StateCreator<
       clip.endFrame = newStart + length
 
       const newTrack: Track = {
-        id: makeId(`track_${clip.type}`),
+        id: uuidv4(),
         type: clip.type,
         name: nextTrackName(state, clip.type),
         muted: false,
@@ -546,7 +546,7 @@ const creator: StateCreator<
       if (playhead <= clip.startFrame || playhead >= clip.endFrame) return
 
       const leftDuration = playhead - clip.startFrame
-      const rightId = makeId(`clip_${clip.type}`)
+      const rightId = uuidv4()
 
       const leftClip: Clip = {
         ...clip,

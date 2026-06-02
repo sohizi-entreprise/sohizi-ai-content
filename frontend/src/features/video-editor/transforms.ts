@@ -6,6 +6,7 @@ import type {
   AudioClip,
   TextClip,
   ImageClip,
+  HtmlClip,
   AspectRatio,
 } from './store/types'
 import type { BatchOperation, LoadCompositionResponse, ServerClip } from './requests'
@@ -84,14 +85,22 @@ function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
         widthRatio: (props.widthRatio as number) ?? 1,
         heightRatio: (props.heightRatio as number) ?? 1,
       } satisfies ImageClip
+    case 'html':
+      return {
+        ...base,
+        type: 'html',
+        html: (props.html as string) ?? '',
+        variables: (props.variables as HtmlClip['variables']) ?? [],
+        values: (props.values as HtmlClip['values']) ?? {},
+      } satisfies HtmlClip
   }
 }
 
 function serverTrackToStore(serverTrack: ServerTrack): Track {
   const trackType = serverTrack.type as TrackType
-  const clips = (serverTrack.clips ?? []).map((c) =>
-    serverClipToStore(c, trackType),
-  )
+  const clips = (serverTrack.clips ?? [])
+    .map((c) => serverClipToStore(c, trackType))
+    .filter((c): c is Clip => c != null)
   return {
     id: serverTrack.id,
     type: trackType,

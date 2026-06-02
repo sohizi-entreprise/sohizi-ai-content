@@ -1,6 +1,8 @@
+import type { CompositionVariable } from '@hyperframes/core'
+
 export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:5'
 
-export type TrackType = 'video' | 'audio' | 'text' | 'image'
+export type TrackType = 'video' | 'audio' | 'text' | 'image' | 'html'
 
 export type TextAlign = 'left' | 'center' | 'right'
 
@@ -66,7 +68,14 @@ export interface ImageClip extends BaseClip {
   heightRatio: number
 }
 
-export type Clip = VideoClip | AudioClip | TextClip | ImageClip
+export interface HtmlClip extends BaseClip {
+  type: 'html'
+  html: string
+  variables: CompositionVariable[]                       // schema — declared once by the AI
+  values: Record<string, string | number | boolean>      // user-set overrides
+}
+
+export type Clip = VideoClip | AudioClip | TextClip | ImageClip | HtmlClip
 
 export interface Track {
   id: string

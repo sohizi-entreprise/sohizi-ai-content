@@ -13,6 +13,7 @@ export const CLIP_EFFECT_IDS = {
   audio: 'effect_audio_clip',
   text: 'effect_text_clip',
   image: 'effect_image_clip',
+  html: 'effect_html_clip',
 } as const
 
 export function selectVisibleClips(

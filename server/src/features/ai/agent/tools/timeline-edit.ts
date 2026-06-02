@@ -6,6 +6,8 @@ import type { VideoClipProperties } from "@/type";
 
 const fileNodeId = z.uuid().describe("The file node ID of the video file.");
 
+const trackTypeEnum = z.enum(['video', 'audio', 'text', 'image', 'html']);
+
 const updateCompositionCommand = z.object({
   cmd: z.literal('update_composition').describe("Update composition-level settings like fps, aspect ratio, or dimensions."),
   fileNodeId,
@@ -21,7 +23,7 @@ const updateCompositionCommand = z.object({
 const addTrackCommand = z.object({
   cmd: z.literal('add_track').describe("Add a new track to the composition."),
   fileNodeId,
-  type: z.enum(['video', 'audio', 'text', 'image']),
+  type: trackTypeEnum,
   name: z.string().max(100),
   position: z.number().int().min(0).optional().describe("Z-order position. 0 = bottom. Omit to add on top."),
 });
@@ -45,12 +47,12 @@ const removeTrackCommand = z.object({
 const addClipCommand = z.object({
   cmd: z.literal('add_clip').describe("Add a new clip to a track."),
   trackId: z.uuid(),
-  type: z.enum(['video', 'audio', 'text', 'image']),
+  type: trackTypeEnum,
   startFrame: z.number().int().min(0),
   endFrame: z.number().int().min(1),
   sourceStartFrame: z.number().int().min(0).default(0),
   sourceDurationInFrames: z.number().int().min(1),
-  assetId: z.string().uuid().optional().describe("Reference to an asset. Required for video/audio/image clips."),
+  assetId: z.uuid().optional().describe("Reference to an asset. Required for video/audio/image clips."),
   properties: z.record(z.string(), z.any()).describe(
     "Type-specific properties. For text: {text, fontSize, color, fontFamily, fontWeight, align, opacity, xRatio, yRatio, widthRatio, heightRatio}. For video: {url, fileName, volume, opacity, speed, borderRadius}. For audio: {url, fileName, volume, speed}. For image: {url, fileName, opacity, borderRadius, blur, brightness, xRatio, yRatio, widthRatio, heightRatio}."
   ),
@@ -87,7 +89,7 @@ const updateCompositionBatchOp = z.object({
 
 const addTrackBatchOp = z.object({
   cmd: z.literal('add_track').describe("Add a new track."),
-  type: z.enum(['video', 'audio', 'text', 'image']),
+  type: trackTypeEnum,
   name: z.string().max(100),
   position: z.number().int().min(0).optional(),
 });

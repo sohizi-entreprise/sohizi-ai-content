@@ -1,8 +1,9 @@
-import { z } from "zod";
+import { z, toJSONSchema } from "zod";
 import { buildBaseTool } from "./tool-definition";
 import { success, failure } from "./utils";
 import * as repo from "@/features/video-editor/repo";
 import type { VideoClip } from "@/db/schema";
+import { clipPropertiesSchemaByType } from "@/type";
 
 const fileNodeId = z.uuid().describe("The file node ID of the video file.");
 const clipId = z.uuid().describe("The clip ID.");
@@ -21,7 +22,7 @@ const listClipsCommand = z.object({
   ),
   fileNodeId,
   trackId: trackId.optional().describe("Filter to a specific track."),
-  type: z.enum(['video', 'audio', 'text', 'image']).optional().describe("Filter by clip type."),
+  type: z.enum(['video', 'audio', 'text', 'image', 'html']).optional().describe("Filter by clip type."),
   fromFrame: z.number().int().optional().describe("Only return clips that overlap with this frame or later."),
   toFrame: z.number().int().optional().describe("Only return clips that overlap with this frame or earlier."),
 });
@@ -48,13 +49,22 @@ const viewTrackCommand = z.object({
   trackId,
 });
 
+const viewClipPropertiesSchema = z.object({
+  cmd: z.literal('view_clip_schema').describe(
+    "Returns the full schema of the properties of a specific clip type. Use this to understand the properties of a clip type before editing it."
+  ),
+  clipType: z.enum(['video', 'audio', 'text', 'image', 'html']),
+});
+
 const toolSchema = z.discriminatedUnion('cmd', [
   overviewCommand,
   listClipsCommand,
   viewClipCommand,
   atFrameCommand,
   viewTrackCommand,
+  viewClipPropertiesSchema,
 ]);
+
 
 export const timelineExploreTool = buildBaseTool({
   name: "timelineExplore",
@@ -73,8 +83,10 @@ export const timelineExploreTool = buildBaseTool({
         return executeAtFrame(input.fileNodeId, input.frame);
       case 'view_track':
         return executeViewTrack(input.trackId);
+      case 'view_clip_schema':
+        return executeViewClipSchema(input.clipType);
       default:
-        return failure('Unknown command.');
+        return failure('Unknown command. Valid commands are: overview, list_clips, view_clip, at_frame, view_track, view_clip_schema.');
     }
   },
 });
@@ -209,6 +221,15 @@ async function executeViewTrack(trackId: string) {
   }
 
   return success(output.trim());
+}
+
+function executeViewClipSchema(clipType: 'video' | 'audio' | 'text' | 'image' | 'html') {
+  const zodSchema = clipPropertiesSchemaByType[clipType];
+  if (!zodSchema) {
+    return failure('Unknown clip type. Valid types are: video, audio, text, image, html.');
+  }
+  const schema = toJSONSchema(zodSchema);
+  return success(JSON.stringify(schema, null, 2));
 }
 
 function getClipLabel(clip: VideoClip): string {
