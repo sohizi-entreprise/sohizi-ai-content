@@ -577,4 +577,5 @@ export const pendingFileOperations = pgTable('pending_file_operations', {
   export type VideoClip = typeof videoClips.$inferSelect
   export type Template = typeof templates.$inferSelect
   export type PendingFileOperation = typeof pendingFileOperations.$inferSelect
+  export type Skill = typeof skills.$inferSelect
   

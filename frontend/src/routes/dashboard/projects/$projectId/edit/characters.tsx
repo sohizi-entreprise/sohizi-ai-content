@@ -18,7 +18,7 @@ import { Users, User, Crown, Skull, UserCircle, Mic2, ChevronRight } from 'lucid
 import type { CharacterRole } from '@/lib/types'
 
 const projectQueryOptions = (projectId: string) => ({
-  queryKey: ['project', projectId],
+  queryKey: ['project', projectId, 'info'],
   queryFn: () => getProject({ data: { projectId } }),
 })
 

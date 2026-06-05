@@ -1,6 +1,6 @@
 import { AssistantContent, ModelMessage, ToolModelMessage } from "ai";
 import type { BillableLlmClient, BillableLlmInput } from "../utils/llm-client";
-import { LlmChunk, streamEvents, ToolCall, ToolResultComplete } from "../utils/llm-response";
+import { LlmChunk, OperationChunk, streamEvents, ToolCall, ToolResultComplete } from "../utils/llm-response";
 import { v4 as uuidv4 } from 'uuid';
 import { getTool } from "../tools/tool-registry";
 import { mergeGenerators } from "../utils/merge-generators";
@@ -20,7 +20,7 @@ type CallbackHandler = (state: AgentState) => void;
 export type AgentChunk = {
     name: string;
     runId: string;
-} & LlmChunk
+} & LlmChunk | OperationChunk
 
 export class Agent {
     private readonly billableLlm: BillableLlmClient;
@@ -47,13 +47,17 @@ export class Agent {
             this.appendUserMessage(prompt);
             this.triggerCallback('start');
 
+            let stepsRun = 0;
             for(let step = 1; step <= maxSteps; step++){
                 if(['finished', 'error', 'aborted', 'paused'].includes(this.state.status)){
                     break;
                 }
-                yield* this.runStep(abortSignal);
-                // TODO: Send a final complete event
-                // yield {name: this.name, runId: this.runId!, type: streamEvents.complete, usage: this.state.usage!, text: '', finishReason: this.state.finishReason!};
+                yield* this.runStep(abortSignal, step);
+                stepsRun++;
+            }
+
+            if(this.state.status === 'running'){
+                this.state.status = 'finished';
             }
         } catch (error) {
             const errorMessage = this.captureStepError(error);
@@ -69,7 +73,7 @@ export class Agent {
         }
     }
 
-    async* runStep(abortSignal: AbortSignal): AsyncGenerator<AgentChunk, void, unknown> {
+    async* runStep(abortSignal: AbortSignal, step: number): AsyncGenerator<AgentChunk, void, unknown> {
         // Future implementation: context summarization + pruning && user limit checking
         // Future persist messages to the database [checkpoints]
         this.runId = uuidv4();
@@ -125,8 +129,6 @@ export class Agent {
                         yield this.buildEvent(chunk);
                         break;
                     case streamEvents.error:
-                        stepError = chunk.error;
-                        this.captureStepError(chunk.error);
                         yield this.buildEvent(chunk);
                         break;
                     case streamEvents.complete:
@@ -134,7 +136,10 @@ export class Agent {
                         this.updateStatus(chunk.finishReason, chunk.error);
                         text = chunk.text || text;
                         reasoning_text = chunk.reasoningText ?? reasoning_text;
-                        stepError = chunk.finishReason === 'error' ? chunk.error ?? stepError ?? 'Unknown agent error' : stepError;
+                        if(chunk.finishReason === 'error'){
+                            stepError = chunk.error ?? 'Unknown agent error';
+                            this.captureStepError(stepError);
+                        }
                         break;
                     case streamEvents.toolCall:
                         tool_calls.push(chunk);
@@ -192,10 +197,9 @@ export class Agent {
                 this.state.status = 'error';
                 this.state.error = error ?? 'Unknown agent error';
                 break;
-            case 'tool-calls':
-                break;
             default:
-                this.state.status = 'finished';
+                // Stay running until finalizeStepStatus — a turn may include tool calls
+                // even when finishReason is not exactly 'tool-calls'.
                 break;
         }
     }

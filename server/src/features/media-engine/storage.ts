@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { S3Client } from 'bun';
 import { createHash, createHmac } from 'node:crypto';
+import { parseBuffer } from 'music-metadata';
 
 const S3_SIGNED_URL_EXPIRY_SECONDS = 10 * 60;
 const S3_SIGNING_SERVICE = 's3';
@@ -61,7 +62,7 @@ export function getMaxUploadSizeInBytes(contentType: string): number {
     return 5 * 1024 * 1024;
 }
 
-function sanitizeFileName(fileName: string): string {
+export function sanitizeFileName(fileName: string): string {
     return fileName.replace(/[/\\\s]+/g, '-').toLowerCase().trim();
 }
 
@@ -250,12 +251,33 @@ export async function fileExists(storageKey: string): Promise<boolean> {
     return await client.exists(storageKey);
 }
 
-export async function getFileMetadata(storageKey: string): Promise<{ contentType: string; size: number }> {
-    const stat = await getS3Client().stat(storageKey);
+export type FileMetadataResult = {
+    contentType: string;
+    size: number;
+    duration?: number;
+};
+
+export async function getFileMetadata(storageKey: string): Promise<FileMetadataResult> {
+    const client = getS3Client();
+    const stat = await client.stat(storageKey);
+    const contentType = stat.type;
+
+    let duration: number | undefined;
+
+    if (contentType.startsWith('audio/')) {
+        const buffer = Buffer.from(await client.file(storageKey).arrayBuffer());
+        try {
+            const metadata = await parseBuffer(buffer, { mimeType: contentType });
+            duration = metadata.format.duration;
+        } catch {
+            // duration stays undefined if parsing fails
+        }
+    }
 
     return {
-        contentType: stat.type,
+        contentType,
         size: stat.size,
+        duration,
     };
 }
 

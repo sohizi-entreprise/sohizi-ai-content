@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { InfiniteData, QueryClient } from '@tanstack/react-query'
-import type { Message, ChatCompletionRequest, Conversation } from '../types'
+import type { Message, ChatCompletionRequest, Conversation, ChatStreamChunk } from '../types'
 import { v4 as uuidv4 } from 'uuid'
 import { useChatStore } from '../store/chat-store'
 import { completeChat, type CursorPaginationResult } from '../requests'
@@ -23,7 +23,7 @@ export const useSendMessage = (projectId: string) => {
 
   const clearInput = useChatStore((state) => state.clearInput)
   const setPendingMessage = useChatStore((state) => state.setPendingMessage)
-  const appendChunk = useChatStore((state) => state.appendChunk)
+  const appendChunks = useChatStore((state) => state.appendChunks)
   const setIsStreaming = useChatStore((state) => state.setIsStreaming)
   const setActiveConversation = useChatStore((state) => state.setActiveConversation)
   const clearStreamingMessages = useChatStore((state) => state.clearStreamingMessages)
@@ -42,6 +42,20 @@ export const useSendMessage = (projectId: string) => {
     clearInput()
 
     setIsStreaming(true)
+
+    const chunkBuffer: ChatStreamChunk[] = []
+    let rafId: number | null = null
+
+    const flushChunks = () => {
+      rafId = null
+      if (chunkBuffer.length === 0) return
+      appendChunks(chunkBuffer.splice(0))
+    }
+
+    const scheduleFlush = () => {
+      if (rafId !== null) return
+      rafId = requestAnimationFrame(flushChunks)
+    }
 
     try {
       for await (const chunk of completeChat(projectId, payload)) {
@@ -86,8 +100,15 @@ export const useSendMessage = (projectId: string) => {
   
           continue;
         }
-        appendChunk(chunk)
+        chunkBuffer.push(chunk)
+        scheduleFlush()
       }
+
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
+      flushChunks()
 
       const { streamingMessages } = useChatStore.getState()
       if(resolvedConversationId){
@@ -104,7 +125,7 @@ export const useSendMessage = (projectId: string) => {
     } finally {
       setIsStreaming(false)
     }
-  }, [appendChunk, clearInput, clearStreamingMessages, projectId, queryClient, setIsStreaming, setPendingMessage, setActiveConversation])
+  }, [appendChunks, clearInput, clearStreamingMessages, projectId, queryClient, setIsStreaming, setPendingMessage, setActiveConversation])
 
 }
 

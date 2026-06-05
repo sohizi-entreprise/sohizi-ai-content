@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 const keysFactory = {
     projects: (organizationId?: string) => organizationId ? ['projects', organizationId] : ['projects'],
-    project: (id: string) => ['project', id],
+    project: (id: string) => ['project', id, 'info'],
     fileTree: (projectId: string, parentId: string) => ['project', projectId, 'file-tree', parentId],
     projectOptions: () => ['projectOptions'],
     templates: () => ['templates'],

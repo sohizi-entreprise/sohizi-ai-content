@@ -415,11 +415,17 @@ export const updateFileContentAtRevision = async(
     return result[0];
 }
 
+type InitialFileContent = {
+    markdown?: string;
+    json?: Record<string, any>;
+}
+
 export const createFileWithContentAtPosition = async(
     projectId: string,
     data: FileCreationRequest,
     anchorId: string | null,
     position: FileNodeInsertPosition,
+    initialContent?: InitialFileContent,
 ) => {
     return db.transaction(async (tx) => {
         const siblings = await listDirectoryFilesForExecutor(tx, projectId, data.parentId);
@@ -433,7 +439,7 @@ export const createFileWithContentAtPosition = async(
         }
 
         const insertedFile = file[0];
-        await createContentBasedOnFormat(tx, insertedFile, projectId);
+        await createContentBasedOnFormat(tx, insertedFile, projectId, initialContent);
 
         const insertionPlan = buildInsertionPlan(
             siblings,
@@ -455,13 +461,21 @@ export const createFileWithContentAtPosition = async(
     });
 }
 
-async function createContentBasedOnFormat(tx: DbTransaction, fileNode: FileNode, projectId: string) {
+async function createContentBasedOnFormat(tx: DbTransaction, fileNode: FileNode, projectId: string, initialContent?: InitialFileContent) {
     switch(fileNode.format){
         case 'markdown':
             await tx.insert(fileNodeContents).values({
                 projectId,
                 fileNodeId: fileNode.id,
-                content: '',
+                content: initialContent?.markdown ?? '',
+            })
+            break;
+        case 'json':
+            await tx.insert(fileNodeContents).values({
+                projectId,
+                fileNodeId: fileNode.id,
+                jsonContent: initialContent?.json ?? {},
+                content: ''
             })
             break;
         case 'skill':

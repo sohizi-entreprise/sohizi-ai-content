@@ -32,7 +32,7 @@ import {
 import type { TimeOfDay } from '@/lib/types'
 
 const projectQueryOptions = (projectId: string) => ({
-  queryKey: ['project', projectId],
+  queryKey: ['project', projectId, 'info'],
   queryFn: () => getProject({ data: { projectId } }),
 })
 

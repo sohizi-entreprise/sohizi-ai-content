@@ -12,16 +12,24 @@ export function failure(output: string): ToolResult {
     return { success: false, output };
 }
 
-export async function resolveFileByPathOrId(filePathOrId: string | undefined, projectId: string) {
+export type FileObjectResolved = {
+    success: false;
+    error: string;
+} | {
+    success: true;
+    file: FileObject;
+}
+
+export async function resolveFileByPathOrId(filePathOrId: string | undefined, projectId: string): Promise<FileObjectResolved> {
 
     if(!filePathOrId) {
-        return failure('Either filepath or fileId is required.');
+        return { success: false, error: 'Either filepath or fileId is required.' };
     }
     const filePath = filePathOrId.startsWith('/') ? filePathOrId : undefined;
     const fileId = validateUuid(filePathOrId) ? filePathOrId : undefined;
 
     if(!filePath && !fileId) {
-        return failure('Invalid filepath or fileId provided.');
+        return { success: false, error: 'Invalid filepath or fileId provided.' };
     }
 
     let fileObjectRef: FileObject | null = null;
@@ -34,9 +42,9 @@ export async function resolveFileByPathOrId(filePathOrId: string | undefined, pr
         fileObjectRef = fileObject;
     }
     if(!fileObjectRef) {
-        return failure('File not found');
+        return { success: false, error: 'File not found' };
     }
-    return fileObjectRef;
+    return { success: true, file: fileObjectRef };
 }
 
 export function formatSkill(data: {name: string, description: string, instructions: string}) {

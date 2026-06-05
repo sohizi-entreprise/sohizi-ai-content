@@ -16,6 +16,14 @@ export function TypingCursor() {
         <span className="inline-block w-2 h-4 bg-foreground animate-pulse" />
     )
 }
+
+export function TextShimmerCss({ text, className }: { text: string; className?: string }) {
+    return (
+        <span className={cn('inline-block text-sm font-medium text-muted-foreground animate-shimmer', className)}>
+            {text}
+        </span>
+    )
+}
   
 export const TextShimmer = ({ text }: { text: string }) => {
 return (

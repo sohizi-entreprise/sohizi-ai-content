@@ -110,7 +110,7 @@ async function* handleChatRun(projectId: string, userId: string, request: Comple
     yield* agent.runLoop(
         userPrompt, 
         new AbortController().signal, 
-        25,
+        250,
     )
 }
 

@@ -37,47 +37,6 @@ import { diffWords } from 'diff'
 import { toast } from 'sonner'
 
 
-
-const SAMPLE_CONTENT = `
-# Welcome to the Markdown Demo
-
-This demo showcases **bidirectional** markdown support in Tiptap with extended features.
-
-==\nHiglight me this guy\nand this one too ==
-
-## Features
-
-- **Bold text** and *italic text*
-- \`inline code\` and code blocks
-- [Links](https://tiptap.dev)
-- Lists and more!
-
-## Extended Features
-
-## Images
-
-![Minimal workspace](https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=900&auto=format&fit=crop&q=80 "Tiptap Editor")
-
-
-## Task Lists
-
-- [ ] Incomplete task
-  - [ ] Nested incomplete task
-  - [x] Completed task
-- [x] Completed task
-  - [ ] Incomplete task
-  - [x] Completed task
-
-End
-
-## Table
-
-|Scene| Status |
-| --- | --- |
-| Opening | Draft |
-| Ending | Outline |
-`
-
 const editorExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
@@ -135,7 +94,7 @@ export function TextEditorView({
   const { projectId } = useParams({
     from: '/dashboard/projects/$projectId/editor',
   })
-  const baseMarkdown = initialContent || SAMPLE_CONTENT
+  const baseMarkdown = initialContent || ''
 
   const appliedDiffRef = useRef(false)
   const visualizedPendingKeyRef = useRef<string | null>(null)

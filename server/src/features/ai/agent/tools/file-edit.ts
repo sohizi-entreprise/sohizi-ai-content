@@ -2,13 +2,14 @@ import { z } from "zod";
 import { buildBaseTool } from "./tool-definition";
 import type { ToolResult } from "./tool-definition";
 import { writeCommandSchema, patchCommandSchema, deleteCommandSchema, moveCommandSchema, copyCommandSchema, createCommandSchema, renameCommandSchema } from "./command-schema";
-import { FileObject } from "@/features/file-system/objects/file";
+import { FileContentPayload, FileObject } from "@/features/file-system/objects/file";
 import * as fileSystemRepo from "@/features/file-system/repo";
 import { normalizeFileName } from "@/features/file-system/utils";
-import { failure, success, resolveFileByPathOrId } from "./utils";
+import { failure, success, resolveFileByPathOrId, formatSkill } from "./utils";
 import { getErrorMessage } from "@/utils/get-error-message";
 import { PatchOperation, RefreshOperation } from "@/type";
 import { Session } from "../core/session";
+import { FileFormat, fileFormat } from "@/features/file-system/constants";
 
 const toolSchema = z.discriminatedUnion('cmd', [
     writeCommandSchema,
@@ -37,57 +38,70 @@ export const editFileTool = buildBaseTool({
             case 'delete':
                 return executeDeleteCommand(command, session);
             case 'move':
-                return executeMoveCommand(command, session.projectId);
+                return executeMoveCommand(command, session);
             case 'copy':
-                return executeCopyCommand(command, session.projectId);
+                return executeCopyCommand(command, session);
             case 'create-file':
-                return executeCreateCommand(command, session.projectId);
+                return executeCreateCommand(command, session);
             case 'rename':
-                return executeRenameCommand(command, session.projectId);
+                return executeRenameCommand(command, session);
             default:
                 return failure(`Invalid command received. Valid commands are: write, patch, delete, move, copy, create-file.`);
         }
     }
 });
 
+const EDIT_SUPPORTED_FORMATS: Partial<FileFormat>[] = [fileFormat.MARKDOWN];
+
 async function executeWriteCommand(input: z.infer<typeof writeCommandSchema>, session: Session) {
     const { filePathOrId, content, strategy } = input;
-    const result = await resolveFileByPathOrId(filePathOrId, session.projectId);
-    if(!(result instanceof FileObject)){
-        return result;
+    const fileObject = await session.resolveFileByPathOrId(filePathOrId);
+    if(!fileObject){
+        return failure(`File ${filePathOrId} not found`);
     }
 
-    const fileObjectRef = result;
-
-    if(fileObjectRef.isDirectory){
+    if(fileObject.isDirectory){
         return failure(`Cannot write to directory.`);
     }
-    if(fileObjectRef.format === null){
+    if(fileObject.format === null){
         return failure(`The file format is corrupted. You cannot write to it.`);
     }
 
-    const currentContent = await session.getFileContent(fileObjectRef.id, fileObjectRef.format);
+    if(!EDIT_SUPPORTED_FORMATS.includes(fileObject.format)){
+        return failure(`The file format ${fileObject.format} is not supported for editing.`);
+    }
 
-    let finalContent = currentContent ?? '';
+    let finalContent = '';
+    let newContentPayload: FileContentPayload | undefined;
 
-    if(strategy === 'overwrite'){
-        finalContent = content;
-    } else if(strategy === 'append'){
-        finalContent = currentContent + ' ' + content;
+    const fileContent = await fileObject.getFileContent();
+    if(!fileContent.ok || fileContent.data === null){
+        return failure(fileContent.error || 'Failed to get the content of the file.');
+    }
+
+    if(fileContent.data.type === 'markdown'){
+        const currentContent = fileContent.data.data;
+        finalContent = buildContent(strategy, currentContent, content);
+        newContentPayload = {
+            type: 'markdown',
+            data: finalContent,
+        };
+    } else {
+        return failure(`The file content type ${fileContent.data.type} is not supported for editing.`);
     }
     
 
     const operation: PatchOperation = {
         type: 'patch',
         content: finalContent,
-        fileId: fileObjectRef.id,
-        fileName: fileObjectRef.name,
+        fileId: fileObject.id,
+        fileName: fileObject.name,
     };
 
-    await fileSystemRepo.upsertPendingFileOperation(session.projectId, fileObjectRef.id, operation);
+    await fileSystemRepo.upsertPendingFileOperation(session.projectId, fileObject.id, operation);
 
     // We update the file cache to make sure that the next read operation will use the latest content.
-    session.updateFileCache(fileObjectRef.id, finalContent);
+    fileObject.updateFileContentCache(newContentPayload);
 
 
     const message = `Content written and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`
@@ -97,22 +111,28 @@ async function executeWriteCommand(input: z.infer<typeof writeCommandSchema>, se
 
 async function executePatchCommand(input: z.infer<typeof patchCommandSchema>, session: Session) {
     const { filePathOrId, oldText, newText, replaceAll } = input;
-    const result = await resolveFileByPathOrId(filePathOrId, session.projectId);
-    if(!(result instanceof FileObject)){
-        return result;
+    const fileObject = await session.resolveFileByPathOrId(filePathOrId);
+    if(!fileObject){
+        return failure(`File ${filePathOrId} not found`);
     }
 
-    const fileObjectRef = result;
-
-    if(fileObjectRef.isDirectory){
+    if(fileObject.isDirectory){
         return failure(`Cannot patch directory.`);
     }
-    if(fileObjectRef.format === null){
+    if(fileObject.format === null){
         return failure(`The file format is corrupted. You cannot patch it.`);
     }
 
-    const currentContent = await session.getFileContent(fileObjectRef.id, fileObjectRef.format);
-    let finalContent = currentContent ?? '';
+    const fileContent = await fileObject.getFileContent();
+    if(!fileContent.ok || fileContent.data === null){
+        return failure(fileContent.error || 'Failed to get the content of the file.');
+    }
+
+    if(fileContent.data.type !== 'markdown'){
+        return failure(`The file content type ${fileContent.data.type} is not supported for editing.`);
+    }
+
+    let finalContent = fileContent.data.data;
     if(replaceAll){
         finalContent = finalContent.replaceAll(oldText, newText);
     }else{
@@ -122,14 +142,17 @@ async function executePatchCommand(input: z.infer<typeof patchCommandSchema>, se
     const operation: PatchOperation = {
         type: 'patch',
         content: finalContent,
-        fileName: fileObjectRef.name,
-        fileId: fileObjectRef.id,
+        fileName: fileObject.name,
+        fileId: fileObject.id,
     };
     
-    await fileSystemRepo.upsertPendingFileOperation(session.projectId, fileObjectRef.id, operation);
+    await fileSystemRepo.upsertPendingFileOperation(session.projectId, fileObject.id, operation);
     
     // We update the file cache to make sure that the next read operation will use the latest content.
-    session.updateFileCache(fileObjectRef.id, finalContent);
+    fileObject.updateFileContentCache({
+        type: 'markdown',
+        data: finalContent,
+    });
 
     const msg = `Content patched and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`
 
@@ -138,22 +161,23 @@ async function executePatchCommand(input: z.infer<typeof patchCommandSchema>, se
 
 async function executeDeleteCommand(input: z.infer<typeof deleteCommandSchema>, session: Session): Promise<ToolResult> {
     const { filePathOrId } = input;
-    const result = await resolveFileByPathOrId(filePathOrId, session.projectId);
-    if(!(result instanceof FileObject)){
-        return result;
+    const fileObject = await session.resolveFileByPathOrId(filePathOrId);
+    if(!fileObject){
+        return failure(`File ${filePathOrId} not found`);
     }
 
-    const fileObjectRef = result;
-
-    if (fileObjectRef.isRoot) {
-        return failure('Cannot target the root directory directly.');
+    if(fileObject.isDirectory){
+        return failure(`Cannot delete directory.`);
+    }
+    if(fileObject.format === null){
+        return failure(`The file format is corrupted. You cannot delete it.`);
     }
 
-    const response = await fileObjectRef.delete();
+    const response = await fileObject.delete();
     if (!response.ok) {
         return failure(response.error ?? `Failed to delete file ${filePathOrId}`);
     }
-    const parent = await fileObjectRef.getParent();
+    const parent = await fileObject.getParent();
     if (!parent){
         return failure(`Failed to delete file ${filePathOrId} because the parent directory is not found.`);
     }
@@ -164,35 +188,32 @@ async function executeDeleteCommand(input: z.infer<typeof deleteCommandSchema>, 
     };
 
     // We update the file cache to make sure that the next read operation will use the latest content.
-    session.updateFileCache(fileObjectRef.id, null);
+    session.removeFileFromCache(filePathOrId);
 
     return success(`Deleted file ${filePathOrId} successfully.`, [operation]);
 }
 
-async function executeMoveCommand(input: z.infer<typeof moveCommandSchema>, projectId: string): Promise<ToolResult> {
+async function executeMoveCommand(input: z.infer<typeof moveCommandSchema>, session: Session): Promise<ToolResult> {
     const { fileIdOrPath, newParentPathOrId, position, newName } = input;
-    const result = await resolveFileByPathOrId(fileIdOrPath, projectId);
-    if(!(result instanceof FileObject)){
-        return result;
+    const fileRef = await session.resolveFileByPathOrId(fileIdOrPath);
+    if(!fileRef){
+        return failure(`File ${fileIdOrPath} not found`);
     }
-
-    const fileRef = result;
 
     if(fileRef.isRoot){
         return failure(`Cannot move root directory.`);
     }
 
-    const resultNewParent = await resolveFileByPathOrId(newParentPathOrId, projectId);
-    if(!(resultNewParent instanceof FileObject)){
-        return resultNewParent;
+    const newParentRef = await session.resolveFileByPathOrId(newParentPathOrId);
+    if(!newParentRef){
+        return failure(`New parent ${newParentPathOrId} not found`);
     }
 
-    const newParentRef = resultNewParent;
     let anchorId: string | null = null;
     if(position.anchorFilePathOrId){
-        const anchorResult = await resolveFileByPathOrId(position.anchorFilePathOrId, projectId);
-        if(!(anchorResult instanceof FileObject)){
-            return anchorResult;
+        const anchorResult = await session.resolveFileByPathOrId(position.anchorFilePathOrId);
+        if(!anchorResult){
+            return failure(`Anchor file ${position.anchorFilePathOrId} not found`);
         }
         anchorId = anchorResult.id;
     }
@@ -228,20 +249,18 @@ async function executeMoveCommand(input: z.infer<typeof moveCommandSchema>, proj
 
 }
 
-async function executeCopyCommand(input: z.infer<typeof copyCommandSchema>, projectId: string): Promise<ToolResult> {
+async function executeCopyCommand(input: z.infer<typeof copyCommandSchema>, session: Session): Promise<ToolResult> {
     const { fromPathOrId, toPathOrId } = input;
     
-    const resultFromFile = await resolveFileByPathOrId(fromPathOrId, projectId);
-    if(!(resultFromFile instanceof FileObject)){
-        return resultFromFile;
+    const sourceFileRef = await session.resolveFileByPathOrId(fromPathOrId);
+    if(!sourceFileRef){
+        return failure(`Source file ${fromPathOrId} not found`);
     }
 
-    const sourceFileRef = resultFromFile;
-    const resultFromTarget = await resolveFileByPathOrId(toPathOrId, projectId);
-    if(!(resultFromTarget instanceof FileObject)){
-        return resultFromTarget;
+    const targetFileRef = await session.resolveFileByPathOrId(toPathOrId);
+    if(!targetFileRef){
+        return failure(`Target file ${toPathOrId} not found`);
     }
-    const targetFileRef = resultFromTarget;
 
     const response = await sourceFileRef.copyTo(targetFileRef);
     if (!response.ok) {
@@ -265,16 +284,14 @@ async function executeCopyCommand(input: z.infer<typeof copyCommandSchema>, proj
 }
 
 
-async function executeCreateCommand(input: z.infer<typeof createCommandSchema>, projectId: string): Promise<ToolResult> {
+async function executeCreateCommand(input: z.infer<typeof createCommandSchema>, session: Session): Promise<ToolResult> {
     const { parentPathOrId, dir, name, position } = input;
 
     try {
-        const result = await resolveFileByPathOrId(parentPathOrId, projectId);
-        if(!(result instanceof FileObject)){
-            return result;
+        const parentFolder = await session.resolveFileByPathOrId(parentPathOrId);
+        if(!parentFolder){
+            return failure(`Parent folder ${parentPathOrId} not found`);
         }
-        const parentFolder = result;
-
         if(!parentFolder.isDirectory){
             return failure(`Parent path "${parentPathOrId}" is not a directory.`);
         }
@@ -284,17 +301,17 @@ async function executeCreateCommand(input: z.infer<typeof createCommandSchema>, 
         let anchorId: string | null = null;
 
         if(position.anchorFilePathOrId){
-            const anchorResult = await resolveFileByPathOrId(position.anchorFilePathOrId, projectId);
-            if(!(anchorResult instanceof FileObject)){
-                return anchorResult;
+            const anchorResult = await session.resolveFileByPathOrId(position.anchorFilePathOrId);
+            if(!anchorResult){
+                return failure(`Anchor file ${position.anchorFilePathOrId} not found`);
             }
             anchorId = anchorResult.id;
         }
 
         const newFileNode = await fileSystemRepo.createFileWithContentAtPosition(
-            projectId,
+            session.projectId,
             {
-                projectId,
+                projectId: session.projectId,
                 name: normalizedName,
                 directory: dir,
                 parentId,
@@ -322,14 +339,12 @@ async function executeCreateCommand(input: z.infer<typeof createCommandSchema>, 
     }
 }
 
-async function executeRenameCommand(input: z.infer<typeof renameCommandSchema>, projectId: string): Promise<ToolResult> {
+async function executeRenameCommand(input: z.infer<typeof renameCommandSchema>, session: Session): Promise<ToolResult> {
     const { filePathOrId, newName } = input;
-    const result = await resolveFileByPathOrId(filePathOrId, projectId);
-    if(!(result instanceof FileObject)){
-        return result;
+    const fileRef = await session.resolveFileByPathOrId(filePathOrId);
+    if(!fileRef){
+        return failure(`File ${filePathOrId} not found`);
     }
-    const fileRef = result;
-
     const response = await fileRef.rename(newName);
     if (!response.ok) {
         return failure(response.error ?? `Failed to rename ${filePathOrId} to ${newName}`);
@@ -349,4 +364,13 @@ function normalizeAndValidateName(name: string) {
     }
 
     return normalizedName;
+}
+
+function buildContent(strategy: 'overwrite' | 'append', currentContent: string, newContent: string): string {
+    if(strategy === 'overwrite'){
+        return newContent;
+    } else if(strategy === 'append'){
+        return currentContent + ' ' + newContent;
+    } 
+    return currentContent;
 }

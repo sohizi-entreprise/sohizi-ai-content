@@ -153,8 +153,8 @@ export const moveCommandSchema = z.object({
 
 export const copyCommandSchema = z.object({
     cmd: z.literal('copy').describe("Copy the content of a file to another file. It overwrites the existing content of the target file."),
-    fromPathOrId: z.string().optional().describe("Absolute file path or file ID (uuid) from which to copy the content."),
-    toPathOrId: z.string().optional().describe("Absolute file path or file ID (uuid) to which to copy the content."),
+    fromPathOrId: z.string().describe("Absolute file path or file ID (uuid) from which to copy the content."),
+    toPathOrId: z.string().describe("Absolute file path or file ID (uuid) to which to copy the content."),
 }).describe(`
     Returns: confirmation message.
     Example: {"cmd": "copy", "fromPathOrId": "/folder/file", "toPathOrId": "/folder/new-file"} => confirmation message

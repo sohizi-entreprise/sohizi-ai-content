@@ -4,12 +4,13 @@ import { manageTodoListTool } from "./tasks-manage";
 import { exploreFileTool } from "./file-explore";
 import { searchFileTool } from "./file-search";
 import { generateImageTool } from "./generate-image";
-import { generateAudioDialogueTool, generateMusicTool, generateSoundEffectTool, generateSpeechTool } from "./generate-audio";
 import { generateVideoTool } from "./generate-video";
 import { timelineExploreTool } from "./timeline-explore";
 import { timelineEditTool } from "./timeline-edit";
 import { ToolSet } from "ai";
 import { editFileTool } from "./file-edit";
+import { processSpeechTool } from "./process-speech";
+import { endExecutionLoopTool } from "./loop-end";
 
 
 const toolRegistry = new Map<string, BaseTool<z.ZodSchema>>();
@@ -30,16 +31,18 @@ export const listTools = (): ToolSet => {
     );
 }
 
+registerTool(endExecutionLoopTool);
 registerTool(editFileTool);
 registerTool(exploreFileTool);
 registerTool(searchFileTool);
 registerTool(manageTodoListTool);
 registerTool(generateImageTool);
 registerTool(generateVideoTool);
-registerTool(generateSpeechTool);
-registerTool(generateSoundEffectTool);
-registerTool(generateMusicTool);
-registerTool(generateAudioDialogueTool);
+// registerTool(generateSpeechTool);
+// registerTool(generateSoundEffectTool);
+// registerTool(generateMusicTool);
+// registerTool(generateAudioDialogueTool);
 registerTool(timelineExploreTool);
 registerTool(timelineEditTool);
+registerTool(processSpeechTool);
 // registerTool(assignTaskTool);

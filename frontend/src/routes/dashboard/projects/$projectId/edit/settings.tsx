@@ -40,7 +40,7 @@ import {
 import { toast } from 'sonner'
 
 const projectQueryOptions = (projectId: string) => ({
-  queryKey: ['project', projectId],
+  queryKey: ['project', projectId, 'info'],
   queryFn: () => getProject({ data: { projectId } }),
 })
 

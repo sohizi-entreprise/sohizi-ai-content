@@ -1,20 +1,23 @@
-import { useEffect, useRef, useLayoutEffect, useCallback } from 'react'
+import { useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react'
 import { IconSparkles, IconLoader2 } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { useChatStore } from '../store/chat-store'
 import { listMessagesInfiniteQueryOptions } from '../query-mutation'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import ChatBuble, { insertToolResultsIntoAssistantMessages } from './chat-buble'
+import { ChatStreamingMessages } from './chat-streaming-messages'
 import { useShallow } from 'zustand/shallow'
-import { TextShimmer } from '@/components/ui/loaders'
 import { useAutoScroll } from '@/hooks/use-auto-scroll'
 
-export function ChatMessages({projectId, className}: {projectId: string; className?: string}) {
+export function ChatMessages({ projectId, className }: { projectId: string; className?: string }) {
   const isStreaming = useChatStore((state) => state.isStreaming)
+  const hasStreamingContent = useChatStore(
+    (state) => state.isStreaming || state.streamingMessages.length > 0,
+  )
   const conversation = useChatStore(useShallow((state) => state.activeConversation))
-  const streamingMessages = useChatStore(useShallow((state) => state.streamingMessages))
-  const pendingMessage = useChatStore(useShallow((state) => state.pendingMessage))
+  const pendingMessage = useChatStore((state) => state.pendingMessage)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const prevScrollHeightRef = useRef<number>(0)
 
@@ -28,13 +31,21 @@ export function ChatMessages({projectId, className}: {projectId: string; classNa
     fetchNextPage,
   } = useInfiniteQuery(listMessagesInfiniteQueryOptions(projectId, conversationId))
 
+  const historyMessages = useMemo(
+    () =>
+      insertToolResultsIntoAssistantMessages(
+        mergeMessages([...messages, pendingMessage].filter((message) => message !== null)),
+      ),
+    [messages, pendingMessage],
+  )
+
   useAutoScroll({
     scrollRef,
+    contentRef,
     isStreaming,
     scrollOnMount: true,
   })
 
-  // Scroll to bottom when the user sends a new message (pendingMessage appears)
   useEffect(() => {
     if (pendingMessage && scrollRef.current) {
       requestAnimationFrame(() => {
@@ -45,7 +56,6 @@ export function ChatMessages({projectId, className}: {projectId: string; classNa
     }
   }, [pendingMessage])
 
-  // Scroll to bottom when messages first load
   useEffect(() => {
     if (!isLoading && messages.length > 0 && scrollRef.current) {
       requestAnimationFrame(() => {
@@ -56,7 +66,6 @@ export function ChatMessages({projectId, className}: {projectId: string; classNa
     }
   }, [isLoading, conversationId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Preserve scroll position when older messages are prepended
   useLayoutEffect(() => {
     const el = scrollRef.current
     if (!el || prevScrollHeightRef.current === 0) return
@@ -68,7 +77,6 @@ export function ChatMessages({projectId, className}: {projectId: string; classNa
     prevScrollHeightRef.current = 0
   }, [messages])
 
-  // IntersectionObserver on sentinel to trigger fetching older messages
   const handleFetchOlder = useCallback(() => {
     if (!hasNextPage || isFetchingNextPage) return
     const el = scrollRef.current
@@ -89,19 +97,17 @@ export function ChatMessages({projectId, className}: {projectId: string; classNa
           handleFetchOlder()
         }
       },
-      { root: viewport, rootMargin: '100px 0px 0px 0px', threshold: 0 }
+      { root: viewport, rootMargin: '100px 0px 0px 0px', threshold: 0 },
     )
 
     observer.observe(sentinel)
     return () => observer.disconnect()
   }, [handleFetchOlder])
 
-  const allMessages = insertToolResultsIntoAssistantMessages(
-    mergeMessages([...messages, pendingMessage, ...streamingMessages].filter((message) => message !== null))
-  )
-  const isEmpty = isLoading === false && allMessages.length === 0
+  const isEmpty =
+    isLoading === false && historyMessages.length === 0 && !hasStreamingContent
 
-  if (isLoading && allMessages.length === 0) {
+  if (isLoading && historyMessages.length === 0 && !hasStreamingContent) {
     return (
       <div className={cn('flex-1 flex items-center justify-center', className)}>
         <span className="text-sm text-muted-foreground">Loading messages...</span>
@@ -123,19 +129,17 @@ export function ChatMessages({projectId, className}: {projectId: string; classNa
 
   return (
     <div className={cn('flex-1 overflow-y-auto w-full', className)} ref={scrollRef}>
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4" ref={contentRef}>
         <div ref={sentinelRef} className="h-1" />
         {isFetchingNextPage && (
           <div className="flex justify-center py-2">
             <IconLoader2 className="size-4 animate-spin text-muted-foreground" />
           </div>
         )}
-        {allMessages.map((message) => (
+        {historyMessages.map((message) => (
           <ChatBuble key={message.id} data={message} />
         ))}
-        {isStreaming && (
-          <TextShimmer text="Processing..." />
-        )}
+        <ChatStreamingMessages />
       </div>
     </div>
   )

@@ -3,10 +3,9 @@ import { buildBaseTool } from "./tool-definition";
 import { findCommandSchema, grepCommandSchema, searchCommandSchema } from "./command-schema";
 import { Session } from "../core/session";
 import { formatChunkResults } from "@/features/file-system/utils";
-import { failure, resolveFileByPathOrId, success } from "./utils";
+import { failure, success } from "./utils";
 import { searchFileNodesByFormat, searchFileNodesByName } from "@/features/file-system/repo";
 import { FileNode } from "@/db/schema";
-import { FileObject } from "@/features/file-system/objects/file";
 
 const toolSchema = z.discriminatedUnion('cmd', [
     findCommandSchema,
@@ -24,24 +23,24 @@ export const searchFileTool = buildBaseTool({
         const input = cmd.command;
         switch (input.cmd) {
             case 'keyword-search':
-                return executeKeywordSearchCommand(input, session.projectId);
+                return executeKeywordSearchCommand(input, session);
             case 'semantic-search':
                 return executeSemanticSearchCommand(input, session);
             case 'find':
-                return executeFindCommand(input, session.projectId);
+                return executeFindCommand(input, session);
             default:
                 return failure('Invalid command received. Valid commands are: keyword-search, semantic-search, find.');
         }
     }
 });
 
-async function executeKeywordSearchCommand(input: z.infer<typeof grepCommandSchema>, projectId: string) {
+async function executeKeywordSearchCommand(input: z.infer<typeof grepCommandSchema>, session: Session) {
     const { filePathOrId, keyword } = input;
-    const fileObject = await resolveFileByPathOrId(filePathOrId, projectId);
-
-    if(!(fileObject instanceof FileObject)) {
-        return fileObject;
+    const fileObject = await session.resolveFileByPathOrId(filePathOrId);
+    if(!fileObject){
+        return failure(`File ${filePathOrId} not found`);
     }
+
     const response = await fileObject.searchByKeyword(keyword);
     if(!response.ok || response.data === null) {
         return failure(response.error ?? `Failed to search by keyword in ${filePathOrId}`);
@@ -54,12 +53,12 @@ async function executeKeywordSearchCommand(input: z.infer<typeof grepCommandSche
 }
 
 async function executeSemanticSearchCommand(input: z.infer<typeof searchCommandSchema>, session: Session) {
-    const { projectId, embedder } = session;
+    const { embedder } = session;
     const { filePathOrId, query } = input;
 
-    const fileObject = await resolveFileByPathOrId(filePathOrId, projectId);
-    if(!(fileObject instanceof FileObject)) {
-        return fileObject;
+    const fileObject = await session.resolveFileByPathOrId(filePathOrId);
+    if(!fileObject){
+        return failure(`File ${filePathOrId} not found`);
     }
     const response = await fileObject.searchByEmbedding(embedder, query, 20);
     if(!response.ok || response.data === null) {
@@ -72,8 +71,10 @@ async function executeSemanticSearchCommand(input: z.infer<typeof searchCommandS
     return success(output);
 }
 
-async function executeFindCommand(input: z.infer<typeof findCommandSchema>, projectId: string) {
+async function executeFindCommand(input: z.infer<typeof findCommandSchema>, session: Session) {
     const { name, format, limit } = input;
+    const { projectId } = session;
+
     if(!name && !format) {
         return failure('Either name or format is required.');
     }

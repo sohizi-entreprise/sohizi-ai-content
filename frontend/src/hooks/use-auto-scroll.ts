@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react'
 
 interface UseAutoScrollOptions {
   scrollRef: React.RefObject<HTMLElement | null>
+  contentRef?: React.RefObject<HTMLElement | null>
   isStreaming: boolean
   scrollOnMount?: boolean
   threshold?: number
@@ -11,6 +12,7 @@ const DEFAULT_THRESHOLD = 40
 
 export function useAutoScroll({
   scrollRef,
+  contentRef,
   isStreaming,
   scrollOnMount = true,
   threshold = DEFAULT_THRESHOLD,
@@ -18,6 +20,7 @@ export function useAutoScroll({
   const isAutoScrollEnabled = useRef(true)
   const wasStreamingRef = useRef(false)
   const hasScrolledOnMount = useRef(false)
+  const scrollRafRef = useRef<number | null>(null)
 
   const isNearBottom = useCallback(() => {
     const el = scrollRef.current
@@ -31,13 +34,21 @@ export function useAutoScroll({
     el.scrollTop = el.scrollHeight
   }, [scrollRef])
 
-  // Scroll to bottom on mount (once content is available)
+  const scheduleScrollToBottom = useCallback(() => {
+    if (!isAutoScrollEnabled.current) return
+    if (scrollRafRef.current !== null) return
+
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null
+      scrollToBottom()
+    })
+  }, [scrollToBottom])
+
   useEffect(() => {
     if (!scrollOnMount || hasScrolledOnMount.current) return
     const el = scrollRef.current
     if (!el) return
 
-    // Wait a frame for content to render
     const raf = requestAnimationFrame(() => {
       scrollToBottom()
       hasScrolledOnMount.current = true
@@ -45,7 +56,6 @@ export function useAutoScroll({
     return () => cancelAnimationFrame(raf)
   }, [scrollOnMount, scrollRef, scrollToBottom])
 
-  // Track user scroll to enable/disable auto-scroll
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -58,15 +68,11 @@ export function useAutoScroll({
     return () => el.removeEventListener('scroll', handleScroll)
   }, [scrollRef, isNearBottom])
 
-  // During streaming, observe DOM mutations and scroll to bottom when content grows
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
 
     if (isStreaming && !wasStreamingRef.current) {
-      // Streaming just started — force-enable auto-scroll.
-      // The user just sent a message, so they expect to follow the response.
-      // They can scroll up during streaming to disable it.
       isAutoScrollEnabled.current = true
     }
 
@@ -74,25 +80,26 @@ export function useAutoScroll({
 
     if (!isStreaming) return
 
-    const observer = new MutationObserver(() => {
-      if (isAutoScrollEnabled.current) {
-        el.scrollTop = el.scrollHeight
-      }
-    })
-
-    observer.observe(el, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    })
-
-    // Initial scroll for current content
     if (isAutoScrollEnabled.current) {
-      el.scrollTop = el.scrollHeight
+      scheduleScrollToBottom()
     }
 
-    return () => observer.disconnect()
-  }, [isStreaming, scrollRef, isNearBottom])
+    const observed = contentRef?.current ?? el.firstElementChild
+    if (!(observed instanceof HTMLElement)) return
+
+    const observer = new ResizeObserver(() => {
+      scheduleScrollToBottom()
+    })
+
+    observer.observe(observed)
+    return () => {
+      observer.disconnect()
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current)
+        scrollRafRef.current = null
+      }
+    }
+  }, [isStreaming, scrollRef, contentRef, scheduleScrollToBottom])
 
   return { scrollToBottom, isNearBottom }
 }

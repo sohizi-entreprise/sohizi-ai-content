@@ -130,6 +130,7 @@ export type DocumentAssetMetadata = {
 export type AssetMetadata = {
   size: number;
   contentType: string;
+  duration?: number
 }
 
 export type TemplateAndSkillStatus = 'draft' | 'published'

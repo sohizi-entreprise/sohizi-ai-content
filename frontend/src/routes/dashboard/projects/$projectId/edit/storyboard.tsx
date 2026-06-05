@@ -45,7 +45,7 @@ import { toast } from 'sonner'
 import type { ShotWithImage, StoryboardScene, ProjectEntities } from '@/lib/types'
 
 const projectQueryOptions = (projectId: string) => ({
-  queryKey: ['project', projectId],
+  queryKey: ['project', projectId, 'info'],
   queryFn: () => getProject({ data: { projectId } }),
 })
 

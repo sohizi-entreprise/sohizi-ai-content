@@ -1,4 +1,4 @@
-import { FileNode, FileNodeContent } from "@/db/schema";
+import { FileNode, FileNodeContent, VideoComposition, Skill, Asset } from "@/db/schema";
 import { ProseDocument } from "@/type";
 import { EmbedderInterface } from "@/lib/rag";
 import {
@@ -13,13 +13,36 @@ import {
 import { FileNodeInsertPosition } from "../payload";
 import { ChunkHit } from "../types";
 import { countLines, countWords, normalizeFileName, serializeFileContent } from "../utils";
-import { getFileNodeById } from "../repo";
+import * as fileSystemRepo from "../repo";
+import { fileFormat } from "../constants";
+import { getCompositionByFileNodeId } from "@/features/video-editor/repo";
+import { getAssetByFileNodeId } from "@/features/media-engine/repo";
 
 
 type FileObjectResponse<T> = {
     ok: boolean;
     data: T;
     error?: string;
+}
+
+export type FileContentPayload = {
+    type: 'markdown';
+    data: string;
+} | {
+    type: 'skill';
+    data: Skill;
+} | {
+    type: 'image' | 'video' | 'document' | 'audio';
+    data: Asset;
+} | {
+    type: 'ai-generated';
+    data: null;
+} | {
+    type: 'video-editor';
+    data: VideoComposition;
+} | {
+    type: 'json';
+    data: Record<string, any>;
 }
 
 function ok<T>(data: T): FileObjectResponse<T> {
@@ -47,9 +70,11 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export class FileObject {
     private fileNode: FileNode;
+    private fileContentCache: FileContentPayload | null | undefined;
 
     constructor(fileNode: FileNode){
         this.fileNode = fileNode;
+        this.fileContentCache = undefined;
     }
 
     get format(){
@@ -102,7 +127,7 @@ export class FileObject {
         if (!this.fileNode.parentId) {
             return null;
         }
-        const parent = await getFileNodeById(this.fileNode.projectId, this.fileNode.parentId);
+        const parent = await fileSystemRepo.getFileNodeById(this.fileNode.projectId, this.fileNode.parentId);
         if (!parent) {
             return;
         }
@@ -333,5 +358,104 @@ export class FileObject {
             lastUpdated: this.fileNode.updatedAt,
             createdAt: this.fileNode.createdAt,
         });
+    }
+
+    async getFileContent(): Promise<FileObjectResponse<FileContentPayload | null>> {
+        if(this.fileContentCache !== undefined){
+            return ok(this.fileContentCache);
+        }
+
+        let content: FileContentPayload | null = null;
+
+        if(this.isDirectory){
+            return err(`Cannot get content of a directory ${this.fileNode.id}`);
+        }
+        if(!this.format){
+            return err(`This file format is corrupted. It cannot be read.`);
+        }
+
+        switch(this.format){
+            case fileFormat.MARKDOWN: {
+                const fileContent = await fileSystemRepo.getFileContentById(this.fileNode.projectId, this.fileNode.id);
+                content = {
+                    type: 'markdown',
+                    data: fileContent?.content ?? '',
+                };
+                break;
+            }
+            case fileFormat.JSON: {
+                const fileContent = await fileSystemRepo.getFileContentById(this.fileNode.projectId, this.fileNode.id);
+                content = {
+                    type: 'json',
+                    data: fileContent?.jsonContent ?? {},
+                };
+                break;
+            }
+            case fileFormat.SKILL: {
+                const skill = await fileSystemRepo.getSkillByFileID(this.id);
+                if(!skill) {
+                    content = null;
+                }else{
+                    content = {
+                        type: 'skill',
+                        data: skill,
+                    };
+                }
+                break;
+            }
+            case fileFormat.AI_GENERATED:{
+                content = {
+                    type: 'ai-generated',
+                    data: null
+                };
+                break;
+            }
+            case fileFormat.VIDEO_EDITOR:{
+                const composition = await getCompositionByFileNodeId(this.fileNode.id);
+                if(!composition) {
+                    content = null;
+                }else{
+                    content = {
+                        type: 'video-editor',
+                        data: composition,
+                    };
+                }
+                break;
+            }
+            case fileFormat.IMAGE:
+            case fileFormat.VIDEO:
+            case fileFormat.DOCUMENT:
+            case fileFormat.AUDIO:{
+                const asset = await getAssetByFileNodeId(this.fileNode.projectId, this.fileNode.id);
+                if(!asset) {
+                    content = null;
+                }else{
+                    content = {
+                        type: asset.type,
+                        data: asset,
+                    };
+                }
+                break;
+            }
+            
+            default:
+                return err(`File with format: ${this.fileNode.format} is not yet supported.`);
+        }
+
+        this.fileContentCache = content;
+
+        if(content === null){
+            return err(`File [Id: ${this.fileNode.id}] [format: ${this.fileNode.format}] not found`);
+        }
+
+        return ok(content);
+    }
+
+    updateFileContentCache(content: FileContentPayload | null | undefined): void {
+        if(content?.type !== this.format){
+            console.error(`Setting cache failed due to format mismatch. Expected: ${this.format}, Got: ${content?.type}`);
+            return;
+        }
+        this.fileContentCache = content;
     }
 }

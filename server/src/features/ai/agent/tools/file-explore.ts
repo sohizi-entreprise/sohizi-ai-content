@@ -1,16 +1,12 @@
 import { z } from "zod";
-import { PathObject } from "@/features/file-system/objects/path";
 import { buildBaseTool } from "./tool-definition";
 import { listCommandSchema, 
          existsCommandSchema, 
          readCommandSchema,
          describeCommandSchema
         } from "./command-schema";
-import { failure, success, resolveFileByPathOrId, formatSkill } from "./utils";
-import { formatReadOutput } from "@/features/file-system/utils";
-import { FileObject } from "@/features/file-system/objects/file";
-import { fileFormat } from "@/features/file-system/constants";
-import * as fileSystemRepo from "@/features/file-system/repo";
+import { failure, success, formatSkill } from "./utils";
+import { FileContentPayload } from "@/features/file-system/objects/file";
 import { Session } from "../core/session";
 
 
@@ -31,25 +27,24 @@ export const exploreFileTool = buildBaseTool({
         const input = cmd.command;
         switch (input.cmd) {
             case 'list':
-                return executeListCommand(input, session.projectId);
+                return executeListCommand(input, session);
             case 'exists':
-                return executeExistsCommand(input, session.projectId);
+                return executeExistsCommand(input, session);
             case 'read':
                 return executeReadCommand(input, session);
             case 'describe':
-                return executeDescribeCommand(input, session.projectId);
+                return executeDescribeCommand(input, session);
             default:
                 return failure('Invalid command received. Valid commands are: list, exists, read, describe.');
         }
     }
 });
 
-async function executeListCommand(input: z.infer<typeof listCommandSchema>, projectId: string) {
-    const result = await resolveFileByPathOrId(input.filePathOrId, projectId);
-    if(!(result instanceof FileObject)){
-        return result;
+async function executeListCommand(input: z.infer<typeof listCommandSchema>, session: Session) {
+    const fileObject = await session.resolveFileByPathOrId(input.filePathOrId);
+    if(!fileObject){
+        return failure(`File ${input.filePathOrId} not found`);
     }
-    const fileObject = result;
     
     const response = await fileObject.getDirectChildren()
     if(!response.ok || response.data === null) {
@@ -64,41 +59,59 @@ async function executeListCommand(input: z.infer<typeof listCommandSchema>, proj
     return success(output);
 }
 
-async function executeExistsCommand(input: z.infer<typeof existsCommandSchema>, projectId: string) {
-    const pathObject = new PathObject();
-    const { fileObject } = await pathObject.resolveByPath(input.filepath, projectId);
-    if(!fileObject) {
+async function executeExistsCommand(input: z.infer<typeof existsCommandSchema>, session: Session) {
+    const fileObject = await session.resolveFileByPathOrId(input.filepath);
+    if(!fileObject){
         return failure(`Path "${input.filepath}" is not found`);
     }
     return success(`${input.filepath} exists. It's a ${fileObject.isDirectory ? 'directory' : 'file'}. The ID is ${fileObject.id}.`);
 }
 
 async function executeReadCommand(input: z.infer<typeof readCommandSchema>, session: Session) {
-    const result = await resolveFileByPathOrId(input.filePathOrId, session.projectId);
-    if(!(result instanceof FileObject)){
-        return result;
+    const fileObject = await session.resolveFileByPathOrId(input.filePathOrId);
+    if(!fileObject){
+        return failure(`File ${input.filePathOrId} not found`);
     }
-    const fileObject = result;
+
     if(fileObject.isDirectory){
         return failure(`You cannot read the content of a directory.`);
     }
     if(fileObject.format === null){
         return failure(`The format of the file is not supported.`);
     }
-    const content = await session.getFileContent(fileObject.id, fileObject.format);
-    if(content === null){
-        return failure(`The content of the file is not found.`);
+    
+    const content = await fileObject.getFileContent();
+    if(!content.ok || content.data === null){
+        return failure(content.error || 'Failed to get the content of the file.');
     }
-    return success(content);
+
+    const data = content.data;
+    
+    return success(formatFileContent(data));
 }
 
-async function executeDescribeCommand(input: z.infer<typeof describeCommandSchema>, projectId: string) {
-    const result = await resolveFileByPathOrId(input.filePathOrId, projectId);
-    if(!(result instanceof FileObject)){
-        return result;
+async function executeDescribeCommand(input: z.infer<typeof describeCommandSchema>, session: Session) {
+    const fileObject = await session.resolveFileByPathOrId(input.filePathOrId);
+    if(!fileObject){
+        return failure(`File ${input.filePathOrId} not found`);
     }
-    const fileObject = result;
     const response = await fileObject.describe();
     return success(JSON.stringify(response.data, null, 2));
+}
+
+
+function formatFileContent(data: FileContentPayload): string {
+    switch(data.type){
+        case 'markdown':
+            return data.data;
+        case 'skill':
+            return formatSkill(data.data);
+        case 'json':
+            return JSON.stringify(data.data, null, 2);
+        case 'ai-generated':
+            return 'Reading the content of ai-generated files is not yet supported.';
+        default:
+            return `File of format: ${data.type} is not supported by this tool.`;
+    }
 }
 
