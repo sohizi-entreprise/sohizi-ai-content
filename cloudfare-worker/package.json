@@ -1,0 +1,21 @@
+{
+	"name": "cloudfare-worker",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy:dev": "wrangler deploy --env dev",
+		"deploy:prod": "wrangler deploy --env prod",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"cf-typegen": "wrangler types",
+		"r2-seed": "wrangler r2 object put sohizi-ai-dev/freesound_community.mp3 --file=/Users/sagelokongi/Desktop/freesound_community.mp3"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.12.4",
+		"@types/node": "^25.9.2",
+		"typescript": "^5.5.2",
+		"vitest": "~3.2.0",
+		"wrangler": "^4.98.0"
+	}
+}
