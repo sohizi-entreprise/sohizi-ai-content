@@ -101,6 +101,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@remotion/captions':
+        specifier: ^4.0.473
+        version: 4.0.473
       '@remotion/player':
         specifier: ^4.0.459
         version: 4.0.459(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -269,6 +272,12 @@ importers:
       react-day-picker:
         specifier: ^9.13.0
         version: 9.13.0(react@19.2.3)
+      react-dnd:
+        specifier: ^14.0.5
+        version: 14.0.5(@types/node@22.19.3)(@types/react@19.2.7)(react@19.2.3)
+      react-dnd-html5-backend:
+        specifier: ^14.1.0
+        version: 14.1.0
       react-dom:
         specifier: ^19.2.0
         version: 19.2.3(react@19.2.3)
@@ -2163,6 +2172,9 @@ packages:
 
   '@react-dnd/shallowequal@2.0.0':
     resolution: {integrity: sha512-Pc/AFTdwZwEKJxFJvlxrSmGe/di+aAOBn60sremrpLo6VI/6cmiUYNNwlI5KNYttg7uypzA3ILPMPgxB2GYZEg==}
+
+  '@remotion/captions@4.0.473':
+    resolution: {integrity: sha512-C/Je9foGYlZZa1MdwdzrFyPFpfRkKzy3IkUyg9JaraAJHgqNtRjQocq+oob3EtNh+3Y5GO2pO+PrccYxTmDzFQ==}
 
   '@remotion/player@4.0.459':
     resolution: {integrity: sha512-K8CpB0M/VTUBJ1G+KxxKw/jyqbneI+h2rXUANnty+skZKkv7c56VXEjnduQMOn8PPRdLctKyEl/KCZQDHG0HrQ==}
@@ -7742,6 +7754,8 @@ snapshots:
   '@react-dnd/invariant@2.0.0': {}
 
   '@react-dnd/shallowequal@2.0.0': {}
+
+  '@remotion/captions@4.0.473': {}
 
   '@remotion/player@4.0.459(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:

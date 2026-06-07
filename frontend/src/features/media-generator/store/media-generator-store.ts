@@ -1,9 +1,7 @@
 import { create } from 'zustand'
 import { toast } from 'sonner'
 import { defaultMediaSettings } from '../constants'
-import { createMockMediaItem } from '../mock-media'
 import type {
-  GenerateMediaInput,
   GeneratedMediaItem,
   MediaFilter,
   MediaGenerationSettings,
@@ -27,7 +25,6 @@ type MediaGeneratorState = {
     type: T,
     patch: Partial<MediaGenerationSettings[T]>,
   ) => void
-  generateMedia: (input: GenerateMediaInput) => GeneratedMediaItem
   deleteItem: (id: string) => void
   setPreviewItem: (id: string | null) => void
   moveItemToFile: (projectId: string, item: GeneratedMediaItem) => Promise<void>
@@ -58,7 +55,7 @@ ${settings}
 }
 
 export const useMediaGeneratorStore = create<MediaGeneratorState>(
-  (set, get) => ({
+  (set, _get) => ({
     items: [],
     filter: 'all',
     activeType: 'image',
@@ -79,11 +76,6 @@ export const useMediaGeneratorStore = create<MediaGeneratorState>(
           },
         },
       })),
-    generateMedia: (input) => {
-      const item = createMockMediaItem(input, get().settings)
-      set((state) => ({ items: [item, ...state.items] }))
-      return item
-    },
     deleteItem: (id) =>
       set((state) => ({
         items: state.items.filter((item) => item.id !== id),

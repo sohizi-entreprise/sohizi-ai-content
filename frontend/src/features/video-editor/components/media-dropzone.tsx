@@ -1,11 +1,18 @@
-import { useCallback, useRef, useState } from 'react'
-import { Loader2, Plus, Upload } from 'lucide-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { Loader2, Plus } from 'lucide-react'
 import { useVideoEditorStore } from '../store/editor-store'
 import { uploadMediaAsset } from '../requests'
 import { secondsToFrames } from '../utils/time'
+import {
+  probeImageDimensions,
+  probeMediaDuration,
+} from '../utils/media-probe'
 import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useMutation } from '@tanstack/react-query'
+import { generateCaptionMutationOptions } from '../query-mutations'
+import { toast } from 'sonner'
 
 interface MediaDropzoneProps {
   projectId: string
@@ -13,16 +20,33 @@ interface MediaDropzoneProps {
 }
 
 export function MediaDropzone({ projectId, className }: MediaDropzoneProps) {
-  const [active, setActive] = useState(false)
   const [uploading, setUploading] = useState(0)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const fps = useVideoEditorStore((s) => s.fps)
+  const tracks = useVideoEditorStore((s) => s.tracks)
+  const selection = useVideoEditorStore((s) => s.selection)
   const addVideoClip = useVideoEditorStore((s) => s.addVideoClip)
   const addAudioClip = useVideoEditorStore((s) => s.addAudioClip)
   const addTextClip = useVideoEditorStore((s) => s.addTextClip)
   const addImageClip = useVideoEditorStore((s) => s.addImageClip)
   const rootFolderId = useFileTreeStore((s) => s.rootFolderId)
+
+  const { mutate: generateCaption, isPending: isGeneratingCaption } = useMutation(generateCaptionMutationOptions(projectId))
+
+  const selectedClip = useMemo(() => {
+    if (selection.clipIds.length !== 1) return null
+    const id = selection.clipIds[0]
+    for (const track of tracks) {
+      for (const clip of track.clips) {
+        if (clip.id === id) return clip
+      }
+    }
+    return null
+  }, [tracks, selection])
+
+  const showAddCaption =
+    selectedClip?.type === 'video' || selectedClip?.type === 'audio'
 
   const ingestFiles = useCallback(
     async (files: FileList | null) => {
@@ -85,41 +109,27 @@ export function MediaDropzone({ projectId, className }: MediaDropzoneProps) {
     })
   }
 
+  const handleAddCaption = () => {
+    if (!selectedClip) return
+    const trackId = selectedClip.trackId
+    
+    generateCaption(trackId, {
+      onError: (error) => {
+        toast.error(error.message)
+      }
+    })
+  }
+
   return (
     <div
-      onDragEnter={(e) => {
-        e.preventDefault()
-        setActive(true)
-      }}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setActive(true)
-      }}
-      onDragLeave={(e) => {
-        e.preventDefault()
-        setActive(false)
-      }}
-      onDrop={(e) => {
-        e.preventDefault()
-        setActive(false)
-        void ingestFiles(e.dataTransfer.files)
-      }}
       className={cn(
-        'flex h-9 shrink-0 items-center gap-2 border-b border-border px-3 transition-colors',
-        active ? 'bg-accent/40' : 'bg-card',
+        'flex h-9 shrink-0 items-center gap-2 border-b border-border bg-card px-3',
         className,
       )}
     >
       {uploading > 0 ? (
         <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-      ) : (
-        <Upload className="size-3.5 text-muted-foreground" />
-      )}
-      <span className="text-[11px] text-muted-foreground">
-        {uploading > 0
-          ? `Uploading ${uploading} file${uploading > 1 ? 's' : ''}...`
-          : 'Drop video, image, or audio files here, or'}
-      </span>
+      ) : null}
       <Button
         variant="ghost"
         size="sm"
@@ -139,6 +149,22 @@ export function MediaDropzone({ projectId, className }: MediaDropzoneProps) {
         <Plus className="size-3" />
         Add text
       </Button>
+      {showAddCaption ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 text-xs"
+          onClick={handleAddCaption}
+          disabled={isGeneratingCaption}
+        >
+          {isGeneratingCaption ? (
+            <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+          ) : (
+            <Plus className="size-3" />
+          )}
+          Add caption
+        </Button>
+      ) : null}
       <input
         ref={inputRef}
         type="file"
@@ -152,62 +178,4 @@ export function MediaDropzone({ projectId, className }: MediaDropzoneProps) {
       />
     </div>
   )
-}
-
-function probeImageDimensions(
-  url: string,
-): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    const cleanup = () => {
-      img.onload = null
-      img.onerror = null
-    }
-    img.onload = () => {
-      cleanup()
-      const w = img.naturalWidth || img.width || 1
-      const h = img.naturalHeight || img.height || 1
-      resolve({ width: w, height: h })
-    }
-    img.onerror = () => {
-      cleanup()
-      reject(new Error('Failed to read image dimensions'))
-    }
-    img.src = url
-  })
-}
-
-function probeMediaDuration(
-  url: string,
-  kind: 'video' | 'audio',
-): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const el =
-      kind === 'video'
-        ? document.createElement('video')
-        : document.createElement('audio')
-    el.preload = 'metadata'
-    el.muted = true
-    if ('playsInline' in el) {
-      ;(el as HTMLVideoElement).playsInline = true
-    }
-
-    const onLoaded = () => {
-      cleanup()
-      const dur =
-        Number.isFinite(el.duration) && el.duration > 0 ? el.duration : 5
-      resolve(dur)
-    }
-    const onError = () => {
-      cleanup()
-      reject(new Error('Failed to read media metadata'))
-    }
-    const cleanup = () => {
-      el.removeEventListener('loadedmetadata', onLoaded)
-      el.removeEventListener('error', onError)
-    }
-    el.addEventListener('loadedmetadata', onLoaded)
-    el.addEventListener('error', onError)
-    el.src = url
-  })
 }

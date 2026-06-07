@@ -21,8 +21,13 @@ type ResultWithCostInUSD<T> = {
     result: T;
     cost: number;
 }
+
+export type WordsWithText = {
+    words: TranscriptionWord[];
+    text: string;
+}
  
-export const speechToText = async ({url, model='whisper-1', mode}: SpeechToTextParams) : Promise<ResultWithCostInUSD<string | TranscriptionWord[]>> => {
+export const speechToText = async ({url, model='whisper-1', mode}: SpeechToTextParams) : Promise<ResultWithCostInUSD<string | WordsWithText>> => {
     try {
         const file = await getFileFromUrl(url);
         if(!file){
@@ -50,7 +55,7 @@ export const speechToText = async ({url, model='whisper-1', mode}: SpeechToTextP
                 throw new Error("No words found in transcript");
             }
             return {
-                result: words,
+                result: {words, text: transcript.text},
                 cost,
             }
         }
@@ -96,16 +101,25 @@ export const textToSpeech = async ({text, model='gpt-4o-mini-tts-2025-12-15', vo
     }
 }
 
-async function getFileFromUrl(url: string) {
-    try{
+async function getFileFromUrl(url: string): Promise<File | null> {
+    try {
         const response = await fetch(url);
+        if (!response.ok) {
+            const body = await response.text().catch(() => '');
+            console.error(
+                `Failed to fetch audio for transcription (${response.status}): ${body.slice(0, 200)}`,
+            );
+            return null;
+        }
         const blob = await response.blob();
-        return blob;
-    }catch(error){
+        const type = blob.type || 'audio/mpeg';
+        return new File([blob], 'audio.mp3', { type });
+    } catch (error) {
         console.error(error);
         return null;
     }
 }
+
 
 export function getTranscriptionCost(durationSeconds: number) {
     // For whisper-1, we charge $0.006 per minute

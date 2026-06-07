@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Tree } from 'react-arborist'
+import { useDragDropManager } from 'react-dnd'
 import { useMutation } from '@tanstack/react-query'
 import { useFileTreeStore } from '../../stores/file-tree-store'
 import { DirectoryNode, useLoadChildren } from '../file-node/node-directory'
@@ -35,6 +36,7 @@ function Node(props: NodeProps) {
 }
 
 export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
+  const dndManager = useDragDropManager()
   const containerRef = useRef<HTMLDivElement>(null)
   const [treeHeight, setTreeHeight] = useState(0)
   const treeData = useFileTreeStore((s) => s.treeData)
@@ -189,7 +191,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   }
 
   const disableDrag = useCallback(
-    (node: FileTreeNode) => node.id.startsWith('temp-'),
+    (node: FileTreeNode) => node.id.startsWith('temp-') || !node.editable,
     [],
   )
 
@@ -230,6 +232,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
     >
       <Tree<FileTreeNode>
         ref={setTree}
+        dndManager={dndManager}
         data={treeData}
         idAccessor="id"
         childrenAccessor="children"
@@ -240,7 +243,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
         height={treeHeight || undefined}
         paddingBottom={20}
         disableDrag={disableDrag}
-        disableDrop={(args) => !args.parentNode.data.directory}
+        // disableDrop={(args) => !args.parentNode.data.directory}
         onRename={onRename}
         onMove={onMove}
         onDelete={onDelete}

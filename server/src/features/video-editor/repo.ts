@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { videoCompositions, videoTracks, videoClips } from "@/db/schema";
-import { eq, and, lte, gt, asc, sql, inArray } from "drizzle-orm";
+import { eq, and, lte, gt, asc, sql, inArray, gte } from "drizzle-orm";
 import type { VideoTrackType, VideoClipProperties, AspectRatio } from "@/type";
 
 // ============================================================================
@@ -62,11 +62,17 @@ export const updateComposition = async (id: string, data: UpdateCompositionData)
 // TRACKS
 // ============================================================================
 
-export const getTracksByCompositionId = async (compositionId: string) => {
+export const getTracksByCompositionId = async (compositionId: string, position?: { min?: number, max?: number }) => {
+  const minPosition = position?.min;
+  const maxPosition = position?.max;
   return db
     .select()
     .from(videoTracks)
-    .where(eq(videoTracks.compositionId, compositionId))
+    .where(and(
+      eq(videoTracks.compositionId, compositionId),
+      (minPosition !== undefined) ? gte(videoTracks.position, minPosition) : undefined,
+      (maxPosition !== undefined) ? lte(videoTracks.position, maxPosition) : undefined,
+    ))
     .orderBy(asc(videoTracks.position));
 };
 

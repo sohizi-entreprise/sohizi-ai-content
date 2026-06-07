@@ -31,6 +31,7 @@ interface EditorActions {
   hydrate: (data: HydrationData & { projectId: string }) => void
   resetStore: () => void
   addTrack: (type: TrackType, name?: string) => string
+  insertTrackAt: (type: TrackType, insertIndex: number, name?: string) => string
   removeTrack: (trackId: string) => void
   toggleTrackMuted: (trackId: string) => void
   toggleTrackHidden: (trackId: string) => void
@@ -213,6 +214,24 @@ const creator: StateCreator<
     const id = uuidv4()
     set((state) => {
       state.tracks.push({
+        id,
+        type,
+        name:
+          name ??
+          `${type[0].toUpperCase()}${type.slice(1)} ${state.tracks.length + 1}`,
+        muted: false,
+        hidden: false,
+        clips: [],
+      })
+    })
+    return id
+  },
+
+  insertTrackAt: (type, insertIndex, name) => {
+    const id = uuidv4()
+    set((state) => {
+      const clamped = Math.max(0, Math.min(insertIndex, state.tracks.length))
+      state.tracks.splice(clamped, 0, {
         id,
         type,
         name:

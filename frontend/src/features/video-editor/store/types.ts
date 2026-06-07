@@ -2,7 +2,7 @@ import type { CompositionVariable } from '@hyperframes/core'
 
 export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:5'
 
-export type TrackType = 'video' | 'audio' | 'text' | 'image' | 'html'
+export type TrackType = 'video' | 'audio' | 'text' | 'image' | 'html' | 'caption'
 
 export type TextAlign = 'left' | 'center' | 'right'
 
@@ -75,7 +75,34 @@ export interface HtmlClip extends BaseClip {
   values: Record<string, string | number | boolean>      // user-set overrides
 }
 
-export type Clip = VideoClip | AudioClip | TextClip | ImageClip | HtmlClip
+export type ServerCaption = {
+  word: string,
+  start: number,
+  end: number,
+}
+
+export interface CaptionClip extends BaseClip {
+  type: 'caption'
+  captions: {
+    text: string,
+    words: ServerCaption[]
+  }
+  properties: {
+    fontSize: number;
+    color: string;
+    fontFamily: string;
+    fontWeight: FontWeight;
+    align: TextAlign;
+    opacity: number;
+    xRatio: number;
+    yRatio: number;
+    widthRatio: number;
+    hightlightColor?: string;
+    backgroundColor?: string;
+  }
+}
+
+export type Clip = VideoClip | AudioClip | TextClip | ImageClip | HtmlClip | CaptionClip
 
 export interface Track {
   id: string

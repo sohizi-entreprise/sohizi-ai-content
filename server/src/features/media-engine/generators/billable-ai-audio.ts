@@ -2,7 +2,7 @@ import {
     providerCostToCredits,
     providerCostToActualCredits,
 } from './cost-utils';
-import { getTranscriptionCost, getTextToSpeechCost, speechToText, SpeechToTextParams, textToSpeech, TextToSpeechParams, estimateAudioSeconds } from './ai-audio';
+import { getTranscriptionCost, getTextToSpeechCost, speechToText, SpeechToTextParams, textToSpeech, TextToSpeechParams, estimateAudioSeconds, WordsWithText } from './ai-audio';
 import type { Billable, BillableContext, BillableResult, Credits } from '@/features/billing/types';
 import { TranscriptionWord } from 'openai/resources/audio/transcriptions';
 import { fastHash64 } from '@/utils/fast-hash';
@@ -17,7 +17,7 @@ type AudioBillableInput = {
 
 type AudioBillableOutput = {
     type: 'speech-to-text';
-    result: string | TranscriptionWord[];
+    result: string | WordsWithText;
 } | {
     type: 'text-to-speech';
     result: ArrayBuffer;

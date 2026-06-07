@@ -91,6 +91,13 @@ export const videoEditorRoutes = new Elysia({ prefix: '/video-editor/:projectId'
     body: updateTrackSchema,
   })
 
+  .post('/tracks/:trackId/captions', async({params, user})=>{
+    await assertProjectAccess(user.id, params.projectId)
+    return videoEditorService.addCaption(params.trackId, params.projectId, user.id)
+  }, {
+    params: trackParams,
+  })
+
   .delete('/tracks/:trackId', async ({ params, user }) => {
     await assertProjectAccess(user.id, params.projectId)
     return videoEditorService.removeTrack(params.trackId, params.projectId)

@@ -1,3 +1,5 @@
+import { DndProvider } from 'react-dnd'
+import { HTML5Backend } from 'react-dnd-html5-backend'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -55,9 +57,15 @@ export function AppLayout({ projectId, rootFolderId }: LayoutProps) {
       <TopNav />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <ActivityBar />
-        <div className="relative h-full min-w-0 flex-1">
-          {sidebarCollapsed ? <CollapsedLayout projectId={projectId} rootFolderId={rootFolderId} /> : <ExpandedLayout projectId={projectId} rootFolderId={rootFolderId} />}
-        </div>
+        <DndProvider backend={HTML5Backend}>
+          <div className="relative h-full min-w-0 flex-1">
+            {sidebarCollapsed ? (
+              <CollapsedLayout projectId={projectId} rootFolderId={rootFolderId} />
+            ) : (
+              <ExpandedLayout projectId={projectId} rootFolderId={rootFolderId} />
+            )}
+          </div>
+        </DndProvider>
       </div>
     </div>
   )

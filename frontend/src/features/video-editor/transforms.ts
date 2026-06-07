@@ -1,4 +1,5 @@
 import type {
+  CaptionClip,
   Clip,
   Track,
   TrackType,
@@ -8,6 +9,7 @@ import type {
   ImageClip,
   HtmlClip,
   AspectRatio,
+  ServerCaption,
 } from './store/types'
 import type { BatchOperation, LoadCompositionResponse, ServerClip } from './requests'
 
@@ -93,6 +95,30 @@ function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
         variables: (props.variables as HtmlClip['variables']) ?? [],
         values: (props.values as HtmlClip['values']) ?? {},
       } satisfies HtmlClip
+    case 'caption':
+      return {
+        ...base,
+        type: 'caption',
+        captions: {
+          text: (props.text as string) ?? '',
+          words: (props.words as ServerCaption[]) ?? [],
+        },
+        properties: {
+          fontSize: (props.fontSize as number) ?? 48,
+          color: (props.color as string) ?? '#ffffff',
+          fontFamily: (props.fontFamily as string) ?? 'Inter',
+          fontWeight:
+            (props.fontWeight as CaptionClip['properties']['fontWeight']) ??
+            'bold',
+          align: (props.align as CaptionClip['properties']['align']) ?? 'center',
+          opacity: (props.opacity as number) ?? 1,
+          xRatio: (props.xRatio as number) ?? 0.5,
+          yRatio: (props.yRatio as number) ?? 0.85,
+          widthRatio: (props.widthRatio as number) ?? 0.7,
+          hightlightColor: props.hightlightColor as string | undefined,
+          backgroundColor: props.backgroundColor as string | undefined,
+        },
+      } satisfies CaptionClip
   }
 }
 
@@ -145,6 +171,13 @@ const STRUCTURAL_KEYS = new Set([
 ])
 
 function extractProperties(clip: Clip): Record<string, unknown> {
+  if (clip.type === 'caption') {
+    return {
+      text: clip.captions.text,
+      words: clip.captions.words,
+      ...clip.properties,
+    }
+  }
   const props: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(clip)) {
     if (!STRUCTURAL_KEYS.has(key)) {
@@ -158,6 +191,15 @@ function extractProperties(clip: Clip): Record<string, unknown> {
 // State diffing -> BatchOperation[]
 // ============================================================================
 
+function isEqualValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true
+  if (a === null || b === null || typeof a !== typeof b) return false
+  if (typeof a === 'object') {
+    return JSON.stringify(a) === JSON.stringify(b)
+  }
+  return false
+}
+
 type DiffableState = {
   compositionId: string
   fps: number
@@ -166,6 +208,21 @@ type DiffableState = {
   width: number
   height: number
   tracks: Track[]
+}
+
+export function diffableSnapshotsEqual(
+  a: DiffableState,
+  b: DiffableState,
+): boolean {
+  return (
+    a.compositionId === b.compositionId &&
+    a.fps === b.fps &&
+    a.durationInFrames === b.durationInFrames &&
+    a.aspectRatio === b.aspectRatio &&
+    a.width === b.width &&
+    a.height === b.height &&
+    isEqualValue(a.tracks, b.tracks)
+  )
 }
 
 export function diffStateToBatchOps(
@@ -312,7 +369,7 @@ export function diffStateToBatchOps(
       const nextProps = extractProperties(clip)
       const propsPatch: Record<string, unknown> = {}
       for (const key of Object.keys(nextProps)) {
-        if (prevProps[key] !== nextProps[key]) {
+        if (!isEqualValue(prevProps[key], nextProps[key])) {
           propsPatch[key] = nextProps[key]
         }
       }
@@ -347,7 +404,7 @@ export function diffStateToBatchOps(
     const nextProps = extractProperties(nextClip)
     const propsPatch: Record<string, unknown> = {}
     for (const key of Object.keys(nextProps)) {
-      if (prevProps[key] !== nextProps[key]) {
+      if (!isEqualValue(prevProps[key], nextProps[key])) {
         propsPatch[key] = nextProps[key]
       }
     }

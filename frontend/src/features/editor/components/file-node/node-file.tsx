@@ -54,6 +54,8 @@ export function DocumentNode(props: NodeProps) {
           : 'text-muted-foreground hover:bg-accent/30 hover:text-foreground',
       )}
       onClick={handleClick}
+      data-format={node.data.format}
+      data-fileid={node.data.id}
     >
       <span className="w-4 shrink-0" />
       {getFileIcon(node.data.format)}

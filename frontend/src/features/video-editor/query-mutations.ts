@@ -1,5 +1,5 @@
 import { queryOptions, mutationOptions } from '@tanstack/react-query'
-import { loadComposition, batchEdit, createComposition } from './requests'
+import { loadComposition, batchEdit, createComposition, generateCaption } from './requests'
 import type { BatchOperation, CreateCompositionInput } from './requests'
 
 const keysFactory = {
@@ -37,3 +37,12 @@ export const batchEditMutationOptions = (
     mutationFn: (operations: BatchOperation[]) =>
       batchEdit(projectId, compositionId, operations),
   })
+
+
+export const generateCaptionMutationOptions = (projectId: string) =>
+  mutationOptions({
+    mutationFn: (trackId: string) => generateCaption(projectId, trackId),
+    meta: {
+      // invalidateQueries: [keysFactory.composition(projectId, fileNodeId)],
+    }
+})

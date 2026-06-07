@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useDrop } from 'react-dnd'
 import { Timeline } from '@xzdarcy/react-timeline-editor'
 import { useVideoEditorStore } from '../store/editor-store'
 import { CLIP_EFFECT_IDS, selectVisibleClips } from '../store/selectors'
@@ -11,17 +12,27 @@ import { AudioBlock } from './renderers/audio-block'
 import { TextBlock } from './renderers/text-block'
 import { ImageBlock } from './renderers/image-block'
 import { getHtmlClipLabel, HtmlBlock } from './renderers/html-block'
-import type { ProjectState } from '../store/types'
+import { CaptionBlock } from './renderers/caption-block'
+import type { ProjectState, TrackType } from '../store/types'
 import type {
   TimelineEditor,
   TimelineState,
 } from '@xzdarcy/react-timeline-editor'
 import type { TimelineEffect } from '@xzdarcy/timeline-engine'
+import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
+import type { FileTreeNode } from '@/features/editor/types'
+import {
+  ARBORIST_NODE_DRAG_TYPE,
+  type ArboristNodeDragItem,
+} from '@/features/editor/utils/arborist-dnd'
+import { ingestFileNodeClip } from '../utils/ingest-file-node-clip'
 
 const ROW_HEIGHT = 44
 const HEADERS_WIDTH = 192
 const SCALE_WIDTH_BASE = 80
 const SCALE_SECONDS = 5
+const START_LEFT = 20
+const DEFAULT_MEDIA_DURATION_SEC = 5
 // Fraction of the dragged clip that must overlap a row for the drop to be
 // treated as "insert into this track". Below this threshold the drop is
 // interpreted as "create new track above/below", so a higher value here
@@ -33,11 +44,18 @@ type DragGuide =
   | { mode: 'create'; insertIndex: number }
   | null
 
-type ClipKind = 'video' | 'audio' | 'text' | 'image' | 'html'
+// type ClipKind = 'video' | 'audio' | 'text' | 'image' | 'html' | 'caption'
+type MediaClipKind = 'video' | 'audio' | 'image'
+
+interface ExternalDropPreview {
+  startSec: number
+  startFrame: number
+  guide: DragGuide
+}
 
 interface DragSession {
   clipId: string
-  clipKind: ClipKind
+  clipKind: TrackType
   clipLabel: string
   sourceTrackIndex: number
   startClientY: number | null
@@ -49,7 +67,7 @@ interface DragGhost {
   left: number
   width: number
   height: number
-  kind: ClipKind
+  kind: TrackType
   label: string
   valid: boolean
 }
@@ -121,6 +139,10 @@ export function VideoTimeline() {
       [CLIP_EFFECT_IDS.text]: { id: CLIP_EFFECT_IDS.text, name: 'Text' },
       [CLIP_EFFECT_IDS.image]: { id: CLIP_EFFECT_IDS.image, name: 'Image' },
       [CLIP_EFFECT_IDS.html]: { id: CLIP_EFFECT_IDS.html, name: 'HTML' },
+      [CLIP_EFFECT_IDS.caption]: {
+        id: CLIP_EFFECT_IDS.caption,
+        name: 'Caption',
+      },
     }),
     [],
   )
@@ -217,6 +239,15 @@ export function VideoTimeline() {
   const [editAreaRect, setEditAreaRect] = useState<DOMRect | null>(null)
   const [dragGhost, setDragGhost] = useState<DragGhost | null>(null)
 
+  const externalDropGuideRef = useRef<DragGuide>(null)
+  const externalDropPreviewRef = useRef<ExternalDropPreview | null>(null)
+  const [externalDropGuide, setExternalDropGuide] = useState<DragGuide>(null)
+  const [externalDropGhost, setExternalDropGhost] = useState<DragGhost | null>(
+    null,
+  )
+  const [externalEditAreaRect, setExternalEditAreaRect] =
+    useState<DOMRect | null>(null)
+
   const updateDragGuide = useCallback((next: DragGuide) => {
     const prev = dragGuideRef.current
     if (sameDragGuide(prev, next)) return
@@ -257,46 +288,7 @@ export function VideoTimeline() {
       const deltaPointer = e.clientY - session.startClientY
       const deltaScroll = scrollTopRef.current - session.scrollTopAtStart
       const ghostTop = sourceRowTop + deltaPointer + deltaScroll
-      const ghostMid = ghostTop + ROW_HEIGHT / 2
-
-      let bestRow = -1
-      let bestOverlap = 0
-      for (let i = 0; i < tracksList.length; i += 1) {
-        const rowTop = i * ROW_HEIGHT
-        const overlap = Math.max(
-          0,
-          Math.min(ghostTop + ROW_HEIGHT, rowTop + ROW_HEIGHT) -
-            Math.max(ghostTop, rowTop),
-        )
-        if (overlap > bestOverlap) {
-          bestOverlap = overlap
-          bestRow = i
-        }
-      }
-
-      let nextGuide: DragGuide
-      if (bestRow >= 0 && bestOverlap / ROW_HEIGHT > INSERT_OVERLAP_THRESHOLD) {
-        const target = tracksList[bestRow]
-        nextGuide = {
-          mode: 'insert',
-          targetIndex: bestRow,
-          valid: target.type === clip.type,
-        }
-      } else {
-        // Decide insertion gap: gap g sits at y = g * ROW_HEIGHT, where
-        // g in [0, tracksList.length].
-        let bestGap = 0
-        let bestDist = Infinity
-        for (let g = 0; g <= tracksList.length; g += 1) {
-          const gapY = g * ROW_HEIGHT
-          const dist = Math.abs(ghostMid - gapY)
-          if (dist < bestDist) {
-            bestDist = dist
-            bestGap = g
-          }
-        }
-        nextGuide = { mode: 'create', insertIndex: bestGap }
-      }
+      const nextGuide = computeDragGuide(ghostTop, tracksList, clip.type)
       updateDragGuide(nextGuide)
 
       // Compute the ghost rectangle in screen coordinates so users get a
@@ -309,7 +301,7 @@ export function VideoTimeline() {
       const endSec = live?.end ?? framesToSeconds(clip.endFrame, fpsRef.current)
       const pxPerSec = scaleWidthRef.current / SCALE_SECONDS
       const widthLocal = Math.max(8, (endSec - startSec) * pxPerSec)
-      const leftLocal = 20 + startSec * pxPerSec
+      const leftLocal = START_LEFT + startSec * pxPerSec
       const ghostScreenLeft = rect.left + leftLocal - scrollLeftRef.current
       const ghostScreenTop = rect.top + ghostTop - scrollTopRef.current
       const valid =
@@ -493,6 +485,18 @@ export function VideoTimeline() {
       if (clip.type === 'html') {
         return <HtmlBlock clip={clip} selected={selected} />
       }
+      if (clip.type === 'caption') {
+        return (
+          <CaptionBlock
+            clip={clip}
+            selected={selected}
+            durationSec={framesToSeconds(
+              clip.endFrame - clip.startFrame,
+              fps,
+            )}
+          />
+        )
+      }
       return <TextBlock clip={clip} selected={selected} />
     },
     [clipById, fps],
@@ -519,6 +523,109 @@ export function VideoTimeline() {
     }
   }, [handleWindowMouseMove, handleWindowMouseUp])
 
+  const clearExternalDropPreview = useCallback(() => {
+    externalDropGuideRef.current = null
+    externalDropPreviewRef.current = null
+    setExternalDropGuide(null)
+    setExternalDropGhost(null)
+    setExternalEditAreaRect(null)
+  }, [])
+
+  const updateExternalDropPreview = useCallback(
+    (clientX: number, clientY: number, node: FileTreeNode) => {
+      const editArea = getEditAreaEl()
+      if (!editArea) return
+
+      const rect = editArea.getBoundingClientRect()
+      const tracksList = tracksRef.current
+      const clipType = node.format as MediaClipKind
+      const localY = clientY - rect.top + scrollTopRef.current
+      const ghostTop = localY - ROW_HEIGHT / 2
+      const nextGuide = computeDragGuide(ghostTop, tracksList, clipType)
+
+      const pxPerSec = scaleWidthRef.current / SCALE_SECONDS
+      const localX = clientX - rect.left + scrollLeftRef.current - START_LEFT
+      const startSec = Math.max(0, localX / pxPerSec)
+      const startFrame = secondsToFrames(startSec, fpsRef.current)
+      const widthLocal = Math.max(8, DEFAULT_MEDIA_DURATION_SEC * pxPerSec)
+      const leftLocal = START_LEFT + startSec * pxPerSec
+      const valid =
+        nextGuide?.mode === 'insert'
+          ? nextGuide.valid
+          : nextGuide?.mode === 'create'
+            ? true
+            : true
+
+      externalDropPreviewRef.current = {
+        startSec,
+        startFrame,
+        guide: nextGuide,
+      }
+
+      if (!sameDragGuide(externalDropGuideRef.current, nextGuide)) {
+        externalDropGuideRef.current = nextGuide
+        setExternalDropGuide(nextGuide)
+      }
+      setExternalEditAreaRect(rect)
+      setExternalDropGhost({
+        top: rect.top + ghostTop - scrollTopRef.current,
+        left: rect.left + leftLocal - scrollLeftRef.current,
+        width: widthLocal,
+        height: ROW_HEIGHT,
+        kind: clipType,
+        label: node.name,
+        valid,
+      })
+    },
+    [getEditAreaEl],
+  )
+
+  const [, dropTimeline] = useDrop(
+    () => ({
+      accept: ARBORIST_NODE_DRAG_TYPE,
+      hover(item: ArboristNodeDragItem, monitor) {
+        if (!monitor.isOver({ shallow: true })) {
+          clearExternalDropPreview()
+          return
+        }
+        const offset = monitor.getClientOffset()
+        if (!offset) return
+
+        const treeData = useFileTreeStore.getState().treeData
+        const node = findFileNodeInTree(treeData, item.id)
+        if (!isMediaFileNode(node)) {
+          clearExternalDropPreview()
+          return
+        }
+        updateExternalDropPreview(offset.x, offset.y, node)
+      },
+      drop(item: ArboristNodeDragItem) {
+        const treeData = useFileTreeStore.getState().treeData
+        const node = findFileNodeInTree(treeData, item.id)
+        if (!isMediaFileNode(node)) {
+          clearExternalDropPreview()
+          return
+        }
+
+        const preview = externalDropPreviewRef.current
+        clearExternalDropPreview()
+
+        const activeProjectId = useVideoEditorStore.getState().projectId
+        if (!activeProjectId) return
+
+        void ingestFileNodeClip({
+          projectId: activeProjectId,
+          node,
+          startFrame: preview?.startFrame ?? 0,
+          guide: preview?.guide ?? null,
+        }).catch((err) => {
+          console.error('[timeline] failed to ingest file node clip:', err)
+        })
+      },
+    }),
+    [clearExternalDropPreview, updateExternalDropPreview],
+  )
+
   return (
     <div className="flex h-full w-full flex-col bg-background">
       <div className="flex flex-1 overflow-hidden">
@@ -527,7 +634,12 @@ export function VideoTimeline() {
           scrollTop={scrollTop}
           width={HEADERS_WIDTH}
         />
-        <div className="relative flex-1 overflow-hidden">
+        <div
+          ref={(node) => {
+            dropTimeline(node)
+          }}
+          className="relative flex-1 overflow-hidden"
+        >
           <Timeline
             ref={(node) => {
               timelineStateRef.current = node
@@ -559,11 +671,11 @@ export function VideoTimeline() {
         </div>
       </div>
       <CrossTrackDragOverlay
-        guide={dragGuide}
-        editAreaRect={editAreaRect}
+        guide={dragGuide ?? externalDropGuide}
+        editAreaRect={editAreaRect ?? externalEditAreaRect}
         scrollTop={scrollTop}
       />
-      <DragGhostOverlay ghost={dragGhost} />
+      <DragGhostOverlay ghost={dragGhost ?? externalDropGhost} />
     </div>
   )
 }
@@ -646,6 +758,65 @@ function findClipById<C extends { id: string }>(
   return null
 }
 
+function isMediaFileNode(
+  node: FileTreeNode | null | undefined,
+): node is FileTreeNode & { format: MediaClipKind } {
+  return (
+    !!node &&
+    !node.directory &&
+    !!node.format &&
+    ['video', 'audio', 'image'].includes(node.format)
+  )
+}
+
+function computeDragGuide(
+  ghostTop: number,
+  tracksList: ReadonlyArray<{ type: string }>,
+  clipType: string,
+): DragGuide {
+  const ghostMid = ghostTop + ROW_HEIGHT / 2
+
+  if (tracksList.length === 0) {
+    return { mode: 'create', insertIndex: 0 }
+  }
+
+  let bestRow = -1
+  let bestOverlap = 0
+  for (let i = 0; i < tracksList.length; i += 1) {
+    const rowTop = i * ROW_HEIGHT
+    const overlap = Math.max(
+      0,
+      Math.min(ghostTop + ROW_HEIGHT, rowTop + ROW_HEIGHT) -
+        Math.max(ghostTop, rowTop),
+    )
+    if (overlap > bestOverlap) {
+      bestOverlap = overlap
+      bestRow = i
+    }
+  }
+
+  if (bestRow >= 0 && bestOverlap / ROW_HEIGHT > INSERT_OVERLAP_THRESHOLD) {
+    const target = tracksList[bestRow]
+    return {
+      mode: 'insert',
+      targetIndex: bestRow,
+      valid: target.type === clipType,
+    }
+  }
+
+  let bestGap = 0
+  let bestDist = Infinity
+  for (let g = 0; g <= tracksList.length; g += 1) {
+    const gapY = g * ROW_HEIGHT
+    const dist = Math.abs(ghostMid - gapY)
+    if (dist < bestDist) {
+      bestDist = dist
+      bestGap = g
+    }
+  }
+  return { mode: 'create', insertIndex: bestGap }
+}
+
 function sameDragGuide(a: DragGuide, b: DragGuide): boolean {
   if (a === b) return true
   if (!a || !b) return false
@@ -660,18 +831,20 @@ function sameDragGuide(a: DragGuide, b: DragGuide): boolean {
 }
 
 function clipDisplayLabel(clip: {
-  type: ClipKind
+  type: TrackType
   fileName?: string
   text?: string
   html?: string
+  captions?: { text: string }
 }): string {
   if (clip.type === 'text') return clip.text || 'Text'
   if (clip.type === 'html') return getHtmlClipLabel(clip.html ?? '')
+  if (clip.type === 'caption') return clip.captions?.text || 'Caption'
   return clip.fileName || clip.type
 }
 
 const GHOST_STYLES: Record<
-  ClipKind,
+TrackType,
   { bg: string; border: string; fg: string }
 > = {
   video: {
@@ -695,6 +868,11 @@ const GHOST_STYLES: Record<
     fg: '#ecfdf5',
   },
   html: {
+    bg: 'linear-gradient(180deg, rgba(139,92,246,0.85) 0%, rgba(124,58,237,0.85) 100%)',
+    border: 'rgba(255,255,255,0.95)',
+    fg: '#f5f3ff',
+  },
+  caption: {
     bg: 'linear-gradient(180deg, rgba(139,92,246,0.85) 0%, rgba(124,58,237,0.85) 100%)',
     border: 'rgba(255,255,255,0.95)',
     fg: '#f5f3ff',
@@ -733,4 +911,18 @@ function DragGhostOverlay({ ghost }: DragGhostOverlayProps) {
     </div>,
     document.body,
   )
+}
+
+function findFileNodeInTree(
+  nodes: FileTreeNode[],
+  id: string,
+): FileTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    if (node.children) {
+      const found = findFileNodeInTree(node.children, id)
+      if (found) return found
+    }
+  }
+  return null
 }

@@ -143,7 +143,7 @@ export type CategoryType = 'genre' | 'format' | 'audience' | 'platform'
 
 export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:5'
 
-export type VideoTrackType = 'video' | 'audio' | 'text' | 'image' | 'html'
+export type VideoTrackType = 'video' | 'audio' | 'text' | 'image' | 'html' | 'caption'
 
 export type TextAlign = 'left' | 'center' | 'right'
 
@@ -248,12 +248,36 @@ export type HtmlClipProperties = {
   values: Record<string, string | number | boolean>
 }
 
+export type CaptionWord = {
+  word: string
+  start: number
+  end: number
+}
+
+export type CaptionClipProperties = {
+  text: string
+  words?: CaptionWord[]
+  fontSize: number
+  color?: string
+  fontFamily?: string
+  fontWeight?: string | number
+  align?: TextAlign
+  hightlightColor?: string
+  backgroundColor?: string
+  opacity?: number
+  xRatio?: number
+  yRatio?: number
+  widthRatio?: number
+  heightRatio?: number
+}
+
 export type VideoClipProperties =
   | VideoMediaClipProperties
   | AudioMediaClipProperties
   | TextClipProperties
   | ImageMediaClipProperties
   | HtmlClipProperties
+  | CaptionClipProperties
 
 const compositionVariableBaseSchema = z.object({
   id: z.string(),

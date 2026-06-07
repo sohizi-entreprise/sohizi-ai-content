@@ -55,7 +55,3 @@ export type MediaGenerationSettings = {
   audio: AudioGenerationSettings
 }
 
-export type GenerateMediaInput = {
-  type: MediaType
-  prompt: string
-}

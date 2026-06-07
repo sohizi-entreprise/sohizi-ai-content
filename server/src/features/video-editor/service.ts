@@ -9,9 +9,17 @@ import type {
   UpdateCompositionInput,
   UpdateTrackInput,
 } from './schema';
-import { BadRequest, NotFound } from '../error';
-import type { VideoClipProperties } from '@/type';
+import { BadRequest, InternalServerError, NotFound } from '../error';
+import type { AudioMediaClipProperties, VideoClipProperties, VideoMediaClipProperties } from '@/type';
 import type { VideoComposition, VideoTrack, VideoClip } from '@/db/schema';
+import { WordsWithText } from '../media-engine/generators/ai-audio';
+import { billingService, withBilling } from '../billing';
+import { aiAudioBillable } from '../media-engine/generators/billable-ai-audio';
+import { v4 as uuidv4 } from 'uuid';
+import { getProjectById } from '../project/repo';
+import { z } from 'zod';
+import { getFileNodeById } from '../file-system/repo';
+import { getAssetByFileNodeId } from '../media-engine/repo';
 
 // ============================================================================
 // TYPES
@@ -244,6 +252,125 @@ export const batchEdit = async (compositionId: string, projectId: string, operat
   return repo.executeBatch(batchOps);
 };
 
+// Generate a caption
+export const addCaption = async (trackId: string, projectId: string, userId: string) => {
+  const track = await repo.getTrackById(trackId);
+  if(!track){
+    throw new NotFound('Track not found');
+  }
+  if(!['audio', 'video'].includes(track.type)){
+    throw new BadRequest('Caption can only be generated for audio and video tracks');
+  }
+
+  const project = await getProjectById(projectId);
+
+  const composition = await repo.getCompositionById(track.compositionId);
+
+  let payload: (Pick<VideoClip, 'startFrame' | 'endFrame' | 'sourceStartFrame' | 'sourceDurationInFrames'> & {url: string})[] = []
+
+  const clips = await repo.getClipsByTrackId(trackId);
+
+  for(const clip of clips){
+    if(clip.type === 'audio' || clip.type === 'video'){
+      let url = (clip.properties as AudioMediaClipProperties | VideoMediaClipProperties).url;
+      const offsetSeconds = clip.sourceStartFrame / composition.fps;
+      const clipDurationSeconds = (clip.endFrame - clip.startFrame) / composition.fps;
+      url = getOAudioUrl(url, clip.type, offsetSeconds, clipDurationSeconds);
+      payload.push({
+        url,
+        startFrame: clip.startFrame,
+        endFrame: clip.endFrame,
+        sourceStartFrame: clip.sourceStartFrame,
+        sourceDurationInFrames: clip.sourceDurationInFrames,
+      })
+    }
+  }
+
+  if(payload.length === 0){
+    throw new BadRequest('No clips found to generate caption for');
+  }
+
+  const audioClient = withBilling(aiAudioBillable, billingService);
+
+  const promises = payload.map((p) => {
+    return (async() => {
+
+      const transcription = await audioClient({
+        type: 'speech-to-text',
+        params: {
+          url: p.url,
+          mode: 'caption',
+          audioDurationSeconds: (p.endFrame - p.startFrame) / composition.fps
+        },
+      }, {
+        organizationId: project.organizationId,
+        userId,
+        metadata: {
+          runId: uuidv4(),
+        },
+      });
+
+      return {
+        transcriptions: transcription.result as WordsWithText,
+        startFrame: p.startFrame,
+        endFrame: p.endFrame,
+        sourceStartFrame: p.sourceStartFrame,
+        sourceDurationInFrames: p.sourceDurationInFrames,
+      }
+    })()
+  })
+
+  const transcriptions = await Promise.all(promises);
+
+  // Build a new track with the transcriptions and insert the clips
+  // Update all the track position below the current track
+  const tracksToUpdate = await repo.getTracksByCompositionId(track.compositionId, { min: track.position });
+  const newTrackId = uuidv4();
+  await repo.executeBatch([
+    {
+      op: 'create_track',
+      data: {
+        id: newTrackId,
+        compositionId: track.compositionId,
+        type: 'caption',
+        // name: 'Caption',
+        position: track.position,
+        muted: false,
+        hidden: false,
+      },
+    },
+    ...transcriptions.map((t) => {
+      return {
+        op: 'create_clip' as const,
+        data: {
+          trackId: newTrackId,
+          compositionId: track.compositionId,
+          type: 'caption' as const,
+          startFrame: t.startFrame,
+          endFrame: t.endFrame,
+          sourceStartFrame: t.sourceStartFrame,
+          sourceDurationInFrames: t.sourceDurationInFrames,
+          properties: {
+            text: t.transcriptions.text,
+            words: t.transcriptions.words,
+            fontSize: 48,
+          },
+        },
+      }
+    }),
+    ...tracksToUpdate.map((t) => {
+      return {
+        op: 'update_track' as const,
+        id: t.id,
+        data: { position: t.position + 1 },
+      }
+    }),
+  ])
+
+  return { ok: true };
+
+}
+
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -254,4 +381,54 @@ async function assertCompositionAccess(compositionId: string, projectId: string)
     throw new NotFound('Composition not found');
   }
   return composition;
+}
+
+const MAX_CAPTION_AUDIO_SECONDS = 600;
+
+function getOAudioUrl(url: string, type: 'audio' | 'video', offsetSeconds = 0, maxDurationSeconds = 600) {
+  const cdnUrl = import.meta.env.R2_PUBLIC_URL
+  const workerUrl = import.meta.env.CLOUDFLARE_WORKER_URL
+  if (!cdnUrl || !workerUrl) {
+    console.error('R2_PUBLIC_URL or CLOUDFLARE_WORKER_URL is not set')
+    throw new InternalServerError('An error occurred while generating the audio url. You can report this issue.')
+  }
+
+  const key = extractUrlKey(url);
+  if (!key) {
+    throw new BadRequest('Invalid media url')
+  }
+
+  const offset = Math.max(0, offsetSeconds);
+  const duration = Math.max(
+    0.1,
+    Math.min(maxDurationSeconds, MAX_CAPTION_AUDIO_SECONDS),
+  );
+
+  let finalUrl = '';
+  if (type === 'audio') {
+    const params = new URLSearchParams({
+      key,
+      offset: String(offset),
+      duration: String(duration),
+    });
+    finalUrl = `${workerUrl.replace(/\/$/, '')}/?${params.toString()}`
+  } else {
+    const transformation = `mode=audio,time=${offset}s,duration=${duration}s`
+    finalUrl = `${cdnUrl.replace(/\/$/, '')}/media/${transformation}/${key}`
+  }
+
+  try {
+    return new URL(finalUrl).href;
+  } catch {
+    throw new BadRequest('Something went wrong during url parsing')
+  }
+}
+
+function extractUrlKey(url: string) {
+  try{
+    const urlObj = new URL(url);
+    return urlObj.pathname.replace(/^[/]/, '')
+  }catch(error){
+    return null;
+  }
 }

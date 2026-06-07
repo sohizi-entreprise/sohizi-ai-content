@@ -11,6 +11,7 @@ import { createAssetWithFileNode } from "@/features/media-engine/repo";
 import { createFileWithContentAtPosition } from "@/features/file-system/repo";
 import * as storage from '@/features/media-engine/storage';
 import { parseBuffer } from 'music-metadata';
+import { WordsWithText } from "@/features/media-engine/generators/ai-audio";
 
 const DEFAULT_AUDIO_DURATION = 5 * 60; // 3 minutes
 
@@ -135,7 +136,7 @@ async function speechToText(command: z.infer<typeof speechToTextInputSchema>, se
                 metadata: { runId: uuid4() },
             }
         )
-        const result = output.result as string | TranscriptionWord[];
+        const result = output.result as string | WordsWithText;
         const isMarkdown = typeof result === 'string';
 
         if(command.writeToFolderId){

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const aspectRatios = ['16:9', '9:16', '1:1', '4:5'] as const;
-const trackTypes = ['video', 'audio', 'text', 'image', 'html'] as const;
+const trackTypes = ['video', 'audio', 'text', 'image', 'html', 'caption'] as const;
 
 // ============================================================================
 // COMPOSITIONS

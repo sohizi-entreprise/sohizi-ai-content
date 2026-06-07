@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useVideoEditorStore } from '../store/editor-store'
 import { batchEditMutationOptions } from '../query-mutations'
-import { diffStateToBatchOps } from '../transforms'
+import { diffStateToBatchOps, diffableSnapshotsEqual } from '../transforms'
 import { batchEdit } from '../requests'
 import type { Track, AspectRatio } from '../store/types'
 import type { BatchOperation } from '../requests'
@@ -79,6 +79,10 @@ export function useVideoEditorAutosave() {
     lastSavedRef.current = takeSnapshot()
 
     const unsubscribe = useVideoEditorStore.subscribe(() => {
+      const prev = lastSavedRef.current
+      const current = takeSnapshot()
+      if (!prev || !current || diffableSnapshotsEqual(prev, current)) return
+
       if (timerRef.current) clearTimeout(timerRef.current)
 
       timerRef.current = setTimeout(() => {

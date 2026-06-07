@@ -33,3 +33,8 @@ TODOS Jun 11 - Jun 23
 [ ] Polish the diff (especially when you try to reformat a doc)
 [ ] improve tool in the chat design
 [ ] Fix the problem, the app is freezing during streaming
+[ ] Handle drag and drop for file in timeline
+[ ] Optimize captions so it can run on the background
+[ ] clean timeline.tsx - decompose logic into hooks
+[ ] avoid dropping node on the timeline layer - it stucks we should fix that
+[ ] inside the storage.ts the max file size is 15MB for video and audio 

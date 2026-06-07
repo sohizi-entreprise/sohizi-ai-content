@@ -7,6 +7,7 @@ import {
 } from './clips'
 import type { Clip, Track } from '../store/types'
 import { HyperframeSequence } from './html-clip'
+import { CaptionsRenderer } from './caption-clip'
 
 export type MainCompositionProps = {
   tracks: Array<Track>
@@ -61,6 +62,8 @@ function ClipRouter({ clip, track }: { clip: Clip, track: Track }) {
       return <TextClipRenderer clip={clip} />
     case 'html':
       return <HyperframeSequence clip={clip} />
+    case 'caption':
+      return <CaptionsRenderer clip={clip} />
     default:
       return null
   }

@@ -58,7 +58,8 @@ function getAssetFolder(contentType: string) {
 }
 
 export function getMaxUploadSizeInBytes(contentType: string): number {
-    if (contentType.startsWith('video/')) return 10 * 1024 * 1024;
+    if (contentType.startsWith('video/')) return 15 * 1024 * 1024;
+    if (contentType.startsWith('audio/')) return 15 * 1024 * 1024;
     return 5 * 1024 * 1024;
 }
 

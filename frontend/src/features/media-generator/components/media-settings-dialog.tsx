@@ -50,8 +50,6 @@ export function MediaSettingsDialog({
   const setActiveType = useMediaGeneratorStore((state) => state.setActiveType)
   const settings = useMediaGeneratorStore((state) => state.settings)
   const updateSettings = useMediaGeneratorStore((state) => state.updateSettings)
-  const generateMedia = useMediaGeneratorStore((state) => state.generateMedia)
-  const prompt = useMediaGeneratorStore((state) => state.settingsPrompt)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -113,7 +111,7 @@ export function MediaSettingsDialog({
               </p>
               <Button
                 onClick={() => {
-                  generateMedia({ type: activeType, prompt })
+                  // generateMedia({ type: activeType, prompt })
                   onOpenChange(false)
                 }}
                 className="rounded-full"

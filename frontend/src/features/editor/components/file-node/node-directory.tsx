@@ -76,6 +76,8 @@ export function DirectoryNode(props: NodeProps) {
           : 'text-muted-foreground hover:bg-accent/30 hover:text-foreground',
       )}
       onClick={handleClick}
+      data-format={node.data.format}
+      data-fileid={node.data.id}
     >
       <span className="flex size-4 shrink-0 items-center justify-center">
         {node.isOpen ? (
@@ -311,8 +313,8 @@ function useHandleUploadFile(
   const { saveFile } = useSaveFileBucket()
   const [_state, { openFileDialog, getInputProps }] = useFileUpload({
     multiple: false,
-    accept: 'image/*,video/*,audio/*,application/pdf,text/plain,.docx',
-    maxSize: 5 * 1024 * 1024, // 5MB
+    accept: 'image/*,video/*,audio/*,text/plain,.docx',
+    maxSize: 20 * 1024 * 1024, // 5MB
     onFilesAdded: (data) => {
       const totalChildren = node.children?.length ?? 0
       if (totalChildren === MAX_CHILDREN_PER_DIRECTORY) {
