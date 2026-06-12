@@ -1,73 +1,43 @@
 import { z } from "zod";
 import { buildBaseTool } from "./tool-definition";
-import { findCommandSchema, grepCommandSchema, searchCommandSchema } from "./command-schema";
+import { findCommandSchema, searchCommandSchema } from "./command-schema";
 import { Session } from "../core/session";
-import { formatChunkResults } from "@/features/file-system/utils";
+import { formatChunkResults, formatKeywordChunkResults } from "@/features/file-system/utils";
 import { failure, success } from "./utils";
-import { searchFileNodesByFormat, searchFileNodesByName } from "@/features/file-system/repo";
+import { searchFileNodesByFormat, searchFileNodesByName, searchProjectChunksByKeyword } from "@/features/file-system/repo";
 import { FileNode } from "@/db/schema";
 
 const toolSchema = z.discriminatedUnion('cmd', [
     findCommandSchema,
-    grepCommandSchema,
     searchCommandSchema,
 ]);
 
 export const searchFileTool = buildBaseTool({
     name: "searchFile",
-    description: "Search the file system using keyword search or semantic search. Keyword search supports tsquery operators (& | ! <N> :*) for precise matching — use for names, exact phrases, proximity, and prefix matching. Semantic search uses vector embeddings for meaning-based retrieval — use when you know the concept but not the exact wording.",
+    description: "Search the file system using keyword search or semantic search. Keyword search runs project-wide using web-style query syntax (quoted phrases, OR, negation). Semantic search uses vector embeddings for meaning-based retrieval within a file or directory — use when you know the concept but not the exact wording.",
     inputSchema: z.object({
         command: toolSchema,
     }),
     execute: async(cmd, {session}) => {
         const input = cmd.command;
         switch (input.cmd) {
-            case 'keyword-search':
+            case 'search':
                 return executeKeywordSearchCommand(input, session);
-            case 'semantic-search':
-                return executeSemanticSearchCommand(input, session);
             case 'find':
                 return executeFindCommand(input, session);
             default:
-                return failure('Invalid command received. Valid commands are: keyword-search, semantic-search, find.');
+                return failure('Invalid command received. Valid commands are: search, find.');
         }
     }
 });
 
-async function executeKeywordSearchCommand(input: z.infer<typeof grepCommandSchema>, session: Session) {
-    const { filePathOrId, keyword } = input;
-    const fileObject = await session.resolveFileByPathOrId(filePathOrId);
-    if(!fileObject){
-        return failure(`File ${filePathOrId} not found`);
+async function executeKeywordSearchCommand(input: z.infer<typeof searchCommandSchema>, session: Session) {
+    const { keyword } = input;
+    const hits = await searchProjectChunksByKeyword(session.projectId, keyword);
+    if (hits.length === 0) {
+        return failure(`No matches found for "${keyword}" in the project`);
     }
-
-    const response = await fileObject.searchByKeyword(keyword);
-    if(!response.ok || response.data === null) {
-        return failure(response.error ?? `Failed to search by keyword in ${filePathOrId}`);
-    }
-    if(response.data.length === 0) {
-        return failure(`No matches found for "${keyword}" in ${filePathOrId}`);
-    }
-    const output = await formatChunkResults(response.data, 'rank');
-    return success(output);
-}
-
-async function executeSemanticSearchCommand(input: z.infer<typeof searchCommandSchema>, session: Session) {
-    const { embedder } = session;
-    const { filePathOrId, query } = input;
-
-    const fileObject = await session.resolveFileByPathOrId(filePathOrId);
-    if(!fileObject){
-        return failure(`File ${filePathOrId} not found`);
-    }
-    const response = await fileObject.searchByEmbedding(embedder, query, 20);
-    if(!response.ok || response.data === null) {
-        return failure(response.error ?? `Failed to search by embedding in ${filePathOrId}`);
-    }
-    if(response.data.length === 0) {
-        return failure(`No matches found for "${query}" in ${filePathOrId}`);
-    }
-    const output = await formatChunkResults(response.data, 'distance');
+    const output = formatKeywordChunkResults(hits);
     return success(output);
 }
 

@@ -8,3 +8,10 @@ export type ChunkHit = {
     rank?: number;
     distance?: number;
 };
+
+export type KeywordChunkHit = {
+    id: string;
+    fileNodeId: string;
+    totalChunksMatched: number;
+    snippet: string;
+};

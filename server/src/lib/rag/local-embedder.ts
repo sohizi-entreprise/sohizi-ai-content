@@ -1,4 +1,4 @@
-import { FeatureExtractionPipeline, pipeline, AutoTokenizer, PreTrainedTokenizer } from '@huggingface/transformers';
+import { FeatureExtractionPipeline, pipeline } from '@huggingface/transformers';
 import { EmbedderInterface } from './embedding';
 import { splitIntoChunks } from './chunker';
 import { HuggingFaceTokenizer } from './tokenizer';

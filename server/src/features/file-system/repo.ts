@@ -415,6 +415,42 @@ export const updateFileContentAtRevision = async(
     return result[0];
 }
 
+type FileContentChunkInsert = {
+    chunkIndex: number;
+    chunkText: string;
+    tokenCount: number;
+};
+
+export const replaceFileContentChunks = async(
+    projectId: string,
+    fileNodeId: string,
+    chunks: FileContentChunkInsert[],
+) => {
+    return db.transaction(async (tx) => {
+        await tx.delete(fileNodeContentChunks)
+                .where(and(
+                    eq(fileNodeContentChunks.projectId, projectId),
+                    eq(fileNodeContentChunks.fileNodeId, fileNodeId),
+                ));
+
+        if (chunks.length === 0) {
+            return;
+        }
+
+        await tx.insert(fileNodeContentChunks).values(
+            chunks.map((chunk) => ({
+                projectId,
+                fileNodeId,
+                chunkIndex: chunk.chunkIndex,
+                chunkText: chunk.chunkText,
+                embedding: null,
+                embeddingMetadata: null,
+                tokenCount: chunk.tokenCount,
+            })),
+        );
+    });
+}
+
 type InitialFileContent = {
     markdown?: string;
     json?: Record<string, any>;
@@ -695,125 +731,6 @@ export const getFileNodePathById = async(projectId: string, fileNodeId: string) 
     return row?.path ?? null;
 }
 
-/**
- * Accepts raw tsquery syntax from the agent (supports &, |, !, <N>, :* operators).
- * Falls back to AND-ing plain words if no operators are present.
- */
-function buildTsQuery(input: string): string {
-    const hasOperators = /[&|!<>:*()]/.test(input);
-    if (hasOperators) {
-        return input;
-    }
-    const tokens = input.split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) return '';
-    return tokens.map(t => `'${t}'`).join(' & ');
-}
-
-export const searchDirectoryChunksByKeyword = async(
-    projectId: string,
-    fileNodeId: string,
-    keyword: string,
-    limit = 20,
-) => {
-    // Works with files as well
-    const normalizedKeyword = keyword.trim();
-
-    if (!normalizedKeyword) {
-        return [];
-    }
-
-    const tsquery = buildTsQuery(normalizedKeyword);
-    const result = await db.execute(sql`
-        WITH RECURSIVE subtree AS (
-            SELECT
-                fn.id,
-                fn.directory
-            FROM file_nodes fn
-            WHERE fn.project_id = ${projectId}
-              AND fn.id = ${fileNodeId}
-
-            UNION ALL
-
-            SELECT
-                child.id,
-                child.directory
-            FROM file_nodes child
-            JOIN subtree ON child.parent_id = subtree.id
-            WHERE child.project_id = ${projectId}
-        ) CYCLE id SET is_cycle USING subtree_cycle_path,
-        hits AS (
-            SELECT
-                chunks.id,
-                chunks.file_node_id,
-                chunks.chunk_index,
-                chunks.chunk_text,
-                ts_rank_cd(chunks.search_text, to_tsquery('simple', ${tsquery})) AS rank
-            FROM file_node_content_chunks chunks
-            JOIN subtree ON subtree.id = chunks.file_node_id
-            WHERE chunks.project_id = ${projectId}
-              AND NOT subtree.is_cycle
-              AND subtree.directory = false
-              AND chunks.search_text @@ to_tsquery('simple', ${tsquery})
-            ORDER BY rank DESC, chunks.chunk_index ASC
-            LIMIT ${limit}
-        ),
-        hit_files AS (
-            SELECT DISTINCT hits.file_node_id
-            FROM hits
-        ),
-        ancestors AS (
-            SELECT
-                fn.id,
-                fn.parent_id,
-                fn.name,
-                fn.id AS leaf_id,
-                0 AS depth
-            FROM file_nodes fn
-            JOIN hit_files ON hit_files.file_node_id = fn.id
-            WHERE fn.project_id = ${projectId}
-
-            UNION ALL
-
-            SELECT
-                parent.id,
-                parent.parent_id,
-                parent.name,
-                ancestors.leaf_id,
-                ancestors.depth + 1
-            FROM file_nodes parent
-            JOIN ancestors ON ancestors.parent_id = parent.id
-            WHERE parent.project_id = ${projectId}
-        ) CYCLE id SET is_cycle USING ancestor_cycle_path,
-        paths AS (
-            SELECT
-                ancestors.leaf_id AS file_node_id,
-                '/' || string_agg(ancestors.name, '/' ORDER BY ancestors.depth DESC) AS path
-            FROM ancestors
-            WHERE NOT ancestors.is_cycle
-            GROUP BY ancestors.leaf_id
-        )
-        SELECT
-            hits.id,
-            hits.file_node_id AS "fileNodeId",
-            hits.chunk_index AS "chunkIndex",
-            hits.chunk_text AS "chunkText",
-            paths.path,
-            hits.rank
-        FROM hits
-        JOIN paths ON paths.file_node_id = hits.file_node_id
-        ORDER BY hits.rank DESC, hits.chunk_index ASC
-    `);
-
-    return result.rows as Array<{
-        id: string;
-        fileNodeId: string;
-        chunkIndex: number;
-        chunkText: string;
-        path: string;
-        rank: number;
-    }>;
-}
-
 export const searchProjectChunksByKeyword = async(
     projectId: string,
     keyword: string,
@@ -825,75 +742,57 @@ export const searchProjectChunksByKeyword = async(
         return [];
     }
 
-    const tsquery = buildTsQuery(normalizedKeyword);
     const result = await db.execute(sql`
-        WITH RECURSIVE hits AS (
+        WITH search AS (
+            SELECT websearch_to_tsquery('simple', ${normalizedKeyword}) AS query
+        ),
+        matched_chunks AS (
             SELECT
                 chunks.id,
                 chunks.file_node_id,
                 chunks.chunk_index,
                 chunks.chunk_text,
-                ts_rank_cd(chunks.search_text, to_tsquery('simple', ${tsquery})) AS rank
+                ts_rank_cd(chunks.search_text, search.query) AS rank
             FROM file_node_content_chunks chunks
+            CROSS JOIN search
             WHERE chunks.project_id = ${projectId}
-              AND chunks.search_text @@ to_tsquery('simple', ${tsquery})
-            ORDER BY rank DESC, chunks.chunk_index ASC
-            LIMIT ${limit}
+              AND chunks.search_text @@ search.query
         ),
-        hit_files AS (
-            SELECT DISTINCT hits.file_node_id
-            FROM hits
-        ),
-        ancestors AS (
+        ranked_documents AS (
             SELECT
-                fn.id,
-                fn.parent_id,
-                fn.name,
-                fn.id AS leaf_id,
-                0 AS depth
-            FROM file_nodes fn
-            JOIN hit_files ON hit_files.file_node_id = fn.id
-            WHERE fn.project_id = ${projectId}
-
-            UNION ALL
-
-            SELECT
-                parent.id,
-                parent.parent_id,
-                parent.name,
-                ancestors.leaf_id,
-                ancestors.depth + 1
-            FROM file_nodes parent
-            JOIN ancestors ON ancestors.parent_id = parent.id
-            WHERE parent.project_id = ${projectId}
-        ) CYCLE id SET is_cycle USING ancestor_cycle_path,
-        paths AS (
-            SELECT
-                ancestors.leaf_id AS file_node_id,
-                '/' || string_agg(ancestors.name, '/' ORDER BY ancestors.depth DESC) AS path
-            FROM ancestors
-            WHERE NOT ancestors.is_cycle
-            GROUP BY ancestors.leaf_id
+                id,
+                file_node_id,
+                chunk_text,
+                rank,
+                COUNT(*) OVER (PARTITION BY file_node_id) AS total_chunks_matched,
+                ROW_NUMBER() OVER (
+                    PARTITION BY file_node_id
+                    ORDER BY rank DESC, chunk_index ASC
+                ) AS chunk_rn
+            FROM matched_chunks
         )
         SELECT
-            hits.id,
-            hits.file_node_id AS "fileNodeId",
-            hits.chunk_index AS "chunkIndex",
-            hits.chunk_text AS "chunkText",
-            paths.path,
-            hits.rank
-        FROM hits
-        JOIN paths ON paths.file_node_id = hits.file_node_id
-        ORDER BY hits.rank DESC, hits.chunk_index ASC
+            ranked_documents.id,
+            ranked_documents.file_node_id AS "fileNodeId",
+            ranked_documents.total_chunks_matched::int AS "totalChunksMatched",
+            ts_headline(
+                'simple',
+                ranked_documents.chunk_text,
+                search.query,
+                'StartSel=**, StopSel=**, MaxWords=50, MinWords=15'
+            ) AS snippet
+        FROM ranked_documents
+        CROSS JOIN search
+        WHERE ranked_documents.chunk_rn = 1
+        ORDER BY ranked_documents.rank DESC
+        LIMIT ${limit}
     `);
 
     return result.rows as Array<{
         id: string;
         fileNodeId: string;
-        chunkIndex: number;
-        chunkText: string;
-        path: string;
-        rank: number;
+        totalChunksMatched: number;
+        snippet: string;
     }>;
 }
 

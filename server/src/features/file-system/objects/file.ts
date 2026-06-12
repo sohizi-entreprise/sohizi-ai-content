@@ -5,13 +5,13 @@ import {
     deleteFileNode as deleteFileNodeFn,
     getFileContent as getFileContentFn,
     listDirectoryFiles as listDirectoryFilesFn,
-    searchDirectoryContent as searchDirectoryContentFn,
+    searchProjectContent as searchProjectContentFn,
     semanticSearchDirectory as semanticSearchDirectoryFn,
     updateFileContent as updateFileContentFn,
     updateFileNode as updateFileNodeFn,
 } from "../functions";
 import { FileNodeInsertPosition } from "../payload";
-import { ChunkHit } from "../types";
+import { ChunkHit, KeywordChunkHit } from "../types";
 import { countLines, countWords, normalizeFileName, serializeFileContent } from "../utils";
 import * as fileSystemRepo from "../repo";
 import { fileFormat } from "../constants";
@@ -134,22 +134,21 @@ export class FileObject {
         return new FileObject(parent);
     }
 
-    async searchByKeyword(keyword: string, limit = 20): Promise<FileObjectResponse<ChunkHit[] | null>> {
+    async searchByKeyword(keyword: string, limit = 20): Promise<FileObjectResponse<KeywordChunkHit[] | null>> {
         const normalizedKeyword = keyword.trim();
         if (!normalizedKeyword) {
             return err('Keyword cannot be empty');
         }
 
         try {
-            const hits = await searchDirectoryContentFn({
+            const hits = await searchProjectContentFn({
                 projectId: this.fileNode.projectId,
-                fileNodeId: this.fileNode.id,
                 keyword: normalizedKeyword,
                 limit,
             });
             return ok(hits);
         } catch (error) {
-            return err(getErrorMessage(error, `Failed to search inside ${this.fileNode.name}`));
+            return err(getErrorMessage(error, 'Failed to search project content'));
         }
     }
 

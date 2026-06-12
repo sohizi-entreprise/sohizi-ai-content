@@ -74,6 +74,21 @@ export function formatReadOutput(text: string, offset?: number, limit?: number) 
         .join('\n');
 }
 
+export function formatKeywordChunkResults(
+    hits: Array<{ fileNodeId: string; totalChunksMatched: number; snippet: string }>,
+) {
+    if (hits.length === 0) {
+        return 'No matches found.';
+    }
+
+    return hits.map((hit, index) => {
+        return [
+            `${index + 1}. [fileId: ${hit.fileNodeId}] (${hit.totalChunksMatched} chunk${hit.totalChunksMatched === 1 ? '' : 's'} matched)`,
+            hit.snippet,
+        ].join('\n');
+    }).join('\n---\n');
+}
+
 export async function formatChunkResults(
     hits: Array<{
         fileNodeId: string;

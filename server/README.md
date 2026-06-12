@@ -29,3 +29,7 @@ Production ready features:
 
 
 Effects/transitions, keyframing, captions auto-gen.
+
+
+Read this:
+https://www.aimagicx.com/blog/long-form-ai-video-character-consistency-guide-2026

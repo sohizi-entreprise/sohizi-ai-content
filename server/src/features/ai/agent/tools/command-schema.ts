@@ -161,28 +161,15 @@ export const copyCommandSchema = z.object({
     Example: {"cmd": "copy", "fromPathOrId": "9514ac94-7ca8-4efc-a330-8c67bd4c2ee5", "toPathOrId": "9514ac94-7ca8-4efc-a330-8c67bd4c2ee6"} => confirmation message
 `.trim());
 
-export const grepCommandSchema = z.object({
-    cmd: z.literal('keyword-search').describe("Perform keyword search in a file or directory using tsquery syntax."),
-    filePathOrId: z.string().describe("Absolute file path or file ID (uuid) to search in. Can be a file or a directory."),
-    keyword: z.string().min(1).describe("Search expression. Plain words are AND-ed by default. Supports tsquery operators: & (AND), | (OR), ! (NOT), <N> (proximity within N words), :* (prefix match). Wrap multi-word phrases in single quotes."),
-}).describe(`
-    Returns: ranked chunk hits matching the keyword expression.
-    Operators: & (AND), | (OR), ! (NOT), <N> (followed by within N words), :* (prefix)
-    Example plain: {"cmd": "keyword-search", "filePathOrId": "/root", "keyword": "hero sword"} => matches chunks containing both "hero" AND "sword"
-    Example OR: {"cmd": "keyword-search", "filePathOrId": "/root", "keyword": "hero | protagonist"} => matches either term
-    Example NOT: {"cmd": "keyword-search", "filePathOrId": "/root", "keyword": "hero & !villain"} => hero but not villain
-    Example proximity: {"cmd": "keyword-search", "filePathOrId": "/root", "keyword": "hero <3> sword"} => hero within 3 words of sword
-    Example prefix: {"cmd": "keyword-search", "filePathOrId": "/root", "keyword": "war:*"} => matches war, warrior, warehouse, etc.
-`.trim());
-
 export const searchCommandSchema = z.object({
-    cmd: z.literal('semantic-search').describe("Perform semantic search in a file or directory using a natural-language query."),
-    filePathOrId: z.string().describe("Absolute file path or file ID (uuid) to search in. can be a file or a directory."),
-    query: z.string().min(1).describe("Semantic search query describing the meaning you want to find."),
+    cmd: z.literal('search').describe("Perform keyword search using PostgreSQL \`websearch_to_tsquery\` syntax."),
+    keyword: z.string().min(1).describe("Search expression. Plain words are AND-ed. Use double quotes for phrases, OR, - to exclude terms."),
 }).describe(`
-    Returns: chunks hits that are semantically relevant to the query.
-    Example: {"cmd": "semantic-search", "filePathOrId": "/folder", "query": "scenes where the hero gives up"} => chunks hits
-    Example: {"cmd": "semantic-search", "filePathOrId": "9514ac94-7ca8-4efc-a330-8c67bd4c2ee5", "query": "scenes where the hero gives up"} => chunks hits
+    Returns: ranked chunk hits matching the keyword expression across the whole project.
+    Example plain: {"cmd": "search", "keyword": "hero sword"} => matches chunks containing both "hero" AND "sword"
+    Example phrase: {"cmd": "search", "keyword": "\\"magic sword\\""} => matches the exact phrase
+    Example OR: {"cmd": "search", "keyword": "hero OR protagonist"} => matches either term
+    Example NOT: {"cmd": "search", "keyword": "hero -villain"} => hero but not villain
 `.trim());
 
 export const findCommandSchema = z.object({

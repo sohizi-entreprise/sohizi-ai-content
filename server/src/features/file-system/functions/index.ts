@@ -3,7 +3,7 @@ export * from './create-file-node';
 export * from './delete-file-node';
 export * from './get-file-content';
 export * from './list-directory-files';
-export * from './search-directory-content';
+export * from './search-project-content';
 export * from './semantic-search-directory';
 export * from './update-file-content';
 export * from './update-file-node';

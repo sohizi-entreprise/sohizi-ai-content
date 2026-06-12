@@ -9,7 +9,7 @@ import {
     createFileNode as createFileNodeFn,
     deleteFileNode as deleteFileNodeFn,
     getFileContent as getFileContentFn,
-    searchDirectoryContent as searchDirectoryContentFn,
+    searchProjectContent as searchProjectContentFn,
     semanticSearchDirectory as semanticSearchDirectoryFn,
     updateFileContent as updateFileContentFn,
     updateFileNode as updateFileNodeFn,
@@ -18,6 +18,7 @@ import { FileCreationRequest, UpdateFileRequest, UpdateSkillRequest, UpdateTextF
 import * as fileSystemRepo from './repo';
 import * as mediaRepo from '../media-engine/repo';
 import { E5SmallLocalEmbedder } from '@/lib/rag/local-embedder';
+import { ingestFileContentChunks } from './ingest-file-content-chunks';
 import { Asset } from '@/db/schema';
 import * as storage from '../media-engine/storage';
 import { CursorPaginationOptions } from '@/type';
@@ -34,7 +35,15 @@ import * as videoEditorRepo from '../video-editor/repo';
 
 export const createFileNode = async(data: FileCreationRequest) => {
     try {
-        return await createFileNodeFn(data);
+        const fileNode = await createFileNodeFn(data);
+        if (!data.directory && data.format === fileFormat.MARKDOWN) {
+            await ingestFileContentChunks({
+                projectId: data.projectId,
+                fileNodeId: fileNode.id,
+                content: '',
+            });
+        }
+        return fileNode;
     } catch (error) {
         if (error instanceof FileSystemConflictError || error instanceof FileSystemInputError) {
             throw new BadRequest(error.message);
@@ -114,6 +123,12 @@ export const updateFileContent = async(projectId: string, fileNodeId: string, da
             if (!updated) {
                 throw new Conflict('File content changed before diff could be applied');
             }
+
+            await ingestFileContentChunks({
+                projectId,
+                fileNodeId,
+                content: updated.content ?? content,
+            });
 
             return updated;
         }
@@ -235,10 +250,10 @@ export const semanticSearch = async(
 }
 
 export const searchFileContent = async(
-    request: { projectId: string; fileNodeId: string; keyword: string; limit?: number },
+    request: { projectId: string; keyword: string; limit?: number },
 ) => {
     await validateProject(request.projectId);
-    return searchDirectoryContentFn(request);
+    return searchProjectContentFn(request);
 }
 
 export const searchFilesByName = async(
