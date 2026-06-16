@@ -5,13 +5,14 @@ import { useEditorInputBridge } from '../../bridge/use-editor-input-bridge'
 
 type TextEditorBubbleMenuProps = {
     editor: Editor
+    scrollContainer: HTMLElement | null
     file: {
         id: string
         name: string
     }
 }
 
-export default function TextEditorBubbleMenu({ editor, file }: TextEditorBubbleMenuProps) {
+export default function TextEditorBubbleMenu({ editor, scrollContainer, file }: TextEditorBubbleMenuProps) {
     const [isSuppressed, setIsSuppressed] = useState(false)
     const { isItalic, isStrikethrough } = useEditorState({
         editor,
@@ -63,12 +64,23 @@ export default function TextEditorBubbleMenu({ editor, file }: TextEditorBubbleM
     if (isSuppressed) return null
       
   return (
-    <BubbleMenu editor={editor} 
-                options={{ placement: 'bottom', offset: 8, flip: true }}
-                shouldShow={({ editor }) => {
-                    return !isSuppressed && editor.isFocused && !editor.state.selection.empty
-                }
-                }
+    <BubbleMenu
+      pluginKey="textEditorBubbleMenu"
+      editor={editor}
+        resizeDelay={16}
+        // appendTo={() => document.body}
+        options={{
+            placement: 'bottom',
+            offset: 8,
+            flip: true,
+            // strategy: 'fixed',
+            scrollTarget: scrollContainer ?? window,
+        }}
+        shouldShow={({ editor }) => {
+            return !isSuppressed && editor.isFocused && !editor.state.selection.empty
+        }
+        }
+                
     >
         <div className="flex items-center gap-5 bg-gray-700 px-4 py-2 drop-shadow-lg rounded-md text-sm"
              onMouseDown={(event) => event.preventDefault()}

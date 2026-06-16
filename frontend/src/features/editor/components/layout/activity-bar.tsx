@@ -2,8 +2,7 @@ import {
   Files,
   Search,
   GitBranch,
-  Play,
-  Settings,
+  Play
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -37,7 +36,7 @@ export function ActivityBar() {
   }
 
   return (
-    <div className="flex w-12 shrink-0 flex-col items-center justify-between border-r border-border/50 bg-background/30 py-2 backdrop-blur-md">
+    <div className="flex w-12 shrink-0 flex-col items-center justify-between py-2 backdrop-blur-md">
       <div className="flex flex-col items-center gap-1">
         {ITEMS.map(({ id, icon: Icon, label }) => (
           <Tooltip key={id}>
@@ -47,7 +46,7 @@ export function ActivityBar() {
                 className={cn(
                   'flex size-9 items-center justify-center rounded-md transition-colors',
                   active === id
-                    ? 'bg-accent/50 text-foreground'
+                    ? 'text-primary'
                     : 'text-muted-foreground hover:bg-accent/30 hover:text-foreground',
                 )}
               >
@@ -61,18 +60,10 @@ export function ActivityBar() {
 
       <div className="flex flex-col items-center gap-1">
         <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => handleClick('settings')}
-              className={cn(
-                'flex size-9 items-center justify-center rounded-md transition-colors',
-                active === 'settings'
-                  ? 'bg-accent/50 text-foreground'
-                  : 'text-muted-foreground hover:bg-accent/30 hover:text-foreground',
-              )}
-            >
-              <Settings className="size-[18px]" />
-            </button>
+          <TooltipTrigger>
+            <div className="size-7 rounded-full bg-primary/20 ring-2 ring-primary/40 flex items-center justify-center">
+              <span className="text-xs font-medium text-primary">JD</span>
+            </div>
           </TooltipTrigger>
           <TooltipContent side="right">Settings</TooltipContent>
         </Tooltip>

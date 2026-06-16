@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { toast } from 'sonner'
 import type {
   ActivityBarItem,
   EditorTab,
@@ -16,9 +17,11 @@ interface EditorState {
   activityBarItem: ActivityBarItem
   sidebarCollapsed: boolean
   savingStatus: Record<string, 'saving' | 'saved' | 'error'>
+  showAiPanel: boolean
 
   setSavingStatus: (tabId: string, status: 'saving' | 'saved' | 'error') => void
   openFile: (node: FileTreeNode) => void
+  openFileFromMention: (mention: { id: string; label: string; format: string }) => void
   closeTab: (tabId: string) => void
   closePane: (pane: Pane) => void
   setActiveTab: (tabId: string) => void
@@ -27,6 +30,8 @@ interface EditorState {
   setActivityBarItem: (item: ActivityBarItem) => void
   setSelectedFileId: (id: string | null) => void
   toggleSidebar: () => void
+  toggleAiPanel: () => void
+  activateFocusMode: () => void
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -35,9 +40,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   splitView: false,
   activePaneTab: { left: null, right: null },
   selectedFileId: null,
-  activityBarItem: 'files',
+  activityBarItem: 'files' as const,
   sidebarCollapsed: false,
   savingStatus: {},
+  showAiPanel: true,
 
   setSavingStatus: (tabId, status) =>
     set({ savingStatus: { ...get().savingStatus, [tabId]: status } }),
@@ -66,6 +72,40 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       activeTabId: node.id,
       selectedFileId: node.id,
       activePaneTab: { ...get().activePaneTab, [pane]: node.id },
+    })
+  },
+
+  openFileFromMention: (mention) => {
+    if (!mention.id || !mention.format) {
+      toast.error('Invalid file mention')
+      return
+    }
+
+    const { openTabs } = get()
+    const existing = openTabs.find((t) => t.id === mention.id)
+    if (existing) {
+      set({
+        activeTabId: mention.id,
+        selectedFileId: mention.id,
+        activePaneTab: { ...get().activePaneTab, [existing.pane]: mention.id },
+      })
+      return
+    }
+
+    const pane = get().splitView ? 'right' : 'left'
+    const newTab: EditorTab = {
+      id: mention.id,
+      name: mention.label,
+      extension: getFileExtension(mention.label),
+      format: mention.format,
+      pane,
+    }
+
+    set({
+      openTabs: [...openTabs, newTab],
+      activeTabId: mention.id,
+      selectedFileId: mention.id,
+      activePaneTab: { ...get().activePaneTab, [pane]: mention.id },
     })
   },
 
@@ -237,6 +277,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setActivityBarItem: (item) => set({ activityBarItem: item }),
   setSelectedFileId: (id) => set({ selectedFileId: id }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  toggleAiPanel: () => set((s) => ({ showAiPanel: !s.showAiPanel })),
+  activateFocusMode: () => set({ showAiPanel: false, sidebarCollapsed: true }),
 }))
 
 function getFileExtension(filename: string): string {

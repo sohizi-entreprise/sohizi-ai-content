@@ -8,7 +8,7 @@ import { TableKit } from '@tiptap/extension-table'
 import { CharacterCount } from '@tiptap/extension-character-count'
 import { Markdown } from '@tiptap/markdown'
 import { useParams } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useAutoSave } from '../../hooks/use-autosave'
 import TextEditorBubbleMenu from '../text-editor-extensions/bubble-menu'
@@ -35,15 +35,26 @@ import { MarkdownDiffExtensions } from '../../extensions/markdown-diff'
 import { MarkdownHighlight } from '../../extensions/markdown-highlight'
 import { diffWords } from 'diff'
 import { toast } from 'sonner'
+import { SlashCommandExtension } from '../../extensions/slash-command'
+import { YoutubeEmbed } from '../../extensions/youtube-embed'
+import { EditorLink } from '../../extensions/editor-link'
 
 
 const editorExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
     trailingNode: false,
+    link: false,
   }),
   Placeholder.configure({
-    placeholder: 'Start writing...',
+    placeholder: ({ node }) => {
+      if (node.type.name === 'paragraph') {
+        return 'Write something or use / command'
+      }
+      return ''
+    },
+    showOnlyCurrent: true,
+    includeChildren: true,
   }),
   TaskList,
   TaskItem.configure({
@@ -74,11 +85,14 @@ const editorExtensions = [
     types: ['heading', 'paragraph'],
   }),
   ImageLayout,
+  EditorLink,
+  YoutubeEmbed,
   CharacterCount.configure({
     limit: MAX_CHARACTER_COUNT,
   }),
   ...MarkdownDiffExtensions,
   MarkdownHighlight,
+  SlashCommandExtension
 ]
 
 interface TextEditorViewProps {
@@ -96,6 +110,7 @@ export function TextEditorView({
   })
   const baseMarkdown = initialContent || ''
 
+  const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(null)
   const appliedDiffRef = useRef(false)
   const visualizedPendingKeyRef = useRef<string | null>(null)
   const isApplyingVisualDiffRef = useRef(false)
@@ -235,22 +250,26 @@ export function TextEditorView({
   }, [editor, resolvePendingChanges])
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-background">
+    <div className="flex h-full w-full flex-col overflow-hidden relative">
       {/* Toolbar */}
-      <TextEditorToolbar editor={editor} tabId={tab.id} />
+      <div className='h-2 absolute top-14 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-8rem)] max-w-[calc(var(--container-3xl)-4rem)] bg-linear-to-t dark:from-white/45 from-black/30 to-transparent'/>
+      <TextEditorToolbar editor={editor} 
+                         tabId={tab.id} 
+                         className="absolute top-8 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-4rem)] max-w-3xl"
+      />
 
       {/* Editor content */}
-      <div className="flex-1 overflow-auto overscroll-none">
-        <div className="mx-auto max-w-3xl px-6 py-8 min-w-2xl">
+      <div ref={setScrollContainer} className="flex-1 overflow-auto overscroll-none scrollbar-hide">
+        <div className="mx-auto max-w-3xl px-6 pb-8 pt-32 min-w-2xl">
           <EditorContent
             editor={editor}
             className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[400px]"
           />
           <TextEditorBubbleMenu
             editor={editor}
+            scrollContainer={scrollContainer}
             file={{ id: tab.id, name: tab.name }}
           />
-
           {
             pendingOperation && 
             (

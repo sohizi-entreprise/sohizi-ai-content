@@ -2,8 +2,6 @@ import {
   ChevronDown,
   ChevronRight,
   FilePlus,
-  Folder,
-  FolderOpen,
   FolderPlus,
   MoreHorizontal,
   Pencil,
@@ -31,6 +29,7 @@ import {
   MenubarSubTrigger,
   MenubarTrigger,
 } from '@/components/ui/menubar'
+import { getDirectoryIcon } from '../../utils/get-file-icon'
 
 const MAX_CHILDREN_PER_DIRECTORY = 100
 
@@ -87,11 +86,7 @@ export function DirectoryNode(props: NodeProps) {
         )}
       </span>
 
-      {node.isOpen ? (
-        <FolderOpen className="size-4 shrink-0 text-primary/70" />
-      ) : (
-        <Folder className="size-4 shrink-0 text-primary/70" />
-      )}
+      {getDirectoryIcon(node.isOpen, node.data.editable)}
 
       {node.isEditing ? (
         <input

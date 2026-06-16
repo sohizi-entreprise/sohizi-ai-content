@@ -1,9 +1,4 @@
 import {
-  File,
-  FileAudio,
-  FileCode,
-  FileText,
-  FileVideo,
   MoreVertical,
   SplitSquareHorizontal,
   X,
@@ -18,27 +13,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { getFileIcon } from '../../utils/get-file-icon'
 
-function getTabIcon(name: string) {
-  const ext = name.split('.').pop()?.toLowerCase()
-  switch (ext) {
-    case 'md':
-      return <FileText className="size-3.5 shrink-0 text-blue-400" />
-    case 'vid':
-    case 'mp4':
-    case 'mov':
-      return <FileVideo className="size-3.5 shrink-0 text-purple-400" />
-    case 'mp3':
-    case 'wav':
-      return <FileAudio className="size-3.5 shrink-0 text-green-400" />
-    case 'json':
-    case 'js':
-    case 'ts':
-      return <FileCode className="size-3.5 shrink-0 text-yellow-400" />
-    default:
-      return <File className="size-3.5 shrink-0 text-muted-foreground" />
-  }
-}
 
 interface EditorTabsProps {
   tabs: Array<EditorTab>
@@ -73,23 +49,20 @@ export function EditorTabs({ tabs, activeTabId, pane }: EditorTabsProps) {
   if (tabs.length === 0) return null
 
   return (
-    <div className="flex h-9 shrink-0 items-center overflow-x-auto overflow-y-hidden border-b border-border bg-background [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-none">
+    <div className="flex h-9 shrink-0 items-center overflow-x-auto overflow-y-hidden bg-background [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-none pl-8">
       <div className="flex items-center">
         {tabs.map((tab) => (
           <div
             key={tab.id}
             className={cn(
-              'group relative flex h-9 cursor-pointer items-center gap-1.5 border-r border-border px-3 text-xs transition-colors',
+              'group relative flex h-9 cursor-pointer items-center gap-1.5 px-3 text-xs transition-colors',
               activeTabId === tab.id
-                ? 'bg-background text-foreground'
-                : 'bg-muted/30 text-muted-foreground hover:text-foreground',
+                ? 'bg-surface text-foreground rounded-t-2xl rounded-out-b-lg'
+                : 'text-muted-foreground hover:text-foreground',
             )}
             onClick={handleTabClick(tab.id)}
           >
-            {activeTabId === tab.id && (
-              <div className="absolute inset-x-0 top-0 h-px bg-primary" />
-            )}
-            {getTabIcon(tab.name)}
+            {getFileIcon(tab.format ?? '', tab.name)}
             <span className="truncate max-w-[120px]">{tab.name}</span>
             <button
               className="ml-1 flex size-4 items-center justify-center rounded-sm opacity-0 transition-opacity hover:bg-accent/50 group-hover:opacity-100"

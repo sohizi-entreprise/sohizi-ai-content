@@ -1,11 +1,6 @@
 import {
   ArrowDown,
   ArrowUp,
-  File,
-  FileAudio,
-  FileCode,
-  FileText,
-  FileVideo,
   MoreHorizontal,
   Pencil,
   Trash,
@@ -27,6 +22,7 @@ import {
   MenubarSubTrigger,
   MenubarTrigger,
 } from '@/components/ui/menubar'
+import { getFileIcon } from '../../utils/get-file-icon'
 
 export function DocumentNode(props: NodeProps) {
   const { node, style, dragHandle } = props
@@ -51,14 +47,14 @@ export function DocumentNode(props: NodeProps) {
         'group flex cursor-pointer items-center gap-1 rounded-sm px-1 py-0.5 text-sm',
         isSelected
           ? 'bg-accent/60 text-foreground'
-          : 'text-muted-foreground hover:bg-accent/30 hover:text-foreground',
+          : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground',
       )}
       onClick={handleClick}
       data-format={node.data.format}
       data-fileid={node.data.id}
     >
       <span className="w-4 shrink-0" />
-      {getFileIcon(node.data.format)}
+      {getFileIcon(node.data.format ?? '', node.data.name)}
       {node.isEditing ? (
         <input
           autoFocus
@@ -80,25 +76,6 @@ export function DocumentNode(props: NodeProps) {
   )
 }
 
-function getFileIcon(format: FileTreeNode['format']) {
-  switch (format) {
-    case 'markdown':
-      return <FileText className="size-4 shrink-0 text-blue-400" />
-    case 'vid':
-    case 'mp4':
-    case 'mov':
-      return <FileVideo className="size-4 shrink-0 text-purple-400" />
-    case 'mp3':
-    case 'wav':
-      return <FileAudio className="size-4 shrink-0 text-green-400" />
-    case 'json':
-    case 'js':
-    case 'ts':
-      return <FileCode className="size-4 shrink-0 text-yellow-400" />
-    default:
-      return <File className="size-4 shrink-0 text-muted-foreground" />
-  }
-}
 
 function FileMenu({ node, tree, onCreateFile }: NodeProps) {
   const [activeInsertSubmenu, setActiveInsertSubmenu] = useState<

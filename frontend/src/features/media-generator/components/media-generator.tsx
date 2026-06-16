@@ -29,8 +29,8 @@ export function MediaGenerator() {
   const previewItem = items.find((item) => item.id === previewItemId) ?? null
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-background">
-      <header className="border-b border-white/10 bg-black/20 px-6 py-5 flex items-center justify-between">
+    <div className="flex h-full w-full flex-col overflow-hidden ">
+      {/* <header className="border-b bg-black/10 m-4 rounded-2xl px-6 py-5 flex items-center justify-between">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-primary">
@@ -51,9 +51,9 @@ export function MediaGenerator() {
         <Tabs
           value={filter}
           onValueChange={(value) => setFilter(value as MediaFilter)}
-          className="mt-5"
+          // className="mt-5"
         >
-          <TabsList className="h-11 rounded-2xl border border-white/10 bg-black/40 p-1">
+          <TabsList className="h-11 rounded-2xl border bg-black/40 p-1">
             {mediaFilterOptions.map((option) => (
               <TabsTrigger
                 key={option.value}
@@ -68,7 +68,9 @@ export function MediaGenerator() {
             ))}
           </TabsList>
         </Tabs>
-      </header>
+      </header> */}
+
+      <RenderHeader filter={filter} setFilter={setFilter} />
 
       <ScrollArea className="flex-1">
         <main className="p-6">
@@ -104,14 +106,66 @@ export function MediaGenerator() {
   )
 }
 
+function RenderHeader(props: { filter: MediaFilter, setFilter: (filter: MediaFilter) => void }){
+  const { filter, setFilter } = props
+  return (
+    <div className='relative border-b m-4 rounded-2xl overflow-hidden'>
+      <div className='absolute inset-0'>
+        <img src="/dot-green.jpg" alt="Media generator header background" className='w-full h-full object-cover' />
+      </div>
+
+      <header className="px-6 py-5 bg-black/20 backdrop-blur-md rounded-2xl flex items-center justify-between relative z-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-primary">
+              <Sparkles className="size-4" />
+              AI media
+            </div>
+            <h1 className="mt-1 text-2xl font-semibold text-white">
+              Media generator history
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              View all your generated media for this project.
+            </p>
+          </div>
+
+          
+        </div>
+
+        <Tabs
+          value={filter}
+          onValueChange={(value) => setFilter(value as MediaFilter)}
+          // className="mt-5"
+        >
+          <TabsList className="h-11 rounded-2xl border bg-black/40 p-1">
+            {mediaFilterOptions.map((option) => (
+              <TabsTrigger
+                key={option.value}
+                value={option.value}
+                className={cn(
+                  'rounded-xl px-5 text-sm text-zinc-300',
+                  'data-[state=active]:bg-white/15 data-[state=active]:text-white',
+                )}
+              >
+                {option.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </header>
+
+    </div>
+  )
+}
+
 function EmptyMediaState() {
   return (
     <div className="flex min-h-[420px] items-center justify-center">
       <div className="max-w-sm text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-white/10">
+        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-card">
           <ImagePlus className="size-6" />
         </div>
-        <h2 className="mt-4 text-lg font-semibold text-white">
+        <h2 className="mt-4 text-lg font-semibold text-foreground">
           No media generated yet
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">

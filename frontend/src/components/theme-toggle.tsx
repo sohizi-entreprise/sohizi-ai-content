@@ -14,10 +14,12 @@ export function ThemeToggle() {
   const toggleTheme = () => {
     const root = document.documentElement
     if (isDark) {
+      root.classList.remove('dark')
       root.classList.add('light')
       setIsDark(false)
     } else {
       root.classList.remove('light')
+      root.classList.add('dark')
       setIsDark(true)
     }
   }

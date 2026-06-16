@@ -17,7 +17,7 @@ function PaneContent({ pane }: { pane: 'left' | 'right' }) {
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
       <EditorTabs tabs={paneTabs} activeTabId={activeTab?.id ?? null} pane={pane} />
-      <div className="relative flex-1 overflow-y-auto">
+      <div className="relative flex-1 overflow-y-auto rounded-t-xl bg-surface">
         {activeTab ? (
           <ContentRouter tab={activeTab} />
         ) : (
@@ -30,7 +30,7 @@ function PaneContent({ pane }: { pane: 'left' | 'right' }) {
 
 function EmptyPane() {
   return (
-    <div className="flex h-full items-center justify-center bg-background">
+    <div className="flex h-full items-center justify-center">
       <div className="flex flex-col items-center gap-3 text-muted-foreground">
         <div className="flex size-16 items-center justify-center rounded-xl border border-dashed border-border">
           <span className="text-2xl font-light">S</span>

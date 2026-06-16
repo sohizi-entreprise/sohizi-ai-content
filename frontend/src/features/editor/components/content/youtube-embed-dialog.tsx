@@ -1,0 +1,87 @@
+import { useState } from 'react'
+import type { Editor } from '@tiptap/core'
+import { toast } from 'sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { isValidYoutubeUrl } from '../../extensions/youtube-embed'
+
+type YoutubeEmbedDialogProps = {
+  editor: Editor
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function YoutubeEmbedDialog({
+  editor,
+  open,
+  onOpenChange,
+}: YoutubeEmbedDialogProps) {
+  const [url, setUrl] = useState('')
+
+  const handleEmbed = () => {
+    const trimmed = url.trim()
+    if (!trimmed) return
+
+    if (!isValidYoutubeUrl(trimmed)) {
+      toast.error('Please enter a valid YouTube URL')
+      return
+    }
+
+    const success = editor.chain().focus().setYoutubeVideo({ src: trimmed }).run()
+    if (!success) {
+      toast.error('Could not embed this YouTube video')
+      return
+    }
+
+    setUrl('')
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) setUrl('')
+        onOpenChange(nextOpen)
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Embed YouTube video</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-2">
+          <Label htmlFor="youtube-url">YouTube URL</Label>
+          <Input
+            id="youtube-url"
+            placeholder="https://www.youtube.com/watch?v=..."
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleEmbed()
+              }
+            }}
+            autoFocus
+          />
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleEmbed} disabled={!url.trim()}>
+            Embed
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

@@ -25,7 +25,7 @@ export function ChatContainer({
 
 
   return (
-    <div className={cn('flex flex-col h-full bg-background', className)}>
+    <div className={cn('flex flex-col h-full bg-card backdrop-blur-md', className)}>
       {/* Header */}
       <ChatHeader projectId={projectId} />
 

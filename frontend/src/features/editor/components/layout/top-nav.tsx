@@ -18,13 +18,18 @@ import { getListProjectsQueryOptions } from '@/features/projects/query-mutation'
 import { Suspense, useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Link } from '@tanstack/react-router'
-import { IconX } from '@tabler/icons-react'
+import { IconFocus2, IconSparkle, IconX } from '@tabler/icons-react'
 import NotificationButton from './notification-button'
 import { useSession } from '@/lib/auth-client'
+import { useEditorStore } from '../../stores/editor-store'
 
 export function TopNav() {
+  
+  const toggleAiPanel = useEditorStore((s) => s.toggleAiPanel)
+  const activateFocusMode = useEditorStore((s) => s.activateFocusMode)
+
   return (
-    <header className="flex h-11 shrink-0 items-center justify-between border-b border-border bg-background px-3">
+    <header className="flex h-11 shrink-0 items-center justify-between border-border  px-3">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <div className="flex size-6 items-center justify-center rounded-md bg-primary">
@@ -46,9 +51,13 @@ export function TopNav() {
 
         <NotificationButton />
 
-        <div className="size-7 rounded-full bg-primary/20 ring-2 ring-primary/40 flex items-center justify-center">
-          <span className="text-xs font-medium text-primary">JD</span>
-        </div>
+        <button onClick={activateFocusMode}>
+          <IconFocus2 className="size-4 text-foreground" />
+        </button>
+
+        <button onClick={toggleAiPanel}>
+          <IconSparkle className="size-4 text-primary" />
+        </button>
       </div>
     </header>
   )

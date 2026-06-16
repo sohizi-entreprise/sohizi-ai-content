@@ -193,7 +193,8 @@ function inlineNodeToHtml(node: JSONContent): string {
   if (node.type === 'fileMention') {
     const label = typeof node.attrs?.label === 'string' ? node.attrs.label : ''
     const id = typeof node.attrs?.id === 'string' ? node.attrs.id : ''
-    return `@[${escapeHtml(label)}](file:${escapeHtml(id)})`
+    const format = typeof node.attrs?.format === 'string' ? node.attrs.format : ''
+    return `@[${escapeHtml(label)}](file:${escapeHtml(id)}?format=${escapeHtml(format)})`
   }
 
   return inlineContentToHtml(node.content ?? [])

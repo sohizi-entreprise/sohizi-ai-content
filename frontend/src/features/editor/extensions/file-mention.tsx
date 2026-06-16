@@ -2,12 +2,27 @@ import { mergeAttributes } from '@tiptap/core'
 import Mention from '@tiptap/extension-mention'
 import { ReactRenderer } from '@tiptap/react'
 import { computePosition, flip, shift } from '@floating-ui/dom'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
 import type { SuggestionOptions, SuggestionProps, SuggestionKeyDownProps } from '@tiptap/suggestion'
 import type { Editor } from '@tiptap/core'
+import { toast } from 'sonner'
 import type { FileMentionItem } from '@/hooks/use-file-mention-search'
 import { FileMentionList } from './file-mention-list'
+import { useEditorStore } from '../stores/editor-store'
 
-const FILE_MENTION_REGEX = /@\[([^\]]+)\]\(file:([^)]+)\)/g
+export const FILE_MENTION_REGEX =
+  /@\[([^\]]+)\]\(file:([^?)\s]+)\?format=([^)]+)\)/g
+
+const FILE_MENTION_PATTERN =
+  /^@\[([^\]]+)\]\(file:([^?)\s]+)\?format=([^)]+)\)/
+
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
 
 export const FileMention = Mention.extend({
   name: 'fileMention',
@@ -24,11 +39,16 @@ export const FileMention = Mention.extend({
         parseHTML: (el) => el.getAttribute('data-label'),
         renderHTML: (attrs) => ({ 'data-label': attrs.label }),
       },
+      format: {
+        default: null,
+        parseHTML: (el) => el.getAttribute('data-format'),
+        renderHTML: (attrs) => ({ 'data-format': attrs.format }),
+      },
     }
   },
 
   parseHTML() {
-    return [{ tag: 'span[data-type="fileMention"]' }]
+    return [{ tag: 'span[data-type="fileMention"][data-format]' }]
   },
 
   renderText({ node }) {
@@ -50,8 +70,36 @@ export const FileMention = Mention.extend({
   renderMarkdown(node) {
     const label = node.attrs?.label ?? ''
     const id = node.attrs?.id ?? ''
-    return `@[${label}](file:${id})`
+    const format = node.attrs?.format ?? ''
+    return `@[${label}](file:${id}?format=${format})`
   },
+
+  markdownTokenizer: {
+    name: 'fileMention',
+    level: 'inline',
+    start: (src) => src.indexOf('@['),
+    tokenize: (src) => {
+      const match = FILE_MENTION_PATTERN.exec(src)
+      if (!match) return undefined
+
+      return {
+        type: 'fileMention',
+        raw: match[0],
+        label: match[1],
+        id: match[2],
+        format: match[3],
+      }
+    },
+  },
+
+  parseMarkdown: (token) => ({
+    type: 'fileMention',
+    attrs: {
+      id: token.id,
+      label: token.label,
+      format: token.format,
+    },
+  }),
 
   addPasteRules() {
     return [
@@ -60,20 +108,57 @@ export const FileMention = Mention.extend({
         handler: ({ match, chain, range }) => {
           const label = match[1]
           const id = match[2]
+          const format = match[3]
           chain().deleteRange(range).insertContentAt(range.from, {
             type: this.name,
-            attrs: { id, label },
+            attrs: { id, label, format },
           })
         },
       },
     ]
   },
+
+  addProseMirrorPlugins() {
+    const parentPlugins = this.parent?.() ?? []
+
+    return [
+      ...parentPlugins,
+      new Plugin({
+        key: new PluginKey('fileMentionClick'),
+        props: {
+          handleClick: (_view, _pos, event) => {
+            const target = event.target
+            if (!(target instanceof HTMLElement)) return false
+
+            const mention = target.closest('[data-type="fileMention"]')
+            if (!mention) return false
+
+            const id = mention.getAttribute('data-id')
+            const label = mention.getAttribute('data-label')
+            const format = mention.getAttribute('data-format')
+
+            if (!id || !label || !format) {
+              toast.error('Invalid file mention')
+              return true
+            }
+
+            event.preventDefault()
+            useEditorStore.getState().openFileFromMention({ id, label, format })
+            return true
+          },
+        },
+      }),
+    ]
+  },
 })
 
 export function preprocessFileMentions(markdown: string): string {
-  return markdown.replace(FILE_MENTION_REGEX, (_match, label, id) => {
-    return `<span data-type="fileMention" data-id="${id}" data-label="${label}">@${label}</span>`
-  })
+  return markdown.replace(
+    FILE_MENTION_REGEX,
+    (_match, label, id, format) => {
+      return `<span data-type="fileMention" data-id="${escapeHtmlAttribute(id)}" data-label="${escapeHtmlAttribute(label)}" data-format="${escapeHtmlAttribute(format)}" class="file-mention">@${label}</span>`
+    },
+  )
 }
 
 type FileMentionListRef = {
@@ -145,6 +230,7 @@ export function createFileMentionSuggestion(
           attrs: {
             id: props.id,
             label: props.display,
+            format: props.format,
           },
         })
         .insertContent(' ')

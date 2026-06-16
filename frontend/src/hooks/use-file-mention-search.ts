@@ -6,6 +6,7 @@ import { searchFilesByName } from '@/features/chat/requests'
 export type FileMentionItem = {
   id: string
   display: string
+  format: string
 }
 
 export function useFileMentionSearch(projectId: string) {
@@ -28,10 +29,13 @@ export function useFileMentionSearch(projectId: string) {
         staleTime: 1000 * 60,
       })
 
-      return files.map((file) => ({
-        id: file.id,
-        display: file.name,
-      }))
+      return files
+        .filter((file) => !file.directory)
+        .map((file) => ({
+          id: file.id,
+          display: file.name,
+          format: file.format ?? 'markdown',
+        }))
     },
     [projectId, queryClient],
   )

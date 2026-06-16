@@ -6,7 +6,7 @@ import { useParams } from '@tanstack/react-router'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { CharacterCount } from '@tiptap/extension-character-count'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import TextEditorBubbleMenu from '../text-editor-extensions/bubble-menu'
 import { useSkillAutosave } from '../../hooks/use-autosave'
 import { serializeMarkdownWithTextAlign } from '../../extensions/markdown-text-align'
@@ -253,6 +253,7 @@ function blocksToMarkdown(blocks: Array<JSONContent>) {
 }
 
 export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
+  const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(null)
   const { projectId } = useParams({
     from: '/dashboard/projects/$projectId/editor',
   })
@@ -313,7 +314,7 @@ export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
     <div className="flex h-full w-full flex-col overflow-hidden bg-background">
       <style>{skillEditorStyles}</style>
       <TextEditorToolbar editor={editor} tabId={tab.id} />
-      <div className="flex-1 overflow-auto overscroll-none">
+      <div ref={setScrollContainer} className="flex-1 overflow-auto overscroll-none">
         <div className="mx-auto min-w-2xl max-w-3xl px-6 py-8">
           <EditorContent
             editor={editor}
@@ -321,6 +322,7 @@ export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
           />
           <TextEditorBubbleMenu
             editor={editor}
+            scrollContainer={scrollContainer}
             file={{ id: tab.id, name: tab.name }}
           />
         </div>
