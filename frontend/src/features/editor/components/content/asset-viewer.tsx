@@ -1,6 +1,7 @@
 import ReactPlayer from 'react-player'
 import { AssetContent, AssetType } from '../../types'
 import { DocumentViewer } from './document-viewer'
+import { buildOptimizeddImageUrl, imageUrlTransforms } from '@/utils/transform-url'
 
 type Props = AssetContent
 
@@ -38,12 +39,8 @@ function VideoAndAudioViewer({ url }: { url: string }) {
 
 function getOptimizedUrl(type: AssetType, url: string, storageKey: string) {
   if (type === 'image') {
-    const cdnUrl = import.meta.env.VITE_MEDIA_CDN_URL
-    if (!cdnUrl) {
-      throw new Error('VITE_MEDIA_CDN_URL is not set')
-    }
-    const transformation = 'width=680,format=webp,quality=80'
-    return `${cdnUrl.replace(/\/$/, '')}/${transformation}/${storageKey}`
+    const transformations = imageUrlTransforms.previews.contentCard
+    return buildOptimizeddImageUrl(storageKey, transformations)
   }
   return url
 }

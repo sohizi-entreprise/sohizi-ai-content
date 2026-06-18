@@ -5,8 +5,6 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable'
-import { TopNav } from './top-nav'
-import { ActivityBar } from './activity-bar'
 import { FileExplorer } from '../sidebar/file-explorer'
 import { EditorWorkspace } from '../workspace/editor-workspace'
 import { useEditorStore } from '../../stores/editor-store'
@@ -21,7 +19,7 @@ function ExpandedLayout({ projectId, rootFolderId }: LayoutProps) {
   const showAiPanel = useEditorStore((s) => s.showAiPanel)
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full w-full">
-      <ResizablePanel id="file-explorer" order={1} defaultSize={15} minSize={10} maxSize={25} className="rounded-2xl mb-2 bg-card backdrop-blur-md border ">
+      <ResizablePanel id="file-explorer" order={1} defaultSize={15} minSize={10} maxSize={25} className="rounded-2xl mb-2 bg-card">
         <FileExplorer projectId={projectId} rootFolderId={rootFolderId} />
       </ResizablePanel>
       <ResizableHandle className='mx-1 bg-transparent'/>
@@ -32,7 +30,7 @@ function ExpandedLayout({ projectId, rootFolderId }: LayoutProps) {
         showAiPanel && (
           <>
             <ResizableHandle className='mx-1 bg-transparent'/>
-            <ResizablePanel id="ai-panel" order={3} defaultSize={22} minSize={22} maxSize={40} className="rounded-2xl mb-2 border">
+            <ResizablePanel id="ai-panel" order={3} defaultSize={22} minSize={22} maxSize={40} className="rounded-2xl mb-2">
               <ChatContainer projectId={projectId} editorType="synopsis" />
             </ResizablePanel>
           </>
@@ -53,7 +51,7 @@ function CollapsedLayout({ projectId }: LayoutProps) {
         showAiPanel && (
           <>
             <ResizableHandle className='mx-1 bg-transparent'/>
-            <ResizablePanel id="ai-panel" order={2} defaultSize={22} minSize={22} maxSize={40} className="rounded-xl mb-2 bg-card border">
+            <ResizablePanel id="ai-panel" order={2} defaultSize={22} minSize={22} maxSize={40} className="rounded-xl mb-2 bg-card">
               <ChatContainer projectId={projectId} editorType="synopsis" />
             </ResizablePanel>
           </>
@@ -67,20 +65,14 @@ export function AppLayout({ projectId, rootFolderId }: LayoutProps) {
   const sidebarCollapsed = useEditorStore((s) => s.sidebarCollapsed)
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background pr-2">
-      <TopNav />
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <ActivityBar />
-        <DndProvider backend={HTML5Backend}>
-          <div className="relative h-full min-w-0 flex-1">
-            {sidebarCollapsed ? (
-              <CollapsedLayout projectId={projectId} rootFolderId={rootFolderId} />
-            ) : (
-              <ExpandedLayout projectId={projectId} rootFolderId={rootFolderId} />
-            )}
-          </div>
-        </DndProvider>
+    <DndProvider backend={HTML5Backend}>
+      <div className="relative h-full min-w-0 flex-1">
+        {sidebarCollapsed ? (
+          <CollapsedLayout projectId={projectId} rootFolderId={rootFolderId} />
+        ) : (
+          <ExpandedLayout projectId={projectId} rootFolderId={rootFolderId} />
+        )}
       </div>
-    </div>
+    </DndProvider>
   )
 }

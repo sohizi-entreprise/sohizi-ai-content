@@ -95,13 +95,6 @@ export type FileContentResponse =
 
 // ==================
 
-export type ActivityBarItem =
-  | 'files'
-  | 'search'
-  | 'settings'
-  | 'git'
-  | 'extensions'
-
 export type ContentType = 'text' | 'video'
 
 

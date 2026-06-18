@@ -9,7 +9,7 @@ import { useShallow } from 'zustand/shallow';
 import { GenerationRequestNotification } from '@/features/notifications/requests';
 
 export default function NotificationButton() {
-    const {projectId} = useParams({from: '/dashboard/projects/$projectId/editor'});
+    const { projectId } = useParams({ from: '/dashboard/projects/$projectId' })
     const [open, setOpen] = useState(false)
     useNotificationManager(projectId)
 
