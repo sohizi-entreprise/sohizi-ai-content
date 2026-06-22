@@ -1,5 +1,4 @@
 import { htmlVideoEditingSkill } from "../skills/video-editing";
-import { syntaxGuidelinesPrompt } from "../prompts/syntax-guidelines";
 import { navigateContextPrompt } from "../prompts/navigate-context";
 import { fileSystemPrompt } from "../prompts/file-system-prompt";
 import { videoExplorerPrompt } from "../prompts/video-explorer-prompt";
@@ -39,10 +38,6 @@ When you hit an Exit Condition, you MUST follow this exact sequence:
 - **Definitive Closures:** Your final message must be a complete statement indicating the end of your process. If there is nothing left to do, say so explicitly.
 
 ${fileSystemPrompt}
-
----
-
-${syntaxGuidelinesPrompt}
 
 ---
 

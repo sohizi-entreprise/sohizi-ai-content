@@ -1,7 +1,6 @@
-import { Elysia, sse } from 'elysia'
+import { Elysia } from 'elysia'
 import { z } from 'zod'
 import * as chatService from './service'
-import { CompletionRequestSchema } from './payload'
 import { assertProjectAccess, assertConversationOwner } from '@/lib/authorize'
 import { authMiddleware } from '@/lib/auth-middleware'
 
@@ -30,21 +29,12 @@ export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
   }, {
     query: paginationQuery,
   })
-  .get('/models', () => {
-    return chatService.listModelsForLeadAgent()
-  })
-  .post('/conversations/messages', async function* ({ params, body, user }) {
-    await assertProjectAccess(user.id, params.projectId)
-    const generator = await chatService.handleChatCompletion(params.projectId, user.id, body)
-
-    for await (const chunk of generator) {
-      yield sse({
-        event: chunk.type,
-        data: JSON.stringify(chunk),
-      })
-    }
+  .get('/models', async ({ query }) => {
+    return chatService.listLlmModels(query.category)
   }, {
-    body: CompletionRequestSchema,
+    query: z.object({
+      category: z.string(),
+    }),
   })
   .guard({
     params: conversationParams,

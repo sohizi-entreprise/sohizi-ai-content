@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { conversations, messages, checkpoints, llmModels } from "@/db/schema";
+import { conversations, messages, checkpoints, llmModels, modelsAndCategories, modelCategories } from "@/db/schema";
 import { eq, desc, and, lt, arrayContains } from "drizzle-orm";
 import { AgentState, CursorPaginationOptions, CursorPaginationResult, MsgContent } from "@/type";
 
@@ -193,17 +193,32 @@ export const ListMessagesByConversationId = async (
   return { data: page, nextCursor, hasMore };
 }
 
-export const listModelsForLeadAgent = async () => {
-  const result = await db
-    .select({
-      id: llmModels.id,
-      name: llmModels.name,
-      provider: llmModels.provider,
-    })
-    .from(llmModels)
-    .where(and(arrayContains(llmModels.recommendedUsage, ['lead-agent']), eq(llmModels.enabled, true)))
-    .limit(20);
+// export const listModelsForLeadAgent = async () => {
+//   const result = await db
+//     .select({
+//       id: llmModels.id,
+//       name: llmModels.name,
+//       provider: llmModels.provider,
+//     })
+//     .from(llmModels)
+//     .where(and(arrayContains(llmModels.recommendedUsage, ['lead-agent']), eq(llmModels.enabled, true)))
+//     .limit(20);
+//   return result;
+// }
+
+export const listLlmModels = async (category: string) => {
+  const result = await db.select({
+                          id: llmModels.id,
+                          name: llmModels.name,
+                          provider: llmModels.provider,
+                        })
+                         .from(llmModels)
+                         .leftJoin(modelsAndCategories, eq(llmModels.id, modelsAndCategories.modelId))
+                         .leftJoin(modelCategories, eq(modelsAndCategories.categoryId, modelCategories.id))
+                         .where(and(eq(modelCategories.name, category), eq(llmModels.enabled, true)))
+                         .limit(20);
   return result;
+
 }
 
 

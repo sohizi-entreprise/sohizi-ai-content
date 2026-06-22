@@ -14,6 +14,7 @@ import {
     foreignKey,
     bigint,
     serial,
+    primaryKey,
   } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import { user, organization } from './auth'
@@ -26,6 +27,7 @@ import {
   AssetType,
   AssetVariantType,
   CategoryType,
+  GenerationRequestAsset,
   GenerationRequestStatus,
   GenerationRequestType,
   ModelCategory,
@@ -78,6 +80,8 @@ export const generationRequests = pgTable('generation_requests', {
   status: varchar('status', {length: 50}).default('pending').notNull().$type<GenerationRequestStatus>(),
   type: varchar('type', {length: 50}).notNull().$type<GenerationRequestType>(),
   request: jsonb('request').$type<Record<string, unknown>>(),
+  history: jsonb('history').$type<Record<string, unknown>[]>(),
+  assets: jsonb('assets').$type<GenerationRequestAsset[]>(),
   error: text('error'),
   ...timestamps,
 }, (table) => ([
@@ -266,14 +270,32 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     provider: varchar('provider', { length: 50 }).notNull(),
     name: varchar('name', { length: 50 }).notNull(),
     apiName: varchar('api_name', { length: 50 }).notNull(),
-    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
     pricing: jsonb('pricing').$type<TokenPricing>(),
-    category: varchar('category', { length: 50 }).array().notNull().$type<ModelCategory[]>(),
-    recommendedUsage: varchar('recommended_usage', { length: 50 }).array().$type<ModelRecommendedUsage[]>(),
     enabled: boolean('enabled').default(true).notNull(),
     ...timestamps,
   }, (table) => ([
     uniqueIndex('llm_models_provider_api_name_unique').on(table.provider, table.apiName),
+  ]))
+
+  export const modelCategories = pgTable('model_categories', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: varchar('name', { length: 100 }).notNull(),
+    description: text('description').notNull(),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('model_categories_name_unique').on(table.name),
+  ]))
+
+  export const modelsAndCategories = pgTable('models_and_categories', {
+    modelId: varchar('model_id', { length: 50 })
+      .references(() => llmModels.id, { onDelete: 'cascade' })
+      .notNull(),
+    categoryId: uuid('category_id')
+      .references(() => modelCategories.id, { onDelete: 'cascade' })
+      .notNull(),
+    ...timestamps,
+  }, (table) => ([
+  primaryKey({ columns: [table.modelId, table.categoryId] }),
   ]))
 
   // ========================= ASSETS ==========================

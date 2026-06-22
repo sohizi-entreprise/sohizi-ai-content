@@ -1,5 +1,6 @@
-import { AssistantContent, ModelMessage, ToolModelMessage } from "ai";
-import type { BillableLlmClient, BillableLlmInput } from "../utils/llm-client";
+import { AssistantContent, ModelMessage, ToolModelMessage, UserModelMessage } from "ai";
+import { LlmModel } from "@/db/schema";
+import { createBillableLlmClient, type BillableLlmClient, type BillableLlmInput, type ModelConfig } from "../utils/llm-client";
 import { LlmChunk, OperationChunk, streamEvents, ToolCall, ToolResultComplete } from "../utils/llm-response";
 import { v4 as uuidv4 } from 'uuid';
 import { getTool } from "../tools/tool-registry";
@@ -7,73 +8,86 @@ import { mergeGenerators } from "../utils/merge-generators";
 import { Session } from "./session";
 import { AgentState, CompleteReason, TokenUsage } from "@/type";
 import { billingService, withBillingStream } from "@/features/billing";
+import { AgentStateManager } from "./state-manager";
+import { Persistence } from "./persistence";
+import { estimateInputTokens } from "../utils/estimate-token";
 
-// Rough chars-per-token heuristic for input estimation when reserving credits.
-// Real tokenization is model-specific; this is intentionally conservative.
-const CHARS_PER_TOKEN = 4;
+
 const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096;
-
-
-type CallbackEvent = 'finish' | 'start'
-type CallbackHandler = (state: AgentState) => void;
 
 export type AgentChunk = {
     name: string;
     runId: string;
 } & LlmChunk | OperationChunk
 
+type AgentConfig = {
+    model: LlmModel;
+    modelConfig: ModelConfig;
+    session: Session;
+    name: string;
+    systemPrompt: string;
+    persistence?: Persistence;
+}
+
+type BilledLlmStream = ReturnType<typeof withBillingStream<BillableLlmInput, LlmChunk>>;
+
+
+
 export class Agent {
-    private readonly billableLlm: BillableLlmClient;
-    private readonly billedLlmStream: ReturnType<typeof withBillingStream<BillableLlmInput, LlmChunk>>;
-    public state: AgentState;
+    public stateManager: AgentStateManager;
     private readonly name: string;
     private runId: string | null;
-    private callbacks: Map<CallbackEvent, Set<CallbackHandler>>
     private readonly session: Session;
+    private readonly persistence: Persistence | undefined;
+    private readonly agentParams: Pick<AgentConfig, 'name' | 'systemPrompt'>;
+    private readonly modelConfig: ModelConfig;
+    private readonly model: LlmModel;
 
-    constructor(name: string, systemPrompt: string, session: Session) {
-        this.billableLlm = session.billableLlmClient;
-        this.billedLlmStream = withBillingStream(this.billableLlm, billingService);
-        this.name = name;
+    constructor(config: AgentConfig) {
+        this.name = config.name;
         this.runId = null;
-        this.callbacks = new Map();
-        this.session = session;
-        this.state = this.getInitialState(systemPrompt);
+        this.session = config.session;
+        this.stateManager = new AgentStateManager();
+        this.persistence = config.persistence;
+        this.agentParams = {
+            name: config.name,
+            systemPrompt: config.systemPrompt
+        };
+        this.modelConfig = config.modelConfig;
+        this.model = config.model;
     }
 
-    async* runLoop(prompt: string, abortSignal: AbortSignal, maxSteps: number = 25): AsyncGenerator<AgentChunk, void, unknown> {
+    async* runLoop(ursMsg: UserModelMessage, abortSignal: AbortSignal, maxSteps: number = 25): AsyncGenerator<AgentChunk, void, unknown> {
         try {
-            this.updateStateForStart();
-            this.appendUserMessage(prompt);
-            this.triggerCallback('start');
+            const billableLlmClient = await this.buildBillableLlmClient();
+            const billedLlmStream = withBillingStream(billableLlmClient, billingService);
+
+            this.initializeState(this.agentParams.systemPrompt);
+            this.registerMessage(ursMsg);
 
             let stepsRun = 0;
             for(let step = 1; step <= maxSteps; step++){
-                if(['finished', 'error', 'aborted', 'paused'].includes(this.state.status)){
+                if(this.stateManager.isExitStatus){
                     break;
                 }
-                yield* this.runStep(abortSignal, step);
+                yield* this.runStep(billedLlmStream, abortSignal, step);
                 stepsRun++;
             }
 
-            if(this.state.status === 'running'){
-                this.state.status = 'finished';
+            if(this.stateManager.isRunning){
+                this.stateManager.finishRun();
             }
         } catch (error) {
             const errorMessage = this.captureStepError(error);
             yield this.buildErrorEvent(errorMessage);
         } finally {
-            try {
-                this.triggerCallback('finish');
-            } catch (error) {
-                console.error('Agent finish callback failed', error);
-            }
-            await this.session.persistState(this.state);
+            // Persist optionally based on the agent config
+            await this.persistence?.persist(this.stateManager.getState());
             yield this.buildUsageEvent();
         }
     }
 
-    async* runStep(abortSignal: AbortSignal, step: number): AsyncGenerator<AgentChunk, void, unknown> {
+    async* runStep(callClient: BilledLlmStream, abortSignal: AbortSignal, _step: number): AsyncGenerator<AgentChunk, void, unknown> {
         // Future implementation: context summarization + pruning && user limit checking
         // Future persist messages to the database [checkpoints]
         this.runId = uuidv4();
@@ -84,16 +98,18 @@ export class Agent {
         let assistantMessageRegistered = false;
         let toolCallsStarted = false;
 
+        const stateMessages = this.stateManager.getState().messages;
+
         const billableInput: BillableLlmInput = {
-            messages: this.state.messages,
-            estimatedInputTokens: this.estimateInputTokens(this.state.messages),
+            messages: stateMessages,
+            estimatedInputTokens: estimateInputTokens(stateMessages, 1.15),
             estimatedOutputTokens: DEFAULT_OUTPUT_TOKEN_ESTIMATE,
         };
 
         // `withBillingStream` reserves up-front, settles on the terminal
         // `complete` chunk, and refunds on error / early termination.
         // The agent sees only LLM chunks; billing is invisible to this loop.
-        const billedStream = this.billedLlmStream(billableInput, {
+        const billedStream = callClient(billableInput, {
             organizationId: this.session.organizationId,
             userId: this.session.userId,
             signal: abortSignal,
@@ -121,18 +137,18 @@ export class Agent {
             for await (const chunk of billedStream) {
                 switch (chunk.type) {
                     case streamEvents.textDelta:
-                        text += chunk.text;
+                        text = chunk.text;
                         yield this.buildEvent(chunk);
                         break;
                     case streamEvents.reasoningDelta:
-                        reasoning_text += chunk.text;
+                        reasoning_text = chunk.text;
                         yield this.buildEvent(chunk);
                         break;
                     case streamEvents.error:
                         yield this.buildEvent(chunk);
                         break;
                     case streamEvents.complete:
-                        this.incrementUsage(chunk.usage);
+                        this.stateManager.incrementUsage(chunk.usage);
                         this.updateStatus(chunk.finishReason, chunk.error);
                         text = chunk.text || text;
                         reasoning_text = chunk.reasoningText ?? reasoning_text;
@@ -152,7 +168,7 @@ export class Agent {
 
             registerAssistantMessage();
 
-            if(tool_calls.length > 0 && !stepError && !['error', 'aborted'].includes(this.state.status)){
+            if(tool_calls.length > 0 && !stepError){
                 toolCallsStarted = true;
                 yield* this.runToolCalls(tool_calls);
             }
@@ -166,36 +182,15 @@ export class Agent {
             }
         }
     }
-    
-    get lastAgentMessage(): ModelMessage | null {
-        const lastMessage = this.state.messages[this.state.messages.length - 1];
-        if(lastMessage.role === 'assistant'){
-            return lastMessage;
-        }
-        return null;
-    }
-
-    get lastAgentText(): string | null {
-        const lastMessage = this.lastAgentMessage;
-        if(!lastMessage){
-            return null
-        }
-        if(typeof lastMessage.content === 'string'){
-            return lastMessage.content;
-        }
-        const text = lastMessage.content.filter((content) => content.type === 'text').map((content) => content.text).join('\n');
-        return text;
-    }
 
     private updateStatus(finishReason: CompleteReason, error?: string) {
-        this.state.finishReason = finishReason;
+        this.stateManager.setFinishReason(finishReason);
         switch (finishReason) {
             case 'abort':
-                this.state.status = 'aborted';
+                this.stateManager.finishRun();
                 break;
             case 'error':
-                this.state.status = 'error';
-                this.state.error = error ?? 'Unknown agent error';
+                this.stateManager.setError(error ?? 'Unknown agent error');
                 break;
             default:
                 // Stay running until finalizeStepStatus — a turn may include tool calls
@@ -204,50 +199,23 @@ export class Agent {
         }
     }
 
-    private updateStateForStart(){
-        this.state.status = 'running';
-        this.state.error = null;
-    }
-
-    private getInitialState(systemPrompt: string): AgentState {
-        const existingState = this.session.checkpoint.state;
-        if(existingState){
-            const messages = existingState.messages.filter((message) => message.role !== 'system');
-            return {...existingState, status: 'idle', messages: [{role: 'system', content: systemPrompt}, ...messages]};
-        }
-        return {
-            messages: [{
-                role: 'system',
-                content: systemPrompt,
-            }],
-            usage: null,
+    private initializeState(systemPrompt: string) {
+        const existingState = this.persistence?.getInitialState();
+        let state: AgentState = {
+            messages: [],
             finishReason: null,
             error: null,
             status: 'idle',
             todos: [],
+            usage: null,
+        };
+        if(existingState){
+            const messages = existingState.messages.filter((message) => message.role !== 'system');
+            state = {...existingState, status: 'idle', messages: [{role: 'system', content: systemPrompt}, ...messages]};
         }
-    }
 
-    private appendUserMessage(message: string) {
-        this.registerMessage({
-            role: 'user',
-            content: [{type: 'text', text: message}],
-        });
-    }
-
-    private incrementUsage(usage: TokenUsage) {
-        if(!this.state.usage){
-            this.state.usage = usage;
-            return;
-        }
-        this.state.usage = {
-            ...this.state.usage,
-            input: this.state.usage.input + usage.input || 0,
-            output: this.state.usage.output + usage.output || 0,
-            reasoning: this.state.usage.reasoning + usage.reasoning || 0,
-            cached: this.state.usage.cached + usage.cached || 0,
-            total: this.state.usage.total + usage.total || 0,
-        }
+        this.stateManager.setState(state);
+        this.stateManager.startRun()
     }
 
     private async* runToolCalls(tool_calls: ToolCall[]): AsyncGenerator<AgentChunk, void, unknown> {
@@ -262,7 +230,7 @@ export class Agent {
                 continue;
             }
             validToolCalls.push(tool_call);
-            generators.push(tool.execute(tool_call, this.session, this.state));
+            generators.push(tool.execute(tool_call, this.session, this.stateManager));
         }
 
         if(invalidTools.length > 0){
@@ -305,14 +273,13 @@ export class Agent {
 
     private captureStepError(error: unknown): string {
         const message = this.errorToMessage(error);
+        let isAborted = false;
         if(error instanceof Error && error.name === 'AbortError'){
-            this.state.status = 'aborted';
-            this.state.finishReason = 'abort';
-        }else{
-            this.state.status = 'error';
-            this.state.finishReason = 'error';
+            isAborted = true;
         }
-        this.state.error = message;
+        this.stateManager.setError(message);
+        this.stateManager.setFinishReason(isAborted ? 'abort' : 'error');
+
         return message;
     }
 
@@ -360,7 +327,7 @@ export class Agent {
         };
 
         this.registerMessage(msg);
-        this.incrementUsage({...result.usage, modelId: this.session.model.id});
+        this.stateManager.incrementUsage({...result.usage, modelId: this.model.id});
     }
 
     private appendBadToolNames(data: {toolCallId: string, toolName: string}[]){
@@ -382,12 +349,9 @@ export class Agent {
     }
 
     private registerMessage(message: ModelMessage | ModelMessage[]) {
-        if(Array.isArray(message)){
-            this.state.messages.push(...message);
-        }else{
-            this.state.messages.push(message);
-        }
-        this.session.registerMessage(message);
+        const messages = Array.isArray(message) ? message : [message];
+        this.stateManager.appendMessages(messages);
+        this.persistence?.registerMessage(messages);
     }
 
     private buildEvent(chunk: LlmChunk): AgentChunk {
@@ -406,9 +370,10 @@ export class Agent {
     }
 
     private buildUsageEvent(): AgentChunk {
+        const usage = this.stateManager.getState().usage;
         return this.buildEvent({
             type: streamEvents.usage,
-            usage: this.state.usage ?? this.emptyUsage(),
+            usage: usage ?? this.emptyUsage(),
         });
     }
 
@@ -419,7 +384,7 @@ export class Agent {
             reasoning: 0,
             cached: 0,
             total: 0,
-            modelId: this.session.model.id,
+            modelId: this.model.id,
         };
     }
 
@@ -430,23 +395,10 @@ export class Agent {
         return this.runId;
     }
 
-    registerCallback(event: CallbackEvent, handler: CallbackHandler) {
-        if(!this.callbacks.has(event)){
-            this.callbacks.set(event, new Set());
-        }
-        this.callbacks.get(event)?.add(handler);
-    }
-
-    unregisterCallback(event: CallbackEvent, handler: CallbackHandler) {
-        this.callbacks.get(event)?.delete(handler);
-    }
-
-    private triggerCallback(event: CallbackEvent) {
-        this.callbacks.get(event)?.forEach(handler => handler(this.state));
-    }
-
-    private estimateInputTokens(messages: ModelMessage[]): number {
-        const chars = JSON.stringify(messages).length;
-        return Math.max(1, Math.ceil(chars / CHARS_PER_TOKEN));
+    async buildBillableLlmClient(): Promise<BillableLlmClient> {
+        return createBillableLlmClient({
+            model: this.model,
+            modelConfig: this.modelConfig,
+        });
     }
 }

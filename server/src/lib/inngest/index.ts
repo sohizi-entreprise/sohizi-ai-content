@@ -1,5 +1,4 @@
-import { handleConceptGeneration,
-        } from './functions'
+import { handleChatCompletionFunc, handleMediaGenerationFunc } from '@/features/generation-request/inngest'
 import {
     handleImageGeneration,
     handleAudioGeneration,
@@ -8,12 +7,11 @@ import {
 
 export {inngest} from './client'
 
-export {  eventNameMap } from './functions'
-
 export const functions = [
-    handleConceptGeneration,
     handleImageGeneration,
     handleAudioGeneration,
     handleVideoGeneration,
+    handleChatCompletionFunc,
+    handleMediaGenerationFunc,
 ]
 

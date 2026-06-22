@@ -113,6 +113,27 @@
       "when": 1780263789813,
       "tag": "0015_dashing_doorman",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1782069679136,
+      "tag": "0016_add-assets-to-generation-requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1782138209200,
+      "tag": "0017_dazzling_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1782571200000,
+      "tag": "0018_seed_model_categories",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { NonRetriableError } from 'inngest';
 import { inngest } from '@/lib/inngest';
 import * as repo from './repo';
+import * as streamRepo from '../generation-request/repo';
 import * as storage from './storage';
 import { MediaGenerator, type ImageSizePreset } from './generators/media-generator';
 import { v4 as uuidv4 } from 'uuid';
@@ -101,30 +102,17 @@ export const handleImageGeneration = inngest.createFunction(
         id: 'media-generate-image',
         retries: 3,
         triggers: [{ event: 'media/generate.image' }],
-        onFailure: async ({ event, error, step }) => {
+        onFailure: async ({ event }) => {
             const data = event.data.event.data as Partial<ImageEventData> & { _reservationId?: string };
-            const requestId = data.requestId;
-            if (requestId) {
-                await step.run('mark-generation-failed', () =>
-                    repo.updateGenerationRequest(requestId, {
-                        status: 'failed',
-                        error: getErrorMessage(error),
-                    }),
-                );
-            }
             const reservationId = data._reservationId;
             if (reservationId) {
-                await step.run('refund-credits', () => safeRefund(reservationId, 'image-generation-failed'));
+                await safeRefund(reservationId, 'image-generation-failed');
             }
         },
     },
     async ({ event, step }) => {
         const data = event.data as ImageEventData;
         const { requestId, projectId, organizationId, userId, prompt, model, aspectRatio, referenceImages, numVariations } = data;
-
-        await step.run('mark-processing', () =>
-            repo.updateGenerationRequest(requestId, { status: 'processing' }),
-        );
 
         const billableInput = {
             model,
@@ -194,7 +182,7 @@ export const handleImageGeneration = inngest.createFunction(
         });
 
         const assets = await step.run('save-assets', async () => {
-            const assets: Asset[] = [];
+            const newAssets: Asset[] = [];
             for (const upload of uploads) {
                 const fileMetadata = await storage.getFileMetadata(upload.storageKey);
                 const assetName = upload.storageKey.split('/').pop() ?? `image-${uuidv4().slice(0, 8)}.png`;
@@ -208,11 +196,16 @@ export const handleImageGeneration = inngest.createFunction(
                     metadata: fileMetadata,
                     storageKey: upload.storageKey,
                 });
-                assets.push(asset);
+                newAssets.push(asset);
             }
 
-            await repo.updateGenerationRequest(requestId, { status: 'completed' });
-            return assets;
+            await streamRepo.appendRequestAssets(requestId, newAssets.map(a => ({
+                assetId: a.id,
+                type: 'image' as const,
+                url: a.url,
+                name: a.name,
+            })));
+            return newAssets;
         });
 
         return { requestId, assets, reservationId: reservation.id };
@@ -231,7 +224,7 @@ export const handleAudioGeneration = inngest.createFunction(
             const requestId = data.requestId;
             if (requestId) {
                 await step.run('mark-generation-failed', () =>
-                    repo.updateGenerationRequest(requestId, {
+                    streamRepo.updateGenerationRequest(requestId, {
                         status: 'failed',
                         error: getErrorMessage(error),
                     }),
@@ -248,7 +241,7 @@ export const handleAudioGeneration = inngest.createFunction(
         const { requestId, projectId, organizationId, userId, prompt, audioType } = data;
 
         await step.run('mark-processing', () =>
-            repo.updateGenerationRequest(requestId, { status: 'processing' }),
+            streamRepo.updateGenerationRequest(requestId, { status: 'processing' }),
         );
 
         const billableInput = { audioType, prompt };
@@ -325,7 +318,7 @@ export const handleAudioGeneration = inngest.createFunction(
                 storageKey: upload.storageKey,
             });
 
-            await repo.updateGenerationRequest(requestId, { status: 'completed' });
+            await streamRepo.updateGenerationRequest(requestId, { status: 'completed' });
             return asset;
         });
 
@@ -340,30 +333,17 @@ export const handleVideoGeneration = inngest.createFunction(
         id: 'media-generate-video',
         retries: 3,
         triggers: [{ event: 'media/generate.video' }],
-        onFailure: async ({ event, error, step }) => {
+        onFailure: async ({ event }) => {
             const data = event.data.event.data as Partial<VideoEventData> & { _reservationId?: string };
-            const requestId = data.requestId;
-            if (requestId) {
-                await step.run('mark-generation-failed', () =>
-                    repo.updateGenerationRequest(requestId, {
-                        status: 'failed',
-                        error: getErrorMessage(error),
-                    }),
-                );
-            }
             const reservationId = data._reservationId;
             if (reservationId) {
-                await step.run('refund-credits', () => safeRefund(reservationId, 'video-generation-failed'));
+                await safeRefund(reservationId, 'video-generation-failed');
             }
         },
     },
     async ({ event, step }) => {
         const data = event.data as VideoEventData;
         const { requestId, projectId, organizationId, userId, prompt, model, duration, aspectRatio, referenceImage } = data;
-
-        await step.run('mark-processing', () =>
-            repo.updateGenerationRequest(requestId, { status: 'processing' }),
-        );
 
         const billableInput = {
             model,
@@ -445,24 +425,12 @@ export const handleVideoGeneration = inngest.createFunction(
             }
 
             if (pollResult.status === 'failed') {
-                await step.run('mark-failed', () =>
-                    repo.updateGenerationRequest(requestId, {
-                        status: 'failed',
-                        error: 'Video generation failed at provider',
-                    }),
-                );
                 await step.run('refund-on-provider-failure', () => safeRefund(reservation.id, 'video-provider-failed'));
                 return { requestId, status: 'failed' };
             }
         }
 
         if (!videoUrl) {
-            await step.run('mark-timeout', () =>
-                repo.updateGenerationRequest(requestId, {
-                    status: 'failed',
-                    error: 'Video generation timed out',
-                }),
-            );
             await step.run('refund-on-timeout', () => safeRefund(reservation.id, 'video-poll-timeout'));
             return { requestId, status: 'failed' };
         }
@@ -493,7 +461,12 @@ export const handleVideoGeneration = inngest.createFunction(
                 storageKey: upload.storageKey,
             });
 
-            await repo.updateGenerationRequest(requestId, { status: 'completed' });
+            await streamRepo.appendRequestAssets(requestId, [{
+                assetId: asset.id,
+                type: 'video',
+                url: asset.url,
+                name: asset.name,
+            }]);
             return asset;
         });
 

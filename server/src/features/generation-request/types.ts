@@ -1,4 +1,3 @@
-import { SseEventType } from "@/type";
 import { YieldEventType } from "../ai/stream-llm";
 
 export type TaskUpdateStreamEvent = YieldEventType<unknown> & {
@@ -13,7 +12,7 @@ export type ChatChunkStreamEvent = {
 };
 
 export type SSEStreamEvent = {
-    event: SseEventType;
+    event: 'chat-completion' | 'media-generation' | 'caption-generation' | 'error';
     requestId: string;
     data: unknown;
 } & Partial<Pick<TaskUpdateStreamEvent, "type" | "finishReason" | "alertType">>;

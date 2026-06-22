@@ -3,8 +3,7 @@
         "provider": "openai",
         "name": "GPT-5.2",
         "apiName": "gpt-5.2",
-        "category": ["text"],
-        "recommended_usage": ["lead-agent"],
+        "category": ["text-to-text", "leading-agent"],
         "pricing": {
             "currency": "USD",
             "unit": "per_1m_tokens",
@@ -18,8 +17,7 @@
         "provider": "openai",
         "name": "GPT-5.1",
         "apiName": "gpt-5.1",
-        "category": ["text"],
-        "recommended_usage": ["lead-agent"],
+        "category": ["text-to-text", "leading-agent"],
         "pricing": {
             "currency": "USD",
             "unit": "per_1m_tokens",
@@ -33,8 +31,7 @@
         "provider": "openai",
         "name": "GPT-5-mini",
         "apiName": "gpt-5-mini",
-        "category": ["text"],
-        "recommended_usage": ["summary-agent"],
+        "category": ["text-to-text"],
         "pricing": {
             "currency": "USD",
             "unit": "per_1m_tokens",
@@ -48,8 +45,7 @@
         "provider": "openai",
         "name": "GPT-5-nano",
         "apiName": "gpt-5-nano",
-        "category": ["text"],
-        "recommended_usage": ["summary-agent"],
+        "category": ["text-to-text"],
         "pricing": {
             "currency": "USD",
             "unit": "per_1m_tokens",
@@ -63,8 +59,7 @@
         "provider": "openai",
         "name": "GPT-4.1",
         "apiName": "gpt-4.1",
-        "category": ["text"],
-        "recommended_usage": ["lead-agent"],
+        "category": ["text-to-text", "leading-agent"],
         "pricing": {
             "currency": "USD",
             "unit": "per_1m_tokens",
@@ -73,5 +68,75 @@
             "output": [{ "up_to": null, "rate": 8 }],
             "cached_input": [{ "up_to": null, "rate": 0.5 }]
         }
+    },
+    {
+        "provider": "black-forest-labs",
+        "name": "Flux 2 Max",
+        "apiName": "flux.2-max",
+        "category": ["text-to-image", "image-to-image"],
+        "pricing": null
+    },
+    {
+        "provider": "openai",
+        "name": "GPT Image 2",
+        "apiName": "gpt-image-2",
+        "category": ["text-to-image", "image-to-image"],
+        "pricing": null
+    },
+    {
+        "provider": "openai",
+        "name": "GPT Image 1.5",
+        "apiName": "gpt-image-1.5",
+        "category": ["text-to-image", "image-to-image"],
+        "pricing": null
+    },
+    {
+        "provider": "google",
+        "name": "Gemini 3.1 Flash Image Preview",
+        "apiName": "gemini-3.1-flash-image-preview",
+        "category": ["text-to-image", "image-to-image"],
+        "pricing": null
+    },
+    {
+        "provider": "google",
+        "name": "Gemini 3 Pro Image Preview",
+        "apiName": "gemini-3-pro-image-preview",
+        "category": ["text-to-image", "image-to-image"],
+        "pricing": null
+    },
+    {
+        "provider": "bytedance",
+        "name": "Seedream 4.5",
+        "apiName": "seedream-4.5",
+        "category": ["text-to-image", "image-to-image"],
+        "pricing": null
+    },
+    {
+        "provider": "bytedance",
+        "name": "Seedream 5 Lite",
+        "apiName": "seedream-5-lite",
+        "category": ["text-to-image", "image-to-image"],
+        "pricing": null
+    },
+    {
+        "provider": "alibaba",
+        "name": "Wan 2.6",
+        "apiName": "wan-2.6",
+        "category": ["text-to-video"],
+        "pricing": null
+    },
+    {
+        "provider": "kling",
+        "name": "Kling V3",
+        "apiName": "kling-v3",
+        "category": ["text-to-video"],
+        "pricing": null
+    },
+    {
+        "provider": "bytedance",
+        "name": "Seedance 2.0",
+        "apiName": "seedance-2.0",
+        "category": ["text-to-video", "video-to-video"],
+        "pricing": null
     }
 ]

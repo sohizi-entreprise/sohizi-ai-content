@@ -1,48 +1,74 @@
 import { ModelMessage } from "ai";
 import { TokenUsage } from "@/type";
-import { LlmClient } from "./llm-client";
-import { streamEvents } from "./llm-response";
-
-const titleClient = new LlmClient("gpt-5-nano", {
-    reasoningEffort: "minimal",
-    maxOutputTokens: 32,
-});
+import { createBillableLlmClient } from "./llm-client";
+import { getModelById } from "@/features/chat/repo";
+import { billingService, withBilling } from "@/features/billing";
+import { estimateInputTokens } from "./estimate-token";
+import { uuidv4 } from "zod/v4";
 
 type GenerateTitleResult = {
     title: string;
-    usage: TokenUsage;
 }
 
-export async function generateTitle(firstMsg: string, abortSignal: AbortSignal): Promise<GenerateTitleResult> {
-    const titleMessages: ModelMessage[] = [
-        {
-            role: "system",
-            content: getSystemPrompt(),
-        },
-        {
-            role: "user",
-            content: `Give me a title based on this message:\n${firstMsg}`,
-        },
-    ];
+type GenerateTitleRequest = {
+    message: string;
+    modelId: string;
+    organizationId: string;
+    abortSignal: AbortSignal;
+}
 
-    for await (const chunk of titleClient.invoke({
-        messages: titleMessages,
-        abortSignal,
-        stream: false,
-    })) {
-        if (chunk.type === streamEvents.complete) {
-            if (chunk.error) {
-                throw new Error(chunk.error);
-            }
-
-            return {
-                title: chunk.text.trim(),
-                usage: chunk.usage,
-            };
+export async function generateTitle(request: GenerateTitleRequest): Promise<GenerateTitleResult> {
+    const { message, modelId, organizationId, abortSignal } = request;
+    let title = derivedTitle(message);
+    try {
+        const model = await getModelById(modelId);
+        if (!model) {
+            throw new Error('Model not found');
         }
-    }
+        const client =createBillableLlmClient({
+            model,
+            modelConfig: {
+                reasoningEffort: "minimal",
+                maxOutputTokens: 32,
+            }
+        })
+        const billedClient = withBilling(client, billingService);
+    
+        const titleMessages: ModelMessage[] = [
+            {
+                role: "system",
+                content: getSystemPrompt(),
+            },
+            {
+                role: "user",
+                content: `Give me a title based on this message:\n${message}`,
+            },
+        ];
+    
+        const output = await billedClient({
+            messages: titleMessages,
+            estimatedInputTokens: estimateInputTokens(titleMessages, 1.15),
+            estimatedOutputTokens: 60,
+            stream: false,
+        }, {
+            organizationId,
+            signal: abortSignal,
+            metadata: {
+                runId: uuidv4(),
+            }
+        });
+    
+        title = output.text.trim();
+    
+        if (output.error) {
+            console.error("Title generation failed: ", output.error);
+        }
 
-    throw new Error("Title generation did not return a completion.");
+    } catch (error) {
+        console.error("Title generation failed: ", error);
+    }
+    
+    return { title };
 }
 
 function getSystemPrompt() {
@@ -70,4 +96,15 @@ Remote Work Productivity Tips
 AI in Healthcare
 Video Game Development Insights
 `.trim();
+}
+
+function derivedTitle(firstMsg: string) {
+    const title = firstMsg
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 15)
+        .toLowerCase();
+
+    return title.charAt(0).toUpperCase() + title.slice(1);
 }

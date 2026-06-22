@@ -1,7 +1,6 @@
-import { inngest } from '@/lib/inngest';
 import * as repo from './repo';
 import * as storage from './storage';
-import type { GenerateImageInput, GenerateAudioInput, GenerateVideoInput, GetUploadUrlInput, GetRequestStatusesInput, uploadSuccessSchema } from './schema';
+import type { GetUploadUrlInput, uploadSuccessSchema } from './schema';
 import { BadRequest, NotFound } from '../error';
 import { getProjectById } from '../project/repo';
 import z from 'zod';
@@ -26,107 +25,6 @@ export const models = {
     videoToVideo: [
         'seedance-2.0'
     ],
-}
-
-async function resolveOrganizationId(projectId: string): Promise<string> {
-    const project = await getProjectById(projectId);
-    if (!project) {
-        throw new NotFound('Project not found');
-    }
-    return project.organizationId;
-}
-
-export async function generateImage(data: GenerateImageInput, userId: string) {
-    const organizationId = await resolveOrganizationId(data.projectId);
-    const genRequest = await repo.createGenerationRequest({
-        projectId: data.projectId,
-        userId,
-        type: 'image',
-        request: {
-            prompt: data.prompt,
-            model: data.model,
-            aspectRatio: data.aspectRatio,
-            referenceImages: data.referenceImages,
-            numVariations: data.numVariations,
-        },
-    });
-
-    await inngest.send({
-        name: 'media/generate.image',
-        data: {
-            requestId: genRequest.id,
-            projectId: data.projectId,
-            organizationId,
-            userId,
-            prompt: data.prompt,
-            model: data.model,
-            aspectRatio: data.aspectRatio,
-            referenceImages: data.referenceImages,
-            numVariations: data.numVariations,
-        },
-    });
-
-    return { requestId: genRequest.id };
-}
-
-export async function generateAudio(data: GenerateAudioInput, userId: string) {
-    const organizationId = await resolveOrganizationId(data.projectId);
-    const genRequest = await repo.createGenerationRequest({
-        projectId: data.projectId,
-        userId,
-        type: 'audio',
-        request: {
-            prompt: data.prompt,
-            audioType: data.audioType,
-        },
-    });
-
-    await inngest.send({
-        name: 'media/generate.audio',
-        data: {
-            requestId: genRequest.id,
-            projectId: data.projectId,
-            organizationId,
-            userId,
-            prompt: data.prompt,
-            audioType: data.audioType,
-        },
-    });
-
-    return { requestId: genRequest.id };
-}
-
-export async function generateVideo(data: GenerateVideoInput, userId: string) {
-    const organizationId = await resolveOrganizationId(data.projectId);
-    const genRequest = await repo.createGenerationRequest({
-        projectId: data.projectId,
-        userId,
-        type: 'video',
-        request: {
-            prompt: data.prompt,
-            model: data.model,
-            duration: data.duration,
-            aspectRatio: data.aspectRatio,
-            referenceImage: data.referenceImage,
-        },
-    });
-
-    await inngest.send({
-        name: 'media/generate.video',
-        data: {
-            requestId: genRequest.id,
-            projectId: data.projectId,
-            organizationId,
-            userId,
-            prompt: data.prompt,
-            model: data.model,
-            duration: data.duration,
-            aspectRatio: data.aspectRatio,
-            referenceImage: data.referenceImage,
-        },
-    });
-
-    return { requestId: genRequest.id };
 }
 
 export async function getUploadUrl(data: GetUploadUrlInput) {
@@ -205,22 +103,6 @@ export async function uploadSuccess(data: z.infer<typeof uploadSuccessSchema>) {
         console.error(error);
         throw new BadRequest('Failed to create asset with file node');
     }
-}
-
-export async function getPendingRequests(projectId: string, userId: string) {
-    const project = await getProjectById(projectId);
-    if (!project) {
-        throw new NotFound('Project not found');
-    }
-    return repo.getPendingRequests(projectId, userId);
-}
-
-export async function getRequestStatuses(projectId: string, data: GetRequestStatusesInput) {
-    const project = await getProjectById(projectId);
-    if (!project) {
-        throw new NotFound('Project not found');
-    }
-    return repo.getGenerationRequestsByIds(projectId, data.requestIds);
 }
 
 function getAssetType(contentType: string): AssetType {

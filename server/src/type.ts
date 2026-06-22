@@ -2,7 +2,14 @@ import { UserContent, AssistantContent, ToolContent, ModelMessage, FinishReason 
 import { z } from 'zod';
 
 export type GenerationRequestStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'aborted';
-export type GenerationRequestType = 'image' | 'video' | 'audio';
+export type GenerationRequestType = 'image' | 'video' | 'audio' | 'chat-completion' | 'media-generation' | 'caption-generation';
+
+export type GenerationRequestAsset = {
+    assetId: string;
+    type: 'image' | 'video' | 'audio';
+    url: string;
+    name: string;
+};
 
 export type ProjectFormat = 'storytime' | 'explainer' | 'documentary' | 'presenter';
 export type Audience = 'general' | 'kids' | 'teens' | 'adult';
@@ -10,7 +17,18 @@ export type TimeOfDay = 'dawn' | 'day' | 'sunset' | 'night' | 'unspecified';
 
 export type EntityType = 'CHARACTER' | 'LOCATION' | 'PROP' | 'COSTUME';
 
-export type ModelCategory = 'text' | 'image' | 'video' | 'audio';
+export type ModelCategory =
+  | 'text-to-image'
+  | 'image-to-image'
+  | 'image-to-video'
+  | 'text-to-video'
+  | 'text-to-speech'
+  | 'video-to-text'
+  | 'image-to-text'
+  | 'speech-to-text'
+  | 'leading-agent'
+  | 'video-to-video'
+  | 'text-to-text';
 
 export type ModelRecommendedUsage = 'lead-agent' | 'summary-agent'
 
@@ -55,7 +73,8 @@ export type CursorPaginationResult<T> = {
   hasMore: boolean;
 };
 
-export type Runstatus = 'idle' | 'running' | 'finished' | 'error' | 'aborted' | 'paused'
+export type Runstatus = 'idle' | 'running' | 'finished' | 'error' | 'paused'
+
 
 export type TodoItem = {
   id: string;
@@ -64,6 +83,7 @@ export type TodoItem = {
 }
 
 export type CompleteReason = FinishReason | 'abort';
+
 
 export type TokenUsage = {
   input: number;

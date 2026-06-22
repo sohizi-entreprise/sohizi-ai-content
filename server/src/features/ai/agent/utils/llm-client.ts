@@ -9,6 +9,7 @@ import { calculateTextCredits } from "@/features/billing/credits";
 import { TOPUP_TARGET_MARGIN, PAYMENT_FEE_RESERVE, ESTIMATE_OVERBOOKING_FACTOR } from "@/features/billing/constants";
 
 export type ModelConfig = {
+    tools?: ToolSet;
     temperature?: number;
     reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
     reasoningSummary?: 'auto' | 'none';
@@ -29,10 +30,11 @@ export class LlmClient {
     private readonly model: string;
     private readonly tools: ToolSet | undefined;
     private readonly modelConfig: ModelConfig | undefined;
-    constructor(model: string, modelConfig?: ModelConfig, tools?: ToolSet) {
-        this.model = model;
-        this.modelConfig = modelConfig;
-        this.tools = tools;
+
+    constructor(modelId: string, config: ModelConfig) {
+        this.model = modelId;
+        this.modelConfig = config;
+        this.tools = config.tools;
     }
 
     async* invoke(request: InvokeRequest){
@@ -52,7 +54,7 @@ export class LlmClient {
               ? Output.object({ schema: outputSchema })
               : undefined;
 
-        const modelConfig = this.modelConfig ?? {};
+        const modelConfig = this.modelConfig;
 
         try {
             const response = await generateText({
@@ -60,13 +62,13 @@ export class LlmClient {
                 messages,
                 abortSignal,
                 tools: this.tools,
-                maxRetries: modelConfig.maxRetries,
-                maxOutputTokens: modelConfig.maxOutputTokens,
+                maxRetries: modelConfig?.maxRetries,
+                maxOutputTokens: modelConfig?.maxOutputTokens,
                 output,
                 providerOptions: {
                     openai: {
-                        reasoningEffort: modelConfig.reasoningEffort,
-                        reasoningSummary: modelConfig.reasoningSummary,
+                        reasoningEffort: modelConfig?.reasoningEffort,
+                        reasoningSummary: modelConfig?.reasoningSummary,
                     }
                 }
             })
@@ -105,11 +107,12 @@ export class LlmClient {
               ? Output.object({ schema: outputSchema })
               : undefined;
 
-        const modelConfig = this.modelConfig ?? {};
+        const modelConfig = this.modelConfig;
         let finishReason: CompleteReason = 'other';
         let error: string | undefined;
         let text = '';
         let reasoningText = '';
+        let toolDeltaBuffered = '';
         let usage: TokenUsage = {
             input: 0,
             output: 0,
@@ -125,13 +128,13 @@ export class LlmClient {
                 messages,
                 abortSignal,
                 tools: this.tools,
-                maxRetries: modelConfig.maxRetries,
-                maxOutputTokens: modelConfig.maxOutputTokens,
+                maxRetries: modelConfig?.maxRetries,
+                maxOutputTokens: modelConfig?.maxOutputTokens,
                 output,
                 providerOptions: {
                     openai: {
-                        reasoningEffort: modelConfig.reasoningEffort,
-                        reasoningSummary: modelConfig.reasoningSummary,
+                        reasoningEffort: modelConfig?.reasoningEffort,
+                        reasoningSummary: modelConfig?.reasoningSummary,
                     }
                 }
             })
@@ -141,14 +144,14 @@ export class LlmClient {
                         text += chunk.text;
                         yield {
                             type: streamEvents.textDelta,
-                            text: chunk.text,
+                            text,
                         }
                         break;
                     case 'reasoning-delta':{
                         reasoningText += chunk.text;
                         yield {
                             type: streamEvents.reasoningDelta,
-                            text: chunk.text,
+                            text: reasoningText,
                         }
                         break;
                     }
@@ -179,10 +182,11 @@ export class LlmClient {
                     }
 
                     case 'tool-input-delta':{
+                        toolDeltaBuffered += chunk.delta;
                         yield {
                             type: streamEvents.toolCallDelta,
                             toolCallId: chunk.id,
-                            input: chunk.delta,
+                            input: toolDeltaBuffered,
                         }
                         break;
                     }
@@ -260,8 +264,7 @@ export type BillableLlmOutput = {
 
 export type BillableLlmConfig = {
     model: LlmModel;
-    modelConfig?: ModelConfig;
-    tools?: ToolSet;
+    modelConfig: ModelConfig;
     timeoutMs?: number;
     ttlMs?: number;
 }
@@ -282,8 +285,8 @@ export type BillableLlmClient =
     & BillableStream<BillableLlmInput, LlmChunk>
 
 export function createBillableLlmClient(config: BillableLlmConfig): BillableLlmClient {
-    const { model, modelConfig, tools, timeoutMs = DEFAULT_TIMEOUT_MS, ttlMs } = config;
-    const client = new LlmClient(model.apiName, modelConfig, tools);
+    const { model, modelConfig, timeoutMs = DEFAULT_TIMEOUT_MS, ttlMs } = config;
+    const client = new LlmClient(model.apiName, modelConfig);
 
     const creditsFromUsage = (usage: TokenUsage): Credits => {
         const actualCredits = calculateTextCredits(model, {
