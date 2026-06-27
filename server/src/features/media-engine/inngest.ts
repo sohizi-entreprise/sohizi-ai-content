@@ -1,5 +1,5 @@
 import { NonRetriableError } from 'inngest';
-import { inngest } from '@/lib/inngest';
+import { inngest } from '@/lib/inngest/client';
 import * as repo from './repo';
 import * as streamRepo from '../generation-request/repo';
 import * as storage from './storage';
@@ -11,6 +11,7 @@ import { imageBillable } from './generators/billable-image';
 import { audioBillable } from './generators/billable-audio';
 import { videoBillable, videoActualCredits } from './generators/billable-video';
 import { isMediaError } from './errors';
+import { decrementKey } from '../generation-request/stream-handler';
 
 type ImageEventData = {
     requestId: string;
@@ -95,18 +96,26 @@ async function safeRefund(reservationId: string | undefined | null, reason: stri
     }
 }
 
+async function commitRequest(requestId: string, status: 'finished' | 'error') {
+    const res = await decrementKey(requestId)
+    if(res === 0){
+        await repo.updateAssetRequest(requestId, { status });
+    }
+}
+
 // ─── Image Generation ────────────────────────────────────────────────
 
 export const handleImageGeneration = inngest.createFunction(
     {
         id: 'media-generate-image',
-        retries: 3,
+        retries: 0,
         triggers: [{ event: 'media/generate.image' }],
         onFailure: async ({ event }) => {
-            const data = event.data.event.data as Partial<ImageEventData> & { _reservationId?: string };
+            const data = event.data.event.data as ImageEventData & { _reservationId?: string };
             const reservationId = data._reservationId;
             if (reservationId) {
                 await safeRefund(reservationId, 'image-generation-failed');
+                await commitRequest(data.requestId, 'error')
             }
         },
     },
@@ -199,12 +208,14 @@ export const handleImageGeneration = inngest.createFunction(
                 newAssets.push(asset);
             }
 
-            await streamRepo.appendRequestAssets(requestId, newAssets.map(a => ({
+            await repo.appendAssetRequestAssets(requestId, newAssets.map(a => ({
                 assetId: a.id,
                 type: 'image' as const,
                 url: a.url,
                 name: a.name,
             })));
+
+            await commitRequest(requestId, 'finished')
             return newAssets;
         });
 
@@ -217,18 +228,13 @@ export const handleImageGeneration = inngest.createFunction(
 export const handleAudioGeneration = inngest.createFunction(
     {
         id: 'media-generate-audio',
-        retries: 3,
+        retries: 0,
         triggers: [{ event: 'media/generate.audio' }],
         onFailure: async ({ event, error, step }) => {
             const data = event.data.event.data as Partial<AudioEventData> & { _reservationId?: string };
             const requestId = data.requestId;
             if (requestId) {
-                await step.run('mark-generation-failed', () =>
-                    streamRepo.updateGenerationRequest(requestId, {
-                        status: 'failed',
-                        error: getErrorMessage(error),
-                    }),
-                );
+                await commitRequest(requestId, 'error')
             }
             const reservationId = data._reservationId;
             if (reservationId) {
@@ -318,7 +324,7 @@ export const handleAudioGeneration = inngest.createFunction(
                 storageKey: upload.storageKey,
             });
 
-            await streamRepo.updateGenerationRequest(requestId, { status: 'completed' });
+            await commitRequest(requestId, 'finished')
             return asset;
         });
 
@@ -331,13 +337,17 @@ export const handleAudioGeneration = inngest.createFunction(
 export const handleVideoGeneration = inngest.createFunction(
     {
         id: 'media-generate-video',
-        retries: 3,
+        retries: 0,
         triggers: [{ event: 'media/generate.video' }],
         onFailure: async ({ event }) => {
-            const data = event.data.event.data as Partial<VideoEventData> & { _reservationId?: string };
+            const data = event.data.event.data as VideoEventData & { _reservationId?: string };
+            const requestId = data.requestId;
             const reservationId = data._reservationId;
             if (reservationId) {
                 await safeRefund(reservationId, 'video-generation-failed');
+            }
+            if (requestId) {
+                await commitRequest(requestId, 'error')
             }
         },
     },
@@ -461,12 +471,13 @@ export const handleVideoGeneration = inngest.createFunction(
                 storageKey: upload.storageKey,
             });
 
-            await streamRepo.appendRequestAssets(requestId, [{
+            await repo.appendAssetRequestAssets(requestId, [{
                 assetId: asset.id,
                 type: 'video',
                 url: asset.url,
                 name: asset.name,
             }]);
+            await commitRequest(requestId, 'finished')
             return asset;
         });
 

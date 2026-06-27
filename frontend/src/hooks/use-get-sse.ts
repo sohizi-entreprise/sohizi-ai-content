@@ -20,7 +20,7 @@ export const useGetSSE = <TEvent extends string>(params: GetSSEOptions<TEvent>) 
         eventSourceRef.current.close()
         eventSourceRef.current = null
       }
-      const eventSource = new EventSource(sseUrl)
+      const eventSource = new EventSource(sseUrl, { withCredentials: true })
       eventSourceRef.current = eventSource
   
       // Handle incoming events

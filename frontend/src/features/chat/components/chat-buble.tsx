@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Message, MsgContent, MsgToolCallPart, MsgToolResultPart } from '../types'
+import { Message, MsgToolCallPart, MsgToolResultPart } from '../types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -32,38 +32,6 @@ export const StreamingChatBubble = memo(function StreamingChatBubble({ data }: {
   return <RenderStreamingAssistantMessage message={data} />
 }, (prev, next) => areMessagesEqual(prev.data, next.data))
 
-export function insertToolResultsIntoAssistantMessages(messages: Message[]) {
-  const toolResults = new Map<string, MsgToolResultPart>()
-
-  for (const message of messages) {
-    for (const part of message.content) {
-      if (part.type === 'tool-result') {
-        toolResults.set(part.toolCallId, part)
-      }
-    }
-  }
-
-  return messages
-    .filter((message) => message.role !== 'tool')
-    .map((message) => {
-      if (message.role !== 'assistant') return message
-
-      return {
-        ...message,
-        content: message.content.flatMap<MsgContent>((part, index) => {
-          if (part.type !== 'tool-call') return [part]
-
-          const nextPart = message.content[index + 1]
-          if (nextPart?.type === 'tool-result' && nextPart.toolCallId === part.toolCallId) {
-            return [part]
-          }
-
-          const toolResult = toolResults.get(part.toolCallId)
-          return toolResult ? [part, toolResult] : [part]
-        }),
-      }
-    })
-}
 
 function RenderUserMessage({ message }: { message: Message }) {
   const content = message.content.find((part) => part.type === 'text')
@@ -210,7 +178,7 @@ function RenderStreamingToolCall({
     <div className="border border-gray-800 rounded-md p-2">
       <div className="text-gray-400 text-xs">{toolCall.toolName}</div>
       {toolCall.isStreaming ? (
-        <div className="text-white text-xs text-muted-foreground">Running…</div>
+        <div className="text-white text-xs">Running…</div>
       ) : (
         <div className="text-white text-xs whitespace-pre-wrap">{String(toolCall.input ?? '')}</div>
       )}

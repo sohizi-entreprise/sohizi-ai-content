@@ -1,10 +1,9 @@
 import { ModelMessage } from "ai";
-import { TokenUsage } from "@/type";
 import { createBillableLlmClient } from "./llm-client";
 import { getModelById } from "@/features/chat/repo";
 import { billingService, withBilling } from "@/features/billing";
 import { estimateInputTokens } from "./estimate-token";
-import { uuidv4 } from "zod/v4";
+import { v4 as uuidv4 } from 'uuid';
 
 type GenerateTitleResult = {
     title: string;
@@ -25,7 +24,7 @@ export async function generateTitle(request: GenerateTitleRequest): Promise<Gene
         if (!model) {
             throw new Error('Model not found');
         }
-        const client =createBillableLlmClient({
+        const client = createBillableLlmClient({
             model,
             modelConfig: {
                 reasoningEffort: "minimal",

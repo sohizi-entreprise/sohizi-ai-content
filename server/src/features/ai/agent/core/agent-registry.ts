@@ -1,10 +1,17 @@
+import { ToolSet } from "ai";
 import { mediaGeneratorPrompt } from "../prompts/media-generator";
+import { editFileTool } from "../tools/file-edit";
 import { exploreFileTool } from "../tools/file-explore";
 import { searchFileTool } from "../tools/file-search";
+import { endExecutionLoopTool } from "../tools/loop-end";
 import { submitMediaJobsTool } from "../tools/submit-media-jobs";
+import { manageTodoListTool } from "../tools/tasks-manage";
+import { timelineEditTool } from "../tools/timeline-edit";
 import { timelineExploreTool } from "../tools/timeline-explore";
-import { getSchemas } from "../tools/tool-registry";
 import { ModelConfig } from "../utils/llm-client";
+import { generateSystemPrompt } from "./sys-prompt";
+import { BaseTool } from "../tools/tool-definition";
+import { z } from "zod";
 
 type AgentName = 'media-generator' | 'main-agent';
 
@@ -14,6 +21,14 @@ export type AgentDefinition = {
     baseSystemPrompt: string;
     modelConfig: ModelConfig;
     modelId: string;
+}
+
+const getSchemas = (tools: BaseTool<z.ZodSchema>[]): ToolSet => {
+    const result: ToolSet = {};
+    for(const tool of tools){
+        result[tool.params.name] = tool.schema;
+    }
+    return result;
 }
 
 const agentRegistry = new Map<string, AgentDefinition>();
@@ -29,11 +44,22 @@ const registerAgent = (definition: AgentDefinition): void => {
 registerAgent({
     name: 'main-agent',
     description: 'The main agent for the application.',
-    baseSystemPrompt: '',
+    baseSystemPrompt: generateSystemPrompt(),
     modelConfig: {
-        tools: getSchemas([timelineExploreTool]),
+        tools: getSchemas([
+            exploreFileTool,
+            searchFileTool, 
+            timelineExploreTool, 
+            timelineEditTool,
+            endExecutionLoopTool,
+            manageTodoListTool,
+            editFileTool
+        ]),
+        reasoningEffort: 'medium',
+        reasoningSummary: 'auto',
+        maxOutputTokens: 3000,
     },
-    modelId: 'gpt-4o-mini'
+    modelId: 'gpt-5.1' // This will be overridden by the model passed to the agent
 });
 
 registerAgent({
@@ -41,7 +67,7 @@ registerAgent({
     description: 'Generate media based on the prompt.',
     baseSystemPrompt: mediaGeneratorPrompt,
     modelConfig: {
-        tools: getSchemas([submitMediaJobsTool, exploreFileTool, searchFileTool]),
+        tools: getSchemas([submitMediaJobsTool, manageTodoListTool, exploreFileTool, searchFileTool]),
         reasoningEffort: 'minimal',
     },
     modelId: 'gpt-5.1'

@@ -31,14 +31,6 @@ export const listTools = (): ToolSet => {
     );
 }
 
-export const getSchemas = (tools: BaseTool<z.ZodSchema>[]): ToolSet => {
-    const result: ToolSet = {};
-    for(const tool of tools){
-        result[tool.params.name] = tool.schema;
-    }
-    return result;
-}
-
 registerTool(endExecutionLoopTool);
 registerTool(editFileTool);
 registerTool(exploreFileTool);

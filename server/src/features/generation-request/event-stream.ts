@@ -41,6 +41,11 @@ type MultiStreamOptions = {
   refreshTargets?: () => Promise<MultiStreamTarget[]>
 }
 
+type StreamCursor = {
+  requestId: string
+  cursor: string
+}
+
 type PushOptions = {
   maxLen?: number
   approximateMaxLen?: boolean
@@ -140,7 +145,7 @@ export async function* subscribeMulti<T = unknown>(
 ): AsyncGenerator<MultiStreamEntry<T>> {
   const { blockMs = DEFAULT_BLOCK_MS, onInvalidEntry, refreshTargets } = options
 
-  const targets = new Map<string, { requestId: string; cursor: string }>()
+  const targets = new Map<string, StreamCursor>()
   for (const t of initialTargets) {
     targets.set(t.streamKey, {
       requestId: t.requestId,
@@ -148,12 +153,49 @@ export async function* subscribeMulti<T = unknown>(
     })
   }
 
+  // A literal '$' cursor is re-resolved by Redis to "latest" on every XREAD
+  // call, so any entry that arrives between calls (e.g. while a busier stream
+  // keeps XREAD returning immediately) is silently skipped. Resolve it once to
+  // a concrete id so the cursor advances deterministically and never drops
+  // events.
+  await resolveDollarCursors(blockingClient, targets)
+
+  /**
+   * Reconcile the live read-set with the registry. New streams are added,
+   * but streams that disappeared are *drained* (a final XRANGE flushes any
+   * buffered tail, including the terminal complete/error event) before being
+   * removed. Without this, completing a request — which removes it from the
+   * registry immediately while keeping the stream alive via TTL — would
+   * abandon any events the blocking read had not yet consumed.
+   */
+  async function* reconcileTargets(): AsyncGenerator<MultiStreamEntry<T>> {
+    if (!refreshTargets) return
+
+    const fresh = await refreshTargets()
+    const freshKeys = new Set(fresh.map((t) => t.streamKey))
+
+    for (const t of fresh) {
+      if (!targets.has(t.streamKey)) {
+        targets.set(t.streamKey, {
+          requestId: t.requestId,
+          cursor: t.lastEventId ?? '0',
+        })
+      }
+    }
+
+    for (const [streamKey, target] of [...targets.entries()]) {
+      if (freshKeys.has(streamKey)) continue
+      yield* drainStream<T>(blockingClient, streamKey, target, onInvalidEntry)
+      targets.delete(streamKey)
+    }
+  }
+
   while (true) {
     if (targets.size === 0) {
       if (!refreshTargets) return
 
       await delay(blockMs)
-      applyRefresh(targets, await refreshTargets())
+      yield* reconcileTargets()
       continue
     }
 
@@ -169,9 +211,7 @@ export async function* subscribeMulti<T = unknown>(
     )
 
     if (!result) {
-      if (refreshTargets) {
-        applyRefresh(targets, await refreshTargets())
-      }
+      yield* reconcileTargets()
       continue
     }
 
@@ -196,9 +236,7 @@ export async function* subscribeMulti<T = unknown>(
       }
     }
 
-    if (refreshTargets) {
-      applyRefresh(targets, await refreshTargets())
-    }
+    yield* reconcileTargets()
   }
 }
 
@@ -259,31 +297,50 @@ function exclusiveId(id: string): string {
 }
 
 /**
- * Merge a fresh set of targets into the live cursor map.
- * - New streams are added with cursor '0' (read from beginning).
- * - Streams no longer in the refresh set are dropped.
- * - Existing streams keep their current cursor position.
+ * Read every remaining entry of a stream (strictly after its current cursor)
+ * in a single non-blocking XRANGE. Used to flush a completed stream's tail
+ * before it is removed from the live read-set, advancing the cursor as it goes.
  */
-function applyRefresh(
-  current: Map<string, { requestId: string; cursor: string }>,
-  freshTargets: MultiStreamTarget[]
-) {
-  const freshKeys = new Set<string>()
+async function* drainStream<T>(
+  client: Redis,
+  streamKey: string,
+  target: StreamCursor,
+  onInvalidEntry?: MultiStreamOptions['onInvalidEntry']
+): AsyncGenerator<MultiStreamEntry<T>> {
+  const startId = target.cursor === '0' ? '0' : exclusiveId(target.cursor)
+  const rawEntries = await client.xrange(streamKey, startId, '+')
 
-  for (const t of freshTargets) {
-    freshKeys.add(t.streamKey)
-    if (!current.has(t.streamKey)) {
-      current.set(t.streamKey, {
-        requestId: t.requestId,
-        cursor: t.lastEventId ?? '0',
-      })
+  for (const [id, fields] of rawEntries) {
+    target.cursor = id
+
+    const parsed = parseFields<T>(id, fields)
+    if (!parsed.ok) {
+      await onInvalidEntry?.(parsed.entry)
+      continue
+    }
+
+    yield {
+      id,
+      requestId: target.requestId,
+      event: parsed.entry.event,
     }
   }
+}
 
-  for (const key of current.keys()) {
-    if (!freshKeys.has(key)) {
-      current.delete(key)
-    }
+/**
+ * Replace any literal '$' cursor with the stream's current last id (or '0' if
+ * the stream is empty). This preserves "only new entries" semantics while
+ * giving us a concrete, monotonically advancing cursor that Redis won't
+ * re-resolve to "latest" on every XREAD.
+ */
+async function resolveDollarCursors(
+  client: Redis,
+  targets: Map<string, StreamCursor>
+): Promise<void> {
+  for (const [streamKey, target] of targets) {
+    if (target.cursor !== '$') continue
+    const last = await client.xrevrange(streamKey, '+', '-', 'COUNT', 1)
+    target.cursor = last.length > 0 ? last[0][0] : '0'
   }
 }
 

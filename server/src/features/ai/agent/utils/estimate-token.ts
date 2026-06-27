@@ -4,7 +4,7 @@ import { encodeChat } from 'gpt-tokenizer';
 
 export function estimateInputTokens(messages: ModelMessage[], overEstimateFactor: number = 1.2): number {
     const sanitizedMessages = sanitizeMessages(messages);
-    const encoded = encodeChat(sanitizedMessages);
+    const encoded = encodeChat(sanitizedMessages, "gpt-5");
     return Math.ceil(encoded.length * overEstimateFactor);
 }
 

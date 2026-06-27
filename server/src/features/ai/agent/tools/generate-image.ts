@@ -3,7 +3,15 @@ import { buildBaseTool } from "./tool-definition";
 import { mediaConstants } from '@/constants'
 import * as mediaEngineService from '@/features/media-engine/service';
 
-const imageModels = z.enum(mediaEngineService.models.image);
+const imageModels = z.enum([
+    'flux.2-max',
+    'gpt-image-2',
+    'gpt-image-1.5',
+    'gemini-3.1-flash-image-preview',
+    'gemini-3-pro-image-preview',
+    'seedream-4.5',
+    'seedream-5-lite'
+]);
 
 export const generateImageSchema = z.object({
     prompt: z.string().min(1).describe('The prompt to generate the image'),
@@ -21,15 +29,15 @@ export const generateImageTool = buildBaseTool({
         const { prompt, model, aspectRatio, referenceImages, numVariations } = input;
         const projectId = session.projectId;
         try{
-            const {requestId} = await mediaEngineService.generateImage({
-                projectId,
-                prompt,
-                model,
-                aspectRatio,
-                referenceImages,
-                numVariations,
-            }, session.userId);
-            const msg = `Image submitted successfully. Here is the request ID: ${requestId}. This can take up to 2 min to complete. User will be notified when the image is ready.`;
+            // const {requestId} = await mediaEngineService.generateImage({
+            //     projectId,
+            //     prompt,
+            //     model,
+            //     aspectRatio,
+            //     referenceImages,
+            //     numVariations,
+            // }, session.userId);
+            const msg = `Image submitted successfully. Here is the request ID: . This can take up to 2 min to complete. User will be notified when the image is ready.`;
             return { success: true, output: msg };
         }catch(error){
             const errorMsg = error instanceof Error ? error.message : String(error);

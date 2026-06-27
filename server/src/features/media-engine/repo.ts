@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { generationRequests, assets, assetVariants, fileNodes } from "@/db/schema";
-import type { AssetType, AssetSource, AssetStatus, AssetVariantType, AssetMetadata, CursorPaginationOptions, CursorPaginationResult } from "@/type";
+import { generationRequests, assets, assetVariants, fileNodes, assetsAgentRuns } from "@/db/schema";
+import type { AssetType, AssetSource, AssetStatus, AssetVariantType, AssetMetadata, CursorPaginationOptions, CursorPaginationResult, AgentRunStatus, GenerationRequestAsset, AgentRunMessage } from "@/type";
 import { and, eq, desc, lt, sql } from "drizzle-orm";
 
 
@@ -180,3 +180,90 @@ export const getAiGeneratedAssetsGroupedByGenerationRequest = async (
 
     return { data, nextCursor, hasMore };
 }
+
+
+export const createAssetRequest = async (projectId: string, settings?: Record<string, unknown>) => {
+    const result = await db.insert(assetsAgentRuns).values({
+        projectId,
+        status: 'pending',
+        assets: [],
+        messages: [],
+        metadata: {settings: settings ?? {}},
+    }).returning();
+
+    return result[0];
+}
+
+type UpdateAssetRequestPayload = {
+    status?: AgentRunStatus;
+    assets?: GenerationRequestAsset[];
+    messages?: AgentRunMessage[];
+    metadata?: {settings: Record<string, unknown>};
+    error?: string;
+}
+
+export const updateAssetRequest = async (runId: string, data: UpdateAssetRequestPayload) => {
+    const result = await db.update(assetsAgentRuns)
+    .set(data)
+    .where(eq(assetsAgentRuns.id, runId))
+    .returning();
+
+    return result[0];
+}
+
+export const appendAssetRequestAssets = async (runId: string, newAssets: GenerationRequestAsset[]) => {
+    return await db.transaction(async (tx) => {
+        const response = await tx.select().from(assetsAgentRuns).where(eq(assetsAgentRuns.id, runId));
+        const agentRun = response[0];
+        if(!agentRun){
+            throw new Error('Agent run not found');
+        }
+        const assets = [...(agentRun.assets ?? []), ...newAssets];
+        const result = await tx.update(assetsAgentRuns)
+                                .set({
+                                    assets,
+                                })
+                                .where(eq(assetsAgentRuns.id, runId))
+                                .returning();
+        return result[0];
+    })
+}
+
+
+const DEFAULT_MESSAGES_PAGE_SIZE = 20;
+const MAX_MESSAGES_PAGE_SIZE = 50;
+
+type ListAssetRequestAssetsResult = {
+    data: typeof assetsAgentRuns.$inferSelect[];
+    nextCursor: string | null;
+    hasMore: boolean;
+}
+
+export const listAssetRequestAssets = async (
+    projectId: string,
+    options?: CursorPaginationOptions
+  ): Promise<ListAssetRequestAssetsResult> => {
+    const limit = Math.min(options?.limit ?? DEFAULT_MESSAGES_PAGE_SIZE, MAX_MESSAGES_PAGE_SIZE);
+    const cursor = options?.cursor;
+  
+    const rows = await db
+      .select()
+      .from(assetsAgentRuns)
+      .where(
+        cursor
+          ? and(
+              eq(assetsAgentRuns.projectId, projectId),
+              lt(assetsAgentRuns.createdAt, new Date(cursor))
+            )
+          : eq(assetsAgentRuns.projectId, projectId)
+      )
+      .orderBy(desc(assetsAgentRuns.createdAt))
+      .limit(limit + 1);
+  
+    const hasMore = rows.length > limit;
+    const page = rows.slice(0, limit);
+    const nextCursor =
+      hasMore && page.length > 0 ? String(page[0].createdAt.toISOString()) : null;
+  
+    return { data: page, nextCursor, hasMore };
+  }

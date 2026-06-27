@@ -11,7 +11,7 @@ export default function ChatSelectModel({projectId}: {projectId: string}) {
 
     const model = useChatStore(state => state.model)
     const setModel = useChatStore(state => state.setModel)
-    const {data: models = [], isLoading} = useQuery(listModelsQueryOptions(projectId))
+    const {data: models = [], isLoading} = useQuery(listModelsQueryOptions(projectId, ['leading-agent']))
 
     const onSelect = (mod: LlmModel) => {
         setModel(mod)

@@ -12,7 +12,7 @@ export const endExecutionLoopTool = buildBaseTool({
     description: "Call this tool to signal that the user's request is completely fulfilled, permanently blocked or needs clarification/confirmation, and the execution loop should end. CRITICAL: You MUST call this tool exactly once at the end of your execution loop after you have provided your final response to the user.",
     inputSchema: endExecutionLoopSchema,
     execute: async (_, {state}) => {
-        state.status = 'finished'
+        state.finishRun()
         return success("The execution loop has ended.");
     }
 });

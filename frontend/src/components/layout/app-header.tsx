@@ -20,7 +20,6 @@ import {
   import { IconFocus2, IconSparkle, IconX } from '@tabler/icons-react'
   import { useSession } from '@/lib/auth-client'
 import { useEditorStore } from '@/features/editor/stores/editor-store'
-import NotificationButton from '@/features/editor/components/layout/notification-button'
 import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
   
   export function AppHeader() {
@@ -48,8 +47,6 @@ import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
         <div className="flex items-center gap-2">
   
           <ThemeToggle />
-  
-          <NotificationButton />
   
           <button onClick={activateFocusMode}>
             <IconFocus2 className="size-4 text-foreground" />

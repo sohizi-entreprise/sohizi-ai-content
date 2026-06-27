@@ -6,7 +6,10 @@ export type GenerationRequestStatus =
   | 'completed'
   | 'failed'
   | 'aborted'
-export type GenerationRequestType = 'image' | 'video' | 'audio'
+export type GenerationRequestType =
+  | 'chat-completion'
+  | 'media-generation'
+  | 'caption-generation'
 
 export type GenerationRequestNotification = {
   id: string
@@ -21,7 +24,7 @@ export type GenerationRequestNotification = {
 export const getPendingRequests = async (
   projectId: string,
 ): Promise<Array<GenerationRequestNotification>> => {
-  const response = await api.get(`/media/${projectId}/requests`)
+  const response = await api.get(`/generations/pending/${projectId}`)
   return response.data
 }
 
@@ -29,8 +32,44 @@ export const getRequestStatuses = async (
   projectId: string,
   requestIds: Array<string>,
 ): Promise<Array<GenerationRequestNotification>> => {
-  const response = await api.post(`/media/${projectId}/requests/status`, {
+  const response = await api.post(`/generations/statuses/${projectId}`, {
     requestIds,
   })
   return response.data
+}
+
+export type ChatCompletionResponse = {
+  requestId: string
+  requestType: 'chat-completion'
+}
+
+export type MediaGenerationResponse = {
+  requestId: string
+  requestType: 'media-generation'
+}
+
+export const submitChatCompletion = async (
+  projectId: string,
+  data: Record<string, unknown>,
+): Promise<ChatCompletionResponse> => {
+  const response = await api.post(
+    `/generations/chat-completion/${projectId}`,
+    data,
+  )
+  return response.data
+}
+
+export const submitMediaGeneration = async (
+  projectId: string,
+  data: Record<string, unknown>,
+): Promise<MediaGenerationResponse> => {
+  const response = await api.post(`/generations/media/${projectId}`, data)
+  return response.data
+}
+
+export const cancelGenerationRequest = async (
+  projectId: string,
+  requestId: string,
+): Promise<void> => {
+  await api.post(`/generations/cancel/${projectId}/${requestId}`)
 }

@@ -1,7 +1,7 @@
 import api from "@/lib/axios"
 import { createParser, type EventSourceMessage } from "eventsource-parser"
 import type { FileNode } from "../projects/type"
-import { ChatCompletionRequest, ChatStreamChunk, Conversation, LlmModel, Message } from "./types"
+import { AgentRunBlock, ChatCompletionRequest, ChatCompletionResponse, ChatStreamChunk, Conversation, LlmModel, Message } from "./types"
 
 export type CursorPaginationOptions = {
     cursor?: string;
@@ -43,8 +43,15 @@ export const getConversationMessages = async (
     return response.data
 }
 
-export const listModels = async (projectId: string): Promise<LlmModel[]> => {
-    const response = await api.get(`/chats/${projectId}/models`)
+export const listModels = async (projectId: string, categories: string[]): Promise<LlmModel[]> => {
+    const response = await api.get(`/chats/${projectId}/models`, {
+        params: { categories: categories.join(',') },
+    })
+    return response.data
+}
+
+export const listAgentRuns = async (projectId: string, conversationId: string, options?: CursorPaginationOptions): Promise<CursorPaginationResult<AgentRunBlock>> => {
+    const response = await api.get(`/chats/${projectId}/conversations/${conversationId}/runs`, { params: options })
     return response.data
 }
 
@@ -58,6 +65,16 @@ export const searchFilesByName = async (
         params: { name, limit },
         signal: options?.signal,
     })
+    return response.data
+}
+
+export const cancelRun = async (projectId: string, conversationId: string, runId: string): Promise<DeleteConversationResponse> => {
+    const response = await api.delete(`/chats/${projectId}/conversations/${conversationId}/runs/${runId}`)
+    return response.data
+}
+
+export const submitChatCompletion = async (projectId: string, data: ChatCompletionRequest): Promise<ChatCompletionResponse> => {
+    const response = await api.post(`/chats/${projectId}/conversations`, data)
     return response.data
 }
 

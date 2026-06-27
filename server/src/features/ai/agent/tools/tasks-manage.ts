@@ -45,7 +45,7 @@ export const manageTodoListTool = buildBaseTool({
                     task,
                     status: 'pending' as const,
                 }))
-                state.todos.push(...newTodos);
+                state.setTodos([...state.todos, ...newTodos]);
                 return success(formatTodoList(state.todos));
             }
             case 'update':{
@@ -53,7 +53,7 @@ export const manageTodoListTool = buildBaseTool({
                 if(!todo){
                     return failure(`Task with id ${input.taskId} not found. Check the task id by listing the current tasks and try again.`);
                 }
-                todo.status = input.status;
+                state.setTodos(state.todos.map((todo) => todo.id === input.taskId ? {...todo, status: input.status} : todo));
                 return success(formatTodoList(state.todos));
             }
             case 'delete':{
@@ -61,7 +61,7 @@ export const manageTodoListTool = buildBaseTool({
                 if(!todo){
                     return failure(`Task with id ${input.taskId} not found. Check the task id by listing the current tasks and try again.`);
                 }
-                state.todos = state.todos.filter((todo) => todo.id !== input.taskId);
+                state.setTodos(state.todos.filter((todo) => todo.id !== input.taskId));
                 return success(formatTodoList(state.todos));
             }
             case 'list':{
@@ -78,7 +78,7 @@ export const manageTodoListTool = buildBaseTool({
                     const finalText = headerText + ongoingTasksText;
                     return failure(finalText);
                 }
-                state.todos = [];
+                state.setTodos([]);
                 return success('All tasks have been cleared.');
             }
             default:

@@ -1,4 +1,3 @@
-import { handleChatCompletionFunc, handleMediaGenerationFunc } from '@/features/generation-request/inngest'
 import {
     handleImageGeneration,
     handleAudioGeneration,
@@ -11,7 +10,5 @@ export const functions = [
     handleImageGeneration,
     handleAudioGeneration,
     handleVideoGeneration,
-    handleChatCompletionFunc,
-    handleMediaGenerationFunc,
 ]
 

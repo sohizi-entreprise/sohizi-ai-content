@@ -6,7 +6,6 @@ import { useSendMessage } from '../hooks/use-chat'
 import { useChatStore } from '../store/chat-store'
 import ChatSelectModel from './chat-select-model'
 import { ContextWindowDonut } from './context-window-donut'
-import type { ChatCompletionRequest } from '../types'
 import type { MentionSearchContext } from 'react-mentions-ts'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -40,48 +39,20 @@ export function ChatInput({
   // Store
   const setInputContent = useChatStore((state) => state.setUserPrompt)
   const inputContent = useChatStore((state) => state.userPrompt)
-  const isStreaming = useChatStore((state) => state.isStreaming)
-  const conversation = useChatStore((state) => state.activeConversation)
-  const model = useChatStore((state) => state.model)
   const setInput = useEditorInputBridge((state) => state.setInput)
-
-  const sendMessage = useSendMessage(projectId)
+  
+  const {sendMessage, loadingState, disableSendButton} = useSendMessage(projectId)
   const searchFiles = useFileMentionSearch(projectId)
-
+  
   const { getInputProps, onRemoveFile, openFileDialog } = useHandleUploadedFiles({projectId})
-
-  const conversationId = conversation?.id ?? null
-  const modelId = model?.id
-
-  const disableSendButton = !inputContent.trim() || isStreaming
-
-  // Send message
-  const handleSend = async () => {
-    const content = inputContent.trim()
-    if (disableSendButton) return
-
-    if (!modelId) {
-      toast.error('Please select a model')
-      return
-    }
-
-    const payload: ChatCompletionRequest = {
-      userPrompt: content,
-      conversationId,
-      modelId,
-    }
-
-    // Send request
-    await sendMessage(payload)
-  }
-
+  
   // Handle keyboard events
-  const handleKeyDown = async (
+  const handleKeyDown = (
     e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
   ) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      await handleSend()
+      sendMessage()
     }
   }
 
@@ -144,7 +115,7 @@ export function ChatInput({
                     size="icon" 
                     className="size-7 rounded-full border-white/10!"
                     onClick={openFileDialog}
-                    disabled={isStreaming}
+                    disabled={loadingState}
                     aria-label="Upload file"
             >
                 <IconPlus className="size-4" />
@@ -164,12 +135,12 @@ export function ChatInput({
             {/* Send button */}
             <Button
               variant="default"
-              onClick={handleSend}
+              onClick={sendMessage}
               disabled={disableSendButton}
               className="size-6 rounded-full disabled:cursor-not-allowed"
               aria-label="Send message"
             >
-              {isStreaming ? (
+              {loadingState ? (
                 <IconLoader2 className="size-4 animate-spin" />
               ) : (
                 <IconArrowNarrowUp className="size-4" />

@@ -1,7 +1,7 @@
 import { create, type StateCreator } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import { ChatStreamChunk, Conversation, LlmModel, Message } from '../types'
-import { applyChunkToStreamingMessages } from './apply-chunk'
+import { Conversation, LlmModel, Message } from '../types'
+import { v4 as uuidv4 } from 'uuid'
 
 // ============================================================================
 // INITIAL STATE
@@ -31,13 +31,20 @@ type AttachedFileUpdate =
   | Omit<Extract<AttachedFile, { status: 'uploaded' }>, 'id'>
   | Omit<Extract<AttachedFile, { status: 'failed' }>, 'id'>
 
+export type ActiveStreamEntry = {
+  messages: Message[]
+  requestId: string
+}
+
+export type StoreConversation = Conversation & {
+  isStreaming?: boolean
+  isNew?: boolean
+}
+
 type ChatState = {
   userPrompt: string
-  activeConversation: Conversation | null
+  activeConversation: StoreConversation | null
   model: LlmModel | null
-  pendingMessage: Message | null
-  streamingMessages: Message[]
-  isStreaming: boolean
   attachedFiles: AttachedFile[]
 }
 
@@ -45,14 +52,11 @@ type ChatActions = {
   setUserPrompt: (content: string) => void
   appendUserPrompt: (content: string) => void
   setModel: (model: LlmModel) => void
-  setActiveConversation: (conversation: Conversation) => void
+  setActiveConversation: (conversation: StoreConversation) => void
+  patchActiveConversation: (conversation: Partial<StoreConversation>) => void
   clearInput: () => void
   reset: () => void
-  setPendingMessage: (message: Message | null) => void
-  appendChunk: (chunk: ChatStreamChunk) => void
-  appendChunks: (chunks: ChatStreamChunk[]) => void
-  setIsStreaming: (isStreaming: boolean) => void
-  clearStreamingMessages: () => void
+  init: (projectId: string) => void
   addAttachedFile: (file: AttachedFile) => void
   removeAttachedFile: (id: string) => void
   updateAttachedFile: (id: string, file: AttachedFileUpdate) => void
@@ -62,9 +66,6 @@ const initialState: ChatState = {
   userPrompt: '',
   activeConversation: null,
   model: null,
-  pendingMessage: null,
-  streamingMessages: [],
-  isStreaming: false,
   attachedFiles: [],
 }
 
@@ -79,11 +80,15 @@ export const useChatStore = create<ChatState & ChatActions>()(immer((set) => ({
   appendUserPrompt: (content) => set((state) => ({ userPrompt: state.userPrompt + content })),
   setModel: (model) => set({ model }),
   setActiveConversation: (conversation) => set({ activeConversation: conversation }),
+  patchActiveConversation: (conversation) => set((state) => {
+    if (state.activeConversation) {
+      state.activeConversation = { ...state.activeConversation, ...conversation }
+    }
+  }),
   clearInput: () => set({ userPrompt: '' }),
+  init: (projectId) => set(createInitialState(projectId)),
   reset: () => set(initialState),
-  setPendingMessage: (message) => set({ pendingMessage: message }),
-  setIsStreaming: (isStreaming) => set({ isStreaming }),
-  clearStreamingMessages: () => set({ streamingMessages: [] }),
+
   addAttachedFile: (file) => set((state) => {
     const index = state.attachedFiles.findIndex((f) => f.id === file.id)
 
@@ -103,12 +108,22 @@ export const useChatStore = create<ChatState & ChatActions>()(immer((set) => ({
   removeAttachedFile: (id) => set((state) => {
     state.attachedFiles = state.attachedFiles.filter((file) => file.id !== id)
   }),
-  appendChunk: (chunk) => set((state) => {
-    applyChunkToStreamingMessages(state.streamingMessages, chunk)
-  }),
-  appendChunks: (chunks) => set((state) => {
-    for (const chunk of chunks) {
-      applyChunkToStreamingMessages(state.streamingMessages, chunk)
-    }
-  }),
 })) as StateCreator<ChatState & ChatActions>)
+
+
+function createInitialState(projectId: string): ChatState{
+
+  return {
+    ...initialState,
+    activeConversation: {
+      id: uuidv4(),
+      projectId,
+      title: 'New Chat',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isNew: true,
+      isStreaming: false
+    }
+  }
+
+}

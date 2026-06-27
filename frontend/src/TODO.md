@@ -25,6 +25,7 @@ TODOS Jun 11 - Jun 23
 [ ] Export video
 
 ======
+[ ] Remove the messages table
 [ ] The agent expose some internal errors of the system, when something goes wrong let's rather return a generic error
 [ ] create other extensions for markdown
 [ ] Make the checkpoints robust to bad message ordering

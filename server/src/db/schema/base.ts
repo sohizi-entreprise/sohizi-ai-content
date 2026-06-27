@@ -30,8 +30,6 @@ import {
   GenerationRequestAsset,
   GenerationRequestStatus,
   GenerationRequestType,
-  ModelCategory,
-  ModelRecommendedUsage,
   MsgContent,
   ProseDocument,
   TemplateAndSkillStatus,
@@ -41,8 +39,12 @@ import {
   VideoTrackType,
   FilePendingOperation,
   FileOperationType,
+  AgentRunStatus,
+  AgentRunMetadata,
+  AgentRunMessage,
 } from '@/type';
 import { FileFormat } from '@/features/file-system/constants';
+
 
 type FileNodeRelationshipType = 'appears_in' | 'derived_from' | 'wears' | 'located_in' | 'uses' | 'depends_on';
 
@@ -241,26 +243,6 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     index('checkpoints_conversation_id_idx').on(table.conversationId),
     uniqueIndex('checkpoints_project_id_conversation_id_unique').on(table.projectId, table.conversationId),
   ]))
-
-  export const messages = pgTable('messages', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    conversationId: uuid('conversation_id')
-      .references(() => conversations.id, { onDelete: 'cascade' })
-      .notNull(),
-    role: chatMessageRoleEnum('role').notNull(),
-    content: jsonb('content').$type<MsgContent>().notNull(),
-    position: serial('position').notNull(),
-    ...timestamps,
-  }, (table) => ([
-    index('messages_conversation_id_idx').on(table.conversationId),
-  ]))
-
-  export const messagesRelations = relations(messages, ({ one }) => ({
-    conversation: one(conversations, {
-      fields: [messages.conversationId],
-      references: [conversations.id],
-    }),
-  }))
 
   // ========================= MODELS ==========================
 
@@ -575,6 +557,56 @@ export const pendingFileOperations = pgTable('pending_file_operations', {
   index('pending_file_operations_project_id_idx').on(table.projectId),
 ]))
 
+// ========================= GENERATION REQUESTS ==========================
+
+// This is the table stores the status of the agent run, it includes the list of messages generated and the status of the run
+export const conversationAgentRuns = pgTable('conversation_agent_runs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+  conversationId: uuid('conversation_id').references(() => conversations.id, { onDelete: 'cascade' }).notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('pending').$type<AgentRunStatus>(),
+  messages: jsonb('messages').notNull().$type<AgentRunMessage[]>(),
+  metadata: jsonb('metadata').$type<AgentRunMetadata>(),
+  error: text('error'),
+  ...timestamps,
+}, (table) => ([
+  index('conversation_agent_runs_project_id_status_idx').on(table.projectId, table.status),
+  index('conversation_agent_runs_conversation_id_created_at_idx').on(table.conversationId, table.createdAt),
+]))
+
+
+export const assetsAgentRuns = pgTable('assets_agent_runs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('pending').$type<AgentRunStatus>(),
+  assets: jsonb('assets').$type<GenerationRequestAsset[]>(),
+  messages: jsonb('messages').$type<AgentRunMessage[]>(),
+  metadata: jsonb('metadata').$type<{settings: Record<string, unknown>}>(),
+  error: text('error'),
+  ...timestamps,
+}, (table) => ([
+  index('assets_agent_runs_project_id_status_idx').on(table.projectId, table.status),
+]))
+
+export const messages = pgTable('messages', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  conversationId: uuid('conversation_id')
+    .references(() => conversations.id, { onDelete: 'cascade' })
+    .notNull(),
+  role: chatMessageRoleEnum('role').notNull(),
+  content: jsonb('content').$type<MsgContent>().notNull(),
+  position: serial('position').notNull(),
+  ...timestamps,
+}, (table) => ([
+  index('messages_conversation_id_idx').on(table.conversationId),
+]))
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [messages.conversationId],
+    references: [conversations.id],
+  }),
+}))
 
   // Type exports for use in app
   export type Project = typeof projects.$inferSelect
@@ -600,4 +632,6 @@ export const pendingFileOperations = pgTable('pending_file_operations', {
   export type Template = typeof templates.$inferSelect
   export type PendingFileOperation = typeof pendingFileOperations.$inferSelect
   export type Skill = typeof skills.$inferSelect
+  export type ConversationAgentRun = typeof conversationAgentRuns.$inferSelect
+  export type AssetsAgentRun = typeof assetsAgentRuns.$inferSelect
   

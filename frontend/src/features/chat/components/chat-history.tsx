@@ -19,7 +19,7 @@ export function ChatHistory({projectId}: {projectId: string}) {
 
     const handleOnConversationChange = (conversation: Conversation) => {
         resetChatStore()
-        setActiveConversation(conversation)
+        setActiveConversation({...conversation, isStreaming: false, isNew: false})
         setOpen(false)
     }
   

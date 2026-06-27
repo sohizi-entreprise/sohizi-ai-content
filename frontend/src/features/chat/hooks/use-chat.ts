@@ -1,184 +1,66 @@
-import { useCallback } from 'react'
-import type { InfiniteData, QueryClient } from '@tanstack/react-query'
-import type { Message, ChatCompletionRequest, Conversation, ChatStreamChunk } from '../types'
-import { v4 as uuidv4 } from 'uuid'
-import { useChatStore } from '../store/chat-store'
-import { completeChat, type CursorPaginationResult } from '../requests'
-import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
-import { getMessageQueryKey, getConversationQueryKey } from '../query-mutation'
-import { getPendingOperationQueryKey } from '@/features/editor/query-mutations'
-import { PendingFileOperation } from '@/features/editor/types'
-
-type ChatInfiniteData<T> = InfiniteData<CursorPaginationResult<T>, string | undefined>
-
-const createPage = <T>(data: T[]): CursorPaginationResult<T> => ({
-  data,
-  nextCursor: null,
-  hasMore: false,
-})
+import type { ChatCompletionRequest, FilePart, ImagePart } from '../types'
+import { AttachedFile, useChatStore } from '../store/chat-store'
+import { useShallow } from 'zustand/shallow'
+import { useMutation } from '@tanstack/react-query'
+import { submitChatCompletionMutationOptions } from '../query-mutation'
 
 export const useSendMessage = (projectId: string) => {
-  const queryClient = useQueryClient();
-
   const clearInput = useChatStore((state) => state.clearInput)
-  const setPendingMessage = useChatStore((state) => state.setPendingMessage)
-  const appendChunks = useChatStore((state) => state.appendChunks)
-  const setIsStreaming = useChatStore((state) => state.setIsStreaming)
+  const modelId = useChatStore((state) => state.model?.id)
+  const conversation = useChatStore(useShallow((state) => state.activeConversation))
+  const attachedFiles = useChatStore(useShallow((state) => state.attachedFiles))
+  const userPrompt = useChatStore((state) => state.userPrompt.trim())
   const setActiveConversation = useChatStore((state) => state.setActiveConversation)
-  const clearStreamingMessages = useChatStore((state) => state.clearStreamingMessages)
 
+  const { mutate: sendMessageMutation, isPending } = useMutation(submitChatCompletionMutationOptions(projectId))
 
-  return useCallback(async (payload: ChatCompletionRequest) => {
-    let resolvedConversationId = payload.conversationId
-    const userMsg: Message = {
-      id: uuidv4(),
-      role: 'user',
-      content: [{type: 'text', text: payload.userPrompt}],
-      createdAt: new Date().toISOString(),
+  const disableSendButton = !userPrompt || !modelId || isPending || conversation?.isStreaming
+  const loadingState = isPending || conversation?.isStreaming || false
+  const conversationId = conversation?.id ?? null
+
+  const sendMessage = () => {
+
+    if (disableSendButton) return
+
+    const payload: ChatCompletionRequest = {
+      modelId,
+      userPrompt: {
+        role: 'user',
+        content: [{ type: 'text', text: userPrompt }, ...buildFilesPayload(attachedFiles)],
+      },
+      conversationId,
+      isNew: conversation?.isNew ?? true,
     }
 
-    setPendingMessage(userMsg)
-    clearInput()
-
-    setIsStreaming(true)
-
-    const chunkBuffer: ChatStreamChunk[] = []
-    let rafId: number | null = null
-
-    const flushChunks = () => {
-      rafId = null
-      if (chunkBuffer.length === 0) return
-      appendChunks(chunkBuffer.splice(0))
-    }
-
-    const scheduleFlush = () => {
-      if (rafId !== null) return
-      rafId = requestAnimationFrame(flushChunks)
-    }
-
-    try {
-      for await (const chunk of completeChat(projectId, payload)) {
-        if(chunk.type === 'identifier') {
-          resolvedConversationId = chunk.conversationId
-
-          if(!payload.conversationId){
-            const now = new Date().toISOString()
-            const conversation: Conversation = {
-              id: chunk.conversationId,
-              projectId,
-              title: chunk.conversationTitle,
-              createdAt: now,
-              updatedAt: now,
-            }
-            setActiveConversation(conversation)
-            updateConversationCache(queryClient, projectId, conversation)
-          }
-
-          // We update tanstack cache with the user message
-          await queryClient.cancelQueries({ queryKey: getMessageQueryKey(projectId, chunk.conversationId) })
-          updateMessagesCache(queryClient, projectId, chunk.conversationId, [userMsg])
-
-        }
-        if(chunk.type === 'operation'){
-          const operation = chunk.operation
-          const fileId = operation.fileId
-          if(operation.type === 'patch'){
-            const patchOperation: PendingFileOperation = {
-              id: uuidv4(),
-              fileNodeId: fileId,
-              operation: operation.type,
-              payload: operation,
-              diffApplied: false,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            }
-            queryClient.setQueryData(getPendingOperationQueryKey(projectId, fileId), {operation: patchOperation})
-          }else{
-            // TODO: handle when file is deleted, created, renamed or moved
-          }
-  
-          continue;
-        }
-        chunkBuffer.push(chunk)
-        scheduleFlush()
+    sendMessageMutation(payload, {
+      onSuccess: (data) => {
+        setActiveConversation({...data.conversation, isStreaming: true, isNew: false})
+        clearInput()
       }
+    })
 
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId)
-        rafId = null
-      }
-      flushChunks()
+  }
 
-      const { streamingMessages } = useChatStore.getState()
-      if(resolvedConversationId){
-        updateMessagesCache(queryClient, projectId, resolvedConversationId, [userMsg, ...streamingMessages])
-        setPendingMessage(null)
-        clearStreamingMessages()
-      }
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      setPendingMessage(null)
-      clearStreamingMessages()
-      toast.error(errorMessage)
-    } finally {
-      setIsStreaming(false)
-    }
-  }, [appendChunks, clearInput, clearStreamingMessages, projectId, queryClient, setIsStreaming, setPendingMessage, setActiveConversation])
-
+  return { sendMessage, loadingState, disableSendButton }
 }
 
-function updateMessagesCache(queryClient: QueryClient, projectId: string, conversationId: string, msgs: Message[]){
-  if (msgs.length === 0) return
-
-  queryClient.setQueryData<ChatInfiniteData<Message>>(getMessageQueryKey(projectId, conversationId), (old) => {
-    if (!old || old.pages.length === 0) {
-      return {
-        pages: [createPage(msgs)],
-        pageParams: [undefined],
-      }
+function buildFilesPayload(attachedFiles: AttachedFile[]): (ImagePart | FilePart)[] {
+  const filtered = attachedFiles.filter((file) => file.status === 'uploaded')
+  const result: (ImagePart | FilePart)[] = []
+  for (const file of filtered) {
+    if(file.type.startsWith('image/')){
+      result.push({
+        type: 'image',
+        image: new URL(file.url),
+      })
     }
-
-    return {
-      ...old,
-      pages: old.pages.map((page, index) =>
-        index === 0
-          ? { ...page, data: mergeMessages(page.data, msgs) }
-          : page
-      ),
+    else {
+      result.push({
+        type: 'file',
+        data: new URL(file.url),
+        mediaType: file.type,
+      })
     }
-  })
+  }
+  return result
 }
-
-function mergeMessages(current: Message[], next: Message[]) {
-  const seen = new Set(current.map((message) => message.id))
-  const uniqueNext = next.filter((message) => {
-    if (seen.has(message.id)) return false
-    seen.add(message.id)
-    return true
-  })
-
-  return [...current, ...uniqueNext]
-}
-
-function updateConversationCache(queryClient: QueryClient, projectId: string, conversation: Conversation){
-  queryClient.setQueryData<ChatInfiniteData<Conversation>>(getConversationQueryKey(projectId), (old) => {
-    if (!old || old.pages.length === 0) {
-      return {
-        pages: [createPage([conversation])],
-        pageParams: [undefined],
-      }
-    }
-
-    return {
-      ...old,
-      pages: old.pages.map((page, index) =>
-        index === 0
-          ? { ...page, data: [conversation, ...page.data] }
-          : page
-      ),
-    }
-  })
-}
-

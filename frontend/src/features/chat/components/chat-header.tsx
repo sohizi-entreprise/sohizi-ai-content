@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { ChatHistory } from './chat-history'
 import { useChatStore } from '../store/chat-store'
 import { useShallow } from 'zustand/react/shallow'
+import { useEffect } from 'react'
 
 type ChatHeaderProps = {
   projectId: string
@@ -13,12 +14,20 @@ type ChatHeaderProps = {
 export function ChatHeader({ projectId, className }: ChatHeaderProps) {
 
   const conversation = useChatStore(useShallow((state) => state.activeConversation))
-  const resetChatStore = useChatStore(useShallow((state) => state.reset))
+  const initChatStore = useChatStore(useShallow((state) => state.init))
+
   const title = conversation?.title ?? 'New Chat'
+  const isNew = conversation ? conversation.isNew : true
 
   const handleNewConversation = () => {
-    resetChatStore()
+    initChatStore(projectId)
   }
+
+  useEffect(() => {
+    if(isNew){
+      initChatStore(projectId)
+    }
+  }, [projectId, isNew])
 
   return (
     <div className={cn('flex items-center justify-between px-4 border-b h-9', className)}>

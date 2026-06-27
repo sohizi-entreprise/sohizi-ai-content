@@ -1,13 +1,12 @@
-import { getModelById } from "../chat/repo";
+import { sse } from "elysia";
+import { getConversationById, getModelById } from "../chat/repo";
 import { BadRequest, NotFound } from "../error";
 import { ChatCompletionRequest, MediaGenerationRequest } from "./schema";
 import { broadcastCancellation } from "./abort-manager";
 import { getProjectById } from "../project/repo";
-import { getConversationById } from "@/entities/chat/repo";
-import { inngest } from "@/lib/inngest";
+import { inngest } from "@/lib/inngest/client";
 import { BaseContextEventData } from "./inngest";
 import { getGenerationRequestById, updateGenerationRequest, createGenerationRequest, getGenerationRequestsByIds, getPendingRequests } from "./repo";
-import { completeRequest } from "./stream-handler";
 
 
 export async function handleChatCompletionRequest(request: ChatCompletionRequest, userId: string, projectId: string) {
@@ -97,7 +96,7 @@ export const cancelRequest = async (projectId: string, userId: string, requestId
 
     await updateGenerationRequest(requestId, { status: 'aborted' });
 
-    await completeRequest(userId, requestId);
+    // await completeRequest(userId, requestId);
 
     return {}
 }
@@ -116,4 +115,37 @@ export async function getRequestStatuses(projectId: string, data: {requestIds: s
         throw new NotFound('Project not found');
     }
     return getGenerationRequestsByIds(projectId, data.requestIds);
+}
+
+export async function* streamActiveRequestsSSE(
+    userId: string,
+    lastEventIds?: Record<string, string>,
+) {
+    try {
+        // for await (const entry of subscribeToActiveRequests({
+        //     userId,
+        //     lastEventIds,
+        //     blockMs: 30_000,
+        //     emitHandshake: true,
+        // })) {
+        //     if (entry.requestId) {
+        //         const data = entry.data ? JSON.parse(entry.data) : {};
+        //         console.log('data', data, '\n---------\n');
+        //         yield sse({
+        //             id: entry.id,
+        //             event: entry.event,
+        //             data: { ...data, requestId: entry.requestId },
+        //         });
+        //     } else {
+        //         yield sse({
+        //             id: entry.id,
+        //             event: entry.event,
+        //             data: entry.data ?? '',
+        //         });
+        //     }
+        // }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        yield sse({ event: 'error', data: { error: message } });
+    }
 }

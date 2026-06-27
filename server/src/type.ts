@@ -431,3 +431,11 @@ export type PatchOperation = {
 }
 
 export type FilePendingOperation = DeleteOperation | PatchOperation | RefreshOperation
+
+export type AgentRunStatus = 'pending' | 'running' | 'finished' | 'error';
+export type AgentRunMetadata = {
+  modelId: string;
+  cost: number;
+}
+
+export type AgentRunMessage = ModelMessage & {id: string}

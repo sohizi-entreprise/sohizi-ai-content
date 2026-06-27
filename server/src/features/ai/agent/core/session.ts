@@ -8,6 +8,7 @@ export type SessionInitData = {
     userId: string;
     organizationId: string;
     projectId: string;
+    runId: string;
     conversationId?: string;
 }
 
@@ -17,6 +18,7 @@ export class Session {
     public readonly organizationId: string;
     public readonly projectId: string;
     public readonly conversationId: string | undefined;
+    public readonly runId: string;
     // We need a cache to make sure that the read and write applies to the correct file content.
     private fileCache: Map<string, FileObject>;
     private modelsCache: Map<string, LlmModel | null>;
@@ -27,6 +29,7 @@ export class Session {
         this.organizationId = data.organizationId;
         this.projectId = data.projectId;
         this.conversationId = data.conversationId;
+        this.runId = data.runId;
         this.fileCache = new Map();
         this.modelsCache = new Map();
     }

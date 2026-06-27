@@ -1,215 +1,181 @@
-import type Redis from 'ioredis'
 import { createBlockingRedisClient, redis } from '@/lib'
-import {
-  pushToRequestStream,
-  requestStreamExists,
-  requestStreamKey,
-  readRequestStreamRange,
-  subscribeMulti,
-  type InvalidStreamEntry,
-  type MultiStreamTarget,
-} from './event-stream'
-import { RequestRegistry, type ActiveRequest } from './request-registry'
-import { SSEStreamEvent } from './types'
 
-type WriteRequestEventOptions = {
-  requestId: string
-  event: SSEStreamEvent
+const DEFAULT_STREAM_TTL_SECONDS = 300
+const DEFAULT_ACTIVE_STREAM_TTL_SECONDS = 1800
+const ACTIVE_STREAM_GRACE_PERIOD_MS = 15000
+const ACTIVE_STREAM_POLL_MS = 250
+const ACTIVE_STREAM_KEY_PREFIX = 'active-stream'
+
+type WriteStreamDataOptions = {
   maxLen?: number
-}
-
-type SubscribeActiveRequestsOptions = {
-  userId: string
-  lastEventIds?: Record<string, string>
-  blockingClient?: Redis
-  blockMs?: number
-  emitHandshake?: boolean
-  onInvalidEntry?: (entry: InvalidStreamEntry) => void | Promise<void>
-}
-
-/**
- * Write an event to a per-request stream.
- */
-export const writeRequestEvent = async (options: WriteRequestEventOptions): Promise<string> => {
-  return pushToRequestStream(
-    redis,
-    options.requestId,
-    { type: options.event.event, data: options.event },
-    options.maxLen ? { maxLen: options.maxLen } : {}
-  )
-}
-
-/**
- * Register a request in the user's active-request registry
- * and create its dedicated stream key.
- */
-export const startRequest = async (
-  userId: string,
-  requestId: string,
-  type: 'chat-completion' | 'media-generation' | 'caption-generation'
-): Promise<void> => {
-  const registry = new RequestRegistry(redis, userId)
-  await registry.register({
-    requestId,
-    type,
-    streamKey: requestStreamKey(requestId),
-  })
-}
-
-/**
- * Mark a request as complete: remove from registry and schedule stream
- * deletion after a grace period so the frontend can receive the terminal event.
- */
-export const completeRequest = async (
-  userId: string,
-  requestId: string,
+  approximateMaxLen?: boolean
   ttlSeconds?: number
-): Promise<void> => {
-  const registry = new RequestRegistry(redis, userId)
-  await registry.completeRequest(requestId, requestStreamKey(requestId), ttlSeconds)
 }
 
-/**
- * Get all active (in-flight) requests for a user.
- */
-export const getActiveRequests = async (userId: string): Promise<ActiveRequest[]> => {
-  const registry = new RequestRegistry(redis, userId)
-  return registry.getActiveRequests()
+type ReadStreamChunksOptions = {
+  fromId?: string
+  blockMs?: number
 }
 
-/**
- * The main SSE entry point. Handles both initial connection and reconnection
- * in a single async generator:
- *
- * 1. Reads the registry to find all active (in-flight) requests
- * 2. For each, replays buffered events via XRANGE (non-blocking catchup)
- * 3. Transitions seamlessly into a live multi-stream XREAD BLOCK subscription
- * 4. On every XREAD cycle, re-checks the registry so new requests
- *    are picked up and completed ones are dropped automatically
- *
- * The frontend opens a single SSE connection to this generator. Every yielded
- * event carries a `requestId` so the client can demux by operation.
- */
-export async function* subscribeToActiveRequests({
-  userId,
-  lastEventIds = {},
-  blockingClient,
-  blockMs,
-  emitHandshake = true,
-  onInvalidEntry,
-}: SubscribeActiveRequestsOptions) {
-  const client = blockingClient ?? createBlockingRedisClient()
-  const ownsBlockingClient = blockingClient == null
+export type BaseStreamData = {
+  event: string;
+  runId: string;
+}
+
+export type RedisStreamChunk<T = unknown> = {
+  id: string
+  data: T
+}
+
+export async function markStreamActive(
+  streamKey: string,
+  ttlSeconds = DEFAULT_ACTIVE_STREAM_TTL_SECONDS,
+): Promise<void> {
+  await redis.set(activeStreamKey(streamKey), '1', 'EX', ttlSeconds)
+}
+
+export async function removeStreamActive(streamKey: string): Promise<void> {
+  await redis.del(activeStreamKey(streamKey))
+}
+
+export async function incrementKey(key: string): Promise<number> {
+  const value = await redis.incr(key)
+  return value
+}
+
+export async function decrementKey(key: string): Promise<number | null> {
+  const current = await redis.get(key)
+  if (!current) return null
+  const value = Number(current)
+  if (value <= 1) {
+    await redis.del(key)
+    return 0
+  }
+  return await redis.decr(key)
+}
+
+export async function writeStreamData<T extends BaseStreamData>(
+  streamKey: string,
+  data: T,
+  options: WriteStreamDataOptions = {},
+): Promise<string> {
+  const args: string[] = []
+
+  if (options.maxLen !== undefined) {
+    args.push(
+      'MAXLEN',
+      options.approximateMaxLen === false ? '=' : '~',
+      String(options.maxLen),
+    )
+  }
+
+  args.push('*', 'data', JSON.stringify(data))
+
+  const id = (await redis.xadd(streamKey, ...args)) as string
+  await redis.expire(streamKey, options.ttlSeconds ?? DEFAULT_STREAM_TTL_SECONDS)
+  return id
+}
+
+export async function* readStreamChunks<T = unknown>(
+  streamKey: string,
+  options: ReadStreamChunksOptions = {},
+): AsyncGenerator<RedisStreamChunk<T>> {
+  const client = createBlockingRedisClient()
+  let cursor = options.fromId ?? '0'
+  let hasSeenActiveStream = await isStreamActive(streamKey)
 
   try {
-    if (emitHandshake) {
-      yield { data: '' }
-    }
+    while (true) {
+      const result = await client.xread(
+        'BLOCK',
+        options.blockMs ?? 5000,
+        'STREAMS',
+        streamKey,
+        cursor,
+      )
+      if (!result) {
+        if (!(await isStreamActiveOrBecomesActive(streamKey, hasSeenActiveStream))) {
+          yield createDoneChunk<T>(streamKey, cursor)
+          break
+        }
 
-    const registry = new RequestRegistry(redis, userId)
-    const activeRequests = await registry.getActiveRequests()
-
-    // -- Phase 1: Catchup --
-    const catchupCursors: Record<string, string> = { ...lastEventIds }
-
-    if (activeRequests.length > 0) {
-      yield {
-        event: 'sync-start',
-        data: JSON.stringify({
-          activeRequests: activeRequests.map((r) => ({
-            requestId: r.requestId,
-            type: r.type,
-            startedAt: r.startedAt,
-          })),
-        }),
+        hasSeenActiveStream = true
+        continue
       }
 
-      for (const req of activeRequests) {
-        const exists = await requestStreamExists(redis, req.requestId)
-        if (!exists) continue
-
-        const afterId = lastEventIds[req.requestId]
-        const entries = await readRequestStreamRange(redis, req.requestId, afterId)
-
-        for (const entry of entries) {
-          catchupCursors[req.requestId] = entry.id
-          yield {
-            event: entry.event.type,
-            id: entry.id,
-            requestId: req.requestId,
-            data: JSON.stringify(entry.event.data),
-          }
+      const [, entries] = result[0]
+      for (const [id, fields] of entries) {
+        cursor = id
+        yield {
+          id,
+          data: parseStreamData<T>(fields),
         }
       }
 
-      yield { event: 'sync-end', data: '' }
-    }
-
-    // -- Phase 2: Live subscription --
-    const initialTargets: MultiStreamTarget[] = activeRequests.map((r) => ({
-      streamKey: r.streamKey,
-      requestId: r.requestId,
-      lastEventId: catchupCursors[r.requestId],
-    }))
-
-    const refreshTargets = async (): Promise<MultiStreamTarget[]> => {
-      const current = await registry.getActiveRequests()
-      return current.map((r) => ({
-        streamKey: r.streamKey,
-        requestId: r.requestId,
-      }))
-    }
-
-    await ensureBlockingClientConnected(client)
-
-    for await (const entry of subscribeMulti(client, initialTargets, {
-      blockMs,
-      onInvalidEntry,
-      refreshTargets,
-    })) {
-      yield {
-        event: entry.event.type,
-        id: entry.id,
-        requestId: entry.requestId,
-        data: JSON.stringify(entry.event.data),
+      if (!(await isStreamActiveOrBecomesActive(streamKey, hasSeenActiveStream))) {
+        yield createDoneChunk<T>(streamKey, cursor)
+        break
       }
+
+      hasSeenActiveStream = true
     }
   } finally {
-    if (ownsBlockingClient) {
-      await client.quit().catch(() => {})
-    }
+    await client.quit().catch(() => {})
   }
 }
 
-const ensureBlockingClientConnected = async (client: Redis) => {
-  if (client.status === 'wait') {
-    await client.connect()
-    return
+function createDoneChunk<T>(streamKey: string, lastId: string): RedisStreamChunk<T> {
+  return {
+    id: `${lastId}:done`,
+    data: {
+      event: 'done',
+      runId: streamKey,
+    } as T,
+  }
+}
+
+async function isStreamActive(streamKey: string): Promise<boolean> {
+  return (await redis.exists(activeStreamKey(streamKey))) === 1
+}
+
+async function isStreamActiveOrBecomesActive(
+  streamKey: string,
+  hasSeenActiveStream: boolean,
+): Promise<boolean> {
+  if (await isStreamActive(streamKey)) return true
+  if (hasSeenActiveStream) return false
+  return waitForStreamActive(streamKey)
+}
+
+async function waitForStreamActive(
+  streamKey: string,
+  timeoutMs = ACTIVE_STREAM_GRACE_PERIOD_MS,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    if (await isStreamActive(streamKey)) return true
+
+    const remainingMs = deadline - Date.now()
+    await delay(Math.min(ACTIVE_STREAM_POLL_MS, remainingMs))
   }
 
-  if (client.status === 'ready' || client.status === 'connect') {
-    return
+  return isStreamActive(streamKey)
+}
+
+function activeStreamKey(streamKey: string): string {
+  return `${ACTIVE_STREAM_KEY_PREFIX}:${streamKey}`
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function parseStreamData<T>(fields: string[]): T {
+  const dataIndex = fields.findIndex((field) => field === 'data')
+  if (dataIndex === -1 || dataIndex + 1 >= fields.length) {
+    throw new Error('Redis stream entry is missing a data field')
   }
 
-  await new Promise<void>((resolve, reject) => {
-    const handleReady = () => {
-      cleanup()
-      resolve()
-    }
-
-    const handleError = (error: Error) => {
-      cleanup()
-      reject(error)
-    }
-
-    const cleanup = () => {
-      client.off('ready', handleReady)
-      client.off('connect', handleReady)
-      client.off('error', handleError)
-    }
-
-    client.on('ready', handleReady)
-    client.on('connect', handleReady)
-    client.on('error', handleError)
-  })
+  return JSON.parse(fields[dataIndex + 1]) as T
 }

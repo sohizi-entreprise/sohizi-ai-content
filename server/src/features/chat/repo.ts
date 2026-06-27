@@ -1,7 +1,8 @@
 import { db } from "@/db";
-import { conversations, messages, checkpoints, llmModels, modelsAndCategories, modelCategories } from "@/db/schema";
-import { eq, desc, and, lt, arrayContains } from "drizzle-orm";
-import { AgentState, CursorPaginationOptions, CursorPaginationResult, MsgContent } from "@/type";
+import { conversations, messages, checkpoints, llmModels, modelsAndCategories, modelCategories, conversationAgentRuns } from "@/db/schema";
+import { eq, desc, and, lt, arrayContains, inArray } from "drizzle-orm";
+import { AgentRunMessage, AgentRunMetadata, AgentRunStatus, AgentState, CursorPaginationOptions, CursorPaginationResult, MsgContent } from "@/type";
+import { ModelMessage, UserModelMessage } from "ai";
 
 
 // ============================================================================
@@ -16,6 +17,73 @@ export const createConversation = async (projectId: string, userId: string, titl
   }).returning();
   return result[0];
 }
+
+type conversationWithAgentRunPayload = {
+  projectId: string;
+  userId: string
+  userMsg: UserModelMessage & { id: string }
+}
+
+export const updateConversationAgentRun = async(runId: string, data: { status?: AgentRunStatus, metadata?: AgentRunMetadata, error?: string, messages?: AgentRunMessage[] }) => {
+  const result = await db.update(conversationAgentRuns).set({
+    ...data,
+  }).where(eq(conversationAgentRuns.id, runId)).returning();
+  return result[0];
+}
+
+export const appendConversationAgentRunMessages = async(runId: string, messages: AgentRunMessage[]) => {
+  return await db.transaction(async (tx) => {
+    const response = await tx.select().from(conversationAgentRuns).where(eq(conversationAgentRuns.id, runId));
+    const agentRun = response[0];
+    if(!agentRun) {
+      throw new Error('Agent run not found');
+    }
+    const newMessages = [...agentRun.messages, ...messages];
+    const result = await tx.update(conversationAgentRuns).set({
+      messages: newMessages,
+    }).where(eq(conversationAgentRuns.id, runId)).returning();
+    return result[0];
+  })
+}
+
+export const createConversationComponents = async(payload: conversationWithAgentRunPayload) => {
+  const { projectId, userId, userMsg } = payload;
+  return await db.transaction(async (tx) => {
+    const convResponse = await tx.insert(conversations).values({
+      projectId,
+      userId,
+      title: 'New chat'
+    }).returning();
+    const conversation = convResponse[0];
+    const checkpointResponse = await tx.insert(checkpoints).values({
+      projectId,
+      conversationId: conversation.id
+    }).returning();
+    const checkpoint = checkpointResponse[0];
+    const agentRunResponse = await tx.insert(conversationAgentRuns).values({
+      projectId,
+      conversationId: conversation.id,
+      messages: [userMsg],
+    }).returning();
+    const agentRun = agentRunResponse[0];
+    return {
+      conversation,
+      checkpoint,
+      agentRun
+    };
+  });
+}
+
+export const createConversationRun = async(payload: Omit<conversationWithAgentRunPayload, 'userId'> & { conversationId: string }) => {
+  const { projectId, conversationId, userMsg } = payload;
+  const response = await db.insert(conversationAgentRuns).values({
+    projectId,
+    conversationId,
+    messages: [userMsg],
+  }).returning();
+  return response[0];
+}
+
 
 export const createConversationWithCheckpoint = async (projectId: string, userId: string, title: string = 'New Chat') => {
   return await db.transaction(async (tx) => {
@@ -160,9 +228,10 @@ export const createMessagesBulk = async (conversationId: string, payloads: Creat
 }
 
 export type ListMessagesByConversationIdResult = CursorPaginationResult<typeof messages.$inferSelect>;
+export type ListConversationAgentRunsResult = CursorPaginationResult<typeof conversationAgentRuns.$inferSelect>;
 
 const DEFAULT_MESSAGES_PAGE_SIZE = 20;
-const MAX_MESSAGES_PAGE_SIZE = 100;
+const MAX_MESSAGES_PAGE_SIZE = 50;
 
 export const ListMessagesByConversationId = async (
   conversationId: string,
@@ -193,20 +262,36 @@ export const ListMessagesByConversationId = async (
   return { data: page, nextCursor, hasMore };
 }
 
-// export const listModelsForLeadAgent = async () => {
-//   const result = await db
-//     .select({
-//       id: llmModels.id,
-//       name: llmModels.name,
-//       provider: llmModels.provider,
-//     })
-//     .from(llmModels)
-//     .where(and(arrayContains(llmModels.recommendedUsage, ['lead-agent']), eq(llmModels.enabled, true)))
-//     .limit(20);
-//   return result;
-// }
+export const listConversationAgentRuns = async (
+  conversationId: string,
+  options?: CursorPaginationOptions
+): Promise<ListConversationAgentRunsResult> => {
+  const limit = Math.min(options?.limit ?? DEFAULT_MESSAGES_PAGE_SIZE, MAX_MESSAGES_PAGE_SIZE);
+  const cursor = options?.cursor;
 
-export const listLlmModels = async (category: string) => {
+  const rows = await db
+    .select()
+    .from(conversationAgentRuns)
+    .where(
+      cursor
+        ? and(
+            eq(conversationAgentRuns.conversationId, conversationId),
+            lt(conversationAgentRuns.createdAt, new Date(cursor))
+          )
+        : eq(conversationAgentRuns.conversationId, conversationId)
+    )
+    .orderBy(desc(conversationAgentRuns.createdAt))
+    .limit(limit + 1);
+
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit).reverse();
+  const nextCursor =
+    hasMore && page.length > 0 ? String(page[0].createdAt.toISOString()) : null;
+
+  return { data: page, nextCursor, hasMore };
+}
+
+export const listLlmModels = async (categories: string[]) => {
   const result = await db.select({
                           id: llmModels.id,
                           name: llmModels.name,
@@ -215,10 +300,9 @@ export const listLlmModels = async (category: string) => {
                          .from(llmModels)
                          .leftJoin(modelsAndCategories, eq(llmModels.id, modelsAndCategories.modelId))
                          .leftJoin(modelCategories, eq(modelsAndCategories.categoryId, modelCategories.id))
-                         .where(and(eq(modelCategories.name, category), eq(llmModels.enabled, true)))
+                         .where(and(inArray(modelCategories.name, categories), eq(llmModels.enabled, true)))
                          .limit(20);
   return result;
-
 }
 
 

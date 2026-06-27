@@ -43,6 +43,17 @@ export type ReasoningPart = {
   isStreaming?: boolean
 }
 
+export type ImagePart = {
+  type: 'image'
+  image: URL
+}
+
+export type FilePart = {
+  type: 'file'
+  data: URL
+  mediaType: string
+}
+
 export type MsgToolCallPart = {
   type: 'tool-call'
   toolName: string
@@ -78,13 +89,24 @@ export type MsgMetadata = {
   context?: MsgContext;
 }
 
-export type MsgContent = MsgTextPart | MsgToolCallPart | MsgToolResultPart | ReasoningPart
+export type MsgContent = MsgTextPart | MsgToolCallPart | MsgToolResultPart | ReasoningPart | ImagePart | FilePart
 
-export type Message = {
+export type Message = {id: string; createdAt: string } & (
+  | { role: 'user'; content: (ImagePart | FilePart | MsgTextPart)[] }
+  | { role: 'assistant'; content: (ReasoningPart | MsgToolCallPart | MsgTextPart)[] }
+  | { role: 'tool'; content: MsgToolResultPart[] }
+)
+
+export type AgentRunBlock = {
   id: string
-  role: MessageRole
-  content: MsgContent[]
+  projectId: string
+  conversationId: string
+  status: 'pending' | 'running' | 'finished' | 'error'
+  messages: Message[]
+  metadata: Record<string, unknown>
+  error: string | null
   createdAt: string
+  updatedAt: string
 }
 
 export type SendMessageInput = {
@@ -264,9 +286,18 @@ export type ProjectInfo = {
 
 export type ChatCompletionRequest = {
   modelId: string;
-  userPrompt: string;
+  userPrompt: {
+    role: 'user';
+    content: (ImagePart | FilePart | MsgTextPart)[];
+  };
   conversationId: string | null;
   editorContext?: Record<string, unknown>;
+  isNew: boolean;
+}
+
+export type ChatCompletionResponse = {
+  conversation: Conversation;
+  run: AgentRunBlock;
 }
 
 export type DeleteOperation = {

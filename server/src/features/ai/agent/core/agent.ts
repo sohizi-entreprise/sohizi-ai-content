@@ -172,6 +172,9 @@ export class Agent {
                 toolCallsStarted = true;
                 yield* this.runToolCalls(tool_calls);
             }
+            // if(){
+
+            // }
         } catch (error) {
             stepError = this.captureStepError(error);
             yield this.buildErrorEvent(stepError);
@@ -192,6 +195,8 @@ export class Agent {
             case 'error':
                 this.stateManager.setError(error ?? 'Unknown agent error');
                 break;
+            
+            
             default:
                 // Stay running until finalizeStepStatus — a turn may include tool calls
                 // even when finishReason is not exactly 'tool-calls'.

@@ -1,0 +1,57 @@
+import { useEffect, useState } from 'react';
+import { useBufferChunks } from '../hooks/use-buffer-chunks';
+import { AgentRunBlock, Message } from '../types'
+import ChatBuble from './chat-buble';
+import { TextShimmerCss } from '@/components/ui/loaders';
+import { useChatStore } from '../store/chat-store';
+
+export const ChatRunBlock = ({ run }: { run: AgentRunBlock }) => {
+    const status = run.status
+    const messages = run.messages || [];
+
+    const patchConversation = useChatStore((state) => state.patchActiveConversation)
+
+    useEffect(()=>{
+        if(status === 'finished' || status === 'error'){
+            patchConversation({ isStreaming: false })
+        }else{
+            patchConversation({ isStreaming: true })
+        }
+    }, [status])
+
+    if(status === 'pending' || status === 'running'){
+        return <PendingRunBlock run={run} /> 
+    }
+    
+
+    return <RenderMessages messages={messages} />
+}
+
+function PendingRunBlock({ run }: { run: AgentRunBlock }){
+    const [isFinished, setIsFinished] = useState(false)
+    const onFinish = (_: AgentRunBlock['status']) => {
+        setIsFinished(true)
+    }
+
+    const url = `${import.meta.env.VITE_API_BASE_URL}/chats/${run.projectId}/conversations/${run.conversationId}/runs/${run.id}`
+    const messages = useBufferChunks(url, run, onFinish)
+    
+    return (
+        <div className='space-y-2'>
+            <RenderMessages messages={messages} />
+            {!isFinished && <TextShimmerCss text="Processing..." />}
+        </div>
+
+    ) 
+}
+
+
+function RenderMessages({ messages }: { messages: Message[] }){
+    return (
+        <div>
+            {messages.map((msg) => (
+            <ChatBuble key={msg.id} data={msg} />
+            ))}
+        </div>
+    )
+}
