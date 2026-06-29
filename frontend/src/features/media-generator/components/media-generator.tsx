@@ -30,9 +30,7 @@ export function MediaGenerator() {
   const deleteItem = useMediaGeneratorStore((state) => state.deleteItem)
   const moveItemToFile = useMediaGeneratorStore((state) => state.moveItemToFile)
 
-  const visibleItems =
-    filter === 'all' ? items : items.filter((item) => item.type === filter)
-  const previewItem = items.find((item) => item.id === previewItemId) ?? null
+  const visibleItems: any = []
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full w-full">
@@ -85,13 +83,13 @@ export function MediaGenerator() {
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
           />
-          <MediaPreviewDialog
+          {/* <MediaPreviewDialog
             item={previewItem}
             open={!!previewItem}
             onOpenChange={(open) => {
               if (!open) setPreviewItem(null)
             }}
-          />
+          /> */}
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

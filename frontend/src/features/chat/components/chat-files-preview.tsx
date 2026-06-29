@@ -1,8 +1,9 @@
 import { DotsLoader } from '@/components/ui/loaders'
-import { AttachedFile, useChatStore } from '../store/chat-store'
+import { useChatStore } from '../store/chat-store'
 import { IconX, IconFileTypePdf, IconFileTypeTxt, IconFileMusic, IconMovie, IconFile } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { AttachedFile } from '@/components/widgets/file-attachments'
 
 
 type Props = {

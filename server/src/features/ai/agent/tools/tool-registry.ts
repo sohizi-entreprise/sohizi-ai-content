@@ -10,7 +10,7 @@ import { timelineEditTool } from "./timeline-edit";
 import { ToolSet } from "ai";
 import { editFileTool } from "./file-edit";
 import { processSpeechTool } from "./process-speech";
-import { endExecutionLoopTool } from "./loop-end";
+import { endExecutionLoopTool, finishTool } from "./loop-end";
 
 
 const toolRegistry = new Map<string, BaseTool<z.ZodSchema>>();
@@ -38,6 +38,7 @@ registerTool(searchFileTool);
 registerTool(manageTodoListTool);
 registerTool(generateImageTool);
 registerTool(generateVideoTool);
+registerTool(finishTool);
 // registerTool(generateSpeechTool);
 // registerTool(generateSoundEffectTool);
 // registerTool(generateMusicTool);

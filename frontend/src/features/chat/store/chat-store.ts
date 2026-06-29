@@ -2,29 +2,12 @@ import { create, type StateCreator } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { Conversation, LlmModel, Message } from '../types'
 import { v4 as uuidv4 } from 'uuid'
+import { AttachedFile } from '@/components/widgets/file-attachments'
 
 // ============================================================================
 // INITIAL STATE
 // ============================================================================
 
-export type AttachedFile = {
-  status: 'pending'
-  id: string
-  type: string
-  preview?: string
-} | {
-  status: 'uploaded'
-  id: string
-  type: string
-  preview?: string
-  url: string
-} | {
-  status: 'failed'
-  id: string
-  type: string
-  preview?: string
-  error: string
-}
 
 type AttachedFileUpdate =
   | Partial<Omit<Extract<AttachedFile, { status: 'pending' }>, 'id'>>

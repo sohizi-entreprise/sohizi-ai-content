@@ -154,6 +154,7 @@ export function TextEditorView({
         HTMLAttributes: {
           class: 'file-mention',
         },
+        enableClick: true,
         suggestion: fileMentionSuggestion,
       }),
       Markdown.configure({

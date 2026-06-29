@@ -1,7 +1,7 @@
 import { db } from "@/db";
-import { generationRequests, assets, assetVariants, fileNodes, assetsAgentRuns } from "@/db/schema";
-import type { AssetType, AssetSource, AssetStatus, AssetVariantType, AssetMetadata, CursorPaginationOptions, CursorPaginationResult, AgentRunStatus, GenerationRequestAsset, AgentRunMessage } from "@/type";
-import { and, eq, desc, lt, sql } from "drizzle-orm";
+import { assets, assetVariants, fileNodes, assetsAgentRuns } from "@/db/schema";
+import type { AssetType, AssetSource, AssetStatus, AssetVariantType, AssetMetadata, CursorPaginationOptions, CursorPaginationResult, AgentRunStatus, AgentRunMessage } from "@/type";
+import { and, eq, desc, lt, isNull } from "drizzle-orm";
 
 
 type CreateAssetPayload = {
@@ -118,58 +118,45 @@ export const getAssetByFileNodeId = async (projectId: string, fileNodeId: string
     return result[0];
 }
 
-type AiGeneratedAssetGroup = {
-    requestId: string;
-    request: Record<string, unknown> | null;
+type AiGeneratedAsset = {
+    id: string;
+    name: string;
+    url: string;
+    type: AssetType;
     createdAt: Date;
-    assets: Array<{
-        id: string;
-        name: string;
-        url: string;
-        type: AssetType;
-        createdAt: string;
-        storageKey: string;
-    }>;
+    storageKey: string;
 }
 
-export const getAiGeneratedAssetsGroupedByGenerationRequest = async (
+type ListAiGeneratedAssetsOptions = CursorPaginationOptions & {
+    type?: AssetType;
+}
+
+export const listAiGeneratedAssets = async (
     projectId: string,
-    options: CursorPaginationOptions = {},
-): Promise<CursorPaginationResult<AiGeneratedAssetGroup>> => {
-    const { cursor, limit = 50 } = options;
+    options: ListAiGeneratedAssetsOptions = {},
+): Promise<CursorPaginationResult<AiGeneratedAsset>> => {
+    const { cursor, limit = 50, type } = options;
     const pageSize = Math.max(limit, 1);
 
     const conditions = [
-        eq(generationRequests.projectId, projectId),
         eq(assets.projectId, projectId),
         eq(assets.source, 'ai-generated' as AssetSource),
     ];
-    if (cursor) conditions.push(lt(generationRequests.createdAt, new Date(cursor)));
+    if (type) conditions.push(eq(assets.type, type));
+    if (cursor) conditions.push(lt(assets.createdAt, new Date(cursor)));
 
     const rows = await db
         .select({
-            requestId: generationRequests.id,
-            request: sql<AiGeneratedAssetGroup['request']>`(array_agg(${generationRequests.request}))[1]`,
-            createdAt: sql<Date>`max(${generationRequests.createdAt})`,
-            assets: sql<AiGeneratedAssetGroup['assets']>`
-                jsonb_agg(
-                    jsonb_build_object(
-                        'id', ${assets.id},
-                        'name', ${assets.name},
-                        'url', ${assets.url},
-                        'type', ${assets.type},
-                        'createdAt', ${assets.createdAt},
-                        'storageKey', ${assets.storageKey}
-                    )
-                    order by ${assets.createdAt} desc
-                )
-            `,
+            id: assets.id,
+            name: assets.name,
+            url: assets.url,
+            type: assets.type,
+            createdAt: assets.createdAt,
+            storageKey: assets.storageKey,
         })
-        .from(generationRequests)
-        .innerJoin(assets, eq(assets.generationRequestId, generationRequests.id))
+        .from(assets)
         .where(and(...conditions))
-        .groupBy(generationRequests.id)
-        .orderBy(desc(sql`max(${generationRequests.createdAt})`))
+        .orderBy(desc(assets.createdAt))
         .limit(pageSize + 1);
 
     const hasMore = rows.length > pageSize;
@@ -186,17 +173,15 @@ export const createAssetRequest = async (projectId: string, settings?: Record<st
     const result = await db.insert(assetsAgentRuns).values({
         projectId,
         status: 'pending',
-        assets: [],
         messages: [],
         metadata: {settings: settings ?? {}},
     }).returning();
 
-    return result[0];
+    return { ...result[0], assets: [] };
 }
 
 type UpdateAssetRequestPayload = {
     status?: AgentRunStatus;
-    assets?: GenerationRequestAsset[];
     messages?: AgentRunMessage[];
     metadata?: {settings: Record<string, unknown>};
     error?: string;
@@ -211,30 +196,15 @@ export const updateAssetRequest = async (runId: string, data: UpdateAssetRequest
     return result[0];
 }
 
-export const appendAssetRequestAssets = async (runId: string, newAssets: GenerationRequestAsset[]) => {
-    return await db.transaction(async (tx) => {
-        const response = await tx.select().from(assetsAgentRuns).where(eq(assetsAgentRuns.id, runId));
-        const agentRun = response[0];
-        if(!agentRun){
-            throw new Error('Agent run not found');
-        }
-        const assets = [...(agentRun.assets ?? []), ...newAssets];
-        const result = await tx.update(assetsAgentRuns)
-                                .set({
-                                    assets,
-                                })
-                                .where(eq(assetsAgentRuns.id, runId))
-                                .returning();
-        return result[0];
-    })
-}
-
-
 const DEFAULT_MESSAGES_PAGE_SIZE = 20;
 const MAX_MESSAGES_PAGE_SIZE = 50;
 
+type AssetRequestRunWithAssets = typeof assetsAgentRuns.$inferSelect & {
+    assets: typeof assets.$inferSelect[];
+}
+
 type ListAssetRequestAssetsResult = {
-    data: typeof assetsAgentRuns.$inferSelect[];
+    data: AssetRequestRunWithAssets[];
     nextCursor: string | null;
     hasMore: boolean;
 }
@@ -246,24 +216,66 @@ export const listAssetRequestAssets = async (
     const limit = Math.min(options?.limit ?? DEFAULT_MESSAGES_PAGE_SIZE, MAX_MESSAGES_PAGE_SIZE);
     const cursor = options?.cursor;
   
-    const rows = await db
-      .select()
-      .from(assetsAgentRuns)
-      .where(
-        cursor
-          ? and(
-              eq(assetsAgentRuns.projectId, projectId),
-              lt(assetsAgentRuns.createdAt, new Date(cursor))
-            )
-          : eq(assetsAgentRuns.projectId, projectId)
-      )
-      .orderBy(desc(assetsAgentRuns.createdAt))
-      .limit(limit + 1);
+    const rows = await db.query.assetsAgentRuns.findMany({
+      where: cursor
+        ? and(
+            eq(assetsAgentRuns.projectId, projectId),
+            lt(assetsAgentRuns.createdAt, new Date(cursor))
+          )
+        : eq(assetsAgentRuns.projectId, projectId),
+      orderBy: desc(assetsAgentRuns.createdAt),
+      limit: limit + 1,
+      with: {
+        assets: true,
+      },
+    });
   
     const hasMore = rows.length > limit;
-    const page = rows.slice(0, limit);
+    const page = rows.slice(0, limit).reverse();
     const nextCursor =
       hasMore && page.length > 0 ? String(page[0].createdAt.toISOString()) : null;
   
     return { data: page, nextCursor, hasMore };
   }
+
+export const getAssetFolder = async (projectId: string) => {
+    const rootResponse = await db.select().from(fileNodes)
+                                    .where(and(
+                                        eq(fileNodes.projectId, projectId), 
+                                        isNull(fileNodes.parentId),
+                                        eq(fileNodes.directory, true),
+                                        eq(fileNodes.name, 'root')
+                                    ));
+    const rootFolder = rootResponse[0];
+    if(!rootFolder){
+        return {
+            assetsFolder: null,
+            uploadsFolder: null,
+        };
+    }
+    const result = await db.select().from(fileNodes)
+                                    .where(and(
+                                        eq(fileNodes.projectId, projectId), 
+                                        eq(fileNodes.parentId, rootFolder.id),
+                                        eq(fileNodes.directory, true),
+                                        eq(fileNodes.name, 'assets')
+                                    ));
+    const assetsFolder = result[0];
+    if(!assetsFolder){
+        return {
+            assetsFolder: null,
+            uploadsFolder: null,
+        };
+    }
+    const uploadsFolder = await db.select().from(fileNodes)
+                                    .where(and(
+                                        eq(fileNodes.projectId, projectId), 
+                                        eq(fileNodes.parentId, assetsFolder.id),
+                                        eq(fileNodes.directory, true),
+                                        eq(fileNodes.name, 'uploads')
+                                    ));
+    return {
+        assetsFolder: result[0],
+        uploadsFolder: uploadsFolder[0],
+    };
+}

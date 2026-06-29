@@ -11,7 +11,7 @@ type UploadUrlResponse = {
 
 export type SaveFileBucketInput = {
   projectId: string
-  folderId: string
+  folderId: string | null
   file: File
 }
 
@@ -21,6 +21,7 @@ export type SaveFileBucketResult = {
 }
 
 export type SaveFileBucketCallbacks = {
+  onStart?: (input: SaveFileBucketInput) => void
   onSuccess?: (result: SaveFileBucketResult, input: SaveFileBucketInput) => void
   onError?: (error: Error, input: SaveFileBucketInput) => void
 }
@@ -35,9 +36,8 @@ export async function saveFileToBucket(
 ): Promise<SaveFileBucketResult> {
   const contentType = file.type || "application/octet-stream"
 
-  const uploadUrlResponse = await api.get<UploadUrlResponse>("/media/upload-url", {
+  const uploadUrlResponse = await api.get<UploadUrlResponse>(`/media/${projectId}/upload-url`, {
     params: {
-      projectId,
       fileName: file.name,
       contentType,
     },
@@ -64,10 +64,9 @@ export async function saveFileToBucket(
   }
 
   const uploadSuccessResponse = await api.post<FileNode>(
-    "/media/upload-success",
+    `/media/${projectId}/upload-success`,
     {
-      projectId,
-      folderId,
+      folderId: folderId ?? null,
       storageKey,
     },
     { signal: options.signal },
@@ -83,7 +82,18 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const {onError, onSuccess} = callbacks
+  const {onError, onStart, onSuccess} = callbacks
+
+  const handleStart = useCallback(
+    (input: SaveFileBucketInput, options?: SaveFileBucketOptions) => {
+      options?.onStart?.(input)
+
+      if (!options?.onStart) {
+        onStart?.(input)
+      }
+    },
+    [onStart],
+  )
 
   const handleSuccess = useCallback(
     (
@@ -126,6 +136,7 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
     ): Promise<SaveFileBucketResult> => {
       setIsUploading(true)
       setError(null)
+      handleStart(input, options)
 
       try {
         const result = await saveFileToBucket(input, options)
@@ -138,7 +149,7 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
         setIsUploading(false)
       }
     },
-    [handleError, handleSuccess],
+    [handleError, handleStart, handleSuccess],
   )
 
   const saveFiles = useCallback(
@@ -152,6 +163,7 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
       try {
         return await Promise.all(
           inputs.map(async (input) => {
+            handleStart(input, options)
             try {
               const result = await saveFileToBucket(input, options)
               handleSuccess(result, input, options)
@@ -168,7 +180,7 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
         setIsUploading(false)
       }
     },
-    [handleError, handleSuccess],
+    [handleError, handleStart, handleSuccess],
   )
 
   const resetError = useCallback(() => {

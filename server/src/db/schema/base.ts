@@ -244,6 +244,26 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     uniqueIndex('checkpoints_project_id_conversation_id_unique').on(table.projectId, table.conversationId),
   ]))
 
+  export const messages = pgTable('messages', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    conversationId: uuid('conversation_id')
+      .references(() => conversations.id, { onDelete: 'cascade' })
+      .notNull(),
+    role: chatMessageRoleEnum('role').notNull(),
+    content: jsonb('content').$type<MsgContent>().notNull(),
+    position: serial('position').notNull(),
+    ...timestamps,
+  }, (table) => ([
+    index('messages_conversation_id_idx').on(table.conversationId),
+  ]))
+  
+  export const messagesRelations = relations(messages, ({ one }) => ({
+    conversation: one(conversations, {
+      fields: [messages.conversationId],
+      references: [conversations.id],
+    }),
+  }))
+
   // ========================= MODELS ==========================
 
   // Model tables
@@ -280,76 +300,6 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
   primaryKey({ columns: [table.modelId, table.categoryId] }),
   ]))
 
-  // ========================= ASSETS ==========================
-
-  export const assets = pgTable('assets', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    projectId: uuid('project_id')
-      .references(() => projects.id, { onDelete: 'cascade' })
-      .notNull(),
-    name: varchar('name', { length: 255 }).notNull(),
-    type: varchar('type', { length: 50 }).notNull().$type<AssetType>(),
-    url: text('url').notNull(),
-    storageKey: text('storage_key').notNull(),
-    source: varchar('source', { length: 50 }).notNull().$type<AssetSource>(),
-    generationRequestId: uuid('generation_request_id')
-      .references(() => generationRequests.id, { onDelete: 'set null' }), // for AI generated assets
-    fileNodeId: uuid('file_node_id')
-      .references(() => fileNodes.id, { onDelete: 'cascade' }),
-    metadata: jsonb('metadata').$type<AssetMetadata>(),
-    ...timestamps,
-  }, (table) => ([
-    index('assets_project_type_created_at_idx').on(
-      table.projectId,
-      table.type,
-      table.createdAt,
-    ),
-    index('assets_project_source_created_at_idx').on(
-      table.projectId,
-      table.source,
-      table.createdAt,
-    ),
-    index('assets_generation_request_id_idx').on(table.generationRequestId)
-  ]))
-
-  export const assetVariants = pgTable('asset_variants', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    assetId: uuid('asset_id')
-      .references(() => assets.id, { onDelete: 'cascade' })
-      .notNull(),
-    type: varchar('type', { length: 50 }).notNull().$type<AssetVariantType>(),
-    storageKey: varchar('storage_key', { length: 255 }).notNull(),
-    url: text('url').notNull(),
-    metadata: jsonb('metadata').$type<AssetMetadata>(),
-    size: integer('size').notNull(),
-    status: varchar('status', { length: 50 }).notNull().$type<AssetStatus>(),
-    blurhash: text('blurhash'),
-    ...timestamps,
-  }, (table) => ([
-    uniqueIndex('asset_variants_asset_id_type_unique').on(table.assetId, table.type),
-  ]))
-
-  export const projectBriefAttachments = pgTable('project_brief_attachments', {
-    id: uuid('id').defaultRandom().primaryKey(),
-  
-    projectBriefId: uuid('project_brief_id')
-      .references(() => projectBriefs.id, { onDelete: 'cascade' })
-      .notNull(),
-  
-    assetId: uuid('asset_id')
-      .references(() => assets.id, { onDelete: 'cascade' })
-      .notNull(),
-  
-    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
-  
-    ...timestamps,
-  }, (table) => ([
-    uniqueIndex('project_brief_attachments_brief_asset_unique').on(
-      table.projectBriefId,
-      table.assetId,
-    ),
-    index('project_brief_attachments_asset_id_idx').on(table.assetId),
-  ]));
 
   // ========================= BILLING ==========================
 
@@ -579,7 +529,6 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
   id: uuid('id').defaultRandom().primaryKey(),
   projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
   status: varchar('status', { length: 50 }).notNull().default('pending').$type<AgentRunStatus>(),
-  assets: jsonb('assets').$type<GenerationRequestAsset[]>(),
   messages: jsonb('messages').$type<AgentRunMessage[]>(),
   metadata: jsonb('metadata').$type<{settings: Record<string, unknown>}>(),
   error: text('error'),
@@ -588,25 +537,66 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
   index('assets_agent_runs_project_id_status_idx').on(table.projectId, table.status),
 ]))
 
-export const messages = pgTable('messages', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  conversationId: uuid('conversation_id')
-    .references(() => conversations.id, { onDelete: 'cascade' })
-    .notNull(),
-  role: chatMessageRoleEnum('role').notNull(),
-  content: jsonb('content').$type<MsgContent>().notNull(),
-  position: serial('position').notNull(),
-  ...timestamps,
-}, (table) => ([
-  index('messages_conversation_id_idx').on(table.conversationId),
-]))
 
-export const messagesRelations = relations(messages, ({ one }) => ({
-  conversation: one(conversations, {
-    fields: [messages.conversationId],
-    references: [conversations.id],
-  }),
-}))
+  // ========================= ASSETS ==========================
+
+  export const assets = pgTable('assets', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    projectId: uuid('project_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    type: varchar('type', { length: 50 }).notNull().$type<AssetType>(),
+    url: text('url').notNull(),
+    storageKey: text('storage_key').notNull(),
+    source: varchar('source', { length: 50 }).notNull().$type<AssetSource>(),
+    generationRequestId: uuid('generation_request_id')
+      .references(() => assetsAgentRuns.id, { onDelete: 'set null' }), // for AI generated assets
+    fileNodeId: uuid('file_node_id')
+      .references(() => fileNodes.id, { onDelete: 'cascade' }),
+    metadata: jsonb('metadata').$type<AssetMetadata>(),
+    ...timestamps,
+  }, (table) => ([
+    index('assets_project_type_created_at_idx').on(
+      table.projectId,
+      table.type,
+      table.createdAt,
+    ),
+    index('assets_project_source_created_at_idx').on(
+      table.projectId,
+      table.source,
+      table.createdAt,
+    ),
+    index('assets_generation_request_id_idx').on(table.generationRequestId)
+  ]))
+
+  export const assetsAgentRunsRelations = relations(assetsAgentRuns, ({ many }) => ({
+    assets: many(assets),
+  }))
+
+  export const assetsRelations = relations(assets, ({ one }) => ({
+    generationRequest: one(assetsAgentRuns, {
+      fields: [assets.generationRequestId],
+      references: [assetsAgentRuns.id],
+    }),
+  }))
+
+  export const assetVariants = pgTable('asset_variants', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    assetId: uuid('asset_id')
+      .references(() => assets.id, { onDelete: 'cascade' })
+      .notNull(),
+    type: varchar('type', { length: 50 }).notNull().$type<AssetVariantType>(),
+    storageKey: varchar('storage_key', { length: 255 }).notNull(),
+    url: text('url').notNull(),
+    metadata: jsonb('metadata').$type<AssetMetadata>(),
+    size: integer('size').notNull(),
+    status: varchar('status', { length: 50 }).notNull().$type<AssetStatus>(),
+    blurhash: text('blurhash'),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('asset_variants_asset_id_type_unique').on(table.assetId, table.type),
+  ]))
 
   // Type exports for use in app
   export type Project = typeof projects.$inferSelect

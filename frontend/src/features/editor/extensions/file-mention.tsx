@@ -10,6 +10,11 @@ import type { FileMentionItem } from '@/hooks/use-file-mention-search'
 import { FileMentionList } from './file-mention-list'
 import { useEditorStore } from '../stores/editor-store'
 
+type MentionConfigureOptions = NonNullable<Parameters<typeof Mention.configure>[0]>
+type FileMentionOptions = MentionConfigureOptions & {
+  enableClick: boolean
+}
+
 export const FILE_MENTION_REGEX =
   /@\[([^\]]+)\]\(file:([^?)\s]+)\?format=([^)]+)\)/g
 
@@ -24,8 +29,15 @@ function escapeHtmlAttribute(value: string): string {
     .replace(/>/g, '&gt;')
 }
 
-export const FileMention = Mention.extend({
+const FileMentionExtension = Mention.extend<FileMentionOptions>({
   name: 'fileMention',
+
+  addOptions() {
+    return {
+      ...this.parent?.(),
+      enableClick: true,
+    }
+  },
 
   addAttributes() {
     return {
@@ -61,7 +73,7 @@ export const FileMention = Mention.extend({
       mergeAttributes(
         { 'data-type': 'fileMention' },
         HTMLAttributes,
-        this.options.HTMLAttributes,
+        this.options.HTMLAttributes ?? {},
       ),
       `@${node.attrs.label ?? node.attrs.id ?? ''}`,
     ]
@@ -127,6 +139,8 @@ export const FileMention = Mention.extend({
         key: new PluginKey('fileMentionClick'),
         props: {
           handleClick: (_view, _pos, event) => {
+            if (!this.options.enableClick) return false
+
             const target = event.target
             if (!(target instanceof HTMLElement)) return false
 
@@ -151,6 +165,15 @@ export const FileMention = Mention.extend({
     ]
   },
 })
+
+export const FileMention = FileMentionExtension as Omit<
+  typeof FileMentionExtension,
+  'configure'
+> & {
+  configure: (
+    options?: Partial<FileMentionOptions>,
+  ) => ReturnType<typeof FileMentionExtension.configure>
+}
 
 export function preprocessFileMentions(markdown: string): string {
   return markdown.replace(

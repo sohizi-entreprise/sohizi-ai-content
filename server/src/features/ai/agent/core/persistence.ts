@@ -60,7 +60,7 @@ export class CheckpointPersistence extends Persistence {
     async persistCheckpoint(state: AgentState) {
         const conversationId = this.checkpoint.conversationId;
         const projectId = this.checkpoint.projectId;
-        const payload = {...state, messages: this.messages.filter((message) => message.role !== 'system')};
+        const payload = {...state, messages: state.messages.filter((message) => message.role !== 'system')};
         return await repo.insertCheckpoint(projectId, conversationId, payload);
     }
 

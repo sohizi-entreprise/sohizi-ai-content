@@ -1,3 +1,5 @@
+import { ReactNode } from "react"
+
 export type MediaType = 'image' | 'video' | 'audio'
 
 export type MediaFilter = 'all' | 'image' | 'video' | 'audio'
@@ -49,9 +51,17 @@ export type AudioGenerationSettings = {
   stability: number
 }
 
-export type MediaGenerationSettings = {
-  image: ImageGenerationSettings
-  video: VideoGenerationSettings
-  audio: AudioGenerationSettings
+export type MediaTuning = {
+  label: string
+  key: string
+  currentValue?: string
+  options: Array<{
+      value: string
+      label: string
+      icon?: ReactNode
+  }>
 }
+
+export type MediaGenerationSettings = Record<MediaType, MediaTuning[]>
+
 

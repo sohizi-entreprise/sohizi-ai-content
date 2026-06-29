@@ -207,7 +207,7 @@ export class Agent {
     private initializeState(systemPrompt: string) {
         const existingState = this.persistence?.getInitialState();
         let state: AgentState = {
-            messages: [],
+            messages: [{ role: 'system', content: systemPrompt }],
             finishReason: null,
             error: null,
             status: 'idle',

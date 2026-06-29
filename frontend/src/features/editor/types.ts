@@ -49,23 +49,18 @@ export type AssetContent = {
 
 export type AssetType = 'document' | 'video' | 'audio' | 'image'
 
-export type AiGeneratedAssetGroup = {
-  requestId: string
-  request: Record<string, unknown> | null
-  createdAt: Date
-  assets: Array<{
-    id: string
-    name: string
-    url: string
-    type: AssetType
-    createdAt: string
-    storageKey: string
-  }>
+export type AiGeneratedAsset = {
+  id: string
+  name: string
+  url: string
+  type: AssetType
+  createdAt: string
+  storageKey: string
 }
 
 export type AiGeneratedAssetsContent = {
   type: 'ai-generated-assets'
-  data: Array<AiGeneratedAssetGroup>
+  data: Array<AiGeneratedAsset>
   nextCursor: string | null
   hasMore: boolean
 }

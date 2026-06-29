@@ -3,7 +3,7 @@ import { mediaGeneratorPrompt } from "../prompts/media-generator";
 import { editFileTool } from "../tools/file-edit";
 import { exploreFileTool } from "../tools/file-explore";
 import { searchFileTool } from "../tools/file-search";
-import { endExecutionLoopTool } from "../tools/loop-end";
+import { endExecutionLoopTool, finishTool } from "../tools/loop-end";
 import { submitMediaJobsTool } from "../tools/submit-media-jobs";
 import { manageTodoListTool } from "../tools/tasks-manage";
 import { timelineEditTool } from "../tools/timeline-edit";
@@ -51,7 +51,7 @@ registerAgent({
             searchFileTool, 
             timelineExploreTool, 
             timelineEditTool,
-            endExecutionLoopTool,
+            finishTool,
             manageTodoListTool,
             editFileTool
         ]),

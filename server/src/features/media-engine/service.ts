@@ -5,21 +5,22 @@ import { BadRequest, NotFound } from '../error';
 import { getProjectById } from '../project/repo';
 import z from 'zod';
 import { getFileNodeById, listDirectoryFiles, ORDER_GAP } from '../file-system/repo';
-import { AssetType } from '@/type';
+import { AssetType, CursorPaginationOptions } from '@/type';
 import { userModelMessageSchema } from 'ai';
-import { createCancellableController } from '../generation-request/abort-manager';
+import { broadcastCancellation, createCancellableController } from '../generation-request/abort-manager';
 import { Session } from '../ai/agent/core/session';
 import { v4 as uuidv4 } from 'uuid';
 import { MediaGenerationPersistence } from '../ai/agent/core/persistence';
 import { getAgentDefinition } from '../ai/agent/core/agent-registry';
 import { Agent } from '../ai/agent/core/agent';
 import { getModelById } from '../chat/repo';
-import { decrementKey, incrementKey, writeStreamData } from '../generation-request/stream-handler';
+import { BaseStreamData, decrementKey, incrementKey, readStreamChunks, writeStreamData } from '../generation-request/stream-handler';
+import { sse } from 'elysia';
 
 
-export async function getUploadUrl(data: GetUploadUrlInput) {
+export async function getUploadUrl(projectId: string, data: GetUploadUrlInput) {
 
-    const project = await getProjectById(data.projectId);
+    const project = await getProjectById(projectId);
     if (!project) {
         throw new NotFound('Project not found');
     }
@@ -43,21 +44,30 @@ export async function getUploadUrl(data: GetUploadUrlInput) {
     }
 }
 
-export async function uploadSuccess(data: z.infer<typeof uploadSuccessSchema>) {
-    const { projectId, folderId, storageKey } = data;
+export async function uploadSuccess(projectId: string, data: z.infer<typeof uploadSuccessSchema>) {
+    const { folderId, storageKey } = data;
+    let uploadfolderId = folderId;
     const project = await getProjectById(projectId);
     if (!project) {
         throw new NotFound('Project not found');
     }
-    const folder = await getFileNodeById(projectId, folderId);
-    if (!folder) {
+    if(!folderId){
+        const { uploadsFolder } = await repo.getAssetFolder(projectId);
+        uploadfolderId = uploadsFolder?.id ?? null;
+    }else{
+        const folder = await getFileNodeById(projectId, folderId);
+        if(!folder || !folder.directory){
+            throw new BadRequest('Required a folder to upload the file to');
+        }
+        uploadfolderId = folder.id;
+    }
+
+    if (!uploadfolderId) {
         throw new NotFound('Folder not found');
     }
-    if(!folder.directory){
-        throw new BadRequest('Required a folder to upload the file to');
-    }
+    
     // Check the total number of files in the folder does not exceed 100
-    const siblingsFiles = await listDirectoryFiles(projectId, folderId);
+    const siblingsFiles = await listDirectoryFiles(projectId, uploadfolderId);
     const totalFiles = siblingsFiles.length;
     if (totalFiles >= 100) {
         throw new BadRequest('Maximum number of files reached in the folder');
@@ -83,7 +93,7 @@ export async function uploadSuccess(data: z.infer<typeof uploadSuccessSchema>) {
             type: getAssetType(fileMetadata.contentType),
             url: storage.buildPublicUrl(storageKey),
             source: 'user-uploaded',
-            folderId,
+            folderId: uploadfolderId,
             metadata: fileMetadata,
             storageKey,
             filePosition
@@ -113,8 +123,11 @@ export const generateAsset = async (payload: RunAgentPayload) => {
     return run;
 }
 
-export const cancelGeneration = async () => {
-
+export const cancelGeneration = async (requestId: string) => {
+    await broadcastCancellation(requestId);
+    await repo.updateAssetRequest(requestId, { status: 'finished' });
+    // Cancel any running inngest job
+    return {ok: true, error: null};
 }
 
 async function runAgent(payload: RunAgentPayload & { runId: string }){
@@ -174,6 +187,27 @@ async function runAgent(payload: RunAgentPayload & { runId: string }){
     }
   }
 
+
+
+export const listAssets = async(projectId: string, options?: CursorPaginationOptions) => {
+    return await repo.listAssetRequestAssets(projectId, options);
+}
+
+export const listAiGeneratedAssets = async(projectId: string, options?: CursorPaginationOptions & { type?: AssetType }) => {
+    return await repo.listAiGeneratedAssets(projectId, options);
+}
+
+export async function* getRequestStreams(requestId: string) {
+    for await (const chunk of readStreamChunks(requestId)) {
+        const data = chunk.data as BaseStreamData;
+        yield sse({
+          id: chunk.id,
+          event: data.event || 'chunk',
+          data: chunk.data,
+      });
+      }
+}
+
 function getAssetType(contentType: string): AssetType {
     if (contentType.startsWith('image/')) return 'image';
     if (contentType.startsWith('video/')) return 'video';
@@ -184,4 +218,8 @@ function getAssetType(contentType: string): AssetType {
 function getFileName(storageKey: string): string {
     const name = storageKey.split('/').pop() || 'new-asset-file';
     return name;
+}
+
+function getAssetFolder(projectId: string){
+    return
 }

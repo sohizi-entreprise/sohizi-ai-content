@@ -348,7 +348,18 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
     format: null,
   }).returning();
 
+  const resp3 = await tx.insert(fileNodes).values({
+    name: 'assets',
+    directory: true,
+    projectId: projectId,
+    parentId: rootFolder.id,
+    position: ORDER_GAP * 2,
+    editable: false,
+    format: null,
+  }).returning();
+
   const coreFolder = resp2[0];
+  const assetsFolder = resp3[0];
 
   await tx.insert(fileNodes).values({
     name: 'skills',
@@ -359,15 +370,24 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
     editable: false,
     format: null,
   });
-  
+
+  await tx.insert(fileNodes).values({
+    name: 'uploads',
+    directory: true,
+    projectId: projectId,
+    parentId: assetsFolder.id,
+    position: ORDER_GAP,
+    editable: false,
+    format: null,
+  });
   
   const resp4 = await tx.insert(fileNodes).values({
-    name: 'instruction',
+    name: 'context',
     directory: false,
     projectId: projectId,
     parentId: coreFolder.id,
     position: ORDER_GAP,
-    editable: true,
+    editable: false,
     format: 'markdown',
   }).returning();
 
@@ -441,7 +461,7 @@ async function createFileFromTemplate(tx: DbTransaction, templateId: string, new
 // Those are files on the root folder, like image and video editors
 async function createSecondaryFiles(tx: DbTransaction, projectId: string, rootFolderId: string){
   const files = [
-    {name: 'media-generator', format: 'ai-generated', position: ORDER_GAP * 2},
+    // {name: 'media-generator', format: 'ai-generated', position: ORDER_GAP * 2},
     {name: 'video-editor', format: 'video-editor', position: ORDER_GAP * 3},
   ] as const;
 

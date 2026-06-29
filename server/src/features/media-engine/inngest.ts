@@ -208,13 +208,6 @@ export const handleImageGeneration = inngest.createFunction(
                 newAssets.push(asset);
             }
 
-            await repo.appendAssetRequestAssets(requestId, newAssets.map(a => ({
-                assetId: a.id,
-                type: 'image' as const,
-                url: a.url,
-                name: a.name,
-            })));
-
             await commitRequest(requestId, 'finished')
             return newAssets;
         });
@@ -471,12 +464,6 @@ export const handleVideoGeneration = inngest.createFunction(
                 storageKey: upload.storageKey,
             });
 
-            await repo.appendAssetRequestAssets(requestId, [{
-                assetId: asset.id,
-                type: 'video',
-                url: asset.url,
-                name: asset.name,
-            }]);
             await commitRequest(requestId, 'finished')
             return asset;
         });

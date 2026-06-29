@@ -217,7 +217,7 @@ export const getFileContent = async(projectId: string, fileNodeId: string, pagin
             return {type: asset.type, url: asset.url, name: asset.name, metadata: asset.metadata, storageKey: asset.storageKey};
         }
         case fileFormat.AI_GENERATED: {
-            const aiGeneratedAssets = await mediaRepo.getAiGeneratedAssetsGroupedByGenerationRequest(projectId, paginationOptions);
+            const aiGeneratedAssets = await mediaRepo.listAiGeneratedAssets(projectId, paginationOptions);
             return {type: 'ai-generated-assets', data: aiGeneratedAssets.data, nextCursor: aiGeneratedAssets.nextCursor, hasMore: aiGeneratedAssets.hasMore};
         }
         case fileFormat.SKILL: {

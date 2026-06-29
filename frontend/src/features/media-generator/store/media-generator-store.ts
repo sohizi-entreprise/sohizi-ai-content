@@ -1,122 +1,73 @@
 import { create } from 'zustand'
-import { toast } from 'sonner'
 import { defaultMediaSettings } from '../constants'
 import type {
-  GeneratedMediaItem,
-  MediaFilter,
   MediaGenerationSettings,
   MediaType,
 } from '../types'
-import { saveFileContent } from '@/features/editor/requests'
-import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
-import { createFileNode } from '@/features/projects/request'
+import { AttachedFile } from '@/components/widgets/file-attachments'
 
-type MediaGeneratorState = {
-  items: Array<GeneratedMediaItem>
-  filter: MediaFilter
-  activeType: MediaType
-  settingsPrompt: string
+type ActiveGenerationRequest = {
+  requestId: string
+  error?: string
+}
+
+type StoreState = {
+  activeGenerationRequests: Array<ActiveGenerationRequest>
+  mediaType: MediaType
+  prompt: string
   settings: MediaGenerationSettings
-  previewItemId: string | null
-  setFilter: (filter: MediaFilter) => void
-  setActiveType: (type: MediaType) => void
-  setSettingsPrompt: (prompt: string) => void
+  attachments: Array<AttachedFile>
+}
+
+type StoreActions = {
+  appendActiveGenerationRequest: (data: ActiveGenerationRequest) => void
+  removeActiveGenerationRequest: (requestId: string) => void
+  setMediaType: (mediaType: MediaType) => void
+  setPrompt: (prompt: string) => void
   updateSettings: <T extends MediaType>(
     type: T,
-    patch: Partial<MediaGenerationSettings[T]>,
+    key: string,
+    value: string,
   ) => void
-  deleteItem: (id: string) => void
-  setPreviewItem: (id: string | null) => void
-  moveItemToFile: (projectId: string, item: GeneratedMediaItem) => Promise<void>
+  addAttachment: (attachment: AttachedFile) => void
+  removeAttachment: (id: string) => void
+  reset: () => void
 }
 
-function getMediaUrl(item: GeneratedMediaItem) {
-  return item.variants?.[0]?.url ?? item.url ?? item.thumbnailUrl ?? ''
+const initialState: StoreState = {
+  activeGenerationRequests: [],
+  mediaType: 'image',
+  prompt: '',
+  settings: defaultMediaSettings,
+  attachments: [],
 }
 
-function buildMediaMarkdown(item: GeneratedMediaItem) {
-  const mediaUrl = getMediaUrl(item)
-  const settings = Object.entries(item.settings)
-    .map(([key, value]) => `- ${key}: ${value}`)
-    .join('\n')
 
-  return `# ${item.title}
-
-Type: ${item.type}
-Model: ${item.model}
-Prompt: ${item.prompt}
-
-${mediaUrl}
-
-## Settings
-
-${settings}
-`
-}
-
-export const useMediaGeneratorStore = create<MediaGeneratorState>(
+export const useMediaGeneratorStore = create<StoreState & StoreActions>(
   (set, _get) => ({
-    items: [],
-    filter: 'all',
-    activeType: 'image',
-    settingsPrompt: '',
-    settings: defaultMediaSettings,
-    previewItemId: null,
-
-    setFilter: (filter) => set({ filter }),
-    setActiveType: (type) => set({ activeType: type }),
-    setSettingsPrompt: (settingsPrompt) => set({ settingsPrompt }),
-    updateSettings: (type, patch) =>
+    ...initialState,
+    setPrompt: (data) => set({ prompt: data }),
+    setMediaType: (data) => set({ mediaType: data }),
+    updateSettings: (type, key, value) =>
       set((state) => ({
         settings: {
           ...state.settings,
-          [type]: {
-            ...state.settings[type],
-            ...patch,
-          },
+          [type]: state.settings[type].map((setting) => setting.key === key ? { ...setting, currentValue: value } : setting),
+
         },
       })),
-    deleteItem: (id) =>
-      set((state) => ({
-        items: state.items.filter((item) => item.id !== id),
-        previewItemId: state.previewItemId === id ? null : state.previewItemId,
-      })),
-    setPreviewItem: (id) => set({ previewItemId: id }),
-    moveItemToFile: async (projectId, item) => {
-      const { rootFolderId, treeData, insertNodeAt } =
-        useFileTreeStore.getState()
-
-      if (!rootFolderId) {
-        toast.error('Open a project folder before moving media to a file.')
-        return
+    addAttachment: (data) => set((state) => {
+      const index = state.attachments.findIndex((attachment) => attachment.id === data.id)
+      if (index >= 0) {
+        return { 
+          attachments: state.attachments.map((attachment) => attachment.id === data.id ? data : attachment) 
+        }
       }
-
-      try {
-        const fileName = `${
-          item.title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/(^-|-$)/g, '') || item.type
-        }.md`
-        const created = await createFileNode(projectId, {
-          name: fileName,
-          directory: false,
-          parentId: rootFolderId,
-          position: treeData.length,
-          format: 'markdown',
-        })
-
-        await saveFileContent(projectId, created.id, buildMediaMarkdown(item))
-        insertNodeAt(
-          rootFolderId,
-          { ...created, children: undefined },
-          treeData.length,
-        )
-        toast.success('Media moved to a project file.')
-      } catch (error) {
-        console.error('Failed to move media to file', error)
-        toast.error('Could not move this media to a file yet.')
-      }
-    },
+      return { attachments: [...state.attachments, data] }
+    }),
+    removeAttachment: (id) => set((state) => ({ attachments: state.attachments.filter((attachment) => attachment.id !== id) })),
+    appendActiveGenerationRequest: (data) => set((state) => ({ activeGenerationRequests: [...state.activeGenerationRequests, data] })),
+    removeActiveGenerationRequest: (requestId) => set((state) => ({ activeGenerationRequests: state.activeGenerationRequests.filter((request) => request.requestId !== requestId) })),
+    reset: () => set(initialState),
   }),
 )

@@ -63,23 +63,119 @@ export const voices = [
 ] as const
 
 export const defaultMediaSettings: MediaGenerationSettings = {
-  image: {
-    model: 'flux-pro',
-    variations: 2,
-    cameraAngle: 'eye-level',
-    resolution: '1080p',
-    aspectRatio: '16:9',
-  },
-  video: {
-    model: 'veo-creative',
-    duration: 6,
-    resolution: '1080p',
-    aspectRatio: '16:9',
-  },
-  audio: {
-    model: 'elevenlabs-studio',
-    voice: 'narrator',
-    speed: 1,
-    stability: 70,
-  },
+  image: [
+    {
+        label: 'Resolution',
+        key: 'resolution',
+        currentValue: '720p',
+        options: [
+          { value: '720p', label: '720p' },
+          { value: '1080p', label: '1080p' },
+          { value: '4K', label: '4K' },
+        ]
+    },
+    {
+      label: 'Camera angle',
+      key: 'cameraAngle',
+      currentValue: 'eye-level',
+      options: [
+        { value: 'eye-level', label: 'Eye level' },
+        { value: 'low-angle', label: 'Low angle' },
+        { value: 'high-angle', label: 'High angle' },
+        { value: 'over-the-shoulder', label: 'Over the shoulder' },
+        { value: 'drone', label: 'Drone' },
+      ],
+    },
+    {
+      label: 'Aspect ratio',
+      key: 'aspectRatio',
+      currentValue: '16:9',
+      options: [
+        { value: '1:1', label: '1:1' },
+        { value: '4:3', label: '4:3' },
+        { value: '16:9', label: '16:9' },
+        { value: '9:16', label: '9:16' },
+      ],
+    },
+    {
+      label: 'Variations',
+      key: 'variations',
+      currentValue: '1',
+      options: [
+        { value: '1', label: '1' },
+        { value: '2', label: '2' },
+        { value: '3', label: '3' },
+        { value: '4', label: '4' },
+      ],
+    },
+  ],
+  video: [
+      {
+          label: 'Resolution',
+          key: 'resolution',
+          currentValue: '720p',
+          options: [
+            { value: '720p', label: '720p' },
+            { value: '1080p', label: '1080p' },
+            { value: '4K', label: '4K' },
+          ]
+      },
+      {
+        label: 'Duration',
+        key: 'duration',
+        currentValue: '6',
+        options: [
+          { value: '3', label: '3' },
+          { value: '4', label: '4' },
+          { value: '5', label: '5' },
+          { value: '6', label: '6' },
+        ],
+      },
+      {
+        label: 'Aspect ratio',
+        key: 'aspectRatio',
+        currentValue: '16:9',
+        options: [
+          { value: '1:1', label: '1:1' },
+          { value: '4:3', label: '4:3' },
+          { value: '16:9', label: '16:9' },
+          { value: '9:16', label: '9:16' },
+        ],
+      },
+      {
+        label: 'Variations',
+        key: 'variations',
+        currentValue: '1',
+        options: [
+          { value: '1', label: '1' },
+          { value: '2', label: '2' },
+          { value: '3', label: '3' },
+          { value: '4', label: '4' },
+        ],
+      },
+  ],
+  audio: [
+    {
+      label: 'Genre',
+      key: 'genre',
+      currentValue: 'narrator',
+      options: [
+        { value: 'narrator', label: 'Narrator' },
+        { value: 'warm', label: 'Warm' },
+        { value: 'dramatic', label: 'Dramatic' },
+        { value: 'documentary', label: 'Documentary' },
+      ],
+    },
+    {
+      label: 'Duration',
+      key: 'duration',
+      currentValue: '6',
+      options: [
+        { value: '3', label: '3' },
+        { value: '4', label: '4' },
+        { value: '5', label: '5' },
+        { value: '6', label: '6' },
+      ],
+    },
+],
 }

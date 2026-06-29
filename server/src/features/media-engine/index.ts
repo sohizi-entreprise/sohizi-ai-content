@@ -6,6 +6,7 @@ import {
 } from './schema'
 import { assertProjectAccess } from '@/lib/authorize'
 import { authMiddleware } from '@/lib/auth-middleware'
+import z from 'zod'
 
 export {
     MediaError,
@@ -22,17 +23,67 @@ export {
     type WrapErrorOptions,
 } from './errors'
 
-export const mediaEngineRoutes = new Elysia({ prefix: '/media' })
+export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
     .use(authMiddleware)
-    .post('/upload-success', async ({ body, user }) => {
-        await assertProjectAccess(user.id, body.projectId)
-        return mediaService.uploadSuccess(body);
+    .guard({
+        params: z.object({ projectId: z.uuid('Invalid project id') }),
+    })
+    .post('/upload-success', async ({ body, user, params }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.uploadSuccess(params.projectId, body);
     }, {
         body: uploadSuccessSchema,
     })
-    .get('/upload-url', async ({ query, user }) => {
-        await assertProjectAccess(user.id, query.projectId)
-        return mediaService.getUploadUrl(query);
+    .get('/upload-url', async ({ query, user, params }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.getUploadUrl(params.projectId, query);
     }, {
         query: getUploadUrlSchema,
+    })
+    .get('/assets', async ({ params, user, query }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.listAssets(params.projectId, query);
+    }, {
+        query: z.object({
+            cursor: z.string().optional(),
+            limit: z.number().optional(),
+            type: z.enum(['image', 'video', 'audio']).optional(),
+        }),
+    })
+    .get('/ai-assets', async ({ params, user, query }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.listAiGeneratedAssets(params.projectId, query);
+    }, {
+        query: z.object({
+            cursor: z.string().optional(),
+            limit: z.number().optional(),
+            type: z.enum(['image', 'video', 'audio']).optional(),
+        }),
+    })
+    .post('/assets', async ({ params, user, body }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.generateAsset({
+            projectId: params.projectId,
+            userId: user.id,
+            ...body,
+        });
+    }, {
+        body: mediaService.assetRequestSchema,
+    })
+    .guard({
+        params: z.object({ 
+            projectId: z.uuid('Invalid project id'),
+            requestId: z.uuid('Invalid request id'),
+        }),
+    })
+    .get('/requests/:requestId', async function* ({ params, user, set }) {
+        await assertProjectAccess(user.id, params.projectId)
+        set.headers['Content-Type'] = 'text/event-stream'
+        set.headers['Cache-Control'] = 'no-cache'
+        set.headers['Connection'] = 'keep-alive'
+        yield* mediaService.getRequestStreams(params.requestId);
+    })
+    .delete('/requests/:requestId', async ({ params, user }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.cancelGeneration(params.requestId);
     })
