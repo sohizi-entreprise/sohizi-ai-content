@@ -10,7 +10,6 @@ import type { MentionSearchContext } from 'react-mentions-ts'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useEditorInputBridge } from '@/features/editor/bridge/use-editor-input-bridge'
-import { MediaSettingsButton } from '@/features/media-generator'
 import ChatFilesPreview from './chat-files-preview'
 import { useFileUpload } from '@/hooks/use-file-upload'
 import { useSaveFileBucket } from '@/hooks/use-save-file-bucket'
@@ -121,7 +120,6 @@ export function ChatInput({
                 <IconPlus className="size-4" />
             </Button>
             <input {...getInputProps()} className='sr-only'/>
-            <MediaSettingsButton />
           </div>
 
           <div className="flex items-center justify-end gap-2">

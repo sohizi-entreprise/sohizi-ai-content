@@ -2,6 +2,7 @@ import { createFileMentionSuggestion, FileMention } from "@/features/editor/exte
 import { useFileMentionSearch } from "@/hooks/use-file-mention-search";
 import { cn } from "@/lib/utils";
 import { Placeholder } from "@tiptap/extension-placeholder";
+import { Markdown } from "@tiptap/markdown";
 import { Editor, EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from '@tiptap/starter-kit'
 import { ClassValue } from "clsx";
@@ -55,6 +56,11 @@ export default function ChatTextarea(props: ChatTextareaProps) {
                 enableClick: true,
                 suggestion: fileMentionSuggestion,
               }),
+            Markdown.configure({
+                markedOptions: {
+                    gfm: true,
+                },
+            }),
         ],
         content: '',
         contentType: 'markdown',

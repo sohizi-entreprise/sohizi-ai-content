@@ -2,12 +2,21 @@ import { useEffect, useState } from 'react'
 import type { AgentRunBlock, ChatStreamChunk, Message } from '../types'
 import { useGetSSE } from '@/hooks/use-get-sse'
 import { useChatStore } from '../store/chat-store'
+import { MediaAsset } from '@/features/media-generator/requests'
 
 type AssistantMessage = Extract<Message, { role: 'assistant' }>
 type AssistantMessageContent = AssistantMessage['content']
 
-export function useBufferChunks(url: string, run: AgentRunBlock, onFinish: (status: AgentRunBlock['status']) => void) {
-  const [messages, setMessages] = useState<Message[]>(run.messages)
+type Params = {
+  url: string;
+  initialMessages: Message[];
+  onFinish: (status: AgentRunBlock['status']) => void;
+  onAsset?: (asset: MediaAsset) => void;
+}
+
+export function useBufferChunks({url, initialMessages, onFinish, onAsset}: Params) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages)
+  const [assets, setAssets] = useState<MediaAsset[]>([])
   const patchConversation = useChatStore((state) => state.patchActiveConversation)
 
   const subscribe = useGetSSE({
@@ -15,6 +24,11 @@ export function useBufferChunks(url: string, run: AgentRunBlock, onFinish: (stat
       chunk: (data) => {
         const chunk = (data as {chunk: ChatStreamChunk}).chunk
         setMessages((prev) => applyChunk(chunk, prev))
+      },
+      asset: (data) => {
+        const asset = (data as {data: MediaAsset}).data
+        setAssets((prev) => [...prev, asset])
+        onAsset?.(asset)
       },
       done: (_, {closeEventSource}) => {
         onFinish('finished')
@@ -30,7 +44,7 @@ export function useBufferChunks(url: string, run: AgentRunBlock, onFinish: (stat
     return () => unsubscribe()
   }, [url, subscribe])
 
-  return messages
+  return {messages, assets}
 }
 
 function applyChunk(chunk: ChatStreamChunk, messages: Message[]): Message[] {

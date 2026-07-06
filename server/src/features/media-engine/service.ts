@@ -1,7 +1,7 @@
 import * as repo from './repo';
 import * as storage from './storage';
 import type { GetUploadUrlInput, uploadSuccessSchema } from './schema';
-import { BadRequest, NotFound } from '../error';
+import { BadRequest, Forbidden, NotFound } from '../error';
 import { getProjectById } from '../project/repo';
 import z from 'zod';
 import { getFileNodeById, listDirectoryFiles, ORDER_GAP } from '../file-system/repo';
@@ -14,7 +14,7 @@ import { MediaGenerationPersistence } from '../ai/agent/core/persistence';
 import { getAgentDefinition } from '../ai/agent/core/agent-registry';
 import { Agent } from '../ai/agent/core/agent';
 import { getModelById } from '../chat/repo';
-import { BaseStreamData, decrementKey, incrementKey, readStreamChunks, writeStreamData } from '../generation-request/stream-handler';
+import { BaseStreamData, decrementKey, incrementKey, markStreamActive, readStreamChunks, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
 import { sse } from 'elysia';
 
 
@@ -44,6 +44,20 @@ export async function getUploadUrl(projectId: string, data: GetUploadUrlInput) {
     }
 }
 
+export async function getDownloadUrl(projectId: string, assetId: string) {
+    const asset = await repo.getAssetById(projectId, assetId);
+    if (!asset) {
+        throw new NotFound('Asset not found');
+    }
+
+    try {
+        return await storage.generateSignedDownloadUrl(asset.storageKey, asset.name);
+    } catch (error) {
+        console.error(error);
+        throw new BadRequest('Failed to generate signed download url');
+    }
+}
+
 export async function uploadSuccess(projectId: string, data: z.infer<typeof uploadSuccessSchema>) {
     const { folderId, storageKey } = data;
     let uploadfolderId = folderId;
@@ -66,12 +80,6 @@ export async function uploadSuccess(projectId: string, data: z.infer<typeof uplo
         throw new NotFound('Folder not found');
     }
     
-    // Check the total number of files in the folder does not exceed 100
-    const siblingsFiles = await listDirectoryFiles(projectId, uploadfolderId);
-    const totalFiles = siblingsFiles.length;
-    if (totalFiles >= 100) {
-        throw new BadRequest('Maximum number of files reached in the folder');
-    }
     const fileExists = await storage.fileExists(storageKey);
     if (!fileExists) {
         throw new NotFound('File not found');
@@ -83,13 +91,20 @@ export async function uploadSuccess(projectId: string, data: z.infer<typeof uplo
         throw new BadRequest('Uploaded file exceeds the maximum allowed size');
     }
 
+    const fileName = getFileName(storageKey);
+    const siblingsFiles = await listDirectoryFiles(projectId, uploadfolderId);
+    const isOverwrite = siblingsFiles.some((file) => file.name === fileName);
+    if (siblingsFiles.length >= 100 && !isOverwrite) {
+        throw new BadRequest('Maximum number of files reached in the folder');
+    }
+
     // save the asset to the database
     try {
         const lastPosition = siblingsFiles[siblingsFiles.length - 1]?.position ?? 0;
         const filePosition = lastPosition + ORDER_GAP;
         const response = await repo.createAssetWithFileNode({
             projectId,
-            name: getFileName(storageKey),
+            name: fileName,
             type: getAssetType(fileMetadata.contentType),
             url: storage.buildPublicUrl(storageKey),
             source: 'user-uploaded',
@@ -98,7 +113,7 @@ export async function uploadSuccess(projectId: string, data: z.infer<typeof uplo
             storageKey,
             filePosition
         });
-        return response.fileNode;
+        return response;
     } catch (error) {
         console.error(error);
         throw new BadRequest('Failed to create asset with file node');
@@ -116,7 +131,8 @@ export type RunAgentPayload = {
 } & z.infer<typeof assetRequestSchema>;
 
 export const generateAsset = async (payload: RunAgentPayload) => {
-    const run = await repo.createAssetRequest(payload.projectId, payload.settings);
+    const run = await repo.createAssetRequest(payload.projectId, payload.userPrompt, payload.settings);
+    await markStreamActive(run.id);
     await incrementKey(run.id);
 
     runAgent({...payload, runId: run.id});
@@ -126,6 +142,7 @@ export const generateAsset = async (payload: RunAgentPayload) => {
 export const cancelGeneration = async (requestId: string) => {
     await broadcastCancellation(requestId);
     await repo.updateAssetRequest(requestId, { status: 'finished' });
+    await removeStreamActive(requestId);
     // Cancel any running inngest job
     return {ok: true, error: null};
 }
@@ -158,7 +175,7 @@ async function runAgent(payload: RunAgentPayload & { runId: string }){
       }
       const agent = new Agent({
           name: agentDefinition.name,
-          systemPrompt: agentDefinition.baseSystemPrompt,
+          systemPrompt: fullPrompt(agentDefinition.baseSystemPrompt, payload.settings ?? {}),
           session,
           model,
           modelConfig: agentDefinition.modelConfig,
@@ -182,7 +199,10 @@ async function runAgent(payload: RunAgentPayload & { runId: string }){
       console.error(error);
       await repo.updateAssetRequest(runId, { status: 'error', error: errorMessage });
     } finally {
-      await decrementKey(runId);
+      const remaining = await decrementKey(runId);
+      if (remaining === 0) {
+        await removeStreamActive(runId);
+      }
       await cleanup();
     }
   }
@@ -208,6 +228,23 @@ export async function* getRequestStreams(requestId: string) {
       }
 }
 
+export const deleteAsset = async (assetId: string) => {
+    return await repo.deleteAsset(assetId);
+}
+
+export const attachAssetToFileNode = async (projectId: string, assetId: string, folderId: string) => {
+    const asset = await repo.getAssetById(projectId, assetId);
+    if(!asset || asset.fileNodeId){
+        throw new Forbidden('Asset does not exist or already attached to a file node');
+    }
+    const folder = await getFileNodeById(projectId, folderId);
+    if(!folder || !folder.directory){
+        throw new Forbidden('Folder does not exist or is not a directory');
+    }
+    
+    return await repo.attachAssetToFileNode({projectId, assetId, folderId});
+}
+
 function getAssetType(contentType: string): AssetType {
     if (contentType.startsWith('image/')) return 'image';
     if (contentType.startsWith('video/')) return 'video';
@@ -220,6 +257,13 @@ function getFileName(storageKey: string): string {
     return name;
 }
 
-function getAssetFolder(projectId: string){
-    return
+function fullPrompt(basePrompt: string, settings: Record<string, unknown>){
+    return `
+${basePrompt}
+
+<media_generation_context>
+The following JSON contains the active settings selected by the user.
+${JSON.stringify(settings)}
+</media_generation_context>
+    `.trim();
 }

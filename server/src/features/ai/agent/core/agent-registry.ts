@@ -68,7 +68,8 @@ registerAgent({
     baseSystemPrompt: mediaGeneratorPrompt,
     modelConfig: {
         tools: getSchemas([submitMediaJobsTool, manageTodoListTool, exploreFileTool, searchFileTool]),
-        reasoningEffort: 'minimal',
+        reasoningEffort: 'low',
+        reasoningSummary: 'auto',
     },
-    modelId: 'gpt-5.1'
+    modelId: 'openai/gpt-5.1'
 });

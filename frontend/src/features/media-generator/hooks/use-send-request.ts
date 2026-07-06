@@ -3,6 +3,7 @@ import { startGenerationMutationOptions } from "../query-mutations"
 import { AssetRequest } from "../requests"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
 import { ImagePart, MsgTextPart, FilePart } from "@/features/chat/types"
+import { cleanMediaType } from "@/utils/clean-mediaType"
 
 
 export const useSendRequest = (projectId: string) => {
@@ -12,39 +13,48 @@ export const useSendRequest = (projectId: string) => {
   const attachments = useMediaGeneratorStore((state) => state.attachments)
   const settings = useMediaGeneratorStore((state) => state.settings)
   const mediaType = useMediaGeneratorStore((state) => state.mediaType)
+  const clearChatInput = useMediaGeneratorStore((state) => state.clearChatInput)
 
   const appendActiveGenerationRequest = useMediaGeneratorStore((state) => state.appendActiveGenerationRequest)
+
+  const uploadedAttachments = attachments.filter((attachment) => attachment.status === 'uploaded')
 
   const content: (MsgTextPart | ImagePart | FilePart)[] = [
     {
       type: 'text',
       text: prompt,
     },
-    ...attachments.filter((attachment) => attachment.status === 'uploaded').map((attachment) => ({
+    ...uploadedAttachments.map((attachment) => ({
       type: 'file' as const,
       data: new URL(attachment.url),
-      mediaType: attachment.type,
+      mediaType: cleanMediaType(attachment.type, attachment.url),
     })),
   ]
+
+  const payloadSettings = Object.fromEntries(
+    settings[mediaType]?.map((item) => [item.key, item.currentValue]) ?? [],
+  )
   
-  const userPrompt: AssetRequest= {
+  const payload: AssetRequest= {
     userPrompt: {
         role: 'user',
         content
     },
     settings: {
-        ...settings,
         mediaType: mediaType,
+        referencedFiles: uploadedAttachments.map((attachment) => ({
+          type: attachment.type,
+          url: attachment.url,
+        })),
+        ...payloadSettings,
     }
   }
 
   const sendRequest = async () => {
-    handleSendRequest(userPrompt, {
+    handleSendRequest(payload, {
         onSuccess: (data) => {
             appendActiveGenerationRequest({requestId: data.id})
-            // Set query for listing generations
-            // Clear the input
-            console.log(data)
+            clearChatInput()
         },
         onError: (error) => {
             console.error(error)

@@ -56,6 +56,19 @@ export const listFileTreePerDirectory = async (projectId: string, parentId: stri
   return response.data
 }
 
+export const searchFilesByName = async (
+  projectId: string,
+  name: string,
+  limit?: number,
+  options?: { signal?: AbortSignal },
+): Promise<FileNode[]> => {
+  const response = await api.get(`/projects/${projectId}/files/search`, {
+    params: { name, limit },
+    signal: options?.signal,
+  })
+  return response.data
+}
+
 export const createFileNode = async (projectId: string, data: {
   name: string
   directory: boolean

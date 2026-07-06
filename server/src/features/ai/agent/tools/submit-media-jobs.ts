@@ -62,6 +62,10 @@ export const submitMediaJobsTool = buildBaseTool({
     description: 'End the execution loop. If status is "done", include all the media jobs the user requested. If status is "blocked", explain why you cannot proceed. Call this tool EXACTLY ONCE.',
     inputSchema: submitMediaJobsSchema,
     execute: async (input, { state, session }) => {
+        if(state.isExitStatus){
+            return success('Media generation was already submitted.');
+        }
+
         state.finishRun();
         if(input.status === 'blocked'){
             return success('The user will be notified that the request cannot be processed at the moment.');

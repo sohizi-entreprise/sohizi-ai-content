@@ -34,7 +34,7 @@ function PendingRunBlock({ run }: { run: AgentRunBlock }){
     }
 
     const url = `${import.meta.env.VITE_API_BASE_URL}/chats/${run.projectId}/conversations/${run.conversationId}/runs/${run.id}`
-    const messages = useBufferChunks(url, run, onFinish)
+    const {messages} = useBufferChunks({url, initialMessages: run.messages, onFinish})
     
     return (
         <div className='space-y-2'>

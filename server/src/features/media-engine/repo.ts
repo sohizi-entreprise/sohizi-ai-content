@@ -1,7 +1,10 @@
 import { db } from "@/db";
 import { assets, assetVariants, fileNodes, assetsAgentRuns } from "@/db/schema";
 import type { AssetType, AssetSource, AssetStatus, AssetVariantType, AssetMetadata, CursorPaginationOptions, CursorPaginationResult, AgentRunStatus, AgentRunMessage } from "@/type";
-import { and, eq, desc, lt, isNull } from "drizzle-orm";
+import { UserModelMessage } from "ai";
+import { and, eq, desc, lt, isNull, max } from "drizzle-orm";
+import { v4 as uuidv4 } from 'uuid';
+import { ORDER_GAP } from "../file-system/repo";
 
 
 type CreateAssetPayload = {
@@ -80,6 +83,59 @@ export const createAssetWithFileNode = async (payload: CreateAssetWithFileNodePa
     const { projectId, name, type, url, source, folderId, metadata, storageKey, filePosition } = payload;
 
     const result = await db.transaction(async (tx) => {
+        const existingFileNodeResponse = await tx.select()
+            .from(fileNodes)
+            .where(and(
+                eq(fileNodes.projectId, projectId),
+                eq(fileNodes.parentId, folderId),
+                eq(fileNodes.name, name),
+            ))
+            .limit(1);
+        const existingFileNode = existingFileNodeResponse[0];
+
+        if (existingFileNode) {
+            if (existingFileNode.directory) {
+                throw new Error('Cannot overwrite a directory with an asset');
+            }
+
+            const updatedFileNodeResponse = await tx.update(fileNodes)
+                .set({
+                    format: type,
+                    editable: true,
+                })
+                .where(and(
+                    eq(fileNodes.projectId, projectId),
+                    eq(fileNodes.id, existingFileNode.id),
+                ))
+                .returning();
+            const fileNode = updatedFileNodeResponse[0] ?? existingFileNode;
+
+            const assetPayload = {
+                projectId,
+                name,
+                type,
+                url,
+                source,
+                fileNodeId: fileNode.id,
+                metadata,
+                storageKey,
+            }
+
+            const assetResponse = await tx.update(assets)
+                .set(assetPayload)
+                .where(and(
+                    eq(assets.projectId, projectId),
+                    eq(assets.fileNodeId, fileNode.id),
+                ))
+                .returning();
+            const asset = assetResponse[0] ?? (await tx.insert(assets).values(assetPayload).returning())[0];
+            if(!asset){
+                throw new Error('Failed to upsert asset');
+            }
+
+            return { asset, fileNode };
+        }
+
         const filePayload = {
             projectId,
             name,
@@ -120,6 +176,7 @@ export const getAssetByFileNodeId = async (projectId: string, fileNodeId: string
 
 type AiGeneratedAsset = {
     id: string;
+    projectId: string;
     name: string;
     url: string;
     type: AssetType;
@@ -141,6 +198,7 @@ export const listAiGeneratedAssets = async (
     const conditions = [
         eq(assets.projectId, projectId),
         eq(assets.source, 'ai-generated' as AssetSource),
+        isNull(assets.fileNodeId),
     ];
     if (type) conditions.push(eq(assets.type, type));
     if (cursor) conditions.push(lt(assets.createdAt, new Date(cursor)));
@@ -148,6 +206,7 @@ export const listAiGeneratedAssets = async (
     const rows = await db
         .select({
             id: assets.id,
+            projectId: assets.projectId,
             name: assets.name,
             url: assets.url,
             type: assets.type,
@@ -169,11 +228,11 @@ export const listAiGeneratedAssets = async (
 }
 
 
-export const createAssetRequest = async (projectId: string, settings?: Record<string, unknown>) => {
+export const createAssetRequest = async (projectId: string, userPrompt: UserModelMessage, settings?: Record<string, unknown>) => {
     const result = await db.insert(assetsAgentRuns).values({
         projectId,
         status: 'pending',
-        messages: [],
+        messages: [{...userPrompt, id: uuidv4()}],
         metadata: {settings: settings ?? {}},
     }).returning();
 
@@ -278,4 +337,51 @@ export const getAssetFolder = async (projectId: string) => {
         assetsFolder: result[0],
         uploadsFolder: uploadsFolder[0],
     };
+}
+
+export const getAssetById = async (projectId: string, assetId: string) => {
+    const result = await db.select().from(assets).where(and(eq(assets.projectId, projectId), eq(assets.id, assetId)));
+    return result[0];
+}
+
+export const deleteAsset = async (assetId: string) => {
+    const result = await db.delete(assets).where(eq(assets.id, assetId));
+    return (result.rowCount ?? 0) > 0;
+}
+
+type AttachAssetToFileNodePayload = {
+    projectId: string;
+    assetId: string;
+    folderId: string;
+}
+
+export const attachAssetToFileNode = async ({projectId, assetId, folderId}: AttachAssetToFileNodePayload) => {
+    return await db.transaction(async (tx) => {
+        const res1 = await tx.select().from(assets).where(and(eq(assets.projectId, projectId), eq(assets.id, assetId)));
+        const asset = res1[0];
+        if(!asset){
+            throw new Error('Asset not found');
+        }
+        const resPos = await tx.select({
+            maxPosition: max(fileNodes.position),
+        }).from(fileNodes)
+          .where(and(eq(fileNodes.projectId, projectId), eq(fileNodes.parentId, folderId)));
+        const maxPosition = resPos[0]?.maxPosition ?? 0;
+        const res2 = await tx.insert(fileNodes).values({
+            projectId,
+            name: asset.name,
+            parentId: folderId,
+            format: asset.type,
+            editable: true,
+            position: maxPosition + ORDER_GAP
+        }).returning();
+        const fileNode = res2[0];
+        if(!fileNode){
+            throw new Error('Failed to create file node');
+        }
+        
+        await tx.update(assets).set({ fileNodeId: fileNode.id }).where(eq(assets.id, assetId));
+
+        return { asset, fileNode };
+    });
 }

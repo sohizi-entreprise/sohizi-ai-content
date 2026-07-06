@@ -1,7 +1,7 @@
 import api from '@/lib/axios'
 import { createParser, type EventSourceMessage } from 'eventsource-parser'
 import type { MediaType } from './types'
-import { FilePart, ImagePart, MsgTextPart } from '../chat/types'
+import { FilePart, ImagePart, Message, MsgTextPart } from '../chat/types'
 
 export type CursorPaginationOptions = {
   cursor?: string
@@ -42,7 +42,7 @@ export type MediaGenerationRun = {
   projectId: string
   status: 'pending' | 'running' | 'finished' | 'error'
   assets: MediaAsset[]
-  messages: Array<{ id: string; [key: string]: unknown }> | null
+  messages: Array<Message>
   metadata: { settings: Record<string, unknown> } | null
   error: string | null
   createdAt: string
@@ -94,6 +94,32 @@ export const cancelGeneration = async (
   requestId: string,
 ): Promise<CancelGenerationResponse> => {
   const response = await api.delete(`/media/${projectId}/requests/${requestId}`)
+  return response.data
+}
+
+export const deleteAsset = async (
+  projectId: string,
+  assetId: string,
+): Promise<{ ok: boolean }> => {
+  const response = await api.delete(`/media/${projectId}/assets/${assetId}`)
+  return response.data
+}
+
+export const moveAssetToFolder = async (
+  projectId: string,
+  assetId: string,
+  folderId: string,
+): Promise<void> => {
+  await api.post(`/media/${projectId}/assets/${assetId}/move-to-folder`, { folderId })
+}
+
+export const getAssetDownloadUrl = async (
+  projectId: string,
+  assetId: string,
+): Promise<{ url: string }> => {
+  const response = await api.get(
+    `/media/${projectId}/assets/${assetId}/download-url`,
+  )
   return response.data
 }
 

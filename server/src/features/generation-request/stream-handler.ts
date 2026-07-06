@@ -5,6 +5,7 @@ const DEFAULT_ACTIVE_STREAM_TTL_SECONDS = 1800
 const ACTIVE_STREAM_GRACE_PERIOD_MS = 15000
 const ACTIVE_STREAM_POLL_MS = 250
 const ACTIVE_STREAM_KEY_PREFIX = 'active-stream'
+const STREAM_COUNTER_KEY_PREFIX = 'stream-counter'
 
 type WriteStreamDataOptions = {
   maxLen?: number
@@ -39,19 +40,20 @@ export async function removeStreamActive(streamKey: string): Promise<void> {
 }
 
 export async function incrementKey(key: string): Promise<number> {
-  const value = await redis.incr(key)
+  const value = await redis.incr(streamCounterKey(key))
   return value
 }
 
 export async function decrementKey(key: string): Promise<number | null> {
-  const current = await redis.get(key)
+  const counterKey = streamCounterKey(key)
+  const current = await redis.get(counterKey)
   if (!current) return null
   const value = Number(current)
   if (value <= 1) {
-    await redis.del(key)
+    await redis.del(counterKey)
     return 0
   }
-  return await redis.decr(key)
+  return await redis.decr(counterKey)
 }
 
 export async function writeStreamData<T extends BaseStreamData>(
@@ -59,6 +61,8 @@ export async function writeStreamData<T extends BaseStreamData>(
   data: T,
   options: WriteStreamDataOptions = {},
 ): Promise<string> {
+  await ensureStreamKeyIsAvailable(streamKey)
+
   const args: string[] = []
 
   if (options.maxLen !== undefined) {
@@ -80,6 +84,8 @@ export async function* readStreamChunks<T = unknown>(
   streamKey: string,
   options: ReadStreamChunksOptions = {},
 ): AsyncGenerator<RedisStreamChunk<T>> {
+  await ensureStreamKeyIsAvailable(streamKey)
+
   const client = createBlockingRedisClient()
   let cursor = options.fromId ?? '0'
   let hasSeenActiveStream = await isStreamActive(streamKey)
@@ -165,6 +171,17 @@ async function waitForStreamActive(
 
 function activeStreamKey(streamKey: string): string {
   return `${ACTIVE_STREAM_KEY_PREFIX}:${streamKey}`
+}
+
+function streamCounterKey(streamKey: string): string {
+  return `${STREAM_COUNTER_KEY_PREFIX}:${streamKey}`
+}
+
+async function ensureStreamKeyIsAvailable(streamKey: string): Promise<void> {
+  const type = await redis.type(streamKey)
+  if (type !== 'none' && type !== 'stream') {
+    await redis.del(streamKey)
+  }
 }
 
 function delay(ms: number): Promise<void> {

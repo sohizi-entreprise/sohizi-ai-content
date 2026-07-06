@@ -202,9 +202,9 @@ function useHandleUploadedFiles(props: HandleProps) {
                       onAdd({
                             id: file.id,
                             status: 'uploaded',
-                            type: file.file.type,
+                            type: result.asset.type,
                             preview: file.preview,
-                            url: file.preview ?? result.storageKey,
+                            url: result.asset.url,
                         })
                     },
                     onError: (error) => {
@@ -238,7 +238,7 @@ function useHandleUploadedFiles(props: HandleProps) {
 
   const RenderPreview = ({file}: {file: AttachedFile}) => {
     switch (true) {
-        case file.type.startsWith('image/'):
+        case file.type.startsWith('image/') || file.type === 'image':
             return <img src={file.preview || (file.status === 'uploaded' && file.url) || ''} 
                             alt={file.id} 
                             className='w-full h-full object-cover'
@@ -246,9 +246,9 @@ function useHandleUploadedFiles(props: HandleProps) {
 
         default:
             return (
-                <div className='w-full h-full flex items-center justify-center bg-black border'>
+                <div className='w-full h-full flex text-foreground items-center justify-center bg-black border'>
                     <span>
-                        {file.type.split('/')[1].toUpperCase()}
+                        K{file.type.split('/')[1]?.toUpperCase()}
                     </span>
                 </div>
             )

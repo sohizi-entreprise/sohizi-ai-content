@@ -5,6 +5,7 @@ import type {
   MediaType,
 } from '../types'
 import { AttachedFile } from '@/components/widgets/file-attachments'
+import { Editor } from '@tiptap/core'
 
 type ActiveGenerationRequest = {
   requestId: string
@@ -17,6 +18,7 @@ type StoreState = {
   prompt: string
   settings: MediaGenerationSettings
   attachments: Array<AttachedFile>
+  chatInput: Editor | null
 }
 
 type StoreActions = {
@@ -32,6 +34,8 @@ type StoreActions = {
   addAttachment: (attachment: AttachedFile) => void
   removeAttachment: (id: string) => void
   reset: () => void
+  setChatInput: (chatInput: Editor | null) => void
+  clearChatInput: () => void
 }
 
 const initialState: StoreState = {
@@ -40,6 +44,7 @@ const initialState: StoreState = {
   prompt: '',
   settings: defaultMediaSettings,
   attachments: [],
+  chatInput: null,
 }
 
 
@@ -66,8 +71,15 @@ export const useMediaGeneratorStore = create<StoreState & StoreActions>(
       return { attachments: [...state.attachments, data] }
     }),
     removeAttachment: (id) => set((state) => ({ attachments: state.attachments.filter((attachment) => attachment.id !== id) })),
-    appendActiveGenerationRequest: (data) => set((state) => ({ activeGenerationRequests: [...state.activeGenerationRequests, data] })),
+    appendActiveGenerationRequest: (data) => set((state) => ({ activeGenerationRequests: [data, ...state.activeGenerationRequests] })),
     removeActiveGenerationRequest: (requestId) => set((state) => ({ activeGenerationRequests: state.activeGenerationRequests.filter((request) => request.requestId !== requestId) })),
     reset: () => set(initialState),
+    setChatInput: (chatInput) => set({ chatInput }),
+    clearChatInput: () => set(state => {
+      if (state.chatInput) {
+        state.chatInput.commands.setContent('', {emitUpdate: false})
+      }
+      return {prompt: ''}
+    }),
   }),
 )

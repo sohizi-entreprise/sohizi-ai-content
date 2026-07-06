@@ -87,3 +87,25 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
         await assertProjectAccess(user.id, params.projectId)
         return mediaService.cancelGeneration(params.requestId);
     })
+    .guard({
+        params: z.object({
+            projectId: z.uuid('Invalid project id'),
+            assetId: z.uuid('Invalid asset id'),
+        }),
+    })
+    .get('/assets/:assetId/download-url', async ({ params, user }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.getDownloadUrl(params.projectId, params.assetId);
+    })
+    .delete('/assets/:assetId', async ({ params, user }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.deleteAsset(params.assetId);
+    })
+    .post('/assets/:assetId/move-to-folder', async ({ params, user, body }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.attachAssetToFileNode(params.projectId, params.assetId, body.folderId);
+    }, {
+        body: z.object({
+            folderId: z.uuid('Invalid folder id'),
+        }),
+    })

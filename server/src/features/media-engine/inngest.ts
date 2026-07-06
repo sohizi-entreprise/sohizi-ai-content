@@ -11,7 +11,7 @@ import { imageBillable } from './generators/billable-image';
 import { audioBillable } from './generators/billable-audio';
 import { videoBillable, videoActualCredits } from './generators/billable-video';
 import { isMediaError } from './errors';
-import { decrementKey } from '../generation-request/stream-handler';
+import { decrementKey, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
 
 type ImageEventData = {
     requestId: string;
@@ -100,6 +100,7 @@ async function commitRequest(requestId: string, status: 'finished' | 'error') {
     const res = await decrementKey(requestId)
     if(res === 0){
         await repo.updateAssetRequest(requestId, { status });
+        await removeStreamActive(requestId);
     }
 }
 
@@ -186,6 +187,7 @@ export const handleImageGeneration = inngest.createFunction(
                 const destPath = storage.buildStoragePath('images', imgName);
                 const upload = await storage.uploadFromUrl(result.urls[i], destPath);
                 uploaded.push(upload);
+                // await writeStreamData(requestId, {runId: requestId, event:'media', data: {type: 'image', ...upload}});
             }
             return uploaded;
         });
@@ -205,6 +207,7 @@ export const handleImageGeneration = inngest.createFunction(
                     metadata: fileMetadata,
                     storageKey: upload.storageKey,
                 });
+                await writeStreamData(requestId, {runId: requestId, event:'asset', data: asset});
                 newAssets.push(asset);
             }
 

@@ -1,11 +1,11 @@
 import {
+  useEffect,
   useRef,
 } from 'react'
 import {
   AudioLines,
   Clapperboard,
   ImageIcon,
-  RefreshCw,
 } from 'lucide-react'
 import { useMediaGeneratorStore } from '../store/media-generator-store'
 import type { Editor, JSONContent } from '@tiptap/core'
@@ -65,15 +65,13 @@ export type MediaChatGeneratePayload = {
 
 export type MediaChatInputProps = {
   projectId: string
-  onGenerate?: (payload: MediaChatGeneratePayload) => void | Promise<void>
-  isGenerating?: boolean
   className?: string
 }
 
 const TABS: Array<{ value: MediaType; label: string; icon: LucideIcon }> = [
-  { value: 'video', label: 'Video Generation', icon: Clapperboard },
-  { value: 'image', label: 'Image Generation', icon: ImageIcon },
-  { value: 'audio', label: 'Audio Generation', icon: AudioLines },
+  { value: 'image', label: 'Image', icon: ImageIcon },
+  { value: 'video', label: 'Video', icon: Clapperboard },
+  { value: 'audio', label: 'Audio', icon: AudioLines },
 ]
 
 
@@ -84,6 +82,7 @@ export function MediaChatInput({
 
   const setMediaType = useMediaGeneratorStore((state) => state.setMediaType)
   const mediaType = useMediaGeneratorStore((state) => state.mediaType)
+  const setChatInput = useMediaGeneratorStore((state) => state.setChatInput)
 
   const currentSettings = useMediaGeneratorStore((state) => state.settings[mediaType])
 
@@ -93,19 +92,25 @@ export function MediaChatInput({
 
   const updateSettings = useMediaGeneratorStore((state) => state.updateSettings)
   const setPrompt = useMediaGeneratorStore((state) => state.setPrompt)
-
-  const reset = useMediaGeneratorStore((state) => state.reset)
  
   const editorRef = useRef<Editor | null>(null)
 
   const supportsImageAttachments = mediaType !== 'audio'
 
   const { sendRequest, isPending, disableButton } = useSendRequest(projectId)
-  
 
   const handleSettingsUpdate = (key:string, value:string) => {
     updateSettings(mediaType, key, value)
   }
+
+  useEffect(()=>{
+    if (editorRef.current) {
+      setChatInput(editorRef.current)
+    }
+    return () => {
+      setChatInput(null)
+    }
+  },[editorRef.current, setChatInput])
 
   return (
     <section
@@ -122,7 +127,7 @@ export function MediaChatInput({
             onValueChange={(value) => setMediaType(value as MediaType)}
             className="min-w-0 flex-1"
           >
-            <TabsList className="h-9 w-full justify-start gap-1 rounded-none bg-transparent p-0">
+            <TabsList className="h-9 w-full justify-start gap-1 rounded-none bg-transparent p-0 pl-6">
               {TABS.map((tab) => {
                 const Icon = tab.icon
 
@@ -131,31 +136,20 @@ export function MediaChatInput({
                     key={tab.value}
                     value={tab.value}
                     className={cn(
-                      'h-9 flex-none rounded-t-2xl rounded-b-none border-0 bg-transparent px-4 text-sm text-zinc-400 shadow-none',
-                      'data-[state=active]:bg-white/8 data-[state=active]:text-white data-[state=active]:shadow-[0_0_34px_rgba(255,255,255,0.12)]',
+                      'relative h-9 flex-none rounded-t-2xl rounded-b-none border-0 bg-transparent px-4 text-sm text-zinc-400',
+                      mediaType === tab.value && 'bg-surface/30! text-primary! rounded-out-b-lg',
                     )}
                   >
-                    <Icon className="size-4" />
+                    <Icon className="size-3" />
                     <span className="hidden sm:inline">{tab.label}</span>
                   </TabsTrigger>
                 )
               })}
             </TabsList>
           </Tabs>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={reset}
-            className="h-8 shrink-0 rounded-lg px-2 text-xs text-zinc-300 hover:bg-white/8 hover:text-white"
-          >
-            <RefreshCw className="size-3.5" />
-            Reset
-          </Button>
         </div>
 
-        <div className="mt-5 flex items-start gap-6 px-1">
+        <div className="flex items-start gap-6 px-2 py-4 bg-surface/30 rounded-t-xl">
           {supportsImageAttachments ? (
             <FileAttachment
               projectId={projectId}
@@ -176,7 +170,7 @@ export function MediaChatInput({
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 bg-surface/30 p-2 rounded-b-xl border-t">
           <SettingsPopover
             settings={currentSettings}
             onUpdate={handleSettingsUpdate}

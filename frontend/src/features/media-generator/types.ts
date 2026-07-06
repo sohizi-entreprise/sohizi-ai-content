@@ -15,20 +15,6 @@ export type MediaVariant = {
   height?: number
 }
 
-export type GeneratedMediaItem = {
-  id: string
-  type: MediaType
-  title: string
-  prompt: string
-  model: string
-  createdAt: string
-  thumbnailUrl?: string
-  url?: string
-  variants?: Array<MediaVariant>
-  durationSeconds?: number
-  settings: Record<string, string | number>
-}
-
 export type ImageGenerationSettings = {
   model: string
   variations: number

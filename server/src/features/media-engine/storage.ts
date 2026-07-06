@@ -18,6 +18,8 @@ type S3Config = {
     region: string;
 };
 
+type SignedUrlMethod = 'GET' | 'PUT';
+
 function getS3Config(): S3Config {
     const endpoint = process.env.R2_ENDPOINT;
     const accessKeyId = process.env.R2_ACCESS_KEY_ID;
@@ -93,7 +95,12 @@ export function buildPublicUrl(storageKey: string): string {
     return `${baseUrl.replace(/\/$/, '')}/${storageKey}`;
 }
 
-function createSignedPutUrl(config: S3Config, storageKey: string): string {
+function createSignedObjectUrl(
+    config: S3Config,
+    storageKey: string,
+    method: SignedUrlMethod,
+    queryParams: Record<string, string> = {},
+): string {
     const now = new Date();
     const dateStamp = getDateStamp(now);
     const amzDate = formatAmzDate(now);
@@ -107,7 +114,8 @@ function createSignedPutUrl(config: S3Config, storageKey: string): string {
     ].join('/');
     const signedHeaders = 'host';
 
-    const queryParams: Record<string, string> = {
+    const signingQueryParams: Record<string, string> = {
+        ...queryParams,
         'X-Amz-Algorithm': S3_SIGNING_ALGORITHM,
         'X-Amz-Credential': credential,
         'X-Amz-Date': amzDate,
@@ -115,10 +123,10 @@ function createSignedPutUrl(config: S3Config, storageKey: string): string {
         'X-Amz-SignedHeaders': signedHeaders,
     };
 
-    const canonicalQueryString = buildCanonicalQueryString(queryParams);
+    const canonicalQueryString = buildCanonicalQueryString(signingQueryParams);
     const canonicalHeaders = `host:${url.host}\n`;
     const canonicalRequest = [
-        'PUT',
+        method,
         canonicalUri,
         canonicalQueryString,
         canonicalHeaders,
@@ -144,6 +152,16 @@ function createSignedPutUrl(config: S3Config, storageKey: string): string {
     return url.toString();
 }
 
+function createSignedPutUrl(config: S3Config, storageKey: string): string {
+    return createSignedObjectUrl(config, storageKey, 'PUT');
+}
+
+function createSignedGetUrl(config: S3Config, storageKey: string, fileName: string): string {
+    return createSignedObjectUrl(config, storageKey, 'GET', {
+        'response-content-disposition': buildAttachmentDisposition(fileName),
+    });
+}
+
 function buildObjectUploadUrl(
     endpoint: string,
     bucket: string,
@@ -162,8 +180,13 @@ function buildObjectUploadUrl(
 
 function buildCanonicalQueryString(params: Record<string, string>): string {
     return Object.entries(params)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([key, value]) => `${awsEncodeURIComponent(key)}=${awsEncodeURIComponent(value)}`)
+        .map(([key, value]) => [awsEncodeURIComponent(key), awsEncodeURIComponent(value)] as const)
+        .sort(([aKey, aValue], [bKey, bValue]) => {
+            if (aKey !== bKey) return aKey < bKey ? -1 : 1;
+            if (aValue !== bValue) return aValue < bValue ? -1 : 1;
+            return 0;
+        })
+        .map(([key, value]) => `${key}=${value}`)
         .join('&');
 }
 
@@ -191,6 +214,14 @@ function awsEncodeURIComponent(value: string): string {
     );
 }
 
+function buildAttachmentDisposition(fileName: string): string {
+    const fallbackFileName = sanitizeFileName(fileName)
+        .replace(/[^\x20-\x7E]|["\r\n;]/g, '')
+        || 'download';
+
+    return `attachment; filename="${fallbackFileName}"; filename*=UTF-8''${awsEncodeURIComponent(fileName)}`;
+}
+
 export async function generateSignedUploadUrl(
     fileName: string,
     contentType: string,
@@ -204,6 +235,17 @@ export async function generateSignedUploadUrl(
         url: createSignedPutUrl(config, storageKey),
         storageKey,
         maxSizeInBytes,
+    };
+}
+
+export async function generateSignedDownloadUrl(
+    storageKey: string,
+    fileName: string,
+): Promise<{ url: string }> {
+    const config = getS3Config();
+
+    return {
+        url: createSignedGetUrl(config, storageKey, fileName),
     };
 }
 
