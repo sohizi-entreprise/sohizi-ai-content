@@ -21,6 +21,7 @@ import {
   import { useSession } from '@/lib/auth-client'
 import { useEditorStore } from '@/features/editor/stores/editor-store'
 import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
+import { SphereLoader } from '../ui/loaders'
   
   export function AppHeader() {
     
@@ -31,10 +32,11 @@ import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
       <header className="flex h-11 shrink-0 items-center justify-between border-border  px-3">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary">
+            {/* <div className="flex size-6 items-center justify-center rounded-md bg-primary">
               <span className="text-xs font-bold text-primary-foreground">S</span>
-            </div>
-            <span className="text-sm font-semibold text-foreground">Sohizi AI</span>
+            </div> */}
+            <SphereLoader isLoading={true} size={32} showRings={false} />
+            <span className="text-sm font-semibold text-foreground">Sohizi Lab</span>
           </div>
   
           <span className="text-muted-foreground/40">|</span>

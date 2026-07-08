@@ -26,6 +26,7 @@ import {
 import { useAssetMenu } from '../hooks/use-asset-menu'
 import { toast } from 'sonner'
 import { searchFilesByName } from '@/features/projects/request'
+import AudioPlayer from './audio-player'
 
 type MediaCardProps = {
   item: MediaAsset
@@ -100,10 +101,7 @@ function RenderVideo({item}: {item: MediaAsset}) {
 function RenderAudio({item}: {item: MediaAsset}) {
   return (
     <div className='size-full flex items-center justify-center'>
-      <audio className='w-11/12 max-w-sm'
-            src={item.url}
-            controls 
-      />
+      <AudioPlayer src={item.url} className="size-full"/>
     </div>
   )
 }

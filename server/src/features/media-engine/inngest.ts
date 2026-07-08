@@ -8,7 +8,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { Asset } from '@/db/schema';
 import { billingService } from '@/features/billing';
 import { imageBillable } from './generators/billable-image';
-import { audioBillable } from './generators/billable-audio';
+import { AudioBillableInput } from './generators/billable-ai-audio';
+import { aiAudioBillable } from './generators/billable-ai-audio';
 import { videoBillable, videoActualCredits } from './generators/billable-video';
 import { isMediaError } from './errors';
 import { decrementKey, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
@@ -30,8 +31,7 @@ type AudioEventData = {
     projectId: string;
     organizationId: string;
     userId: string;
-    prompt: string;
-    audioType: 'speech' | 'sound-effect' | 'music' | 'dialogue';
+    payload: AudioBillableInput
 }
 
 type VideoEventData = {
@@ -226,74 +226,59 @@ export const handleAudioGeneration = inngest.createFunction(
         id: 'media-generate-audio',
         retries: 0,
         triggers: [{ event: 'media/generate.audio' }],
-        onFailure: async ({ event, error, step }) => {
-            const data = event.data.event.data as Partial<AudioEventData> & { _reservationId?: string };
-            const requestId = data.requestId;
-            if (requestId) {
-                await commitRequest(requestId, 'error')
-            }
+        onFailure: async ({ event }) => {
+            const data = event.data.event.data as AudioEventData & { _reservationId?: string };
             const reservationId = data._reservationId;
             if (reservationId) {
-                await step.run('refund-credits', () => safeRefund(reservationId, 'audio-generation-failed'));
+                await safeRefund(reservationId, 'audio-generation-failed');
+            }
+            if (data.requestId) {
+                await commitRequest(data.requestId, 'error');
             }
         },
     },
     async ({ event, step }) => {
         const data = event.data as AudioEventData;
-        const { requestId, projectId, organizationId, userId, prompt, audioType } = data;
-
-        await step.run('mark-processing', () =>
-            streamRepo.updateGenerationRequest(requestId, { status: 'processing' }),
-        );
-
-        const billableInput = { audioType, prompt };
+        const { requestId, projectId, organizationId, userId, payload } = data;
 
         const reservation = await step.run('reserve-credits', async () => {
-            const estimatedCredits = await audioBillable.estimateCost(billableInput);
-            const idempotencyKey = audioBillable.idempotencyKey(billableInput, { organizationId, userId });
+            const estimatedCredits = await aiAudioBillable.estimateCost(payload);
+            const idempotencyKey = aiAudioBillable.idempotencyKey(payload, { organizationId });
             const res = await billingService.reserve({
                 organizationId,
                 userId,
-                operation: audioBillable.operation,
+                operation: aiAudioBillable.operation,
                 estimatedCredits,
                 ttlMs: SYNC_RESERVATION_TTL_MS,
                 idempotencyKey,
-                metadata: { requestId, projectId, kind: 'audio', audioType },
+                metadata: { requestId, projectId, kind: 'audio', type: payload.type },
             });
             return { id: res.id, estimatedCredits: estimatedCredits.toString() };
         });
 
-        let upload;
-        let actualCreditsStr = '0';
-        let providerCostUsd = 0;
+        let result;
         try {
-            const generated = await step.run('generate-and-upload-audio', async () => {
-                let billable;
+            result = await step.run('generate-and-upload-audio', async () => {
                 try {
-                    billable = await audioBillable.execute(billableInput, {
+                    const billCtx = {
                         organizationId,
                         userId,
                         signal: new AbortController().signal,
                         reservationId: reservation.id,
-                    });
+                    };
+                    const billable = await aiAudioBillable.execute(payload, billCtx);
+                    const buffer = Buffer.from(billable.output.result as ArrayBuffer);
+                    const fileName = `audio-${uuidv4().slice(0, 8)}.mp3`;
+                    const destPath = storage.buildStoragePath('audios', fileName);
+                    const uploaded = await storage.uploadFromBuffer(buffer, destPath, 'audio/mpeg');
+                    return {
+                        upload: uploaded,
+                        actualCredits: billable.actualCredits.toString(),
+                    };
                 } catch (error) {
-                    if (error instanceof NonRetriableError) throw error;
                     wrapNonRetryable(error);
                 }
-
-                const file = billable.output.response.file;
-                const buffer = Buffer.from(await file.arrayBuffer());
-                const destPath = storage.buildStoragePath('audios', file.name);
-                const uploaded = await storage.uploadFromBuffer(buffer, destPath, file.type);
-                return {
-                    upload: uploaded,
-                    actualCredits: billable.actualCredits.toString(),
-                    providerCostUsd: billable.output.providerCostUsd,
-                };
             });
-            upload = generated.upload;
-            actualCreditsStr = generated.actualCredits;
-            providerCostUsd = generated.providerCostUsd;
         } catch (error) {
             await step.run('refund-on-error', () => safeRefund(reservation.id, 'audio-execute-error'));
             throw error;
@@ -302,25 +287,25 @@ export const handleAudioGeneration = inngest.createFunction(
         await step.run('settle-credits', () =>
             billingService.settle({
                 reservationId: reservation.id,
-                actualCredits: BigInt(actualCreditsStr),
-                metadata: { requestId, providerCostUsd },
+                actualCredits: BigInt(result.actualCredits),
+                metadata: { requestId },
             }),
         );
 
         const asset = await step.run('save-asset', async () => {
-            const fileMetadata = await storage.getFileMetadata(upload.storageKey);
+            const fileMetadata = await storage.getFileMetadata(result.upload.storageKey);
             const asset = await repo.createAsset({
                 projectId,
-                name: upload.storageKey.split('/').pop() ?? `audio-${uuidv4().slice(0, 8)}.mp3`,
+                name: result.upload.storageKey.split('/').pop() ?? `audio-${uuidv4().slice(0, 8)}.mp3`,
                 type: 'audio',
-                url: upload.url,
+                url: result.upload.url,
                 source: 'ai-generated',
                 generationRequestId: requestId,
                 metadata: fileMetadata,
-                storageKey: upload.storageKey,
+                storageKey: result.upload.storageKey,
             });
-
-            await commitRequest(requestId, 'finished')
+            await writeStreamData(requestId, { runId: requestId, event: 'asset', data: asset });
+            await commitRequest(requestId, 'finished');
             return asset;
         });
 
@@ -466,8 +451,8 @@ export const handleVideoGeneration = inngest.createFunction(
                 metadata: fileMetadata,
                 storageKey: upload.storageKey,
             });
-
-            await commitRequest(requestId, 'finished')
+            await writeStreamData(requestId, { runId: requestId, event: 'asset', data: asset });
+            await commitRequest(requestId, 'finished');
             return asset;
         });
 

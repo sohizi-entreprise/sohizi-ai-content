@@ -2,17 +2,21 @@ import {
     providerCostToCredits,
     providerCostToActualCredits,
 } from './cost-utils';
-import { getTranscriptionCost, getTextToSpeechCost, speechToText, SpeechToTextParams, textToSpeech, TextToSpeechParams, estimateAudioSeconds, WordsWithText } from './ai-audio';
+import { getTranscriptionCost, getTextToSpeechCost, speechToText, SpeechToTextParams, textToSpeech, TextToSpeechParams, WordsWithText, getMusicCost, generateMusic } from './ai-audio';
 import type { Billable, BillableContext, BillableResult, Credits } from '@/features/billing/types';
-import { TranscriptionWord } from 'openai/resources/audio/transcriptions';
 import { fastHash64 } from '@/utils/fast-hash';
 
-type AudioBillableInput = {
+export type AudioBillableInput = {
     type: 'speech-to-text';
     params: SpeechToTextParams & { audioDurationSeconds: number };
 } | {
     type: 'text-to-speech';
     params: TextToSpeechParams;
+} | {
+    type: 'generate-music';
+    params: {
+        prompt: string;
+    }
 }
 
 type AudioBillableOutput = {
@@ -20,6 +24,9 @@ type AudioBillableOutput = {
     result: string | WordsWithText;
 } | {
     type: 'text-to-speech';
+    result: ArrayBuffer;
+} | {
+    type: 'generate-music';
     result: ArrayBuffer;
 }
 
@@ -39,6 +46,10 @@ export const aiAudioBillable: Billable<AudioBillableInput, AudioBillableOutput> 
             }
             case 'text-to-speech': {
                 providerCostUsd = getTextToSpeechCost(input.params.text);
+                break;
+            }
+            case 'generate-music': {
+                providerCostUsd = getMusicCost();
                 break;
             }
             default:
@@ -75,6 +86,18 @@ export const aiAudioBillable: Billable<AudioBillableInput, AudioBillableOutput> 
                     }),
                 }
             }
+            case 'generate-music': {
+                const output = await generateMusic(input.params.prompt);
+                return {
+                    output: {
+                        type: 'generate-music',
+                        result: output.result,
+                    },
+                    actualCredits: providerCostToActualCredits(output.cost, {
+                        overheadRate: AUDIO_OVERHEAD_RATE,
+                    }),
+                }
+            }
         }
     },
     idempotencyKey(input: AudioBillableInput, ctx: { organizationId: string; metadata?: Record<string, unknown> }): string {
@@ -84,6 +107,8 @@ export const aiAudioBillable: Billable<AudioBillableInput, AudioBillableOutput> 
                 return `media:ai-audio:speech-to-text:${runId}:${fastHash64(input.params.url)}`;
             case 'text-to-speech':
                 return `media:ai-audio:text-to-speech:${runId}:${fastHash64(input.params.text)}`;
+            case 'generate-music':
+                return `media:ai-audio:generate-music:${runId}:${fastHash64(input.params.prompt)}`;
         }
     },
 }

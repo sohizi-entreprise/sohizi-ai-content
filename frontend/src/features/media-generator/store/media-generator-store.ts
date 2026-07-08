@@ -19,6 +19,7 @@ type StoreState = {
   settings: MediaGenerationSettings
   attachments: Array<AttachedFile>
   chatInput: Editor | null
+  viewRequestInput: {jobs: Record<string, string>[]; status: 'done' | 'blocked' | 'unknown'} | null
 }
 
 type StoreActions = {
@@ -36,6 +37,7 @@ type StoreActions = {
   reset: () => void
   setChatInput: (chatInput: Editor | null) => void
   clearChatInput: () => void
+  setViewRequestInput: (input: StoreState['viewRequestInput']) => void
 }
 
 const initialState: StoreState = {
@@ -45,6 +47,7 @@ const initialState: StoreState = {
   settings: defaultMediaSettings,
   attachments: [],
   chatInput: null,
+  viewRequestInput: null,
 }
 
 
@@ -81,5 +84,6 @@ export const useMediaGeneratorStore = create<StoreState & StoreActions>(
       }
       return {prompt: ''}
     }),
+    setViewRequestInput: (input) => set({ viewRequestInput: input }),
   }),
 )

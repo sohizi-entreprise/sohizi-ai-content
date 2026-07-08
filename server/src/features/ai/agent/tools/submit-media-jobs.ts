@@ -25,6 +25,10 @@ const models = {
     ],
 }
 
+const textToSpeechVoices = [
+    'alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'onyx', 'nova', 'sage', 'shimmer', 'verse', 'marin', 'cedar'
+]
+
 const imageModels = z.enum(models.image);
 const videoModels = z.enum(models.video);
 const videoAspectRatios = ['16:9', '9:16', '1:1'] as const;
@@ -47,7 +51,19 @@ const videoJobSchema = z.object({
     referenceImage: z.url().optional().describe('Optional reference image URL to guide generation'),
 });
 
-const mediaJobSchema = z.discriminatedUnion('type', [imageJobSchema, videoJobSchema]);
+const musicJobSchema = z.object({
+    type: z.literal('music'),
+    instructions: z.string().min(1).describe('A clear detailed prompt to generate the music'),
+});
+
+const textToSpeechJobSchema = z.object({
+    type: z.literal('text-to-speech'),
+    text: z.string().min(1).describe('The text to convert to speech'),
+    voice: z.enum(textToSpeechVoices).describe('The voice to use for text to speech'),
+    instructions: z.string().optional().describe('Optional instructions to guide the generation'),
+});
+
+const mediaJobSchema = z.discriminatedUnion('type', [imageJobSchema, videoJobSchema, musicJobSchema, textToSpeechJobSchema]);
 
 export type MediaJob = z.infer<typeof mediaJobSchema>;
 
@@ -106,6 +122,44 @@ export const submitMediaJobsTool = buildBaseTool({
                         },
                     });
                     break;
+                case 'music':
+                    await inngest.send({
+                        name: 'media/generate.audio',
+                        data: {
+                            requestId: session.runId,
+                            projectId: session.projectId,
+                            organizationId: session.organizationId,
+                            userId: session.userId,
+                            payload: {
+                                type: 'generate-music',
+                                params: {
+                                    prompt: job.instructions,
+                                },
+                            },
+                        },
+                    });
+                    break;
+                case 'text-to-speech':
+                    await inngest.send({
+                        name: 'media/generate.audio',
+                        data: {
+                            requestId: session.runId,
+                            projectId: session.projectId,
+                            organizationId: session.organizationId,
+                            userId: session.userId,
+                            payload: {
+                                type: 'text-to-speech',
+                                params: {
+                                    text: job.text,
+                                    voice: job.voice,
+                                    instructions: job.instructions,
+                                },
+                            },
+                        },
+                    });
+                    break;
+                // default:
+                //     throw new Error(`Invalid job type: ${job.type}`);
             }
         }
         

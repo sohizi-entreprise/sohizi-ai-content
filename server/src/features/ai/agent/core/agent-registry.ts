@@ -59,7 +59,7 @@ registerAgent({
         reasoningSummary: 'auto',
         maxOutputTokens: 3000,
     },
-    modelId: 'gpt-5.1' // This will be overridden by the model passed to the agent
+    modelId: 'openai/gpt-5.1' // This will be overridden by the model passed to the agent
 });
 
 registerAgent({

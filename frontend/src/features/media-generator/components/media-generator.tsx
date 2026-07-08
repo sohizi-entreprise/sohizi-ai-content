@@ -33,7 +33,7 @@ export function MediaGenerator() {
         defaultSize={50}
         minSize={40}
         maxSize={50}
-        className="rounded-2xl mb-2 bg-surface"
+        className="rounded-2xl mb-2 bg-white/10"
       >
         <MediaChat projectId={projectId} />
       </ResizablePanel>

@@ -1,5 +1,6 @@
 import openAIClient from "@/lib/open-ai-client";
 import { APIError } from "openai";
+import { OpenRouter } from '@openrouter/sdk';
 
 import { wrapAsMediaError } from '../errors';
 import { TranscriptionCreateParamsNonStreaming, TranscriptionWord } from "openai/resources/audio/transcriptions";
@@ -98,6 +99,68 @@ export const textToSpeech = async ({text, model='gpt-4o-mini-tts-2025-12-15', vo
             context = error.message;
         }
         throw wrapAsMediaError(error, {status, context});
+    }
+}
+
+const MUSIC_MODELS = [
+    {
+        id: 'google/lyria-3-clip-preview',
+        costPerSong: 0.04
+    },
+    {
+        id: 'google/lyria-3-pro-preview',
+        costPerSong: 0.08
+    }
+]
+
+export const getMusicCost = () => {
+    return MUSIC_MODELS[0].costPerSong;
+}
+
+export const generateMusic = async(prompt: string) => {
+    const model = MUSIC_MODELS[0].id;
+
+    const client = new OpenRouter({
+        apiKey: process.env.OPENROUTER_API_KEY,
+    });
+    const stream = await client.chat.send({
+        chatRequest: {
+            model,
+            stream: true,
+            messages: [
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            modalities: ['audio'],
+        }
+    });
+
+    const audioChunks: string[] = [];
+    let cost = 0;
+    for await (const chunk of stream) {
+        const delta = chunk.choices?.[0]?.delta;
+        if (delta?.audio?.data) {
+            audioChunks.push(delta.audio.data);
+        }
+        if (chunk.usage?.cost) {
+            cost = chunk.usage.cost;
+        }
+    }
+
+    if (audioChunks.length === 0) {
+        throw new Error("No audio found in response");
+    }
+
+    const buffer = Buffer.from(audioChunks.join(''), 'base64');
+    const arrayBuffer = buffer.buffer.slice(
+        buffer.byteOffset,
+        buffer.byteOffset + buffer.byteLength,
+    );
+    return {
+        result: arrayBuffer,
+        cost,
     }
 }
 

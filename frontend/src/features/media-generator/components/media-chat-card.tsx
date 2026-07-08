@@ -5,16 +5,19 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
 import { buildOptimizeddImageUrl, imageUrlTransforms } from "@/utils/transform-url";
-import { PlusCircle } from "lucide-react";
+import { Copy, Eye, PlusCircle } from "lucide-react";
 import { MediaAsset, MediaGenerationRun } from "../requests";
 import { Message } from "@/features/chat";
 import { MediaType } from "../types";
-import { TextShimmerCss } from "@/components/ui/loaders";
+import { SphereLoader} from "@/components/ui/loaders";
 import MediaLoader from "./media-loader";
 import { useEffect, useState } from "react";
 import { useMediaGeneratorStore } from "../store/media-generator-store";
 import { useBufferChunks } from "@/features/chat/hooks/use-buffer-chunks";
 import { useUpdateAssetsList } from "../query-mutations";
+import { toast } from "sonner";
+import { cn, timeFromNow } from "@/lib/utils";
+import AudioPlayer from "./audio-player";
 
 type GenerationType = 'image' | 'video' | 'audio';
 
@@ -38,7 +41,6 @@ type Props = {
 
 export default function MediaChatCard(props: Props) {
   const {run} = props;
-  const userMsg = extractUserMessage(run.messages);
   const appendActiveGenerationRequest = useMediaGeneratorStore(state => state.appendActiveGenerationRequest);
   const removeActiveGenerationRequest = useMediaGeneratorStore(state => state.removeActiveGenerationRequest);
 
@@ -55,37 +57,60 @@ export default function MediaChatCard(props: Props) {
   }, [isRunning])
 
   return (
-    <div className='flex flex-col gap-2'>
-        <div className='flex items-start gap-2'>
-          <div className='flex items-center gap-1'>
-            {userMsg.attachments.map((attachment) => (
-              <SmallAvatar key={attachment.url} attachment={attachment} />
-            ))}
-          </div>
-          
-          {/* prompt */}
-          <div className="flex-1">
-            <p className="line-clamp-2 text-sm text-foreground tracking-wide break-all">
-              {userMsg.text}
-            </p>
-          </div>
-        </div>
+    <div className='flex flex-col gap-4'>
+      <div className="flex items-center gap-2">
+        <div className="h-px w-8 bg-primary rounded-full" />
+        <span className="text-xs text-muted-foreground tracking-wide">
+          {timeFromNow(run.createdAt)}
+        </span>
+      </div>
+        <RenderUserMessage messages={run.messages} />
 
         {/* Generation */}
-        {
-          isRunning ? (
-            <RenderAssistantMessage run={run}/>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <div className="grid grid-cols-5 gap-1">
-                <RenderAssets assets={run.assets} status={run.status} />
+        <div className="border p-2 rounded-xl">
+          {
+            isRunning ? (
+              <RenderAssistantMessage run={run}/>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-5 gap-1">
+                  <RenderAssets assets={run.assets} status={run.status} />
+                </div>
+                <AssistantMessage messages={run.messages} isLoading={false}/>
               </div>
-              <AssistantMessage messages={run.messages}/>
-            </div>
-          )
-        }
+            )
+          }
+        </div>
 
     </div>
+  )
+}
+
+const RenderUserMessage = ({messages}: {messages: Message[]}) => {
+  const userMsg = extractUserMessage(messages);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(userMsg.text);
+    toast.success('Copied to clipboard');
+  }
+  return (
+    <div className='flex flex-col bg-white/10 p-4 rounded-r-xl rounded-bl-xl rounded-out-tl-xl sticky top-0 z-10 backdrop-blur-md'>
+      {/* prompt */}
+      <div className="flex-1 flex items-start gap-2">
+        <p className="line-clamp-2 text-sm text-foreground tracking-wide break-all flex-1">
+          {userMsg.text}
+        </p>
+        <Button variant="ghost" size="icon-sm" onClick={handleCopy} className="hover:bg-transparent! hover:text-foreground text-muted-foreground">
+          <Copy />
+        </Button> 
+      </div>
+
+      <div className='flex items-center gap-1'>
+        {userMsg.attachments.map((attachment) => (
+          <SmallAvatar key={attachment.url} attachment={attachment} />
+        ))}
+      </div>
+    </div>
+
   )
 }
 
@@ -112,7 +137,6 @@ const RenderAssistantMessage = ({run}: {run: MediaGenerationRun;}) => {
     initialMessages: [], 
     onFinish,
     onAsset: (asset) => {
-      console.log('asset', asset)
       updateAssetsList([asset])
     }
   })
@@ -122,18 +146,25 @@ const RenderAssistantMessage = ({run}: {run: MediaGenerationRun;}) => {
       <div className="grid grid-cols-5 gap-1">
         <RenderAssets assets={assets} status={runStatus} />
       </div>
-      <AssistantMessage messages={messages} />
-      {isRunning && <TextShimmerCss text="Processing..." />}
+      <AssistantMessage messages={messages} isLoading={isRunning} className="flex-1" />
     </div>
   )
 }
 
-function AssistantMessage({messages}: {messages: Message[]}){
+function AssistantMessage({messages, isLoading, className}: {messages: Message[]; isLoading: boolean; className?: string;}){
   const text = extractLastMessageContent(messages)
+  const input = extractSubmitMediaJobsInput(messages);
+  
   return (
-    <p className="text-xs text-foreground tracking-wide break-all">
-      {text}
-    </p>
+    <div>
+      <div className="flex items-start gap-2">
+        <SphereLoader isLoading={isLoading} size={24} />
+        <p className={cn("text-sm font-medium text-muted-foreground tracking-wide break-all", className)}>
+          {text}
+        </p>
+      </div>
+      <RenderViewPrompt input={input} />
+    </div>
   )
 }
 
@@ -179,9 +210,26 @@ const RenderAssets = ({assets, status}: {assets: MediaAsset[]; status: MediaGene
 const GenerationCard = (props: {url: string; type: GenerationType;}) => {
 
   const {url, type} = props;
+  const containerClass = "bg-background rounded-md overflow-hidden aspect-3/4 relative"
+
+  if(type === 'audio'){
+    return (
+      <div className={containerClass}>
+        <AudioPlayer src={url} timeDisplay="remaining" className="size-full"/>
+      </div>
+    )
+  }
+
+  if(type === 'video'){
+    return (
+      <div className={containerClass}>
+        <video src={url} controls className="size-full" />
+      </div>
+    )
+  }
 
   return (
-    <div className="bg-background rounded-md overflow-hidden aspect-3/4 relative">
+    <div className={containerClass}>
       <img src={url} alt="attachment" className="size-full object-contain" />
       <div className="opacity-0 hover:opacity-100 transition-opacity duration-300 absolute inset-0 bg-black/50 flex items-end justify-end">
         <RenderReuseAsset url={url} type={type} />
@@ -230,6 +278,24 @@ const RenderReuseAsset = ({url, type, className}: {url: string; type: Generation
   )
 }
 
+const RenderViewPrompt = ({input}: {input: {jobs: Record<string, string>[]; status: 'done' | 'blocked' | 'unknown'}}) => {
+  const setViewRequestInput = useMediaGeneratorStore(state => state.setViewRequestInput);
+  const isEmpty = Object.keys(input).length === 0;
+  const onClick = () => {
+    setViewRequestInput(input)
+  }
+  if(isEmpty){
+    return null;
+  }
+  return (
+    <div className="flex items-center justify-end">
+      <Button onClick={onClick} variant="ghost" size="icon-sm" className="hover:bg-transparent! hover:text-foreground text-muted-foreground">
+        <Eye className="size-4"/>
+      </Button>
+    </div>
+  )
+}
+
 
 function extractUserMessage(messages: Message[]) {
   let userMsg: UserMessage = {
@@ -265,13 +331,13 @@ function extractUserMessage(messages: Message[]) {
 }
 
 type SubmitMediaJobsInput = {
-  jobs: Record<string, string | number | boolean>
+  jobs: Record<string, string>[]
   status: 'done' | 'blocked'
   message: string
 }
 
 function extractLastMessageContent(messages: Message[]) {
-  let text = ''
+  let text = 'Processing ...'
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index]
     if (message.role !== 'assistant') continue
@@ -290,6 +356,7 @@ function extractLastMessageContent(messages: Message[]) {
         text = `Calling tool ${lastPart.toolName}...`
         const toolName = lastPart.toolName;
         if(toolName === 'submitMediaJobs'){
+          console.log('lastPart', lastPart)
           const input = lastPart.input as SubmitMediaJobsInput;
           text = input.message || text;
         }
@@ -333,6 +400,20 @@ function getDisplayUrls(attachment: Attachment) {
   }
 
   return { avatarUrl, url };
+}
+
+function extractSubmitMediaJobsInput(messages: Message[]): Omit<SubmitMediaJobsInput, 'message'> {
+
+  const assistantMessage = messages.find((message) => message.role === 'assistant');
+  const toolCall = assistantMessage?.content.find((part) => part.type === 'tool-call');
+  if(!toolCall) return {jobs: [], status: 'done'};
+
+  const input = (toolCall.toolName === 'submitMediaJobs' ? toolCall.input : {}) as SubmitMediaJobsInput;
+
+  const jobs = input.jobs || []
+  const status = input.status || 'done'
+
+  return {jobs, status};
 }
 
 function getMediaType(mediaType: string): MediaType {
