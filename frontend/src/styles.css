@@ -2,6 +2,9 @@
 @import 'tw-animate-css';
 @import "tailwind-rounded-out";
 
+/* Include Streamdown (AI Elements markdown renderer) styles */
+@source "../node_modules/streamdown/dist/index.js";
+
 @custom-variant dark (&:is(.dark:not(.light) *));
 
 /* Disable scroll bouncing on ScrollArea */

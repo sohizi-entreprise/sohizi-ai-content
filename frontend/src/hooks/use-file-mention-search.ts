@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { searchFilesByNameQueryOptions } from '@/features/chat/query-mutation'
-import { searchFilesByName } from '@/features/chat/requests'
+import { searchFilesByName } from '@/features/projects/request'
 
 export type FileMentionItem = {
   id: string

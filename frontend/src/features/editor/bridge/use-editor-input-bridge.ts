@@ -1,4 +1,3 @@
-import { useChatStore } from '@/features/chat'
 import { Editor } from '@tiptap/core'
 import { z } from 'zod'
 import { create } from 'zustand'
@@ -6,19 +5,22 @@ import { create } from 'zustand'
 type EditorInputState = {
     input: HTMLTextAreaElement | HTMLInputElement | null
     editor: Editor | null
+    chatEditor: Editor | null
 }
 
 type EditorInputActions = {
     setInput: (input: HTMLTextAreaElement | HTMLInputElement | null) => void
     setEditor: (editor: Editor) => void
     clearEditor: (editor: Editor) => void
+    setChatEditor: (editor: Editor | null) => void
     reset: () => void
     runCommand: (command: EditorInputBridgeCommand) => void
 }
 
 const initialState: EditorInputState = {
     input: null,
-    editor: null
+    editor: null,
+    chatEditor: null
 }
 
 
@@ -29,22 +31,21 @@ export const useEditorInputBridge = create<EditorInputState & EditorInputActions
   clearEditor: (editor) => set({
     editor: editor === get().editor ? null : get().editor
   }),
+  setChatEditor: (chatEditor) => set({ chatEditor }),
   reset: () => set(initialState),
   runCommand: (command) => {
-    const { input, editor } = get()
-    if (!input || !editor) return
+    const { editor, chatEditor } = get()
+    if (!chatEditor) return
 
     switch (command.type) {
       case 'insertMention': {
-        const appendUserPrompt = useChatStore.getState().appendUserPrompt
-        const text = ` @[${command.mention.display}](${command.mention.id})`
-        appendUserPrompt(text)
+        const text = ` @[${command.mention.display}](${command.mention.id}) `
+        chatEditor.chain().focus().insertContent(text).run()
         editor
-            .chain()
+            ?.chain()
             .setTextSelection(editor.state.selection.to)
             .blur()
             .run()
-        input.focus()
         break
       }
     }

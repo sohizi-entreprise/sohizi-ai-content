@@ -84,7 +84,12 @@ export const getFileNodeByName = async(projectId: string, parentId: string | nul
     return result[0];
 }
 
-export const searchFileNodesByName = async(projectId: string, name: string, limit = 15): Promise<FileNode[]> => {
+type SearchFileNodesByNameOptions = {
+    directory?: boolean;
+    format?: FileFormat;
+}
+
+export const searchFileNodesByName = async(projectId: string, name: string, limit = 15, options?: SearchFileNodesByNameOptions): Promise<FileNode[]> => {
     const normalizedName = name.trim();
 
     if (!normalizedName) {
@@ -101,6 +106,8 @@ export const searchFileNodesByName = async(projectId: string, name: string, limi
              .where(and(
                 eq(fileNodes.projectId, projectId),
                 sql`${fileNodes.name} ILIKE ${containsPattern} ESCAPE '\\'`,
+                options?.directory === undefined ? undefined : eq(fileNodes.directory, options.directory),
+                options?.format === undefined ? undefined : eq(fileNodes.format, options.format),
              ))
              .orderBy(
                 sql`CASE
@@ -1085,6 +1092,49 @@ export const markPendingFileOperationDiffApplied = async(fileNodeId: string) => 
         return false;
     }
     return true;
+}
+
+export const listSkills = async (projectId: string) => {
+    const result = await db
+                     .select({
+                        name: fileNodes.name,
+                        description: skills.description,
+                        instructions: skills.instructions,
+                     })
+                     .from(fileNodes)
+                     .innerJoin(skills, eq(fileNodes.id, skills.fileNodeId))
+                     .where(and(
+                        eq(fileNodes.projectId, projectId),
+                        eq(fileNodes.format, 'skill'),
+                     ));
+    
+    return result;
+}
+
+export const getSkillByName = async (projectId: string, name: string) => {
+    const fileResponse = await db
+                     .select()
+                     .from(fileNodes)
+                     .where(and(
+                        eq(fileNodes.projectId, projectId),
+                        eq(fileNodes.name, name),
+                        eq(fileNodes.format, 'skill'),
+                     ));
+    const fileNode = fileResponse[0];
+    if(!fileNode) {
+        return null;
+    }
+    const skillResponse = await db
+                     .select()
+                     .from(skills)
+                     .where(and(
+                        eq(skills.fileNodeId, fileNode.id),
+                     ));
+    const skill = skillResponse[0];
+    if(!skill) {
+        return null;
+    }
+    return skill;
 }
 
 

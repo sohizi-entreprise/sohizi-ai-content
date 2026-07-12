@@ -23,6 +23,14 @@ export {
     type WrapErrorOptions,
 } from './errors'
 
+const bulkAssetIdsSchema = z.object({
+    assetIds: z.array(z.uuid('Invalid asset id')).min(1, 'At least one asset is required').max(100, 'Too many assets selected'),
+})
+
+const bulkMoveAssetsSchema = bulkAssetIdsSchema.extend({
+    folderId: z.uuid('Invalid folder id'),
+})
+
 export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
     .use(authMiddleware)
     .guard({
@@ -69,6 +77,24 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
         });
     }, {
         body: mediaService.assetRequestSchema,
+    })
+    .post('/assets/bulk/move-to-folder', async ({ params, user, body }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.attachAssetsToFileNodes(params.projectId, body.assetIds, body.folderId);
+    }, {
+        body: bulkMoveAssetsSchema,
+    })
+    .post('/assets/bulk/delete', async ({ params, user, body }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.deleteAssets(params.projectId, body.assetIds);
+    }, {
+        body: bulkAssetIdsSchema,
+    })
+    .post('/assets/bulk/download-zip', async ({ params, user, body }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.downloadAssetsZip(params.projectId, body.assetIds);
+    }, {
+        body: bulkAssetIdsSchema,
     })
     .guard({
         params: z.object({ 

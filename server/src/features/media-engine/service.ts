@@ -16,6 +16,8 @@ import { Agent } from '../ai/agent/core/agent';
 import { getModelById } from '../chat/repo';
 import { BaseStreamData, decrementKey, incrementKey, markStreamActive, readStreamChunks, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
 import { sse } from 'elysia';
+import { ZipArchive } from 'archiver';
+import { PassThrough, Readable } from 'node:stream';
 
 
 export async function getUploadUrl(projectId: string, data: GetUploadUrlInput) {
@@ -180,6 +182,9 @@ async function runAgent(payload: RunAgentPayload & { runId: string }){
           model,
           modelConfig: agentDefinition.modelConfig,
           persistence: persistence,
+          maxContextTokens: agentDefinition.maxContextTokens,
+          contextThreshold: agentDefinition.contextThreshold,
+          summaryModelId: agentDefinition.summaryModelId,
       })
   
       const chunks = agent.runLoop(
@@ -245,6 +250,65 @@ export const attachAssetToFileNode = async (projectId: string, assetId: string, 
     return await repo.attachAssetToFileNode({projectId, assetId, folderId});
 }
 
+export const deleteAssets = async (projectId: string, assetIds: string[]) => {
+    const normalizedAssetIds = normalizeAssetIds(assetIds);
+    await getAssetsForBulkAction(projectId, normalizedAssetIds);
+    const deletedCount = await repo.deleteAssets(projectId, normalizedAssetIds);
+
+    return { ok: deletedCount === normalizedAssetIds.length, count: deletedCount };
+}
+
+export const attachAssetsToFileNodes = async (projectId: string, assetIds: string[], folderId: string) => {
+    const normalizedAssetIds = normalizeAssetIds(assetIds);
+    const selectedAssets = await getAssetsForBulkAction(projectId, normalizedAssetIds);
+    const attachedAsset = selectedAssets.find((asset) => asset.fileNodeId);
+    if(attachedAsset){
+        throw new Forbidden('One or more assets are already attached to a file node');
+    }
+
+    const folder = await getFileNodeById(projectId, folderId);
+    if(!folder || !folder.directory){
+        throw new Forbidden('Folder does not exist or is not a directory');
+    }
+
+    return await repo.attachAssetsToFileNodes({projectId, assetIds: normalizedAssetIds, folderId});
+}
+
+export const downloadAssetsZip = async (projectId: string, assetIds: string[]) => {
+    const normalizedAssetIds = normalizeAssetIds(assetIds);
+    const selectedAssets = await getAssetsForBulkAction(projectId, normalizedAssetIds);
+    const assetsById = new Map(selectedAssets.map((asset) => [asset.id, asset]));
+    const orderedAssets = normalizedAssetIds.flatMap((assetId) => {
+        const asset = assetsById.get(assetId);
+        return asset ? [asset] : [];
+    });
+
+    const archive = new ZipArchive({ zlib: { level: 9 } });
+    const output = new PassThrough();
+    archive.on('error', (error: Error) => output.destroy(error));
+    archive.pipe(output);
+
+    void (async () => {
+        try {
+            const usedNames = new Map<string, number>();
+            for (const asset of orderedAssets) {
+                const buffer = await storage.readFileBuffer(asset.storageKey);
+                archive.append(buffer, { name: buildZipEntryName(asset.name, usedNames) });
+            }
+            await archive.finalize();
+        } catch (error) {
+            output.destroy(error instanceof Error ? error : new Error('Failed to build zip file'));
+        }
+    })();
+
+    return new Response(Readable.toWeb(output) as unknown as BodyInit, {
+        headers: {
+            'Content-Type': 'application/zip',
+            'Content-Disposition': `attachment; filename="generated-assets.zip"`,
+        },
+    });
+}
+
 function getAssetType(contentType: string): AssetType {
     if (contentType.startsWith('image/')) return 'image';
     if (contentType.startsWith('video/')) return 'video';
@@ -255,6 +319,40 @@ function getAssetType(contentType: string): AssetType {
 function getFileName(storageKey: string): string {
     const name = storageKey.split('/').pop() || 'new-asset-file';
     return name;
+}
+
+function normalizeAssetIds(assetIds: string[]) {
+    return [...new Set(assetIds)];
+}
+
+async function getAssetsForBulkAction(projectId: string, assetIds: string[]) {
+    if(assetIds.length === 0){
+        throw new BadRequest('At least one asset is required');
+    }
+
+    const selectedAssets = await repo.getAssetsByIds(projectId, assetIds);
+    if(selectedAssets.length !== assetIds.length){
+        throw new NotFound('One or more assets were not found');
+    }
+
+    return selectedAssets;
+}
+
+function buildZipEntryName(fileName: string, usedNames: Map<string, number>) {
+    const sanitizedName = storage.sanitizeFileName(fileName) || 'asset';
+    const currentCount = usedNames.get(sanitizedName) ?? 0;
+    usedNames.set(sanitizedName, currentCount + 1);
+
+    if(currentCount === 0){
+        return sanitizedName;
+    }
+
+    const extensionIndex = sanitizedName.lastIndexOf('.');
+    if(extensionIndex <= 0){
+        return `${sanitizedName}-${currentCount + 1}`;
+    }
+
+    return `${sanitizedName.slice(0, extensionIndex)}-${currentCount + 1}${sanitizedName.slice(extensionIndex)}`;
 }
 
 function fullPrompt(basePrompt: string, settings: Record<string, unknown>){

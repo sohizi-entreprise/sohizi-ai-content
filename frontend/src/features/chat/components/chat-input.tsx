@@ -1,28 +1,25 @@
-import { useCallback } from 'react'
-import { IconArrowNarrowUp, IconLoader2, IconPlus } from '@tabler/icons-react'
-import { Mention, MentionsInput } from 'react-mentions-ts'
+import { useCallback, useEffect, useRef } from 'react'
+import { IconPlus } from '@tabler/icons-react'
 import { toast } from 'sonner'
+import type { Editor } from '@tiptap/core'
 import { useSendMessage } from '../hooks/use-chat'
 import { useChatStore } from '../store/chat-store'
 import ChatSelectModel from './chat-select-model'
 import { ContextWindowDonut } from './context-window-donut'
-import type { MentionSearchContext } from 'react-mentions-ts'
+import ChatTextarea from './chat-textarea'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputButton,
+  PromptInputFooter,
+  PromptInputSubmit,
+  PromptInputTools,
+} from '@/components/ai-elements/prompt-input'
 import { useEditorInputBridge } from '@/features/editor/bridge/use-editor-input-bridge'
 import ChatFilesPreview from './chat-files-preview'
 import { useFileUpload } from '@/hooks/use-file-upload'
 import { useSaveFileBucket } from '@/hooks/use-save-file-bucket'
-import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
-import { useFileMentionSearch } from '@/hooks/use-file-mention-search'
-
-export type sendParams = {
-  prompt: string
-  context: {
-    blocks: Array<string>
-    selections: Array<string>
-  }
-}
 
 type ChatInputProps = {
   projectId: string
@@ -32,186 +29,160 @@ type ChatInputProps = {
 
 export function ChatInput({
   projectId,
-  placeholder = 'Ask anything... Use @ for characters, # for locations',
+  placeholder = 'Ask anything... Use @ to reference files',
   className,
 }: ChatInputProps) {
-  // Store
   const setInputContent = useChatStore((state) => state.setUserPrompt)
   const inputContent = useChatStore((state) => state.userPrompt)
-  const setInput = useEditorInputBridge((state) => state.setInput)
-  
-  const {sendMessage, loadingState, disableSendButton} = useSendMessage(projectId)
-  const searchFiles = useFileMentionSearch(projectId)
-  
-  const { getInputProps, onRemoveFile, openFileDialog } = useHandleUploadedFiles({projectId})
-  
-  // Handle keyboard events
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
-  ) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
+  const setChatEditor = useEditorInputBridge((state) => state.setChatEditor)
+
+  const editorRef = useRef<Editor | null>(null)
+
+  const { sendMessage, loadingState, disableSendButton } = useSendMessage(projectId)
+  const { getInputProps, onRemoveFile, openFileDialog } = useHandleUploadedFiles({ projectId })
+
+  const attachedFiles = useChatStore((state) => state.attachedFiles)
+  const hasAttachments = attachedFiles.length > 0
+
+  // Register the chat editor with the cross-editor bridge so document
+  // selections can be inserted as references into the prompt.
+  const handleEditorReady = useCallback(
+    (editor: Editor | null) => {
+      setChatEditor(editor)
+    },
+    [setChatEditor],
+  )
+
+  useEffect(() => () => setChatEditor(null), [setChatEditor])
+
+  // Clear the editor once the store prompt is reset (e.g. after sending).
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    if (inputContent === '' && !editor.isEmpty) {
+      editor.commands.clearContent()
     }
-  }
+  }, [inputContent])
 
-  // Handle input change and detect removed selections
-  const handleInputChange = useCallback(
-    ({ value: nextValue }: { value: string }) => {
-      setInputContent(nextValue)
-    },
-    [setInputContent],
-  )
-
-  const searchFileMentions = useCallback(
-    async (query: string, { signal }: MentionSearchContext) => {
-      return searchFiles(query, { signal })
-    },
-    [searchFiles],
-  )
+  const handleSubmit = useCallback(() => {
+    sendMessage()
+  }, [sendMessage])
 
   return (
-    <div className='m-4'>
-
-      {/* Chat input */}
-      <div
+    <div className="p-3">
+      <PromptInput
+        onSubmit={handleSubmit}
         className={cn(
-          'border bg-white/5 p-2 rounded-xl overflow-hidden',
+          'rounded-2xl border border-white/10 bg-white/5 shadow-sm transition-colors focus-within:border-white/20 overflow-hidden',
           className,
         )}
       >
-        <ChatFilesPreview className='mb-2' onRemoveFile={onRemoveFile} />
-        <MentionsInput
-          value={inputContent}
-          onMentionsChange={handleInputChange}
-          suggestionsPlacement="above"
-          inputRef={setInput}
-          autoResize
-          classNames={{
-            input: 'bg-transparent! max-h-50 text-sm',
-            control: 'bg-transparent! border-none',
-            highlighterSubstring: '',
-            highlighter: 'text-green-500',
-          }}
-          placeholder={placeholder}
-          onKeyDown={handleKeyDown}
-        >
-          <Mention
-            trigger="@"
-            data={searchFileMentions}
-            debounceMs={200}
-            maxSuggestions={15}
-            className="bg-primary/20 rounded-none"
-            displayTransform={(_, display) => ` @${display} `}
-          />
-          <Mention trigger="#" data={[]} />
-          <Mention trigger="&&" data={[]} />
-        </MentionsInput>
-
-        <div className="flex items-center justify-between gap-2 mt-2">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" 
-                    size="icon" 
-                    className="size-7 rounded-full border-white/10!"
-                    onClick={openFileDialog}
-                    disabled={loadingState}
-                    aria-label="Upload file"
-            >
-                <IconPlus className="size-4" />
-            </Button>
-            <input {...getInputProps()} className='sr-only'/>
-          </div>
-
-          <div className="flex items-center justify-end gap-2">
-
-            <div className="flex items-center">
-              <ContextWindowDonut usage={{ percentage: 40 }} size="xs" />
-              <ChatSelectModel projectId={projectId} />
+        <PromptInputBody>
+          {hasAttachments ? (
+            <div className="w-full px-3 pt-3">
+              <ChatFilesPreview onRemoveFile={onRemoveFile} />
             </div>
+          ) : null}
 
-
-            {/* Send button */}
-            <Button
-              variant="default"
-              onClick={sendMessage}
-              disabled={disableSendButton}
-              className="size-6 rounded-full disabled:cursor-not-allowed"
-              aria-label="Send message"
-            >
-              {loadingState ? (
-                <IconLoader2 className="size-4 animate-spin" />
-              ) : (
-                <IconArrowNarrowUp className="size-4" />
-              )}
-            </Button>
+          <div className="w-full max-h-40 min-w-0 overflow-y-auto px-3 pt-3">
+            <ChatTextarea
+              projectId={projectId}
+              onChange={setInputContent}
+              onSubmit={handleSubmit}
+              onEditorReady={handleEditorReady}
+              editorRef={editorRef}
+              placeholder={placeholder}
+              className='border-none'
+            />
           </div>
-        </div>
-      </div>
+        </PromptInputBody>
+
+        <PromptInputFooter className="border-white/5">
+          <PromptInputTools>
+            <PromptInputButton
+              onClick={openFileDialog}
+              disabled={loadingState}
+              aria-label="Upload file"
+              className="rounded-full"
+            >
+              <IconPlus className="size-4" />
+            </PromptInputButton>
+            <input {...getInputProps()} className="sr-only" />
+
+            <ContextWindowDonut usage={{ percentage: 40 }} size="xs" />
+            <ChatSelectModel projectId={projectId} />
+          </PromptInputTools>
+
+          <PromptInputSubmit
+            status={loadingState ? 'submitted' : undefined}
+            disabled={disableSendButton}
+            className="rounded-full"
+          />
+        </PromptInputFooter>
+      </PromptInput>
     </div>
   )
 }
 
-function useHandleUploadedFiles({projectId}: {projectId: string}) {
-  const addAttachedFile = useChatStore(s => s.addAttachedFile)
-  const updateAttachedFile = useChatStore(s => s.updateAttachedFile)
-  const removeAttachedFile = useChatStore(s => s.removeAttachedFile)
-  const insertNodeAt = useFileTreeStore(s => s.insertNodeAt)
+function useHandleUploadedFiles({ projectId }: { projectId: string }) {
+  const addAttachedFile = useChatStore((s) => s.addAttachedFile)
+  const updateAttachedFile = useChatStore((s) => s.updateAttachedFile)
+  const removeAttachedFile = useChatStore((s) => s.removeAttachedFile)
+  // const insertNodeAt = useFileTreeStore((s) => s.insertNodeAt)
   const { saveFile } = useSaveFileBucket()
 
-  const DUMMY_FOLDER_ID = 'd77b6506-ae24-4f8a-8a2e-431a0a84cf4b'
+  const [
+    _state,
+    {
+      openFileDialog,
+      getInputProps,
+      removeFile,
+    },
+  ] = useFileUpload({
+    multiple: true,
+    accept: 'image/*,video/*,audio/*,application/pdf,text/plain',
+    maxSize: 5 * 1024 * 1024, // 5MB
+    maxFiles: 5,
+    onFilesAdded: async (data) => {
+      for (const file of data) {
+        addAttachedFile({
+          id: file.id,
+          preview: file.preview,
+          status: 'pending',
+          type: file.file.type,
+        })
 
-    const [
-        _state,
-        {
-            openFileDialog,
-            getInputProps,
-            removeFile
-        }
-    ] = useFileUpload({
-        multiple: true,
-        accept: 'image/*,video/*,audio/*,application/pdf,text/plain',
-        maxSize: 5 * 1024 * 1024, // 5MB
-        maxFiles: 5,
-        onFilesAdded: async (data) => {
-            for (const file of data) {
-                addAttachedFile({
-                    id: file.id,
-                    preview: file.preview,
-                    status: 'pending',
-                    type: file.file.type,
-                })
-
-                saveFile({projectId, folderId: DUMMY_FOLDER_ID, file: file.file as File}, {
-                    onSuccess: (result) => {
-                        updateAttachedFile(file.id, {
-                            status: 'uploaded',
-                            type: file.file.type,
-                            preview: file.preview,
-                            url: file.preview ?? result.storageKey,
-                        })
-                        insertNodeAt(DUMMY_FOLDER_ID, result.fileNode)
-                    },
-                    onError: (error) => {
-                      removeFile(file.id)
-                      removeAttachedFile(file.id)
-                      toast.error(error.message)
-                    }
-                })
-            }
-        },
-        onError: (error) => {
-            toast.error(error)
-        },
-    })
+        saveFile({ projectId, folderId: null, file: file.file as File }, {
+          onSuccess: (result) => {
+            updateAttachedFile(file.id, {
+              status: 'uploaded',
+              type: file.file.type,
+              preview: file.preview,
+              url: result.asset.url,
+            })
+            // insertNodeAt(DUMMY_FOLDER_ID, result.fileNode)
+          },
+          onError: (error) => {
+            removeFile(file.id)
+            removeAttachedFile(file.id)
+            toast.error(error.message)
+          },
+        })
+      }
+    },
+    onError: (error) => {
+      toast.error(error)
+    },
+  })
 
   const onRemoveFile = useCallback((id: string) => {
-      removeAttachedFile(id)
-      removeFile(id)
-    }, [removeAttachedFile, removeFile])
+    removeAttachedFile(id)
+    removeFile(id)
+  }, [removeAttachedFile, removeFile])
 
   return {
     getInputProps,
     onRemoveFile,
-    openFileDialog
+    openFileDialog,
   }
 }

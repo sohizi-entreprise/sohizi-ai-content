@@ -93,7 +93,7 @@ export type MsgContent = MsgTextPart | MsgToolCallPart | MsgToolResultPart | Rea
 
 export type Message = {id: string; createdAt: string } & (
   | { role: 'user'; content: (ImagePart | FilePart | MsgTextPart)[] }
-  | { role: 'assistant'; content: (ReasoningPart | MsgToolCallPart | MsgTextPart)[] }
+  | { role: 'assistant'; content: (ReasoningPart | MsgToolCallPart | MsgToolResultPart | MsgTextPart)[] }
   | { role: 'tool'; content: MsgToolResultPart[] }
 )
 
@@ -332,6 +332,7 @@ export type ChatStreamChunk = {
   | { type: 'tool_call_start'; toolCallId: string; toolName: string; input: string }
   | { type: 'tool_call_end'; toolCallId: string }
   | { type: 'tool_call'; toolCallId: string; toolName: string; input: unknown }
+  | { type: 'tool_result_complete'; toolCallId: string; toolName: string; success: boolean; output: string }
   | { type: 'complete'; text: string; finishReason: 'error' | 'not-finished' | 'response' | 'tool-calls' | 'aborted' | 'max-iterations'; usage: TokenUsage; error?: string; reasoningText?: string }
   | { type: 'error'; error: string }
   | { type: 'abort' }

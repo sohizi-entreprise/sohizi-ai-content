@@ -1,6 +1,7 @@
 import { queryOptions, mutationOptions, infiniteQueryOptions, keepPreviousData, type InfiniteData } from '@tanstack/react-query'
 import * as requests from './requests'
 import type { AgentRunBlock, ChatCompletionRequest } from './types'
+import { searchFilesByName } from '@/features/projects/request'
 
 type AgentRunsInfiniteData = InfiniteData<requests.CursorPaginationResult<AgentRunBlock>, string | undefined>
 
@@ -167,7 +168,7 @@ export const listModelsQueryOptions = (projectId: string, categories: string[]) 
 
 export const searchFilesByNameQueryOptions = (projectId: string, name: string, limit = 15) => queryOptions({
     queryKey: keysFactory.fileNameSearch(projectId, name, limit),
-    queryFn: ({ signal }) => requests.searchFilesByName(projectId, name, limit, { signal }),
+    queryFn: ({ signal }) => searchFilesByName(projectId, name, limit, { signal }),
     enabled: name.trim().length > 0,
 })
 

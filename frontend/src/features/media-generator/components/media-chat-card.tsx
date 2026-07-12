@@ -18,6 +18,7 @@ import { useUpdateAssetsList } from "../query-mutations";
 import { toast } from "sonner";
 import { cn, timeFromNow } from "@/lib/utils";
 import AudioPlayer from "./audio-player";
+import { IconAlertTriangle } from "@tabler/icons-react";
 
 type GenerationType = 'image' | 'video' | 'audio';
 
@@ -190,7 +191,7 @@ const RenderAssets = ({assets, status}: {assets: MediaAsset[]; status: MediaGene
   if(isEmpty && !isLoadingState){
     return (
       <div className="flex items-center justify-center bg-background rounded-md p-2 aspect-3/4">
-        <span className="text-xs tracking-wide text-foreground">No assets found</span>
+        <IconAlertTriangle className="size-6 text-destructive" />
       </div>
     )
   }
@@ -356,7 +357,6 @@ function extractLastMessageContent(messages: Message[]) {
         text = `Calling tool ${lastPart.toolName}...`
         const toolName = lastPart.toolName;
         if(toolName === 'submitMediaJobs'){
-          console.log('lastPart', lastPart)
           const input = lastPart.input as SubmitMediaJobsInput;
           text = input.message || text;
         }
@@ -404,16 +404,21 @@ function getDisplayUrls(attachment: Attachment) {
 
 function extractSubmitMediaJobsInput(messages: Message[]): Omit<SubmitMediaJobsInput, 'message'> {
 
-  const assistantMessage = messages.find((message) => message.role === 'assistant');
-  const toolCall = assistantMessage?.content.find((part) => part.type === 'tool-call');
-  if(!toolCall) return {jobs: [], status: 'done'};
+  for (const message of messages) {
+    if (message.role !== 'assistant') continue;
+    const toolCall = message.content.find(
+      (part) => part.type === 'tool-call'
+    );
+    if (toolCall && toolCall.toolName === 'submitMediaJobs') {
+      const input = toolCall.input as SubmitMediaJobsInput;
+      return {
+        jobs: input.jobs || [],
+        status: input.status || 'done',
+      };
+    }
+  }
 
-  const input = (toolCall.toolName === 'submitMediaJobs' ? toolCall.input : {}) as SubmitMediaJobsInput;
-
-  const jobs = input.jobs || []
-  const status = input.status || 'done'
-
-  return {jobs, status};
+  return {jobs: [], status: 'done'};
 }
 
 function getMediaType(mediaType: string): MediaType {

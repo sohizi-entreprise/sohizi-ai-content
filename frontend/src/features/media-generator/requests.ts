@@ -113,6 +113,39 @@ export const moveAssetToFolder = async (
   await api.post(`/media/${projectId}/assets/${assetId}/move-to-folder`, { folderId })
 }
 
+export const bulkMoveAssetsToFolder = async (
+  projectId: string,
+  assetIds: string[],
+  folderId: string,
+): Promise<void> => {
+  await api.post(`/media/${projectId}/assets/bulk/move-to-folder`, {
+    assetIds,
+    folderId,
+  })
+}
+
+export const bulkDeleteAssets = async (
+  projectId: string,
+  assetIds: string[],
+): Promise<{ ok: boolean; count: number }> => {
+  const response = await api.post(`/media/${projectId}/assets/bulk/delete`, {
+    assetIds,
+  })
+  return response.data
+}
+
+export const downloadAssetsZip = async (
+  projectId: string,
+  assetIds: string[],
+): Promise<Blob> => {
+  const response = await api.post(
+    `/media/${projectId}/assets/bulk/download-zip`,
+    { assetIds },
+    { responseType: 'blob' },
+  )
+  return response.data
+}
+
 export const getAssetDownloadUrl = async (
   projectId: string,
   assetId: string,

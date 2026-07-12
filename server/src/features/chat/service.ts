@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { UserModelMessage, userModelMessageSchema } from 'ai';
 import { assertConversationOwner } from '@/lib/authorize';
 import { Conversation, ConversationAgentRun, LlmModel } from '@/db/schema';
-import { BadRequest } from '../error';
+import { BadRequest, NotFound } from '../error';
 import { Session } from '../ai/agent/core/session';
 import { v4 as uuidv4 } from 'uuid';
 import { CheckpointPersistence } from '../ai/agent/core/persistence';
@@ -15,6 +15,7 @@ import { broadcastCancellation, createCancellableController } from '../generatio
 import { BaseStreamData, markStreamActive, readStreamChunks, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
 import { getProjectById } from '../project/repo';
 import { sse } from 'elysia';
+import { listSkills } from '../file-system/repo';
 
 export const listConversations = async (projectId: string, userId: string, options?: CursorPaginationOptions) => {
   const conversations = await repo.listConversations(projectId, userId, options);
@@ -34,6 +35,15 @@ export const deleteConversation = async (id: string) => {
 export const listLlmModels = async (categories: string[]) => {
   const models = await repo.listLlmModels(categories);
   return models;
+}
+
+export const listModelOptions = async (modelId: string) => {
+  const model = await repo.getModelById(modelId);
+  if(!model){
+    throw new NotFound('Model not found')
+  }
+  const options = await repo.listModelOptions(model.id);
+  return options;
 }
 
 export const listConversationAgentRuns = async (conversationId: string, options?: CursorPaginationOptions) => {
@@ -133,9 +143,10 @@ async function runAgent(payload: RunAgentPayload){
   try {
     await repo.updateConversationAgentRun(runId, { status: 'running' })
 
-    const [project, checkpoint] = await Promise.all([
+    const [project, checkpoint, projectSkills] = await Promise.all([
       getProjectById(projectId),
       repo.getCheckpoint(projectId, conversationId),
+      listSkills(projectId),
     ])
     
     // const checkpoint = await repo.getCheckpoint(project.id, conversationId);
@@ -155,11 +166,14 @@ async function runAgent(payload: RunAgentPayload){
     }
     const agent = new Agent({
         name: agentDefinition.name,
-        systemPrompt: agentDefinition.baseSystemPrompt,
+        systemPrompt: enrichSystemPrompt(agentDefinition.baseSystemPrompt, projectSkills, agentDefinition.subAgents),
         session,
         model,
         modelConfig: agentDefinition.modelConfig,
         persistence: checkpointPersistence,
+        maxContextTokens: agentDefinition.maxContextTokens,
+        contextThreshold: agentDefinition.contextThreshold,
+        summaryModelId: agentDefinition.summaryModelId,
     })
 
     const chunks = agent.runLoop(
@@ -201,6 +215,42 @@ async function handleTitleGeneration(userPrompt: UserModelMessage, organizationI
     abortSignal: new AbortController().signal, // This won't be aborted since the request will be done at this stage
   })
   return title
+}
+
+function enrichSystemPrompt(systemPrompt: string, projectSkills: {name: string, description: string, instructions: string}[], subAgents: string[]){
+  let finalPrompt = systemPrompt;
+  const skillPrompts = projectSkills
+                        .filter(skill => !!skill.description.trim() && !!skill.instructions.trim())
+                        .map((skill, index) => `${index + 1}. ${skill.name}:\n${skill.description}\n---\n`).join('\n');
+  const subAgentDefinitions = subAgents.map(name => getAgentDefinition(name as any));
+  const subAgentPrompts = subAgentDefinitions
+                        .filter(subAgent => !!subAgent)
+                        .map((subAgent, index) => `${index + 1}. ${subAgent.name}:\n${subAgent.description}\n---\n`).join('\n');
+  if(skillPrompts.length > 0){
+    finalPrompt += `
+<project-skills>
+Here are the skills that you have access to within this project. A skill is a package of instructions, metadata and resources that can give you
+specialized capabilities and domain expertise to better perform your tasks. You can load skills "on-demand" depending on the task.
+
+Project Skills (Name + Description):
+${skillPrompts}
+
+</project-skills>
+`;
+  }
+  if(subAgentPrompts.length > 0){
+    finalPrompt += `
+<sub-agents>
+Here are the sub-agents that you have access to within this project. A sub-agent is a specialized agent that can perform a specific isolated task.
+
+Sub-Agents (Name + Description):
+${subAgentPrompts}
+</sub-agents>
+`;
+  }
+
+          
+  return finalPrompt.trim();
 }
 
 

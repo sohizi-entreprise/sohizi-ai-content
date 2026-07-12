@@ -1,46 +1,74 @@
 import { z } from "zod";
 import { buildBaseTool } from "./tool-definition";
-
-const supportedAgents = [
-    {
-        role: 'writer-agent',
-        description: 'Best suited for off-loading heavy writes and updates that involve more than 5 files.',
-    },
-    {
-        role: 'researcher-agent',
-        description: 'Best suited for researching data.',
-    },
-    {
-        role: 'storyboard-agent',
-        description: 'Best suited for researching data.',
-    },
-] as const;
-
-const agentRoles = supportedAgents.map((agent) => agent.role);
+import { getAgentDefinition, supportedAgents } from "../core/agent-registry";
+import { Agent } from "../core/agent";
+import { success, failure } from "./utils";
+import { createCancellableController } from "@/features/generation-request/abort-manager";
 
 
 const assignTaskInputSchema = z.object({
-    agentRole: z.enum(agentRoles).describe('The specific type of sub-agent required for the job.'),
-    taskObjective: z.string().describe('The primary goal for the sub-agent.'),
-    contextData: z.string().describe('The exact background information the sub-agent needs to succeed. Sub-agents do not share your memory! Provide IDs, constraints, and plot points here.'),
-    expectedDeliverable: z.string().describe('Strict instructions on what the sub-agent must return to you.')
+    subAgent: z.enum(supportedAgents).describe('The specific type of sub-agent required for the job.'),
+    instructions: z.string().describe('The instructions for the sub-agent to follow in order to complete the assigned task.'),
 })
 
 export const assignTaskTool = buildBaseTool({
     name: "assignTask",
-    description: getDescription(),
+    description: "Delegates a focused, heavy-lifting task to a specialized sub-agent.",
     inputSchema: assignTaskInputSchema,
-    execute: async(input) => {
-        return {
-            success: true,
-            output: '',
+    execute: async(input, {session}) => {
+
+        const { subAgent, instructions } = input;
+        const { controller, cleanup } = await createCancellableController(session.runId);
+
+        try {
+            const agentDefinition = getAgentDefinition(subAgent);
+            if(!agentDefinition){
+                return failure(`Invalid sub-agent name provided. Supported are ${supportedAgents.join(', ')}`)
+            }
+    
+            const model = await session.resolveModel(agentDefinition.modelId);
+            if(!model){
+                return failure(`Model not found. The sub-agent ${subAgent} is unvailable right now. Either assign a different sub-agent if possible or return to the user if this is a blocker.`)
+            }
+    
+    
+            const agent = new Agent({
+                name: agentDefinition.name,
+                systemPrompt: agentDefinition.baseSystemPrompt,
+                model,
+                modelConfig: agentDefinition.modelConfig,
+                session,
+                maxContextTokens: agentDefinition.maxContextTokens,
+                contextThreshold: agentDefinition.contextThreshold,
+                summaryModelId: agentDefinition.summaryModelId,
+            });
+    
+            const msg = {
+                role: 'user' as const,
+                content: instructions
+            }
+    
+            const chunks = agent.runLoop(msg, controller.signal, 100)
+    
+            let output = '';
+    
+            for await (const chunk of chunks) {
+                if(chunk.type === 'complete'){
+                    output = chunk.text
+                }
+            }
+            
+            return success(output);
+            
+        } catch (error) {
+            console.error(error);
+            if(error instanceof Error){
+                return failure(error.message);
+            }
+            return failure('An unknown error occurred');
+        }
+        finally {
+            cleanup();
         }
     }
 })
-
-function getDescription() {
-    return `
-Delegates a focused, heavy-lifting task to a specialized sub-agent. Use this whenever a task requires deep data research, creative writing, or formatting.
-Do not attempt to write content or read massive documents yourself. Pass the exact context and expectations to the sub-agent, and wait for their completed response.
-`
-}

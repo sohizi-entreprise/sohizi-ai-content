@@ -257,10 +257,13 @@ export const searchFileContent = async(
 }
 
 export const searchFilesByName = async(
-    request: { projectId: string; name: string; limit?: number },
+    request: { projectId: string; name: string; limit?: number; directory?: boolean; format?: FileFormat },
 ) => {
     await validateProject(request.projectId);
-    return fileSystemRepo.searchFileNodesByName(request.projectId, request.name, request.limit ?? 15);
+    return fileSystemRepo.searchFileNodesByName(request.projectId, request.name, request.limit ?? 15, {
+        directory: request.directory,
+        format: request.format,
+    });
 }
 
 export const updateFileNode = async(projectId: string, request: UpdateFileRequest) => {

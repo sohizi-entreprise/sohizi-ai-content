@@ -48,7 +48,7 @@ function PendingRunBlock({ run }: { run: AgentRunBlock }){
 
 function RenderMessages({ messages }: { messages: Message[] }){
     return (
-        <div>
+        <div className="flex flex-col gap-4">
             {messages.map((msg) => (
             <ChatBuble key={msg.id} data={msg} />
             ))}

@@ -1,6 +1,5 @@
 import api from "@/lib/axios"
 import { createParser, type EventSourceMessage } from "eventsource-parser"
-import type { FileNode } from "../projects/type"
 import { AgentRunBlock, ChatCompletionRequest, ChatCompletionResponse, ChatStreamChunk, Conversation, LlmModel, Message } from "./types"
 
 export type CursorPaginationOptions = {
@@ -52,19 +51,6 @@ export const listModels = async (projectId: string, categories: string[]): Promi
 
 export const listAgentRuns = async (projectId: string, conversationId: string, options?: CursorPaginationOptions): Promise<CursorPaginationResult<AgentRunBlock>> => {
     const response = await api.get(`/chats/${projectId}/conversations/${conversationId}/runs`, { params: options })
-    return response.data
-}
-
-export const searchFilesByName = async (
-    projectId: string,
-    name: string,
-    limit?: number,
-    options?: { signal?: AbortSignal },
-): Promise<FileNode[]> => {
-    const response = await api.get(`/projects/${projectId}/files/search`, {
-        params: { name, limit },
-        signal: options?.signal,
-    })
     return response.data
 }
 

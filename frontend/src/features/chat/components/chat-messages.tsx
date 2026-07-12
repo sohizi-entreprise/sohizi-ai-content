@@ -1,49 +1,33 @@
-import { useEffect, useRef, useLayoutEffect, useCallback } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { IconSparkles, IconLoader2 } from '@tabler/icons-react'
 import { StoreConversation, useChatStore } from '../store/chat-store'
 import { listAgentRunsInfiniteQueryOptions } from '../query-mutation'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useShallow } from 'zustand/shallow'
-import { useAutoScroll } from '@/hooks/use-auto-scroll'
 import { ChatRunBlock } from './chat-run-block'
+import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from '@/components/ai-elements/conversation'
 
-export function ChatMessages({ projectId }: { projectId: string; className?: string }) {
+export function ChatMessages({ projectId, className }: { projectId: string; className?: string }) {
   const conversation = useChatStore(useShallow((state) => state.activeConversation))
-  // useEffect(() => {
-  //   if (pendingMessage && scrollRef.current) {
-  //     requestAnimationFrame(() => {
-  //       if (scrollRef.current) {
-  //         scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  //       }
-  //     })
-  //   }
-  // }, [pendingMessage])
-
 
   if (!conversation) {
     return <RenderEmpty />
   }
 
-  return <RenderAgentRuns conversation={conversation} projectId={projectId} />
+  return <RenderAgentRuns conversation={conversation} projectId={projectId} className={className} />
 }
 
 
-function RenderAgentRuns(props: {conversation: StoreConversation; projectId: string}){
-  const {conversation, projectId} = props
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
+function RenderAgentRuns(props: { conversation: StoreConversation; projectId: string; className?: string }) {
+  const { conversation, projectId, className } = props
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const prevScrollHeightRef = useRef<number>(0)
-  
-  const isStreaming = conversation.isStreaming ?? false
-  const isNew = conversation.isNew ?? true
 
-  useAutoScroll({
-    scrollRef,
-    contentRef,
-    isStreaming,
-    scrollOnMount: true,
-  })
+  const isNew = conversation.isNew ?? true
 
   const {
     data: runs = [],
@@ -53,30 +37,14 @@ function RenderAgentRuns(props: {conversation: StoreConversation; projectId: str
     fetchNextPage,
   } = useInfiniteQuery(listAgentRunsInfiniteQueryOptions(projectId, conversation.id, isNew))
 
-  useLayoutEffect(() => {
-    const el = scrollRef.current
-    if (!el || prevScrollHeightRef.current === 0) return
-
-    const diff = el.scrollHeight - prevScrollHeightRef.current
-    if (diff > 0) {
-      el.scrollTop += diff
-    }
-    prevScrollHeightRef.current = 0
-  }, [runs])
-
   const handleFetchOlder = useCallback(() => {
     if (!hasNextPage || isFetchingNextPage) return
-    const el = scrollRef.current
-    if (el) {
-      prevScrollHeightRef.current = el.scrollHeight
-    }
     fetchNextPage()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
-    const viewport = scrollRef.current
-    if (!sentinel || !viewport) return
+    if (!sentinel) return
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -84,31 +52,28 @@ function RenderAgentRuns(props: {conversation: StoreConversation; projectId: str
           handleFetchOlder()
         }
       },
-      { root: viewport, rootMargin: '100px 0px 0px 0px', threshold: 0 },
+      { rootMargin: '100px 0px 0px 0px', threshold: 0 },
     )
 
     observer.observe(sentinel)
     return () => observer.disconnect()
   }, [handleFetchOlder])
 
-  
-
-
   if (isLoading) {
     return (
-      <div className='flex-1 flex items-center justify-center'>
+      <div className="flex flex-1 items-center justify-center">
         <span className="text-sm text-muted-foreground">Loading messages...</span>
       </div>
     )
   }
 
-  if(runs.length === 0){
+  if (runs.length === 0) {
     return <RenderEmpty />
   }
 
   return (
-    <div className='flex-1 overflow-y-auto w-full' ref={scrollRef}>
-      <div className="p-4 space-y-4" ref={contentRef}>
+    <Conversation className={className}>
+      <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-4 py-6">
         <div ref={sentinelRef} className="h-1" />
         {isFetchingNextPage && (
           <div className="flex justify-center py-2">
@@ -118,19 +83,24 @@ function RenderAgentRuns(props: {conversation: StoreConversation; projectId: str
         {runs.map((run) => (
           <ChatRunBlock key={run.id} run={run} />
         ))}
-      </div>
-    </div>
+      </ConversationContent>
+      <ConversationScrollButton />
+    </Conversation>
   )
 }
 
-function RenderEmpty(){
+function RenderEmpty() {
   return (
-    <div className='flex-1 flex items-center justify-center'>
-      <div className="text-center text-muted-foreground">
-        <IconSparkles className="size-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">Start a conversation</p>
-        <p className="text-xs mt-1">Ask me anything about your content</p>
-      </div>
+    <div className="flex flex-1 items-center justify-center p-8">
+      <ConversationEmptyState
+        icon={
+          <div className="mb-2 flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+            <IconSparkles className="size-6 text-primary" />
+          </div>
+        }
+        title="Start a conversation"
+        description="Ask anything about your project, reference files with @, and let the agent help you create."
+      />
     </div>
   )
 }

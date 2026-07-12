@@ -1,192 +1,150 @@
-import { memo } from 'react'
+import { useMemo } from 'react'
 import { Message, MsgToolCallPart, MsgToolResultPart } from '../types'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import {
+  Message as UIMessage,
+  MessageContent,
+  MessageResponse,
+} from '@/components/ai-elements/message'
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from '@/components/ai-elements/reasoning'
+import {
+  Attachments,
+  Attachment,
+  AttachmentPreview,
+  type AttachmentData,
+} from '@/components/ai-elements/attachments'
+import { ChatToolCall } from './chat-tool-call'
 
-function messageContentLength(message: Message): number {
-  return message.content.reduce((sum, part) => {
-    if (part.type === 'text' || part.type === 'reasoning') return sum + part.text.length
-    return sum
-  }, 0)
+type AggregatedAssistant = {
+  content: string
+  reasoning: string
+  reasoningStreaming: boolean
+  toolCalls: Array<MsgToolCallPart & { result?: MsgToolResultPart }>
 }
 
-function areMessagesEqual(prev: Message, next: Message): boolean {
-  return prev.id === next.id && messageContentLength(prev) === messageContentLength(next)
+function aggregateAssistant(message: Message): AggregatedAssistant {
+  let content = ''
+  let reasoning = ''
+  let reasoningStreaming = false
+  const toolCalls: Array<MsgToolCallPart & { result?: MsgToolResultPart }> = []
+
+  for (const part of message.content) {
+    switch (part.type) {
+      case 'text':
+        content += part.text
+        break
+      case 'reasoning':
+        reasoning += part.text
+        reasoningStreaming = part.isStreaming ?? false
+        break
+      case 'tool-call':
+        toolCalls.push(part)
+        break
+      case 'tool-result': {
+        const toolCall = toolCalls.find((item) => item.toolCallId === part.toolCallId)
+        if (toolCall) {
+          toolCall.result = part
+        }
+        break
+      }
+    }
+  }
+
+  return { content, reasoning, reasoningStreaming, toolCalls }
 }
 
-const ChatBuble = memo(function ChatBuble({ data }: { data: Message }) {
+function ChatBuble({ data }: { data: Message }) {
   switch (data.role) {
     case 'user':
       return <RenderUserMessage message={data} />
     case 'assistant':
       return <RenderAssistantMessage message={data} />
     case 'tool':
-      return <RenderToolResponse message={data} />
+      return null
   }
-}, (prev, next) => areMessagesEqual(prev.data, next.data))
+}
 
 export default ChatBuble
 
-export const StreamingChatBubble = memo(function StreamingChatBubble({ data }: { data: Message }) {
+export function StreamingChatBubble({ data }: { data: Message }) {
   if (data.role !== 'assistant') return null
-  return <RenderStreamingAssistantMessage message={data} />
-}, (prev, next) => areMessagesEqual(prev.data, next.data))
-
+  return <RenderAssistantMessage message={data} />
+}
 
 function RenderUserMessage({ message }: { message: Message }) {
   const content = message.content.find((part) => part.type === 'text')
+
+  const attachments = useMemo<AttachmentData[]>(() => {
+    if (message.role !== 'user') return []
+    return message.content
+      .filter((part) => part.type === 'image' || part.type === 'file')
+      .map((part, i) => {
+        if (part.type === 'image') {
+          return {
+            id: `${message.id}-img-${i}`,
+            type: 'file' as const,
+            url: String(part.image),
+            mediaType: 'image/*',
+          }
+        }
+        return {
+          id: `${message.id}-file-${i}`,
+          type: 'file' as const,
+          url: String(part.data),
+          mediaType: part.mediaType,
+        }
+      })
+  }, [message])
+
   return (
-    <div className="text-sm text-foreground bg-white/10 p-2 rounded-lg break-all">
-      {content?.text || ''}
-    </div>
+    <UIMessage from="user" className='max-w-full ml-0'>
+      {attachments.length > 0 && (
+        <Attachments variant="grid" className="mb-1 ml-0">
+          {attachments.map((file) => (
+            <Attachment key={file.id} data={file} className='size-16 border'>
+              <AttachmentPreview />
+            </Attachment>
+          ))}
+        </Attachments>
+      )}
+      <MessageContent className='w-full dark:bg-surface'>
+        <MessageResponse>{content?.text || ''}</MessageResponse>
+      </MessageContent>
+    </UIMessage>
   )
 }
 
 function RenderAssistantMessage({ message }: { message: Message }) {
-  let content = ''
-  let reasoning = ''
-  const toolCalls: Array<MsgToolCallPart & { result?: MsgToolResultPart }> = []
-  for (const part of message.content) {
-    switch (part.type) {
-      case 'text':
-        content += part.text
-        break
-      case 'reasoning':
-        reasoning += part.text
-        break
-      case 'tool-call':
-        toolCalls.push(part)
-        break
-      case 'tool-result': {
-        const toolCall = toolCalls.find((item) => item.toolCallId === part.toolCallId)
-        if (toolCall) {
-          toolCall.result = part
-        }
-        break
-      }
-    }
-  }
-  return (
-    <div className="text-sm flex flex-col gap-2 p-2 w-full overflow-auto">
-      {reasoning ? (
-        <div className="text-gray-400 text-xs">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{reasoning}</ReactMarkdown>
-        </div>
-      ) : null}
-      {content ? (
-        <div className="text-white">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-        </div>
-      ) : null}
-      {toolCalls.length > 0 ? (
-        <div className="text-gray-400 space-y-2">
-          {toolCalls.map((toolCall) => (
-            <RenderToolCall key={toolCall.toolCallId} toolCall={toolCall} result={toolCall.result} />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
-}
+  const { content, reasoning, reasoningStreaming, toolCalls } = aggregateAssistant(message)
 
-function RenderStreamingAssistantMessage({ message }: { message: Message }) {
-  let content = ''
-  let reasoning = ''
-  const toolCalls: Array<MsgToolCallPart & { result?: MsgToolResultPart }> = []
-  for (const part of message.content) {
-    switch (part.type) {
-      case 'text':
-        content += part.text
-        break
-      case 'reasoning':
-        reasoning += part.text
-        break
-      case 'tool-call':
-        toolCalls.push(part)
-        break
-      case 'tool-result': {
-        const toolCall = toolCalls.find((item) => item.toolCallId === part.toolCallId)
-        if (toolCall) {
-          toolCall.result = part
-        }
-        break
-      }
-    }
-  }
   return (
-    <div className="text-sm flex flex-col gap-2 p-2 w-full overflow-auto">
-      {reasoning ? (
-        <div className="text-gray-400 text-xs whitespace-pre-wrap">{reasoning}</div>
-      ) : null}
-      {content ? (
-        <div className="text-white whitespace-pre-wrap">{content}</div>
-      ) : null}
-      {toolCalls.length > 0 ? (
-        <div className="text-gray-400 space-y-2">
-          {toolCalls.map((toolCall) => (
-            <RenderStreamingToolCall
-              key={toolCall.toolCallId}
-              toolCall={toolCall}
-              result={toolCall.result}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
-}
+    <UIMessage from="assistant">
+      <MessageContent className="gap-3">
+        {reasoning ? (
+          <Reasoning isStreaming={reasoningStreaming}>
+            <ReasoningTrigger />
+            <ReasoningContent>{reasoning}</ReasoningContent>
+          </Reasoning>
+        ) : null}
 
-function RenderToolResponse({ message }: { message: Message }) {
-  const toolResult = message.content.find((part) => part.type === 'tool-result')
-  return (
-    <div className="text-xs text-gray-400 border border-gray-800 rounded-md p-2">
-      {toolResult?.output.value ?? 'tool response'}
-    </div>
-  )
-}
+        {/* Text accompanying tool calls is a progress update, so it precedes them. */}
+        {content ? <MessageResponse>{content}</MessageResponse> : null}
 
-function RenderToolCall({
-  toolCall,
-  result,
-}: {
-  toolCall: MsgToolCallPart
-  result?: MsgToolResultPart
-}) {
-  return (
-    <div className="border border-gray-800 rounded-md p-2">
-      <div className="text-gray-400 text-xs">{toolCall.toolName}</div>
-      <div className="text-white">
-        <div className="text-xs">{JSON.stringify(toolCall.input)}</div>
-      </div>
-      {result ? (
-        <div className="mt-2 border-t border-gray-800 pt-2 text-xs text-gray-300 whitespace-pre-wrap">
-          {result.output.value}
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
-function RenderStreamingToolCall({
-  toolCall,
-  result,
-}: {
-  toolCall: MsgToolCallPart
-  result?: MsgToolResultPart
-}) {
-  return (
-    <div className="border border-gray-800 rounded-md p-2">
-      <div className="text-gray-400 text-xs">{toolCall.toolName}</div>
-      {toolCall.isStreaming ? (
-        <div className="text-white text-xs">Running…</div>
-      ) : (
-        <div className="text-white text-xs whitespace-pre-wrap">{String(toolCall.input ?? '')}</div>
-      )}
-      {result ? (
-        <div className="mt-2 border-t border-gray-800 pt-2 text-xs text-gray-300 whitespace-pre-wrap">
-          {result.output.value}
-        </div>
-      ) : null}
-    </div>
+        {toolCalls.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {toolCalls.map((toolCall) => (
+              <ChatToolCall
+                key={toolCall.toolCallId}
+                toolCall={toolCall}
+                result={toolCall.result}
+              />
+            ))}
+          </div>
+        ) : null}
+      </MessageContent>
+    </UIMessage>
   )
 }

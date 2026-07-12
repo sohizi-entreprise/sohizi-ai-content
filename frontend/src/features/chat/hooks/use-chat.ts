@@ -1,8 +1,10 @@
 import type { ChatCompletionRequest, FilePart, ImagePart } from '../types'
-import { AttachedFile, useChatStore } from '../store/chat-store'
+import { useChatStore } from '../store/chat-store'
 import { useShallow } from 'zustand/shallow'
 import { useMutation } from '@tanstack/react-query'
 import { submitChatCompletionMutationOptions } from '../query-mutation'
+import { AttachedFile } from '@/components/widgets/file-attachments'
+import { cleanMediaType } from '@/utils/clean-mediaType'
 
 export const useSendMessage = (projectId: string) => {
   const clearInput = useChatStore((state) => state.clearInput)
@@ -48,7 +50,7 @@ function buildFilesPayload(attachedFiles: AttachedFile[]): (ImagePart | FilePart
   const filtered = attachedFiles.filter((file) => file.status === 'uploaded')
   const result: (ImagePart | FilePart)[] = []
   for (const file of filtered) {
-    if(file.type.startsWith('image/')){
+    if(file.type.startsWith('image/') || file.type === 'image'){
       result.push({
         type: 'image',
         image: new URL(file.url),
@@ -58,7 +60,7 @@ function buildFilesPayload(attachedFiles: AttachedFile[]): (ImagePart | FilePart
       result.push({
         type: 'file',
         data: new URL(file.url),
-        mediaType: file.type,
+        mediaType: cleanMediaType(file.type, file.url),
       })
     }
   }

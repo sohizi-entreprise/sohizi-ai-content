@@ -11,14 +11,16 @@ import { billingService, withBillingStream } from "@/features/billing";
 import { AgentStateManager } from "./state-manager";
 import { Persistence } from "./persistence";
 import { estimateInputTokens } from "../utils/estimate-token";
+import { buildEvaluatorInput, drainStreamForComplete, parseEvaluatorResponse, StopEvaluation } from "./stop-evaluator";
+import { ContextManager } from "./context-manager";
 
 
 const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096;
 
-export type AgentChunk = {
+export type AgentChunk = ({
     name: string;
     runId: string;
-} & LlmChunk | OperationChunk
+} & (LlmChunk | ToolResultComplete)) | OperationChunk
 
 type AgentConfig = {
     model: LlmModel;
@@ -27,6 +29,9 @@ type AgentConfig = {
     name: string;
     systemPrompt: string;
     persistence?: Persistence;
+    maxContextTokens: number;
+    contextThreshold?: number;
+    summaryModelId: string;
 }
 
 type BilledLlmStream = ReturnType<typeof withBillingStream<BillableLlmInput, LlmChunk>>;
@@ -42,6 +47,8 @@ export class Agent {
     private readonly agentParams: Pick<AgentConfig, 'name' | 'systemPrompt'>;
     private readonly modelConfig: ModelConfig;
     private readonly model: LlmModel;
+    private readonly contextManager: ContextManager;
+    private lastInputTokens: number;
 
     constructor(config: AgentConfig) {
         this.name = config.name;
@@ -55,6 +62,13 @@ export class Agent {
         };
         this.modelConfig = config.modelConfig;
         this.model = config.model;
+        this.lastInputTokens = 0;
+        this.contextManager = new ContextManager({
+            maxContextTokens: config.maxContextTokens,
+            threshold: config.contextThreshold,
+            session: config.session,
+            summaryModelId: config.summaryModelId,
+        });
     }
 
     async* runLoop(ursMsg: UserModelMessage, abortSignal: AbortSignal, maxSteps: number = 25): AsyncGenerator<AgentChunk, void, unknown> {
@@ -71,6 +85,7 @@ export class Agent {
                     break;
                 }
                 yield* this.runStep(billedLlmStream, abortSignal, step);
+                await this.contextManager.maybeCompress(this.stateManager, this.lastInputTokens, abortSignal, this.ensureRunId());
                 stepsRun++;
             }
 
@@ -149,6 +164,7 @@ export class Agent {
                         break;
                     case streamEvents.complete:
                         this.stateManager.incrementUsage(chunk.usage);
+                        this.lastInputTokens = chunk.usage.input || this.lastInputTokens;
                         this.updateStatus(chunk.finishReason, chunk.error);
                         text = chunk.text || text;
                         reasoning_text = chunk.reasoningText ?? reasoning_text;
@@ -172,9 +188,19 @@ export class Agent {
                 toolCallsStarted = true;
                 yield* this.runToolCalls(tool_calls);
             }
-            // if(){
 
-            // }
+            if (tool_calls.length === 0 && !stepError && !this.stateManager.isExitStatus) {
+                const evaluation = await this.evaluateStopCondition(callClient, abortSignal, text);
+                console.log('evaluation', evaluation);
+                if (evaluation.isDone) {
+                    this.stateManager.finishRun();
+                } else {
+                    this.registerMessage({
+                        role: 'user',
+                        content: [{ type: 'text', text: evaluation.instruction }],
+                    }, true);
+                }
+            }
         } catch (error) {
             stepError = this.captureStepError(error);
             yield this.buildErrorEvent(stepError);
@@ -183,6 +209,40 @@ export class Agent {
             if(stepError && tool_calls.length > 0 && !toolCallsStarted){
                 this.appendToolCallErrors(tool_calls, `Tool call was not executed because the step failed: ${stepError}`);
             }
+        }
+    }
+
+    private async evaluateStopCondition(
+        callClient: BilledLlmStream,
+        abortSignal: AbortSignal,
+        lastAssistantText: string,
+    ): Promise<StopEvaluation> {
+        try {
+            const evaluatorInput = buildEvaluatorInput({
+                lastAssistantText,
+                messages: this.stateManager.getState().messages,
+            });
+
+            const billedStream = callClient(evaluatorInput, {
+                organizationId: this.session.organizationId,
+                userId: this.session.userId,
+                signal: abortSignal,
+                metadata: {
+                    sessionId: this.session.id,
+                    conversationId: this.session.conversationId,
+                    runId: this.ensureRunId(),
+                },
+            });
+
+            const result = await drainStreamForComplete(billedStream);
+            if (!result) {
+                return { isDone: true, instruction: '' };
+            }
+
+            this.stateManager.incrementUsage(result.usage);
+            return parseEvaluatorResponse(result.text);
+        } catch {
+            return { isDone: true, instruction: '' };
         }
     }
 
@@ -247,6 +307,7 @@ export class Agent {
                 if(chunk.type === streamEvents.toolResultComplete){
                     completedToolCallIds.add(chunk.toolCallId);
                     this.updateToolResults(chunk);
+                    yield this.buildEvent(chunk);
                 }else{
                     yield chunk;
                 }
@@ -353,13 +414,15 @@ export class Agent {
         this.registerMessage(msgs);
     }
 
-    private registerMessage(message: ModelMessage | ModelMessage[]) {
+    private registerMessage(message: ModelMessage | ModelMessage[], stateOnly: boolean = false) {
         const messages = Array.isArray(message) ? message : [message];
         this.stateManager.appendMessages(messages);
-        this.persistence?.registerMessage(messages);
+        if(!stateOnly){
+            this.persistence?.registerMessage(messages);
+        }
     }
 
-    private buildEvent(chunk: LlmChunk): AgentChunk {
+    private buildEvent(chunk: LlmChunk | ToolResultComplete): AgentChunk {
         return {
             name: this.name,
             runId: this.ensureRunId(),

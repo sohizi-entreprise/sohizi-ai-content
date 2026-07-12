@@ -42,6 +42,7 @@ import {
   AgentRunStatus,
   AgentRunMetadata,
   AgentRunMessage,
+  ModelOptionType,
 } from '@/type';
 import { FileFormat } from '@/features/file-system/constants';
 
@@ -298,6 +299,33 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     ...timestamps,
   }, (table) => ([
   primaryKey({ columns: [table.modelId, table.categoryId] }),
+  ]))
+
+
+  export const modelsOptions = pgTable('models_options', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    key: varchar('key', { length: 100 }).notNull(),
+    label: varchar('label', { length: 100 }).notNull(),
+    description: text('description'),
+    options: jsonb('options').$type<ModelOptionType[]>().notNull(),
+    default: varchar('default', { length: 100 }),
+    active: boolean('active').default(true).notNull(),
+    provider: varchar('provider', { length: 50 }).default('generic').notNull(),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('models_options_provider_key_unique').on(table.provider, table.key),
+  ]))
+
+  export const modelsOptionsAndModels = pgTable('models_options_and_models', {
+    optionId: uuid('option_id')
+      .references(() => modelsOptions.id, { onDelete: 'cascade' })
+      .notNull(),
+    modelId: varchar('model_id', { length: 50 })
+      .references(() => llmModels.id, { onDelete: 'cascade' })
+      .notNull(),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('models_options_and_models_option_id_model_id_unique').on(table.optionId, table.modelId),
   ]))
 
 

@@ -27,19 +27,39 @@ import { useAssetMenu } from '../hooks/use-asset-menu'
 import { toast } from 'sonner'
 import { searchFilesByName } from '@/features/projects/request'
 import AudioPlayer from './audio-player'
+import { Checkbox } from '@/components/ui/checkbox'
 
 type MediaCardProps = {
   item: MediaAsset
   projectId: string
+  selected?: boolean
+  onSelectedChange?: (assetId: string, selected: boolean) => void
 }
 
 export function MediaCard({
   item,
   projectId,
+  selected = false,
+  onSelectedChange,
 }: MediaCardProps) {
 
   return (
     <div className='group overflow-hidden rounded-md border aspect-4/3 relative'>
+      <div
+        className={cn(
+          'absolute left-1 top-1 z-10 flex size-8 items-center justify-center rounded-full bg-black/50 text-white opacity-0 backdrop-blur transition-opacity hover:bg-black/70',
+          'group-hover:opacity-100',
+          selected && 'opacity-100',
+        )}
+      >
+        <Checkbox
+          checked={selected}
+          onCheckedChange={(checked) => onSelectedChange?.(item.id, checked === true)}
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`Select ${item.name}`}
+          className="border-white/80 bg-white/10 text-white data-[state=checked]:border-primary data-[state=checked]:bg-primary"
+        />
+      </div>
       <RouteMediaAsset item={item} />
       <CardMenu asset={item} projectId={projectId} className='absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300'/>
     </div>
@@ -134,12 +154,15 @@ function CardMenu({
   const { data: searchedFiles, isFetching: isSearchingFolders } = useQuery({
     queryKey: ['project', projectId, 'folder-search', trimmedDebouncedFolderQuery],
     queryFn: ({ signal }) =>
-      searchFilesByName(projectId, trimmedDebouncedFolderQuery, 25, { signal }),
+      searchFilesByName(projectId, trimmedDebouncedFolderQuery, 25, {
+        signal,
+        directory: true,
+      }),
     enabled: moveDialogOpen && trimmedDebouncedFolderQuery.length > 0,
     staleTime: 1000 * 60,
   })
   const folderOptions = useMemo(
-    () => searchedFiles?.filter((file) => file.directory) ?? [],
+    () => searchedFiles ?? [],
     [searchedFiles],
   )
   const selectedFolder = folderOptions.find((folder) => folder.id === selectedFolderId)

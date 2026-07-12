@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { conversations, messages, checkpoints, llmModels, modelsAndCategories, modelCategories, conversationAgentRuns } from "@/db/schema";
+import { conversations, messages, checkpoints, llmModels, modelsAndCategories, modelCategories, conversationAgentRuns, modelsOptions, modelsOptionsAndModels } from "@/db/schema";
 import { eq, desc, and, lt, arrayContains, inArray } from "drizzle-orm";
 import { AgentRunMessage, AgentRunMetadata, AgentRunStatus, AgentState, CursorPaginationOptions, CursorPaginationResult, MsgContent } from "@/type";
 import { ModelMessage, UserModelMessage } from "ai";
@@ -309,4 +309,21 @@ export const listLlmModels = async (categories: string[]) => {
 export const getModelById = async (id: string) => {
   const result = await db.select().from(llmModels).where(eq(llmModels.id, id));
   return result[0];
+}
+
+export const listModelOptions = async (modelId: string) => {
+  const result = await db.select({
+                            key: modelsOptions.key,
+                            label: modelsOptions.label,
+                            description: modelsOptions.description,
+                            options: modelsOptions.options,
+                            default: modelsOptions.default,
+                        })
+                         .from(modelsOptions)
+                         .innerJoin(
+                          modelsOptionsAndModels, 
+                          and(eq(modelsOptions.id, modelsOptionsAndModels.optionId), eq(modelsOptionsAndModels.modelId, modelId))
+                         )
+                         .where(eq(modelsOptions.active, true));
+  return result;
 }

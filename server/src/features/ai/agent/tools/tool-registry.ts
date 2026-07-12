@@ -12,6 +12,8 @@ import { editFileTool } from "./file-edit";
 import { processSpeechTool } from "./process-speech";
 import { endExecutionLoopTool, finishTool } from "./loop-end";
 import { submitMediaJobsTool } from "./submit-media-jobs";
+import { loadSkillTool } from "./load-skill";
+import { assignTaskTool } from "./tasks-assign";
 
 
 const toolRegistry = new Map<string, BaseTool<z.ZodSchema>>();
@@ -44,4 +46,5 @@ registerTool(timelineExploreTool);
 registerTool(timelineEditTool);
 registerTool(processSpeechTool);
 registerTool(submitMediaJobsTool);
-// registerTool(assignTaskTool);
+registerTool(loadSkillTool);
+registerTool(assignTaskTool);

@@ -2,6 +2,7 @@ import { LlmModel } from "@/db/schema";
 import { resolveFileByPathOrId } from "../tools/utils";
 import { FileObject } from "@/features/file-system/objects/file";
 import { getModelById } from "@/features/chat/repo";
+import { getSkillByName } from "@/features/file-system/repo";
 
 export type SessionInitData = {
     sessionId: string;
@@ -22,6 +23,7 @@ export class Session {
     // We need a cache to make sure that the read and write applies to the correct file content.
     private fileCache: Map<string, FileObject>;
     private modelsCache: Map<string, LlmModel | null>;
+    private skillsCache: Map<string, string>;
 
     constructor(data: SessionInitData) {
         this.id = data.sessionId;
@@ -32,6 +34,7 @@ export class Session {
         this.runId = data.runId;
         this.fileCache = new Map();
         this.modelsCache = new Map();
+        this.skillsCache = new Map();
     }
 
     // get billableLlmClient(): BillableLlmClient {
@@ -64,6 +67,19 @@ export class Session {
         const model = await getModelById(modelId) || null;
         this.modelsCache.set(modelId, model);
         return model;
+    }
+
+    async resolveSkill(skillName: string): Promise<string | null> {
+        const cachedSkill = this.skillsCache.get(skillName);
+        if(cachedSkill !== undefined){
+            return cachedSkill;
+        }
+        const skill = await getSkillByName(this.projectId, skillName);
+        if(!skill) {
+            return null;
+        }
+        this.skillsCache.set(skillName, skill.instructions);
+        return skill.instructions;
     }
 
     async removeFileFromCache(filePathOrId: string) {

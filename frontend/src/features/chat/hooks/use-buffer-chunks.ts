@@ -3,6 +3,7 @@ import type { AgentRunBlock, ChatStreamChunk, Message } from '../types'
 import { useGetSSE } from '@/hooks/use-get-sse'
 import { useChatStore } from '../store/chat-store'
 import { MediaAsset } from '@/features/media-generator/requests'
+import { parse } from 'partial-json'
 
 type AssistantMessage = Extract<Message, { role: 'assistant' }>
 type AssistantMessageContent = AssistantMessage['content']
@@ -77,59 +78,93 @@ function createAssistantMessage(runId: string): AssistantMessage {
 }
 
 function applyChunkToMessage(message: AssistantMessage, chunk: ChatStreamChunk): AssistantMessage {
+  const currentMessage =
+    chunk.type === 'reasoning_delta' ? message : finishReasoning(message)
+
   switch (chunk.type) {
     case 'text_delta':
       return {
-        ...message,
-        content: upsertTextPart(message.content, 'text', chunk.text),
+        ...currentMessage,
+        content: upsertTextPart(currentMessage.content, 'text', chunk.text),
       }
     case 'reasoning_delta':
       return {
-        ...message,
-        content: upsertTextPart(message.content, 'reasoning', chunk.text),
+        ...currentMessage,
+        content: upsertTextPart(currentMessage.content, 'reasoning', chunk.text, true),
       }
     case 'tool_call_start':
       return {
-        ...message,
-        content: upsertToolCallPart(message.content, {
+        ...currentMessage,
+        content: upsertToolCallPart(currentMessage.content, {
           toolCallId: chunk.toolCallId,
           toolName: chunk.toolName,
-          input: chunk.input,
+          input: {},
           isStreaming: true,
         }),
       }
     case 'tool_call_delta':
       return {
-        ...message,
-        content: message.content.map((part) =>
+        ...currentMessage,
+        content: currentMessage.content.map((part) =>
           part.type === 'tool-call' && part.toolCallId === chunk.toolCallId
-            ? { ...part, input: chunk.input }
+            ? { ...part, input: parse(chunk.input) }
             : part,
         ),
       }
-    case 'tool_call_end':
+    // case 'tool_call_end':
+    //   return {
+    //     ...message,
+    //     content: message.content.map((part) =>
+    //       part.type === 'tool-call' && part.toolCallId === chunk.toolCallId
+    //         ? { ...part, isStreaming: false }
+    //         : part,
+    //     ),
+    //   }
+    case 'tool_call':
       return {
-        ...message,
-        content: message.content.map((part) =>
-          part.type === 'tool-call' && part.toolCallId === chunk.toolCallId
-            ? { ...part, isStreaming: false }
-            : part,
-        ),
+        ...currentMessage,
+        content: upsertToolCallPart(currentMessage.content, {
+          toolCallId: chunk.toolCallId,
+          toolName: chunk.toolName,
+          input: chunk.input as Record<string, unknown>,
+          isStreaming: false,
+        }),
+      }
+    case 'tool_result_complete':
+      return {
+        ...currentMessage,
+        content: [
+          ...currentMessage.content.map((part) =>
+            part.type === 'tool-call' && part.toolCallId === chunk.toolCallId
+              ? { ...part, isStreaming: false }
+              : part,
+          ),
+          {
+            type: 'tool-result' as const,
+            toolCallId: chunk.toolCallId,
+            toolName: chunk.toolName,
+            output: {
+              type: (chunk.success ? 'text' : 'error-text') as 'text' | 'error-text',
+              value: chunk.output,
+            },
+          },
+        ],
       }
     case 'usage':
       console.log('usage', chunk)
-      return message
+      return currentMessage
     case 'error':
       console.error('error', chunk)
-      return message
+      return currentMessage
     case 'abort':
       console.log('Aborted')
-      return message
-    case 'tool_call':
+      return currentMessage
     case 'complete':
     case 'identifier':
     case 'operation':
-      return message
+      return currentMessage
+    default:
+      return currentMessage
   }
 }
 
@@ -137,16 +172,32 @@ function upsertTextPart(
   content: AssistantMessageContent,
   type: 'text' | 'reasoning',
   text: string,
+  isStreaming?: boolean,
 ): AssistantMessageContent {
   const hasPart = content.some((part) => part.type === type)
 
   if (!hasPart) {
-    return [...content, { type, text }]
+    return [...content, { type, text, isStreaming }]
   }
 
   return content.map((part) =>
-    part.type === type ? { ...part, text } : part,
+    part.type === type ? { ...part, text, isStreaming } : part,
   )
+}
+
+function finishReasoning(message: AssistantMessage): AssistantMessage {
+  const hasStreamingReasoning = message.content.some(
+    (part) => part.type === 'reasoning' && part.isStreaming,
+  )
+
+  if (!hasStreamingReasoning) return message
+
+  return {
+    ...message,
+    content: message.content.map((part) =>
+      part.type === 'reasoning' ? { ...part, isStreaming: false } : part,
+    ),
+  }
 }
 
 function upsertToolCallPart(
@@ -154,7 +205,7 @@ function upsertToolCallPart(
   toolCall: {
     toolCallId: string
     toolName: string
-    input: string
+    input: Record<string, unknown>
     isStreaming: boolean
   },
 ): AssistantMessageContent {

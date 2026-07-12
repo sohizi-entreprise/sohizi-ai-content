@@ -4,6 +4,7 @@ import * as fileService from './service'
 import { fileCreationRequestSchema, fileNodeInsertPositionSchema, updateSkillRequestSchema, updateTextFileContentRequestSchema } from './payload';
 import { assertProjectAccess } from '@/lib/authorize'
 import { authMiddleware } from '@/lib/auth-middleware'
+import { fileFormat } from './constants';
 
 const projectParams = z.object({
     projectId: z.uuid('Invalid project id'),
@@ -41,11 +42,25 @@ export const fileSystemRoutes = new Elysia({ prefix: '/projects/:projectId/files
       projectId: params.projectId,
       name: query.name,
       limit: query.limit,
+      directory: query.directory,
+      format: query.format,
     })
   }, {
     query: z.object({
       name: z.string().trim().min(1, 'Search query is required'),
       limit: z.coerce.number().int().positive().optional(),
+      directory: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
+      format: z.enum([
+        fileFormat.MARKDOWN,
+        fileFormat.JSON,
+        fileFormat.IMAGE,
+        fileFormat.VIDEO,
+        fileFormat.AUDIO,
+        fileFormat.DOCUMENT,
+        fileFormat.VIDEO_EDITOR,
+        fileFormat.AI_GENERATED,
+        fileFormat.SKILL,
+      ]).optional(),
     })
   })
   .get('/pending-operations', ({params})=>{

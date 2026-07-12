@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { assets, assetVariants, fileNodes, assetsAgentRuns } from "@/db/schema";
 import type { AssetType, AssetSource, AssetStatus, AssetVariantType, AssetMetadata, CursorPaginationOptions, CursorPaginationResult, AgentRunStatus, AgentRunMessage } from "@/type";
 import { UserModelMessage } from "ai";
-import { and, eq, desc, lt, isNull, max } from "drizzle-orm";
+import { and, eq, desc, lt, isNull, max, inArray } from "drizzle-orm";
 import { v4 as uuidv4 } from 'uuid';
 import { ORDER_GAP } from "../file-system/repo";
 
@@ -344,14 +344,47 @@ export const getAssetById = async (projectId: string, assetId: string) => {
     return result[0];
 }
 
+export const getAssetsByIds = async (projectId: string, assetIds: string[]) => {
+    if (assetIds.length === 0) {
+        return [];
+    }
+
+    return await db.select()
+        .from(assets)
+        .where(and(
+            eq(assets.projectId, projectId),
+            inArray(assets.id, assetIds),
+        ));
+}
+
 export const deleteAsset = async (assetId: string) => {
     const result = await db.delete(assets).where(eq(assets.id, assetId));
     return (result.rowCount ?? 0) > 0;
 }
 
+export const deleteAssets = async (projectId: string, assetIds: string[]) => {
+    if (assetIds.length === 0) {
+        return 0;
+    }
+
+    const result = await db.delete(assets)
+        .where(and(
+            eq(assets.projectId, projectId),
+            inArray(assets.id, assetIds),
+        ));
+
+    return result.rowCount ?? 0;
+}
+
 type AttachAssetToFileNodePayload = {
     projectId: string;
     assetId: string;
+    folderId: string;
+}
+
+type AttachAssetsToFileNodesPayload = {
+    projectId: string;
+    assetIds: string[];
     folderId: string;
 }
 
@@ -383,5 +416,62 @@ export const attachAssetToFileNode = async ({projectId, assetId, folderId}: Atta
         await tx.update(assets).set({ fileNodeId: fileNode.id }).where(eq(assets.id, assetId));
 
         return { asset, fileNode };
+    });
+}
+
+export const attachAssetsToFileNodes = async ({projectId, assetIds, folderId}: AttachAssetsToFileNodesPayload) => {
+    if (assetIds.length === 0) {
+        return { assets: [], fileNodes: [] };
+    }
+
+    return await db.transaction(async (tx) => {
+        const selectedAssets = await tx.select()
+            .from(assets)
+            .where(and(
+                eq(assets.projectId, projectId),
+                inArray(assets.id, assetIds),
+            ));
+
+        const assetsById = new Map(selectedAssets.map((asset) => [asset.id, asset]));
+        const orderedAssets = assetIds.flatMap((assetId) => {
+            const asset = assetsById.get(assetId);
+            return asset ? [asset] : [];
+        });
+
+        const resPos = await tx.select({
+            maxPosition: max(fileNodes.position),
+        }).from(fileNodes)
+          .where(and(eq(fileNodes.projectId, projectId), eq(fileNodes.parentId, folderId)));
+        const maxPosition = resPos[0]?.maxPosition ?? 0;
+
+        const fileNodeRows = orderedAssets.map((asset, index) => ({
+            projectId,
+            name: asset.name,
+            parentId: folderId,
+            format: asset.type,
+            editable: true,
+            position: maxPosition + ORDER_GAP * (index + 1),
+        }));
+
+        const insertedFileNodes = await tx.insert(fileNodes).values(fileNodeRows).returning();
+        if (insertedFileNodes.length !== orderedAssets.length) {
+            throw new Error('Failed to create all file nodes');
+        }
+
+        for (const [index, asset] of orderedAssets.entries()) {
+            const fileNode = insertedFileNodes[index];
+            if (!fileNode) {
+                throw new Error('Failed to create file node');
+            }
+
+            await tx.update(assets)
+                .set({ fileNodeId: fileNode.id })
+                .where(and(
+                    eq(assets.projectId, projectId),
+                    eq(assets.id, asset.id),
+                ));
+        }
+
+        return { assets: orderedAssets, fileNodes: insertedFileNodes };
     });
 }

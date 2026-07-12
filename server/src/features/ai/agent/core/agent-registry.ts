@@ -3,7 +3,6 @@ import { mediaGeneratorPrompt } from "../prompts/media-generator";
 import { editFileTool } from "../tools/file-edit";
 import { exploreFileTool } from "../tools/file-explore";
 import { searchFileTool } from "../tools/file-search";
-import { endExecutionLoopTool, finishTool } from "../tools/loop-end";
 import { submitMediaJobsTool } from "../tools/submit-media-jobs";
 import { manageTodoListTool } from "../tools/tasks-manage";
 import { timelineEditTool } from "../tools/timeline-edit";
@@ -13,7 +12,9 @@ import { generateSystemPrompt } from "./sys-prompt";
 import { BaseTool } from "../tools/tool-definition";
 import { z } from "zod";
 
-type AgentName = 'media-generator' | 'main-agent';
+export const supportedAgents = ['media-generator', 'main-agent', 'explorer', 'researcher', 'motion-graphic'] as const;
+
+type AgentName = typeof supportedAgents[number];
 
 export type AgentDefinition = {
     name: AgentName;
@@ -21,6 +22,10 @@ export type AgentDefinition = {
     baseSystemPrompt: string;
     modelConfig: ModelConfig;
     modelId: string;
+    maxContextTokens: number;      // model context window used for consumption % computation
+    contextThreshold?: number;     // 0-1, defaults to 0.8 in the ContextManager
+    summaryModelId: string;        // dedicated summarizer model
+    subAgents: AgentName[];
 }
 
 const getSchemas = (tools: BaseTool<z.ZodSchema>[]): ToolSet => {
@@ -51,7 +56,6 @@ registerAgent({
             searchFileTool, 
             timelineExploreTool, 
             timelineEditTool,
-            finishTool,
             manageTodoListTool,
             editFileTool
         ]),
@@ -59,7 +63,11 @@ registerAgent({
         reasoningSummary: 'auto',
         maxOutputTokens: 3000,
     },
-    modelId: 'openai/gpt-5.1' // This will be overridden by the model passed to the agent
+    modelId: 'openai/gpt-5.1', // This will be overridden by the model passed to the agent
+    maxContextTokens: 400_000,
+    contextThreshold: 0.8,
+    summaryModelId: 'openai/gpt-5-nano',
+    subAgents: ['media-generator'],
 });
 
 registerAgent({
@@ -71,5 +79,9 @@ registerAgent({
         reasoningEffort: 'low',
         reasoningSummary: 'auto',
     },
-    modelId: 'openai/gpt-5.1'
+    modelId: 'openai/gpt-5.1',
+    maxContextTokens: 400_000,
+    contextThreshold: 0.8,
+    summaryModelId: 'openai/gpt-5-nano',
+    subAgents: [],
 });

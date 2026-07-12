@@ -1,4 +1,6 @@
 import { createFileMentionSuggestion, FileMention } from "@/features/editor/extensions/file-mention";
+import { Extension } from "@tiptap/core";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { useFileMentionSearch } from "@/hooks/use-file-mention-search";
 import { cn } from "@/lib/utils";
 import { Placeholder } from "@tiptap/extension-placeholder";
@@ -6,7 +8,7 @@ import { Markdown } from "@tiptap/markdown";
 import { Editor, EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from '@tiptap/starter-kit'
 import { ClassValue } from "clsx";
-import { RefObject, useEffect, useMemo } from "react";
+import { RefObject, useEffect, useMemo, useRef } from "react";
 
 
 type ChatTextareaProps = {
@@ -15,17 +17,57 @@ type ChatTextareaProps = {
     className?: ClassValue
     placeholder?: string
     editorRef?: RefObject<Editor | null>
+    /** Called when the user presses Enter (without Shift). */
+    onSubmit?: () => void
+    /** Called whenever the underlying editor instance changes (ready/destroyed). */
+    onEditorReady?: (editor: Editor | null) => void
 }
 
 export default function ChatTextarea(props: ChatTextareaProps) {
 
-    const { projectId, onChange, className, placeholder, editorRef } = props
+    const { projectId, onChange, className, placeholder, editorRef, onSubmit, onEditorReady } = props
 
     const searchFiles = useFileMentionSearch(projectId)
+
+    const onSubmitRef = useRef(onSubmit)
+    useEffect(() => {
+        onSubmitRef.current = onSubmit
+    }, [onSubmit])
 
     const fileMentionSuggestion = useMemo(
         () => createFileMentionSuggestion(searchFiles),
         [searchFiles],
+    )
+
+    // Registered as a ProseMirror plugin so it runs *after* the mention
+    // suggestion plugin: when the @-mention popup is open it consumes Enter to
+    // select an item, otherwise Enter submits the prompt.
+    const submitOnEnter = useMemo(
+        () =>
+            Extension.create({
+                name: 'chatSubmitOnEnter',
+                addProseMirrorPlugins() {
+                    return [
+                        new Plugin({
+                            key: new PluginKey('chatSubmitOnEnter'),
+                            props: {
+                                handleKeyDown(_view, event) {
+                                    if (event.key === 'Enter' && !event.shiftKey) {
+                                        const submit = onSubmitRef.current
+                                        if (submit) {
+                                            event.preventDefault()
+                                            submit()
+                                            return true
+                                        }
+                                    }
+                                    return false
+                                },
+                            },
+                        }),
+                    ]
+                },
+            }),
+        [],
     )
 
     const editor = useEditor({
@@ -61,6 +103,7 @@ export default function ChatTextarea(props: ChatTextareaProps) {
                     gfm: true,
                 },
             }),
+            submitOnEnter,
         ],
         content: '',
         contentType: 'markdown',
@@ -82,6 +125,10 @@ export default function ChatTextarea(props: ChatTextareaProps) {
             onChange(updatedEditor.getMarkdown())
         },
     })
+
+    useEffect(() => {
+        onEditorReady?.(editor)
+    }, [editor, onEditorReady])
 
     useEffect(() => {
         if (editorRef) {

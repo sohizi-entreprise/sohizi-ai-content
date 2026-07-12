@@ -439,3 +439,8 @@ export type AgentRunMetadata = {
 }
 
 export type AgentRunMessage = ModelMessage & {id: string}
+
+export type ModelOptionType = {
+  value: string
+  label: string
+}

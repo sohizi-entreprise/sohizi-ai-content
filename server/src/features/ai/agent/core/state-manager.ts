@@ -65,6 +65,10 @@ export class AgentStateManager {
         this.state.messages.push(...messages);
     }
 
+    replaceMessages(messages: AgentState["messages"]): void {
+        this.state.messages = messages;
+    }
+
     incrementUsage(usage: TokenUsage) {
         if(!this.state.usage){
             this.state.usage = usage;

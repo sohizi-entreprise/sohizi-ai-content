@@ -75,6 +75,28 @@ export const moveAssetToFolderMutationOptions = (projectId: string, assetId: str
     },
   })
 
+export const bulkMoveAssetsToFolderMutationOptions = (projectId: string) =>
+  mutationOptions({
+    mutationFn: ({ assetIds, folderId }: { assetIds: string[]; folderId: string }) =>
+      requests.bulkMoveAssetsToFolder(projectId, assetIds, folderId),
+    meta: {
+      invalidateQueries: [mediaGeneratorKeys.aiGeneratedAssets(projectId)],
+    },
+  })
+
+export const bulkDeleteAssetsMutationOptions = (projectId: string) =>
+  mutationOptions({
+    mutationFn: (assetIds: string[]) => requests.bulkDeleteAssets(projectId, assetIds),
+    meta: {
+      invalidateQueries: [mediaGeneratorKeys.aiGeneratedAssets(projectId)],
+    },
+  })
+
+export const downloadAssetsZipMutationOptions = (projectId: string) =>
+  mutationOptions({
+    mutationFn: (assetIds: string[]) => requests.downloadAssetsZip(projectId, assetIds),
+  })
+
 export const useUpdateAssetsList = (projectId: string) => {
   const queryClient = useQueryClient()
 

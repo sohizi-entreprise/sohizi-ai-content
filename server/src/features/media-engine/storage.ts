@@ -324,6 +324,11 @@ export async function getFileMetadata(storageKey: string): Promise<FileMetadataR
     };
 }
 
+export async function readFileBuffer(storageKey: string): Promise<Buffer> {
+    const arrayBuffer = await getS3Client().file(storageKey).arrayBuffer();
+    return Buffer.from(arrayBuffer);
+}
+
 export async function deleteFile(storageKey: string): Promise<void> {
     await getS3Client().delete(storageKey);
 }

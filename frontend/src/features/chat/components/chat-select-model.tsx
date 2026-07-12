@@ -1,69 +1,104 @@
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useChatStore } from "../store/chat-store"
-import { listModelsQueryOptions } from "../query-mutation"
-import { useQuery } from "@tanstack/react-query"
-import { Spinner } from "@/components/ui/spinner"
-import { Check, ChevronDown } from "lucide-react"
-import { LlmModel } from "../types"
-import { useEffect } from "react"
+import { useChatStore } from '../store/chat-store'
+import { listModelsQueryOptions } from '../query-mutation'
+import { useQuery } from '@tanstack/react-query'
+import { Spinner } from '@/components/ui/spinner'
+import { Check, ChevronDown } from 'lucide-react'
+import { LlmModel } from '../types'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  ModelSelector,
+  ModelSelectorContent,
+  ModelSelectorEmpty,
+  ModelSelectorGroup,
+  ModelSelectorInput,
+  ModelSelectorItem,
+  ModelSelectorList,
+  ModelSelectorLogo,
+  ModelSelectorName,
+  ModelSelectorTrigger,
+} from '@/components/ai-elements/model-selector'
 
-export default function ChatSelectModel({projectId}: {projectId: string}) {
+export default function ChatSelectModel({ projectId }: { projectId: string }) {
+  const model = useChatStore((state) => state.model)
+  const setModel = useChatStore((state) => state.setModel)
+  const { data: models = [], isLoading } = useQuery(
+    listModelsQueryOptions(projectId, ['leading-agent']),
+  )
 
-    const model = useChatStore(state => state.model)
-    const setModel = useChatStore(state => state.setModel)
-    const {data: models = [], isLoading} = useQuery(listModelsQueryOptions(projectId, ['leading-agent']))
+  const [open, setOpen] = useState(false)
 
-    const onSelect = (mod: LlmModel) => {
-        setModel(mod)
+  const isNotSet = model === null
+  const isEmpty = models.length === 0
+
+  useEffect(() => {
+    if (isNotSet && !isEmpty) {
+      setModel(models[0])
     }
+  }, [isNotSet, isEmpty, setModel])
 
-    const isNotSet = model === null
-    const isEmpty = models.length === 0
-
-    useEffect(() => {
-        if(isNotSet && !isEmpty){
-            setModel(models[0])
-        }
-    }, [isNotSet, isEmpty, setModel])
-
-    if(isLoading){
-        return <LoadingModel />
+  const grouped = useMemo(() => {
+    const map = new Map<string, LlmModel[]>()
+    for (const m of models) {
+      const list = map.get(m.provider) ?? []
+      list.push(m)
+      map.set(m.provider, list)
     }
+    return map
+  }, [models])
 
+  const onSelect = (mod: LlmModel) => {
+    setModel(mod)
+    setOpen(false)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 px-2 py-2">
+        <Spinner className="size-4 animate-spin" />
+      </div>
+    )
+  }
 
   return (
-    <DropdownMenu>
-        <DropdownMenuTrigger asChild disabled={isLoading}>
-            <button className="flex items-center gap-2 py-2 px-2 text-xs">
-                {model?.name ?? 'Select Model'}
-                <ChevronDown className="size-4" />
-            </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align={'center'} 
-                             className="w-56 border-white/10 bg-black/90 backdrop-blur-xl"
-        >
-            {models.map((mod) => (
-                <DropdownMenuItem key={mod.id} onClick={() => onSelect(mod)}>
-                    <div className="flex items-center gap-2 text-sm">
-                        {mod.name}
-                        {
-                            mod.id === model?.id ? (
-                                <Check className="size-4" />
-                            ) : null
-                        }
-                    </div>
-                </DropdownMenuItem>
-            ))}
-        </DropdownMenuContent>
-    </DropdownMenu>
+    <ModelSelector open={open} onOpenChange={setOpen}>
+      <ModelSelectorTrigger asChild>
+        <button className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+          {model ? (
+            <>
+              <ModelSelectorLogo provider={model.provider} className="size-3" />
+              <span className="max-w-[120px] truncate">{model.name}</span>
+            </>
+          ) : (
+            'Select Model'
+          )}
+          <ChevronDown className="size-3 opacity-50" />
+        </button>
+      </ModelSelectorTrigger>
+
+      <ModelSelectorContent>
+        <ModelSelectorInput placeholder="Search models..." />
+        <ModelSelectorList>
+          <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
+          {[...grouped.entries()].map(([provider, providerModels]) => (
+            <ModelSelectorGroup key={provider} heading={provider}>
+              {providerModels.map((mod) => (
+                <ModelSelectorItem
+                  key={mod.id}
+                  value={mod.name}
+                  onSelect={() => onSelect(mod)}
+                  className="flex items-center gap-2"
+                >
+                  <ModelSelectorLogo provider={mod.provider} className="size-4" />
+                  <ModelSelectorName>{mod.name}</ModelSelectorName>
+                  {mod.id === model?.id && (
+                    <Check className="ml-auto size-4 shrink-0 text-primary" />
+                  )}
+                </ModelSelectorItem>
+              ))}
+            </ModelSelectorGroup>
+          ))}
+        </ModelSelectorList>
+      </ModelSelectorContent>
+    </ModelSelector>
   )
-}
-
-function LoadingModel(){
-    return (
-        <div className="flex items-center gap-2 py-2 px-4 rounded-lg dark:bg-white/10">
-            <Spinner className="size-4 animate-spin" />
-        </div>
-    )
-
 }

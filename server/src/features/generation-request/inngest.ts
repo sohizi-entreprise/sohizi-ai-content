@@ -93,6 +93,9 @@ export const handleMediaGenerationFunc = inngest.createFunction(
                 model: model as unknown as LlmModel,
                 modelConfig: agentDefinition.modelConfig,
                 persistence: new MediaGenerationPersistence(requestId),
+                maxContextTokens: agentDefinition.maxContextTokens,
+                contextThreshold: agentDefinition.contextThreshold,
+                summaryModelId: agentDefinition.summaryModelId,
             });
 
             const userPrompt = await formatUserPrompt(request.prompt);
