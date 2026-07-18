@@ -1,7 +1,7 @@
 import { queryOptions, mutationOptions, infiniteQueryOptions, keepPreviousData, type InfiniteData } from '@tanstack/react-query'
 import * as requests from './requests'
 import type { AgentRunBlock, ChatCompletionRequest } from './types'
-import { searchFilesByName } from '@/features/projects/request'
+import { searchFilesByName, searchCommands } from '@/features/projects/request'
 
 type AgentRunsInfiniteData = InfiniteData<requests.CursorPaginationResult<AgentRunBlock>, string | undefined>
 
@@ -10,6 +10,7 @@ const keysFactory = {
     messages: (projectId: string, conversationId: string, options?: requests.CursorPaginationOptions) => ['messages', projectId, conversationId, options],
     models: (projectId: string, categories: string[]) => ['models', projectId, categories],
     fileNameSearch: (projectId: string, name: string, limit: number) => ['file-name-search', projectId, name, limit],
+    commandSearch: (projectId: string, name: string, limit: number) => ['command-search', projectId, name, limit],
     agentRuns: (projectId: string, conversationId: string, options?: requests.CursorPaginationOptions) => ['agent-runs', projectId, conversationId, options],
 }
 
@@ -169,6 +170,12 @@ export const listModelsQueryOptions = (projectId: string, categories: string[]) 
 export const searchFilesByNameQueryOptions = (projectId: string, name: string, limit = 15) => queryOptions({
     queryKey: keysFactory.fileNameSearch(projectId, name, limit),
     queryFn: ({ signal }) => searchFilesByName(projectId, name, limit, { signal }),
+    enabled: name.trim().length > 0,
+})
+
+export const searchCommandsQueryOptions = (projectId: string, name: string, limit = 15) => queryOptions({
+    queryKey: keysFactory.commandSearch(projectId, name, limit),
+    queryFn: ({ signal }) => searchCommands(projectId, name, limit, { signal }),
     enabled: name.trim().length > 0,
 })
 

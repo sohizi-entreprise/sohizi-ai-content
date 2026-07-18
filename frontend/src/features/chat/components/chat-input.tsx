@@ -73,11 +73,11 @@ export function ChatInput({
       <PromptInput
         onSubmit={handleSubmit}
         className={cn(
-          'rounded-2xl border border-white/10 bg-white/5 shadow-sm transition-colors focus-within:border-white/20 overflow-hidden',
+          '[&>div]:rounded-2xl [&>div]:bg-background! focus-within:[&>div]:border-white/20',
           className,
         )}
       >
-        <PromptInputBody>
+        <PromptInputBody className=''>
           {hasAttachments ? (
             <div className="w-full px-3 pt-3">
               <ChatFilesPreview onRemoveFile={onRemoveFile} />
@@ -92,7 +92,7 @@ export function ChatInput({
               onEditorReady={handleEditorReady}
               editorRef={editorRef}
               placeholder={placeholder}
-              className='border-none'
+              className=''
             />
           </div>
         </PromptInputBody>

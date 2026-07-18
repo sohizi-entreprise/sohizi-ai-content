@@ -1,8 +1,9 @@
 import { z } from 'zod'
 import { create } from 'zustand'
-import { useFileTreeStore } from '../stores/file-tree-store'
+import { insertNodeAt as insertNodeInCache } from '../stores/file-tree-cache'
 import type { FileNodeFormat, FileTreeNode } from '../types'
 import type { TreeApi } from 'react-arborist'
+import type { QueryClient } from '@tanstack/react-query'
 
 type TreeType = TreeApi<FileTreeNode>
 
@@ -31,7 +32,7 @@ type Command = z.infer<typeof commandSchema>
 type FileTreeBridgeState = {
   tree: TreeType | null
   setTree: (tree: TreeType | null | undefined) => void
-  runCommand: (command: Command) => void
+  runCommand: (command: Command, queryClient: QueryClient) => void
 }
 
 const useFileTreeBridgeStore = create<FileTreeBridgeState>((set, get) => ({
@@ -39,7 +40,7 @@ const useFileTreeBridgeStore = create<FileTreeBridgeState>((set, get) => ({
 
   setTree: (tree) => set({ tree: tree ?? null }),
 
-  runCommand: (command) => {
+  runCommand: (command, queryClient) => {
     const tree = get().tree
 
     if (!tree) {
@@ -57,7 +58,7 @@ const useFileTreeBridgeStore = create<FileTreeBridgeState>((set, get) => ({
           isDir,
           format,
         )
-        useFileTreeStore.getState().insertNodeAt(parentId, tempNode, index)
+        insertNodeInCache(queryClient, projectId, parentId, tempNode, index)
         setTimeout(() => {
           get().tree?.edit(tempNode.id)
         }, 50)
@@ -86,6 +87,7 @@ function createTempNode(
     parentId,
     position: index * 1000,
     editable: true,
+    contentEditable: true,
   }
   return tempNode
 }

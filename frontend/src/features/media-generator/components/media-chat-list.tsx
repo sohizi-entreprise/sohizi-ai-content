@@ -1,7 +1,13 @@
-import { cn } from '@/lib/utils'
+import { useCallback, useEffect, useRef } from 'react'
+import { IconLoader2 } from '@tabler/icons-react'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from '@/components/ai-elements/conversation'
 import MediaChatCard from './media-chat-card'
 import { listAssetsRequestsQueryOptions } from '../query-mutations'
-import { useInfiniteQuery } from '@tanstack/react-query'
 
 
 type MediaChatListProps = {
@@ -10,9 +16,39 @@ type MediaChatListProps = {
 }
 
 export function MediaChatList({ projectId, className }: MediaChatListProps) {
-  const { data: assetsRequests, isLoading } = useInfiniteQuery(listAssetsRequestsQueryOptions(projectId))
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
-  if(isLoading){
+  const {
+    data: assetsRequests = [],
+    isLoading,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery(listAssetsRequestsQueryOptions(projectId))
+
+  const handleFetchOlder = useCallback(() => {
+    if (!hasNextPage || isFetchingNextPage) return
+    fetchNextPage()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          handleFetchOlder()
+        }
+      },
+      { rootMargin: '100px 0px 0px 0px', threshold: 0 },
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [handleFetchOlder])
+
+  if (isLoading) {
     return (
       <div className='flex-1 flex items-center justify-center'>
         ...loading
@@ -20,7 +56,7 @@ export function MediaChatList({ projectId, className }: MediaChatListProps) {
     )
   }
 
-  if(!assetsRequests || assetsRequests?.length === 0){
+  if (assetsRequests.length === 0) {
     return (
       <div className='flex-1 flex items-center justify-center'>
         No assets requests found
@@ -28,20 +64,20 @@ export function MediaChatList({ projectId, className }: MediaChatListProps) {
     )
   }
 
-
   return (
-    <div
-      className={cn(
-        'relative flex-1 overflow-y-auto space-y-14 p-4',
-        className,
-      )}
-    >
-      {
-        assetsRequests.map((run) => (
-          <MediaChatCard key={run.id} run={run}/>
-        ))
-      }
-    </div>
+    <Conversation className={className}>
+      <ConversationContent className="space-y-8 p-4">
+        <div ref={sentinelRef} className="h-1" />
+        {isFetchingNextPage && (
+          <div className="flex justify-center py-2">
+            <IconLoader2 className="size-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {assetsRequests.map((run) => (
+          <MediaChatCard key={run.id} run={run} />
+        ))}
+      </ConversationContent>
+      <ConversationScrollButton />
+    </Conversation>
   )
 }
-

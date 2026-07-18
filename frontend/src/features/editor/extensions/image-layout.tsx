@@ -6,8 +6,10 @@ import {
 } from '@tiptap/react'
 import { ImageIcon, Loader2, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useFileTreeStore } from '../stores/file-tree-store'
+import { insertNodeAt as insertNodeInCache } from '../stores/file-tree-cache'
 import type { ReactNodeViewProps } from '@tiptap/react'
 import type { DragEvent } from 'react'
 import { cn } from '@/lib/utils'
@@ -224,7 +226,7 @@ function ImageUploadSlot({
   const [isUploading, setIsUploading] = useState(false)
   const projectId = useFileTreeStore((s) => s.projectId)
   const rootFolderId = useFileTreeStore((s) => s.rootFolderId)
-  const insertNodeAt = useFileTreeStore((s) => s.insertNodeAt)
+  const queryClient = useQueryClient()
 
   const uploadImage = async (file: File | undefined) => {
     if (!file) return
@@ -244,7 +246,7 @@ function ImageUploadSlot({
         folderId: rootFolderId,
         file,
       })
-      insertNodeAt(rootFolderId, result.fileNode)
+      insertNodeInCache(queryClient, projectId, rootFolderId, result.fileNode)
 
       const { data: content } = await api.get<AssetFileContent>(
         `/projects/${projectId}/files/${result.fileNode.id}`,

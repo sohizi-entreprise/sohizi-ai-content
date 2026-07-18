@@ -163,10 +163,15 @@ export type VoiceInputState = {
 // TOKEN/CONTEXT WINDOW TYPES
 // ============================================================================
 
-export type TokenUsage = {
-  used: number
+
+export type StreamTokenUsage = {
+  input: number
+  output: number
+  reasoning: number
+  cached: number
   total: number
-  percentage: number
+  modelId: string
+  cost: number
 }
 
 // ============================================================================
@@ -327,13 +332,13 @@ export type ChatStreamChunk = {
 } & (
   | { type: 'text_delta'; text: string }
   | { type: 'reasoning_delta'; text: string }
-  | { type: 'usage'; usage: TokenUsage }
+  | { type: 'usage'; usage: StreamTokenUsage }
   | { type: 'tool_call_delta'; toolCallId: string; input: string }
   | { type: 'tool_call_start'; toolCallId: string; toolName: string; input: string }
   | { type: 'tool_call_end'; toolCallId: string }
   | { type: 'tool_call'; toolCallId: string; toolName: string; input: unknown }
   | { type: 'tool_result_complete'; toolCallId: string; toolName: string; success: boolean; output: string }
-  | { type: 'complete'; text: string; finishReason: 'error' | 'not-finished' | 'response' | 'tool-calls' | 'aborted' | 'max-iterations'; usage: TokenUsage; error?: string; reasoningText?: string }
+  | { type: 'complete'; text: string; finishReason: 'error' | 'not-finished' | 'response' | 'tool-calls' | 'aborted' | 'max-iterations'; usage: StreamTokenUsage; error?: string; reasoningText?: string }
   | { type: 'error'; error: string }
   | { type: 'abort' }
   | { type: 'identifier'; conversationId: string, conversationTitle: string }

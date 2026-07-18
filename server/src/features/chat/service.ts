@@ -16,6 +16,8 @@ import { BaseStreamData, markStreamActive, readStreamChunks, removeStreamActive,
 import { getProjectById } from '../project/repo';
 import { sse } from 'elysia';
 import { listSkills } from '../file-system/repo';
+import * as commandService from '../command/service';
+import { buildInvokedCommandsPrompt, extractCommandNames } from '../command/resolve';
 
 export const listConversations = async (projectId: string, userId: string, options?: CursorPaginationOptions) => {
   const conversations = await repo.listConversations(projectId, userId, options);
@@ -143,11 +145,17 @@ async function runAgent(payload: RunAgentPayload){
   try {
     await repo.updateConversationAgentRun(runId, { status: 'running' })
 
-    const [project, checkpoint, projectSkills] = await Promise.all([
+    const [project, checkpoint, projectSkills, userPromptText] = await Promise.all([
       getProjectById(projectId),
       repo.getCheckpoint(projectId, conversationId),
       listSkills(projectId),
+      Promise.resolve(getUserPromptText(userPrompt)),
     ])
+    
+    const invokedCommandNames = extractCommandNames(userPromptText)
+    const invokedCommands = invokedCommandNames.length > 0
+      ? await commandService.resolveCommandsByNames(projectId, invokedCommandNames)
+      : []
     
     // const checkpoint = await repo.getCheckpoint(project.id, conversationId);
     const session = new Session({
@@ -166,7 +174,12 @@ async function runAgent(payload: RunAgentPayload){
     }
     const agent = new Agent({
         name: agentDefinition.name,
-        systemPrompt: enrichSystemPrompt(agentDefinition.baseSystemPrompt, projectSkills, agentDefinition.subAgents),
+        systemPrompt: enrichSystemPrompt(
+          agentDefinition.baseSystemPrompt,
+          projectSkills,
+          agentDefinition.subAgents,
+          invokedCommands,
+        ),
         session,
         model,
         modelConfig: agentDefinition.modelConfig,
@@ -217,7 +230,20 @@ async function handleTitleGeneration(userPrompt: UserModelMessage, organizationI
   return title
 }
 
-function enrichSystemPrompt(systemPrompt: string, projectSkills: {name: string, description: string, instructions: string}[], subAgents: string[]){
+function getUserPromptText(userPrompt: UserModelMessage): string {
+  const content = userPrompt.content
+  if (typeof content === 'string') {
+    return content
+  }
+  return content.find((part) => part.type === 'text')?.text ?? ''
+}
+
+function enrichSystemPrompt(
+  systemPrompt: string,
+  projectSkills: {name: string, description: string, instructions: string}[],
+  subAgents: string[],
+  invokedCommands: Array<{ name: string; action: string }> = [],
+){
   let finalPrompt = systemPrompt;
   const skillPrompts = projectSkills
                         .filter(skill => !!skill.description.trim() && !!skill.instructions.trim())
@@ -247,6 +273,11 @@ Sub-Agents (Name + Description):
 ${subAgentPrompts}
 </sub-agents>
 `;
+  }
+
+  const invokedCommandsPrompt = buildInvokedCommandsPrompt(invokedCommands)
+  if (invokedCommandsPrompt.length > 0) {
+    finalPrompt += `\n\n${invokedCommandsPrompt}`
   }
 
           

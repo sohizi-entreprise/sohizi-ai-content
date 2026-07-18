@@ -609,6 +609,18 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
     }),
   }))
 
+  export const commands = pgTable('commands', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: varchar('name', { length: 100 }).notNull(),
+    action: text('action').notNull(),
+    isPublic: boolean('is_public').default(false).notNull(),
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+    ...timestamps,
+  }, (table) => ([
+    index('commands_project_id_idx').on(table.projectId),
+    uniqueIndex('commands_name_project_unique').on(table.name, table.projectId),
+  ]))
+
   export const assetVariants = pgTable('asset_variants', {
     id: uuid('id').defaultRandom().primaryKey(),
     assetId: uuid('asset_id')
@@ -652,4 +664,4 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
   export type Skill = typeof skills.$inferSelect
   export type ConversationAgentRun = typeof conversationAgentRuns.$inferSelect
   export type AssetsAgentRun = typeof assetsAgentRuns.$inferSelect
-  
+  export type Command = typeof commands.$inferSelect

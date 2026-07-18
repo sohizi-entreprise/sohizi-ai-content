@@ -91,6 +91,7 @@ const app = new Elysia()
                 .use(routes.billingRoutes)
                 .use(routes.videoEditorRoutes)
                 .use(routes.generationRequestRoutes)
+                .use(routes.commandRoutes)
                 .listen(3030);
 
 billingService.startSweeper();

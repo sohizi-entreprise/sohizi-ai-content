@@ -14,6 +14,7 @@ import { endExecutionLoopTool, finishTool } from "./loop-end";
 import { submitMediaJobsTool } from "./submit-media-jobs";
 import { loadSkillTool } from "./load-skill";
 import { assignTaskTool } from "./tasks-assign";
+import { imageAnalyzerTool, videoAnalyzerTool, youtubeAnalyzerTool } from "./media-analyzer";
 
 
 const toolRegistry = new Map<string, BaseTool<z.ZodSchema>>();
@@ -48,3 +49,6 @@ registerTool(processSpeechTool);
 registerTool(submitMediaJobsTool);
 registerTool(loadSkillTool);
 registerTool(assignTaskTool);
+registerTool(imageAnalyzerTool);
+registerTool(videoAnalyzerTool);
+registerTool(youtubeAnalyzerTool);

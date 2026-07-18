@@ -26,6 +26,8 @@ export const getListProjectsQueryOptions = ({cursor, limit, organizationId}: {cu
     select: (data) => data.pages.flatMap(page => page.data),
 })
 
+export const fileTreeKey = (projectId: string, parentId: string) => keysFactory.fileTree(projectId, parentId)
+
 export const getProjectQueryOptions = (id: string) => queryOptions({
     queryKey: keysFactory.project(id),
     queryFn: () => requests.getProject(id),

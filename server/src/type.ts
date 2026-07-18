@@ -92,6 +92,7 @@ export type TokenUsage = {
   cached: number;
   total: number;
   modelId: string;
+  cost: number;
 }
 
 export type AgentState = {

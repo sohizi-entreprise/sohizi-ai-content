@@ -60,7 +60,6 @@ export default function MediaChatCard(props: Props) {
   return (
     <div className='flex flex-col gap-4'>
       <div className="flex items-center gap-2">
-        <div className="h-px w-8 bg-primary rounded-full" />
         <span className="text-xs text-muted-foreground tracking-wide">
           {timeFromNow(run.createdAt)}
         </span>
@@ -68,16 +67,16 @@ export default function MediaChatCard(props: Props) {
         <RenderUserMessage messages={run.messages} />
 
         {/* Generation */}
-        <div className="border p-2 rounded-xl">
+        <div className="">
           {
             isRunning ? (
               <RenderAssistantMessage run={run}/>
             ) : (
               <div className="flex flex-col gap-2">
-                <div className="grid grid-cols-5 gap-1">
+                <AssistantMessage messages={run.messages} isLoading={false}/>
+                <div className="grid grid-cols-5 gap-1 border p-2 rounded-xl">
                   <RenderAssets assets={run.assets} status={run.status} />
                 </div>
-                <AssistantMessage messages={run.messages} isLoading={false}/>
               </div>
             )
           }
@@ -94,7 +93,7 @@ const RenderUserMessage = ({messages}: {messages: Message[]}) => {
     toast.success('Copied to clipboard');
   }
   return (
-    <div className='flex flex-col bg-white/10 p-4 rounded-r-xl rounded-bl-xl rounded-out-tl-xl sticky top-0 z-10 backdrop-blur-md'>
+    <div className='flex flex-col bg-surface p-4 rounded-xl'>
       {/* prompt */}
       <div className="flex-1 flex items-start gap-2">
         <p className="line-clamp-2 text-sm text-foreground tracking-wide break-all flex-1">
@@ -144,10 +143,10 @@ const RenderAssistantMessage = ({run}: {run: MediaGenerationRun;}) => {
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-5 gap-1">
+      <AssistantMessage messages={messages} isLoading={isRunning} className="flex-1" />
+      <div className="grid grid-cols-5 gap-1 border p-2 rounded-xl">
         <RenderAssets assets={assets} status={runStatus} />
       </div>
-      <AssistantMessage messages={messages} isLoading={isRunning} className="flex-1" />
     </div>
   )
 }
@@ -155,16 +154,22 @@ const RenderAssistantMessage = ({run}: {run: MediaGenerationRun;}) => {
 function AssistantMessage({messages, isLoading, className}: {messages: Message[]; isLoading: boolean; className?: string;}){
   const text = extractLastMessageContent(messages)
   const input = extractSubmitMediaJobsInput(messages);
+
+  const showViewPrompt = !isLoading && input.jobs.length > 0;
   
   return (
-    <div>
-      <div className="flex items-start gap-2">
+    <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2 flex-1">
         <SphereLoader isLoading={isLoading} size={24} />
-        <p className={cn("text-sm font-medium text-muted-foreground tracking-wide break-all", className)}>
+        <p className={cn("text-sm text-muted-foreground tracking-wide break-all", className)}>
           {text}
         </p>
       </div>
-      <RenderViewPrompt input={input} />
+      {
+        showViewPrompt && (
+          <RenderViewPrompt input={input} />
+        )
+      }
     </div>
   )
 }

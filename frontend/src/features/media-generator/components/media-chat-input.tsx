@@ -6,6 +6,7 @@ import {
   AudioLines,
   Clapperboard,
   ImageIcon,
+  MoveUp,
 } from 'lucide-react'
 import { useMediaGeneratorStore } from '../store/media-generator-store'
 import type { Editor, JSONContent } from '@tiptap/core'
@@ -115,19 +116,19 @@ export function MediaChatInput({
   return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-2xl border bg-background p-3 text-foreground',
+        'relative overflow-hidden rounded-2xl border focus-within:border-white/20 bg-background text-foreground',
         className,
       )}
     >
-      <div className="pointer-events-none absolute -right-1/4 top-0 h-16 w-56 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
+      {/* <div className="pointer-events-none absolute -right-1/4 top-0 h-16 w-56 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" /> */}
       <div className="relative z-1">
         <div className="flex items-start justify-between gap-3">
           <Tabs
             value={mediaType}
             onValueChange={(value) => setMediaType(value as MediaType)}
-            className="min-w-0 flex-1"
+            className="min-w-0 flex-1 p-2"
           >
-            <TabsList className="h-9 w-full justify-start gap-1 rounded-none bg-transparent p-0 pl-6">
+            <TabsList className="h-9 w-full justify-start gap-1 rounded-none bg-transparent">
               {TABS.map((tab) => {
                 const Icon = tab.icon
 
@@ -136,8 +137,8 @@ export function MediaChatInput({
                     key={tab.value}
                     value={tab.value}
                     className={cn(
-                      'relative h-9 flex-none rounded-t-2xl rounded-b-none border-0 bg-transparent px-4 text-sm text-zinc-400',
-                      mediaType === tab.value && 'bg-surface/30! text-primary! rounded-out-b-lg',
+                      'relative h-9 flex-none rounded-2xl border-0 bg-transparent px-4 text-sm text-muted-foreground',
+                      mediaType === tab.value && 'bg-surface/30 text-primary!',
                     )}
                   >
                     <Icon className="size-3" />
@@ -149,40 +150,43 @@ export function MediaChatInput({
           </Tabs>
         </div>
 
-        <div className="flex items-start gap-6 px-2 py-4 bg-surface/30 rounded-t-xl">
-          {supportsImageAttachments ? (
+        <div className="max-h-24 min-h-20 min-w-0 overflow-y-auto px-3">
+          <ChatTextarea
+            projectId={projectId}
+            onChange={setPrompt}
+            placeholder="Write your prompt, use @ to reference files ..."
+            editorRef={editorRef}
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 p-2 rounded-b-xl border-t">
+        {supportsImageAttachments ? (
             <FileAttachment
               projectId={projectId}
               attachments={attachments}
               onAdd={addAttachment}
               onRemove={removeAttachment}
               maxAttachments={5}
+              itemSize={40}
             />
           ) : null}
 
-          <div className="max-h-[100px] min-w-0 flex-1 overflow-y-auto">
-            <ChatTextarea
-              projectId={projectId}
-              onChange={setPrompt}
-              placeholder="Write your prompt, use @ to reference files ..."
-              editorRef={editorRef}
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 bg-surface/30 p-2 rounded-b-xl border-t">
           <SettingsPopover
             settings={currentSettings}
             onUpdate={handleSettingsUpdate}
           />
 
           <Button
-            type="button"
+           
             disabled={disableButton}
             onClick={sendRequest}
-            className="ml-auto h-9 min-w-35 rounded-lg bg-linear-to-r from-emerald-500 to-lime-400 px-6 font-semibold text-black hover:from-emerald-400 hover:to-lime-300 disabled:opacity-50"
+            size="icon"
+            className="ml-auto rounded-full text-black disabled:opacity-50"
           >
-            {isPending ? <IconLoader2 className="size-4 animate-spin" /> : 'Generate'}
+            {isPending ? 
+            <IconLoader2 className="size-4 animate-spin" /> : 
+            <MoveUp className="size-4" strokeWidth={3}/>
+            }
           </Button>
         </div>
       </div>

@@ -148,6 +148,20 @@
       "when": 1782660000000,
       "tag": "0020_assets_agent_run_assets_relation",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1782746400000,
+      "tag": "0021_commands",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782746400001,
+      "tag": "0022_seed_commands",
+      "breakpoints": true
     }
   ]
 }

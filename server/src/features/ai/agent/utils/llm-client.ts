@@ -1,12 +1,13 @@
 import { Output, streamText, generateText, ModelMessage, ToolSet, LanguageModelUsage } from "ai";
 import { openai } from "@/lib/llm-providers";
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { z } from "zod";
 import { LlmChunk, LlmCompleteChunk, streamEvents } from "./llm-response";
 import { TokenUsage, CompleteReason } from "@/type";
 import type { Billable, BillableContext, BillableResult, BillableStream, Credits } from "@/features/billing/types";
 import type { LlmModel } from "@/db/schema";
-import { calculateTextCredits } from "@/features/billing/credits";
-import { TOPUP_TARGET_MARGIN, PAYMENT_FEE_RESERVE, ESTIMATE_OVERBOOKING_FACTOR } from "@/features/billing/constants";
+import { calculateTextCredits, loaded_cost_usd, retail_price_usd, credits_to_charge } from "@/features/billing/credits";
+import { TOPUP_TARGET_MARGIN, PAYMENT_FEE_RESERVE, ESTIMATE_OVERBOOKING_FACTOR, TOKEN_OVERHEAD_RATE, CREDIT_RATE } from "@/features/billing/constants";
 
 export type ModelConfig = {
     tools?: ToolSet;
@@ -55,10 +56,12 @@ export class LlmClient {
               : undefined;
 
         const modelConfig = this.modelConfig;
+        let openRouterCost = 0;
 
         try {
             const response = await generateText({
-                model: openai(this.model),
+                model: this.getProvider(true),
+                allowSystemInMessages: true,
                 messages,
                 abortSignal,
                 tools: this.tools,
@@ -69,14 +72,23 @@ export class LlmClient {
                     openai: {
                         reasoningEffort: modelConfig?.reasoningEffort,
                         reasoningSummary: modelConfig?.reasoningSummary,
+                    },
+                    openrouter: {
+                        reasoning: {
+                            effort: modelConfig?.reasoningEffort,
+                            exclude: false
+                        }
                     }
                 }
             })
+            const openRouterUsage = response.finalStep.providerMetadata?.openrouter?.usage as { cost: number } | undefined;
+            openRouterCost = openRouterUsage?.cost ?? 0;
+            
             yield {
                 type: streamEvents.complete,
                 text: response.text,
                 finishReason: response.finishReason,
-                usage: this.getTokenUsage(response.usage),
+                usage: this.getTokenUsage(response.usage, openRouterCost),
             }
         } catch (error) {
             yield {
@@ -91,6 +103,7 @@ export class LlmClient {
                     cached: 0,
                     total: 0,
                     modelId: this.model,
+                    cost: openRouterCost,
                 },
 
             }
@@ -120,12 +133,14 @@ export class LlmClient {
             cached: 0,
             total: 0,
             modelId: this.model,
+            cost: 0,
         };
 
         try {
             const response = streamText({
-                model: openai(this.model),
+                model: this.getProvider(true),
                 messages,
+                allowSystemInMessages: true,
                 abortSignal,
                 tools: this.tools,
                 maxRetries: modelConfig?.maxRetries,
@@ -135,10 +150,16 @@ export class LlmClient {
                     openai: {
                         reasoningEffort: modelConfig?.reasoningEffort,
                         reasoningSummary: modelConfig?.reasoningSummary,
+                    },
+                    openrouter: {
+                        reasoning: {
+                            effort: modelConfig?.reasoningEffort,
+                            exclude: false
+                        }
                     }
                 }
             })
-            for await (const chunk of response.fullStream) {
+            for await (const chunk of response.stream) {
                 switch (chunk.type) {
                     case 'text-delta':
                         text += chunk.text;
@@ -214,7 +235,15 @@ export class LlmClient {
                 }
             }
             usage = this.getTokenUsage(await response.usage);
-            finishReason = await response.finishReason;
+            const [finish, finalStep] = await Promise.all([response.finishReason, response.finalStep]);
+            finishReason = finish;
+            const openRouterUsage = finalStep.providerMetadata?.openrouter?.usage as { cost: number } | undefined;
+            const openRouterCost = openRouterUsage?.cost ?? 0;
+            usage = {
+                ...usage,
+                cost: openRouterCost,
+            };
+
         } catch (e) {
             error = e instanceof Error ? e.message : String(e)
             finishReason = 'error';
@@ -234,7 +263,7 @@ export class LlmClient {
         }
     }
 
-    private getTokenUsage(usage: LanguageModelUsage): TokenUsage {
+    private getTokenUsage(usage: LanguageModelUsage, cost = 0): TokenUsage {
         return {
             input: usage.inputTokens || 0,
             output: usage.outputTokens || 0,
@@ -242,7 +271,22 @@ export class LlmClient {
             cached: (usage.inputTokenDetails.cacheReadTokens || 0) + (usage.inputTokenDetails.cacheWriteTokens || 0),
             total: usage.totalTokens || 0,
             modelId: this.model,
+            cost,
         }
+    }
+
+    private getProvider(useOpenRouter?: boolean){
+        if(useOpenRouter){
+            const apiKey = process.env.OPENROUTER_API_KEY;
+            if(!apiKey){
+                throw new Error('OPENROUTER_API_KEY is not set');
+            }
+            const openrouter = createOpenRouter({
+                apiKey: process.env.OPENROUTER_API_KEY,
+            })
+            return openrouter(this.model)
+        }
+        return openai(this.model);
     }
 }
 
@@ -269,7 +313,7 @@ export type BillableLlmConfig = {
     ttlMs?: number;
 }
 
-const DEFAULT_TIMEOUT_MS = 120_000; // 2 minutes
+const DEFAULT_TIMEOUT_MS = 600_000; // 10 minutes
 
 /**
  * A BillableLlmClient satisfies both:
@@ -286,9 +330,19 @@ export type BillableLlmClient =
 
 export function createBillableLlmClient(config: BillableLlmConfig): BillableLlmClient {
     const { model, modelConfig, timeoutMs = DEFAULT_TIMEOUT_MS, ttlMs } = config;
-    const client = new LlmClient(model.apiName, modelConfig);
+    const client = new LlmClient(model.id, modelConfig);
 
     const creditsFromUsage = (usage: TokenUsage): Credits => {
+        if (usage.cost > 0) {
+            const loadedCostUsd = loaded_cost_usd(usage.cost, TOKEN_OVERHEAD_RATE);
+            const retailPriceUsd = retail_price_usd(
+                loadedCostUsd,
+                TOPUP_TARGET_MARGIN,
+                PAYMENT_FEE_RESERVE,
+            );
+            return BigInt(credits_to_charge(retailPriceUsd, CREDIT_RATE));
+        }
+
         const actualCredits = calculateTextCredits(model, {
             inputTokens: usage.input,
             outputTokens: usage.output,
@@ -310,7 +364,7 @@ export function createBillableLlmClient(config: BillableLlmConfig): BillableLlmC
     }
 
     return {
-        operation: `llm:${model.apiName}`,
+        operation: `llm:${model.id}`,
         timeoutMs,
         ttlMs,
 

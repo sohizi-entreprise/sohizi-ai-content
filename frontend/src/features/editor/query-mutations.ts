@@ -131,6 +131,8 @@ export const getPendingOperationQueryOptions = (projectId: string, fileId: strin
     enabled: !!projectId && !!fileId,
 })
 
+export const getFilePendingKey = (projectId: string, fileId: string) => keysFactory.pendingOperation(projectId, fileId)
+
 export const deletePendingOperationMutationOptions = (projectId: string, fileId: string) =>
   mutationOptions({
     mutationFn: () => deletePendingOperation(projectId, fileId),

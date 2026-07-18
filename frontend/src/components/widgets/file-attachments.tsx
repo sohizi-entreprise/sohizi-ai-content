@@ -87,18 +87,22 @@ export default function FileAttachment(props: Props) {
     return (
       <div
         className={cn(
-          'group relative h-18 shrink-0 overflow-visible py-1 transition-[z-index] duration-300',
+          'group relative shrink-0 overflow-visible py-1 transition-[z-index] duration-300',
           isExpanded ? 'z-20' : 'z-1',
         )}
-        style={{ width: collapsedWidth }}
+        style={{ width: collapsedWidth, height: itemSize + 8 }}
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
         onFocus={() => setIsExpanded(true)}
         onBlur={handleBlur}
       >
         <div
-          className="relative h-15 min-w-15"
-          style={{ width: isExpanded ? expandedWidth : collapsedWidth }}
+          className="relative"
+          style={{
+            width: isExpanded ? expandedWidth : collapsedWidth,
+            height: itemSize,
+            minWidth: itemSize,
+          }}
         >
           {visibleAttachments.map((attachment, index) => {
             const collapsedX = index * collapsedOffset
@@ -108,8 +112,10 @@ export default function FileAttachment(props: Props) {
             return (
               <div
                 key={attachment.id}
-                className="absolute left-0 top-0 size-15 overflow-hidden rounded-xl border border-white/10 bg-white/8 shadow-lg shadow-black/20 transition-[transform,border-color,box-shadow] duration-300 ease-out will-change-transform hover:border-white/25 hover:shadow-xl hover:shadow-black/30"
+                className="absolute left-0 top-0 overflow-hidden rounded-xl border border-white/10 bg-white/8 shadow-lg shadow-black/20 transition-[transform,border-color,box-shadow] duration-300 ease-out will-change-transform hover:border-white/25 hover:shadow-xl hover:shadow-black/30"
                 style={{
+                  width: itemSize,
+                  height: itemSize,
                   zIndex: isExpanded
                     ? index + 1
                     : visibleAttachments.length + index,
@@ -142,12 +148,14 @@ export default function FileAttachment(props: Props) {
             onClick={openFileDialog}
             disabled={!canAdd}
             className={cn(
-              'absolute left-0 top-0 flex size-15 items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/6 text-zinc-300 transition-[transform,opacity,border-color,background-color,color] duration-300 ease-out will-change-transform hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:opacity-50',
+              'absolute left-0 top-0 flex items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/6 backdrop-blur-sm text-zinc-300 transition-[transform,opacity,border-color,background-color,color] duration-300 ease-out will-change-transform hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:opacity-50',
               isExpanded || visibleAttachments.length === 0
                 ? 'pointer-events-auto opacity-100'
                 : 'pointer-events-none opacity-0',
             )}
             style={{
+              width: itemSize,
+              height: itemSize,
               zIndex: visibleAttachments.length + 2,
               transform:
                 isExpanded || visibleAttachments.length === 0

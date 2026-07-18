@@ -1,4 +1,5 @@
 import { FilePlus, FolderPlus, Plus } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { FileNodeMenu } from '../file-node/node-menu'
 import useFileTreeBridge from '../../bridge/use-file-tree-bridge'
 import { FileTree } from './file-tree'
@@ -24,21 +25,28 @@ const menuOptions = [
 
 export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
   const runCommand = useFileTreeBridge((s) => s.runCommand)
+  const queryClient = useQueryClient()
 
   const handleOnCreate = (action: string) => {
     if (!rootFolderId) return
     switch (action) {
       case 'new-file':
-        runCommand({
-          type: 'create',
-          data: { projectId, parentId: rootFolderId, index: 0, isDir: false },
-        })
+        runCommand(
+          {
+            type: 'create',
+            data: { projectId, parentId: rootFolderId, index: 0, isDir: false },
+          },
+          queryClient,
+        )
         break
       case 'new-folder':
-        runCommand({
-          type: 'create',
-          data: { projectId, parentId: rootFolderId, index: 0, isDir: true },
-        })
+        runCommand(
+          {
+            type: 'create',
+            data: { projectId, parentId: rootFolderId, index: 0, isDir: true },
+          },
+          queryClient,
+        )
         break
       default:
         break

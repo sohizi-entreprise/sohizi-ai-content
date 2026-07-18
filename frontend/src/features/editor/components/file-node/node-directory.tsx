@@ -8,14 +8,15 @@ import {
   Trash,
   Upload,
 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useEditorStore } from '../../stores/editor-store'
-import { useFileTreeStore } from '../../stores/file-tree-store'
+import { insertNodeAt as insertNodeInCache } from '../../stores/file-tree-cache'
+import { getlistFileTreePerDirectoryOptions } from '@/features/projects/query-mutation'
 import { FILE_FORMAT_OPTIONS } from './node-menu'
 import type { FileNodeFormat, FileTreeNode, NodeProps } from '../../types'
 import { cn } from '@/lib/utils'
-import * as requests from '@/features/projects/request'
 import { useFileUpload } from '@/hooks/use-file-upload'
 import { useSaveFileBucket } from '@/hooks/use-save-file-bucket'
 import {
@@ -40,11 +41,10 @@ export function DirectoryNode(props: NodeProps) {
   const isSelected = selectedFileId === node.data.id
   const isDir = node.data.directory
 
-  const handleLoadChildren = useLoadChildren()
+  useDirectoryChildren(node.data.projectId, node.data.id, isDir && node.isOpen)
 
   const handleClick = () => {
     if (isDir) {
-      handleLoadChildren(node.data.id)
       node.toggle()
     } else {
       openFile(node.data)
@@ -107,7 +107,7 @@ export function DirectoryNode(props: NodeProps) {
 
 function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
   const [isNewFileSubmenuOpen, setIsNewFileSubmenuOpen] = useState(false)
-  const handleLoadChildren = useLoadChildren()
+  const queryClient = useQueryClient()
   const { openFileDialog, getInputProps } = useHandleUploadFile({
     projectId: node.data.projectId,
     node,
@@ -115,9 +115,14 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
 
   if (node.isEditing) return null
 
+  const ensureChildrenLoaded = () =>
+    queryClient.ensureQueryData(
+      getlistFileTreePerDirectoryOptions(node.data.projectId, node.data.id),
+    )
+
   const createFile = async (format: FileNodeFormat) => {
     if (!node.isOpen) node.open()
-    await handleLoadChildren(node.data.id)
+    await ensureChildrenLoaded()
     onCreateFile(node.data.id, 0, false, format)
   }
 
@@ -125,7 +130,7 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
     switch (action) {
       case 'new-folder': {
         if (!node.isOpen) node.open()
-        await handleLoadChildren(node.data.id)
+        await ensureChildrenLoaded()
         onCreateFile(node.data.id, 0, true)
         break
       }
@@ -276,35 +281,22 @@ function getOptions(
   ]
 }
 
-export function useLoadChildren() {
-  const projectId = useFileTreeStore((s) => s.projectId)
-  const appendChildren = useFileTreeStore((s) => s.appendChildren)
-  const markDirLoaded = useFileTreeStore((s) => s.markDirLoaded)
-  const isDirLoaded = useFileTreeStore((s) => s.isDirLoaded)
-
-  return useCallback(
-    async (dirId: string) => {
-      if (!projectId || isDirLoaded(dirId)) return
-      try {
-        const children = await requests.listFileTreePerDirectory(
-          projectId,
-          dirId,
-        )
-        appendChildren(dirId, children)
-        markDirLoaded(dirId)
-      } catch (err) {
-        console.error('Failed to load children:', err)
-      }
-    },
-    [projectId, appendChildren, markDirLoaded, isDirLoaded],
-  )
+function useDirectoryChildren(
+  projectId: string,
+  dirId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    ...getlistFileTreePerDirectoryOptions(projectId, dirId),
+    enabled,
+  })
 }
 
 function useHandleUploadFile(
   params: { projectId: string } & Pick<NodeProps, 'node'>,
 ) {
   const { projectId, node } = params
-  const insertNodeAt = useFileTreeStore((s) => s.insertNodeAt)
+  const queryClient = useQueryClient()
   const { saveFile } = useSaveFileBucket()
   const [_state, { openFileDialog, getInputProps }] = useFileUpload({
     multiple: false,
@@ -323,7 +315,13 @@ function useHandleUploadFile(
           {
             onSuccess: (result) => {
               const fileNode = result.fileNode
-              insertNodeAt(node.id, fileNode, totalChildren)
+              insertNodeInCache(
+                queryClient,
+                projectId,
+                node.id,
+                fileNode,
+                totalChildren,
+              )
             },
             onError: (error) => {
               toast.error(error.message)

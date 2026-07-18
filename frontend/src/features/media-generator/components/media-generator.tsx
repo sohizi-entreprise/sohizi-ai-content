@@ -46,31 +46,30 @@ export function MediaGenerator() {
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full w-full">
       <ResizablePanel
-        id="file-explorer"
-        defaultSize={50}
-        minSize={40}
-        maxSize={50}
-        className="rounded-2xl mb-2 bg-white/10"
-      >
-        <MediaChat projectId={projectId} />
-      </ResizablePanel>
-
-      <ResizableHandle className="mx-1 bg-transparent" />
-
-      <ResizablePanel
         id="editor-workspace"
-        defaultSize={50}
+        defaultSize={65}
         minSize={50}
-        className=""
+        className="bg-card rounded-2xl"
       >
         <div className="flex h-full w-full flex-col">
           <RenderHeader filter={filter} setFilter={setFilter} />
 
-          <ScrollArea className="flex-1 min-h-0">
+          <ScrollArea className="flex-1 min-h-0 px-4">
             <RenderAssets projectId={projectId} />
           </ScrollArea>
         </div>
       </ResizablePanel>
+      <ResizableHandle className="mx-1 bg-transparent" />
+      <ResizablePanel
+        id="file-explorer"
+        defaultSize={35}
+        minSize={30}
+        // maxSize={40}
+        className="rounded-2xl mb-2 bg-card"
+      >
+        <MediaChat projectId={projectId} />
+      </ResizablePanel>
+
     </ResizablePanelGroup>
   )
 }
@@ -110,7 +109,7 @@ function RenderAssets({projectId}: {projectId: string}){
 
   return (
 
-    <div className="">
+    <div className="py-8">
       <div className="grid gap-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {activeGenerationRequests.map((request) => (
             <MediaLoader key={request.requestId} />
@@ -143,7 +142,7 @@ function RenderHeader(props: {
 }) {
   const { filter, setFilter } = props
   return (
-    <header className="px-6 py-5 bg-black/20 backdrop-blur-md rounded-2xl flex items-center justify-between relative z-4">
+    <header className="px-4 pt-4 pb-2 flex items-center justify-between relative z-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-primary">

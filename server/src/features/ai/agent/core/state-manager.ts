@@ -81,6 +81,7 @@ export class AgentStateManager {
             reasoning: this.state.usage.reasoning + usage.reasoning || 0,
             cached: this.state.usage.cached + usage.cached || 0,
             total: this.state.usage.total + usage.total || 0,
+            cost: this.state.usage.cost + usage.cost || 0,
         }
     }
 

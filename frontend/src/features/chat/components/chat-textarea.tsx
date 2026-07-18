@@ -1,7 +1,9 @@
 import { createFileMentionSuggestion, FileMention } from "@/features/editor/extensions/file-mention";
+import { createCommandMentionSuggestion, CommandMention } from "@/features/editor/extensions/command-mention";
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { useFileMentionSearch } from "@/hooks/use-file-mention-search";
+import { useCommandMentionSearch } from "@/hooks/use-command-mention-search";
 import { cn } from "@/lib/utils";
 import { Placeholder } from "@tiptap/extension-placeholder";
 import { Markdown } from "@tiptap/markdown";
@@ -28,6 +30,7 @@ export default function ChatTextarea(props: ChatTextareaProps) {
     const { projectId, onChange, className, placeholder, editorRef, onSubmit, onEditorReady } = props
 
     const searchFiles = useFileMentionSearch(projectId)
+    const searchCommands = useCommandMentionSearch(projectId)
 
     const onSubmitRef = useRef(onSubmit)
     useEffect(() => {
@@ -37,6 +40,11 @@ export default function ChatTextarea(props: ChatTextareaProps) {
     const fileMentionSuggestion = useMemo(
         () => createFileMentionSuggestion(searchFiles),
         [searchFiles],
+    )
+
+    const commandMentionSuggestion = useMemo(
+        () => createCommandMentionSuggestion(searchCommands),
+        [searchCommands],
     )
 
     // Registered as a ProseMirror plugin so it runs *after* the mention
@@ -97,6 +105,12 @@ export default function ChatTextarea(props: ChatTextareaProps) {
                 },
                 enableClick: true,
                 suggestion: fileMentionSuggestion,
+              }),
+            CommandMention.configure({
+                HTMLAttributes: {
+                  class: 'inline-flex rounded bg-white/10 px-1 py-0 text-zinc-100 ring-1 ring-white/10',
+                },
+                suggestion: commandMentionSuggestion,
               }),
             Markdown.configure({
                 markedOptions: {

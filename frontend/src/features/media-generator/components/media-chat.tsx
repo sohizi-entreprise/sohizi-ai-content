@@ -8,6 +8,11 @@ export default function MediaChat({ projectId }: { projectId: string }) {
   return (
     <>
     <div className='flex flex-col h-full'>
+      <div className='h-10 border-b flex items-center px-4'>
+        {/* <p className='text-sm text-muted-foreground'>
+          There is no context saved accross runs
+        </p> */}
+      </div>
         <MediaChatList projectId={projectId}/>
         <MediaChatInput projectId={projectId} 
                         className='mx-2 mb-2'

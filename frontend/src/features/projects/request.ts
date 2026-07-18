@@ -62,6 +62,36 @@ type SearchFilesByNameOptions = {
   format?: string
 }
 
+export type Command = {
+  id: string
+  name: string
+  action: string
+  isPublic: boolean
+  projectId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+type SearchCommandsOptions = {
+  signal?: AbortSignal
+}
+
+export const searchCommands = async (
+  projectId: string,
+  name: string,
+  limit?: number,
+  options?: SearchCommandsOptions,
+): Promise<Command[]> => {
+  const response = await api.get(`/projects/${projectId}/commands/search`, {
+    params: {
+      name,
+      limit,
+    },
+    signal: options?.signal,
+  })
+  return response.data
+}
+
 export const searchFilesByName = async (
   projectId: string,
   name: string,

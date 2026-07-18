@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useDrop } from 'react-dnd'
+import { useQueryClient } from '@tanstack/react-query'
 import { Timeline } from '@xzdarcy/react-timeline-editor'
 import { useVideoEditorStore } from '../store/editor-store'
 import { CLIP_EFFECT_IDS, selectVisibleClips } from '../store/selectors'
@@ -20,6 +21,7 @@ import type {
 } from '@xzdarcy/react-timeline-editor'
 import type { TimelineEffect } from '@xzdarcy/timeline-engine'
 import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
+import { findNodeById } from '@/features/editor/stores/file-tree-cache'
 import type { FileTreeNode } from '@/features/editor/types'
 import {
   ARBORIST_NODE_DRAG_TYPE,
@@ -74,6 +76,7 @@ interface DragGhost {
 
 export function VideoTimeline() {
   const playerRef = usePlayerRef()
+  const queryClient = useQueryClient()
   const timelineStateRef = useRef<TimelineState | null>(null)
   const programmaticTimeRef = useRef(false)
 
@@ -580,6 +583,15 @@ export function VideoTimeline() {
     [getEditAreaEl],
   )
 
+  const findDraggedFileNode = useCallback(
+    (id: string): FileTreeNode | null => {
+      const { projectId, rootFolderId } = useFileTreeStore.getState()
+      if (!projectId) return null
+      return findNodeById(queryClient, projectId, rootFolderId, id)
+    },
+    [queryClient],
+  )
+
   const [, dropTimeline] = useDrop(
     () => ({
       accept: ARBORIST_NODE_DRAG_TYPE,
@@ -591,8 +603,7 @@ export function VideoTimeline() {
         const offset = monitor.getClientOffset()
         if (!offset) return
 
-        const treeData = useFileTreeStore.getState().treeData
-        const node = findFileNodeInTree(treeData, item.id)
+        const node = findDraggedFileNode(item.id)
         if (!isMediaFileNode(node)) {
           clearExternalDropPreview()
           return
@@ -600,8 +611,7 @@ export function VideoTimeline() {
         updateExternalDropPreview(offset.x, offset.y, node)
       },
       drop(item: ArboristNodeDragItem) {
-        const treeData = useFileTreeStore.getState().treeData
-        const node = findFileNodeInTree(treeData, item.id)
+        const node = findDraggedFileNode(item.id)
         if (!isMediaFileNode(node)) {
           clearExternalDropPreview()
           return
@@ -623,7 +633,7 @@ export function VideoTimeline() {
         })
       },
     }),
-    [clearExternalDropPreview, updateExternalDropPreview],
+    [clearExternalDropPreview, updateExternalDropPreview, findDraggedFileNode],
   )
 
   return (
@@ -911,18 +921,4 @@ function DragGhostOverlay({ ghost }: DragGhostOverlayProps) {
     </div>,
     document.body,
   )
-}
-
-function findFileNodeInTree(
-  nodes: FileTreeNode[],
-  id: string,
-): FileTreeNode | null {
-  for (const node of nodes) {
-    if (node.id === id) return node
-    if (node.children) {
-      const found = findFileNodeInTree(node.children, id)
-      if (found) return found
-    }
-  }
-  return null
 }

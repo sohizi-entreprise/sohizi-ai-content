@@ -68,7 +68,7 @@ export const useChatStore = create<ChatState & ChatActions>()(immer((set) => ({
       state.activeConversation = { ...state.activeConversation, ...conversation }
     }
   }),
-  clearInput: () => set({ userPrompt: '' }),
+  clearInput: () => set({ userPrompt: '', attachedFiles: [] }),
   init: (projectId) => set(createInitialState(projectId)),
   reset: () => set(initialState),
 

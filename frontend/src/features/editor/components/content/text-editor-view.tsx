@@ -30,14 +30,18 @@ import {
   saveFileContentMutationOptions,
 } from '../../query-mutations'
 import { useQuery } from '@tanstack/react-query'
-import { acceptDiffMarkdown, rejectDiffMarkdown } from '../../diff-markdown'
 import { MarkdownDiffExtensions } from '../../extensions/markdown-diff'
 import { MarkdownHighlight } from '../../extensions/markdown-highlight'
-import { diffWords } from 'diff'
 import { toast } from 'sonner'
 import { SlashCommandExtension } from '../../extensions/slash-command'
 import { YoutubeEmbed } from '../../extensions/youtube-embed'
 import { EditorLink } from '../../extensions/editor-link'
+import {
+  asDiffMarkdown,
+  buildDiff,
+  acceptDiffMarkdown,
+  rejectDiffMarkdown,
+} from '../../diff-markdown'
 
 
 const editorExtensions = [
@@ -242,12 +246,16 @@ export function TextEditorView({
 
   const handleAcceptChanges = useCallback(() => {
     if (!editor) return
-    void resolvePendingChanges(acceptDiffMarkdown(editor.getMarkdown()))
+    void resolvePendingChanges(
+      acceptDiffMarkdown(asDiffMarkdown(editor.getMarkdown())),
+    )
   }, [editor, resolvePendingChanges])
 
   const handleRejectChanges = useCallback(() => {
     if (!editor) return
-    void resolvePendingChanges(rejectDiffMarkdown(editor.getMarkdown()))
+    void resolvePendingChanges(
+      rejectDiffMarkdown(asDiffMarkdown(editor.getMarkdown())),
+    )
   }, [editor, resolvePendingChanges])
 
   return (
@@ -305,37 +313,37 @@ function getPendingOperationKey(operation: PendingFileOperation) {
   return `${operation.fileNodeId}:${operation.updatedAt}`
 }
 
-function buildDiff(text1: string, text2: string) {
-  const base = acceptDiffMarkdown(text1)
-  const next = acceptDiffMarkdown(text2)
-  const wordsDiff = diffWords(base, next)
+// function buildDiff(text1: string, text2: string) {
+//   const base = acceptDiffMarkdown(text1)
+//   const next = acceptDiffMarkdown(text2)
+//   const wordsDiff = diffWords(base, next)
 
-  return wordsDiff
-    .map((item) => {
-      if (!item.added && !item.removed) {
-        return item.value;
-      }
+//   return wordsDiff
+//     .map((item) => {
+//       if (!item.added && !item.removed) {
+//         return item.value;
+//       }
 
-      const marker = item.added ? '+' : '-';
-      const openMarker = item.added ? '{' : '[';
-      const closeMarker = item.added ? '}' : ']';
+//       const marker = item.added ? '+' : '-';
+//       const openMarker = item.added ? '{' : '[';
+//       const closeMarker = item.added ? '}' : ']';
 
-      return item.value
-        .split(/(\n+)/)
-        .map((part) => {
-          // Newline chunks stay outside markers
-          if (/^\n+$/.test(part)) return part;
+//       return item.value
+//         .split(/(\n+)/)
+//         .map((part) => {
+//           // Newline chunks stay outside markers
+//           if (/^\n+$/.test(part)) return part;
 
-          // Trim leading/trailing spaces, keep them outside markers
-          const leading = part.match(/^ */)?.[0] ?? '';
-          const trailing = part.match(/ *$/)?.[0] ?? '';
-          const inner = part.slice(leading.length, part.length - trailing.length);
+//           // Trim leading/trailing spaces, keep them outside markers
+//           const leading = part.match(/^ */)?.[0] ?? '';
+//           const trailing = part.match(/ *$/)?.[0] ?? '';
+//           const inner = part.slice(leading.length, part.length - trailing.length);
 
-          if (!inner) return part;
+//           if (!inner) return part;
 
-          return `${leading}${openMarker}${marker}${inner}${marker}${closeMarker}${trailing}`;
-        })
-        .join('');
-    })
-    .join('');
-}
+//           return `${leading}${openMarker}${marker}${inner}${marker}${closeMarker}${trailing}`;
+//         })
+//         .join('');
+//     })
+//     .join('');
+// }

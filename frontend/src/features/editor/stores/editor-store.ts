@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { toast } from 'sonner'
 import type {
-  ActivityBarItem,
   EditorTab,
   FileTreeNode,
 } from '../types'
@@ -14,7 +13,7 @@ interface EditorState {
   splitView: boolean
   activePaneTab: Record<Pane, string | null>
   selectedFileId: string | null
-  activityBarItem: ActivityBarItem
+  activityBarItem: string
   sidebarCollapsed: boolean
   savingStatus: Record<string, 'saving' | 'saved' | 'error'>
   showAiPanel: boolean
@@ -27,7 +26,7 @@ interface EditorState {
   setActiveTab: (tabId: string) => void
   toggleSplitView: () => void
   moveTabToPane: (tabId: string, pane: Pane) => void
-  setActivityBarItem: (item: ActivityBarItem) => void
+  setActivityBarItem: (item: string) => void
   setSelectedFileId: (id: string | null) => void
   toggleSidebar: () => void
   toggleAiPanel: () => void

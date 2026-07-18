@@ -1,9 +1,16 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Tree } from 'react-arborist'
 import { useDragDropManager } from 'react-dnd'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useFileTreeStore } from '../../stores/file-tree-store'
-import { DirectoryNode, useLoadChildren } from '../file-node/node-directory'
+import {
+  insertNodeAt as insertNodeInCache,
+  isDirLoaded,
+  removeNode as removeNodeFromCache,
+  updateNode as updateNodeInCache,
+  useProjectFileTree,
+} from '../../stores/file-tree-cache'
+import { DirectoryNode } from '../file-node/node-directory'
 import { DocumentNode } from '../file-node/node-file'
 import useFileTreeBridge from '../../bridge/use-file-tree-bridge'
 import type {
@@ -16,6 +23,8 @@ import type { FileNodeFormat, FileTreeNode, NodeProps } from '../../types'
 import {
   createFileNodeMutationOptions,
   deleteFileNodeMutationOptions,
+  getlistFileTreePerDirectoryOptions,
+  getProjectQueryOptions,
   moveFileNodeMutationOptions,
   renameFileNodeMutationOptions,
 } from '@/features/projects/query-mutation'
@@ -37,13 +46,20 @@ function Node(props: NodeProps) {
 
 export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   const dndManager = useDragDropManager()
+  const queryClient = useQueryClient()
   const containerRef = useRef<HTMLDivElement>(null)
   const [treeHeight, setTreeHeight] = useState(0)
-  const treeData = useFileTreeStore((s) => s.treeData)
-  const removeNode = useFileTreeStore((s) => s.removeNode)
-  const updateNode = useFileTreeStore((s) => s.updateNode)
-  const insertNodeAt = useFileTreeStore((s) => s.insertNodeAt)
   const storeRootFolderId = useFileTreeStore((s) => s.rootFolderId)
+
+  // Keep the root directory cache entry observed so TanStack Query won't GC it.
+  useQuery({
+    ...getlistFileTreePerDirectoryOptions(projectId, rootFolderId),
+    initialData: () =>
+      queryClient.getQueryData(getProjectQueryOptions(projectId).queryKey)
+        ?.rootFiles,
+  })
+
+  const treeData = useProjectFileTree(projectId, rootFolderId)
   const setTree = useFileTreeBridge((s) => s.setTree)
   const runCommand = useFileTreeBridge((s) => s.runCommand)
 
@@ -52,8 +68,6 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   const moveMutation = useMutation(moveFileNodeMutationOptions(projectId))
   const deleteMutation = useMutation(deleteFileNodeMutationOptions(projectId))
 
-  const handleLoadChildren = useLoadChildren()
-
   const createFileNode = useCallback(
     (
       parentId: string,
@@ -61,18 +75,23 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
       isDir: boolean = false,
       format?: FileNodeFormat,
     ) => {
-      runCommand({
-        type: 'create',
-        data: { projectId, parentId, index, isDir, format },
-      })
+      runCommand(
+        {
+          type: 'create',
+          data: { projectId, parentId, index, isDir, format },
+        },
+        queryClient,
+      )
     },
-    [projectId, runCommand],
+    [projectId, runCommand, queryClient],
   )
 
   const onRename: RenameHandler<FileTreeNode> = async ({ id, name }) => {
     if (!name.trim()) {
       if (id.startsWith('temp-')) {
-        removeNode(id)
+        const node = findNodeInTree(treeData, id)
+        const parentId = node?.parentId ?? rootFolderId
+        removeNodeFromCache(queryClient, projectId, parentId, id)
       }
       return
     }
@@ -95,12 +114,14 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
 
       createMutation.mutate(payload, {
         onSettled(created, error) {
-          removeNode(id)
+          removeNodeFromCache(queryClient, projectId, parentId, id)
           if (error || !created) {
             console.error('Failed to create file node:', error)
             return
           }
-          insertNodeAt(
+          insertNodeInCache(
+            queryClient,
+            projectId,
             parentId,
             node.directory ? { ...created, children: [] } : created,
           )
@@ -112,12 +133,13 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
     const node = findNodeInTree(treeData, id)
     if (!node || node.name === name.trim()) return
 
-    updateNode(id, { name: name.trim() })
+    const parentId = node.parentId ?? rootFolderId
+    updateNodeInCache(queryClient, projectId, parentId, id, { name: name.trim() })
     try {
       await renameMutation.mutateAsync({ fileId: id, name: name.trim() })
     } catch (err) {
       console.error('Failed to rename:', err)
-      updateNode(id, { name: node.name })
+      updateNodeInCache(queryClient, projectId, parentId, id, { name: node.name })
     }
   }
 
@@ -150,16 +172,24 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
     const node = findNodeInTree(treeData, fileId)
     if (!node) return
 
-    removeNode(fileId)
-    const clampedIndex = Math.min(index, filteredSiblings.length)
-    insertNodeAt(
-      resolvedParentId,
-      { ...node, parentId: resolvedParentId },
-      clampedIndex,
-    )
+    const oldParentId = node.parentId ?? rootFolderId
+    const parentWasLoaded = isDirLoaded(queryClient, projectId, resolvedParentId)
 
-    if (parentId && !useFileTreeStore.getState().isDirLoaded(parentId)) {
-      await handleLoadChildren(parentId)
+    removeNodeFromCache(queryClient, projectId, oldParentId, fileId)
+    const clampedIndex = Math.min(index, filteredSiblings.length)
+
+    if (parentWasLoaded) {
+      insertNodeInCache(
+        queryClient,
+        projectId,
+        resolvedParentId,
+        { ...node, parentId: resolvedParentId },
+        clampedIndex,
+      )
+    } else if (parentId) {
+      await queryClient.ensureQueryData(
+        getlistFileTreePerDirectoryOptions(projectId, parentId),
+      )
     }
 
     try {
@@ -179,7 +209,8 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
       const node = findNodeInTree(treeData, id)
       if (!node) continue
 
-      removeNode(id)
+      const parentId = node.parentId ?? rootFolderId
+      removeNodeFromCache(queryClient, projectId, parentId, id)
       if (!id.startsWith('temp-')) {
         try {
           await deleteMutation.mutateAsync(id)

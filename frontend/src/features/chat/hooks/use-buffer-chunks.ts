@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentRunBlock, ChatStreamChunk, Message } from '../types'
+import type { AgentRunBlock, ChatStreamChunk, Message, FilePendingOperation } from '../types'
 import { useGetSSE } from '@/hooks/use-get-sse'
 import { useChatStore } from '../store/chat-store'
 import { MediaAsset } from '@/features/media-generator/requests'
@@ -13,9 +13,10 @@ type Params = {
   initialMessages: Message[];
   onFinish: (status: AgentRunBlock['status']) => void;
   onAsset?: (asset: MediaAsset) => void;
+  onOperation?: (operation: FilePendingOperation) => void;
 }
 
-export function useBufferChunks({url, initialMessages, onFinish, onAsset}: Params) {
+export function useBufferChunks({url, initialMessages, onFinish, onAsset, onOperation}: Params) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [assets, setAssets] = useState<MediaAsset[]>([])
   const patchConversation = useChatStore((state) => state.patchActiveConversation)
@@ -24,7 +25,7 @@ export function useBufferChunks({url, initialMessages, onFinish, onAsset}: Param
     eventFuncMap: {
       chunk: (data) => {
         const chunk = (data as {chunk: ChatStreamChunk}).chunk
-        setMessages((prev) => applyChunk(chunk, prev))
+        setMessages((prev) => applyChunk(chunk, prev, onOperation))
       },
       asset: (data) => {
         const asset = (data as {data: MediaAsset}).data
@@ -48,14 +49,14 @@ export function useBufferChunks({url, initialMessages, onFinish, onAsset}: Param
   return {messages, assets}
 }
 
-function applyChunk(chunk: ChatStreamChunk, messages: Message[]): Message[] {
+function applyChunk(chunk: ChatStreamChunk, messages: Message[], onOperation?: (operation: FilePendingOperation) => void): Message[] {
   if (!chunk.runId) return messages
 
   const existingMessage = messages.find(
     (m): m is AssistantMessage => m.id === chunk.runId && m.role === 'assistant',
   )
   const message = existingMessage ?? createAssistantMessage(chunk.runId)
-  const nextMessage = applyChunkToMessage(message, chunk)
+  const nextMessage = applyChunkToMessage(message, chunk, onOperation)
 
   if (!existingMessage) {
     return [...messages, nextMessage]
@@ -77,7 +78,7 @@ function createAssistantMessage(runId: string): AssistantMessage {
   }
 }
 
-function applyChunkToMessage(message: AssistantMessage, chunk: ChatStreamChunk): AssistantMessage {
+function applyChunkToMessage(message: AssistantMessage, chunk: ChatStreamChunk, onOperation?: (operation: FilePendingOperation) => void): AssistantMessage {
   const currentMessage =
     chunk.type === 'reasoning_delta' ? message : finishReasoning(message)
 
@@ -159,9 +160,11 @@ function applyChunkToMessage(message: AssistantMessage, chunk: ChatStreamChunk):
     case 'abort':
       console.log('Aborted')
       return currentMessage
+    case 'operation':
+      onOperation?.(chunk.operation)
+      return currentMessage
     case 'complete':
     case 'identifier':
-    case 'operation':
       return currentMessage
     default:
       return currentMessage

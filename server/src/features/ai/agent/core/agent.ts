@@ -17,10 +17,10 @@ import { ContextManager } from "./context-manager";
 
 const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096;
 
-export type AgentChunk = ({
+export type AgentChunk = {
     name: string;
     runId: string;
-} & (LlmChunk | ToolResultComplete)) | OperationChunk
+} & (LlmChunk | ToolResultComplete | OperationChunk)
 
 type AgentConfig = {
     model: LlmModel;
@@ -186,15 +186,15 @@ export class Agent {
 
             if(tool_calls.length > 0 && !stepError){
                 toolCallsStarted = true;
-                yield* this.runToolCalls(tool_calls);
+                yield* this.runToolCalls(tool_calls, abortSignal);
             }
 
             if (tool_calls.length === 0 && !stepError && !this.stateManager.isExitStatus) {
                 const evaluation = await this.evaluateStopCondition(callClient, abortSignal, text);
-                console.log('evaluation', evaluation);
                 if (evaluation.isDone) {
                     this.stateManager.finishRun();
                 } else {
+                    console.log('evaluation', evaluation);
                     this.registerMessage({
                         role: 'user',
                         content: [{ type: 'text', text: evaluation.instruction }],
@@ -283,8 +283,8 @@ export class Agent {
         this.stateManager.startRun()
     }
 
-    private async* runToolCalls(tool_calls: ToolCall[]): AsyncGenerator<AgentChunk, void, unknown> {
-        const generators: AsyncGenerator<ToolResultComplete | AgentChunk, void, unknown>[] = [];
+    private async* runToolCalls(tool_calls: ToolCall[], abortSignal: AbortSignal): AsyncGenerator<AgentChunk, void, unknown> {
+        const generators: AsyncGenerator<ToolResultComplete | AgentChunk | OperationChunk, void, unknown>[] = [];
         const invalidTools: {toolCallId: string, toolName: string}[] = [];
         const validToolCalls: ToolCall[] = [];
         const completedToolCallIds = new Set<string>();
@@ -295,7 +295,7 @@ export class Agent {
                 continue;
             }
             validToolCalls.push(tool_call);
-            generators.push(tool.execute(tool_call, this.session, this.stateManager));
+            generators.push(tool.execute(tool_call, this.session, this.stateManager, abortSignal));
         }
 
         if(invalidTools.length > 0){
@@ -307,10 +307,8 @@ export class Agent {
                 if(chunk.type === streamEvents.toolResultComplete){
                     completedToolCallIds.add(chunk.toolCallId);
                     this.updateToolResults(chunk);
-                    yield this.buildEvent(chunk);
-                }else{
-                    yield chunk;
                 }
+                yield this.buildEvent(chunk);
             }
         } catch (error) {
             const errorMessage = this.errorToMessage(error);
@@ -422,11 +420,11 @@ export class Agent {
         }
     }
 
-    private buildEvent(chunk: LlmChunk | ToolResultComplete): AgentChunk {
+    private buildEvent(chunk: LlmChunk | ToolResultComplete | OperationChunk | AgentChunk): AgentChunk {
         return {
+            ...chunk,
             name: this.name,
             runId: this.ensureRunId(),
-            ...chunk,
         }
     }
 
@@ -453,6 +451,7 @@ export class Agent {
             cached: 0,
             total: 0,
             modelId: this.model.id,
+            cost: 0,
         };
     }
 
