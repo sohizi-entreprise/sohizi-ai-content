@@ -13,6 +13,7 @@ export const useSendRequest = (projectId: string) => {
   const attachments = useMediaGeneratorStore((state) => state.attachments)
   const settings = useMediaGeneratorStore((state) => state.settings)
   const mediaType = useMediaGeneratorStore((state) => state.mediaType)
+  const selectedModelId = useMediaGeneratorStore((state) => state.selectedModelIds[mediaType])
   const clearChatInput = useMediaGeneratorStore((state) => state.clearChatInput)
 
   const appendActiveGenerationRequest = useMediaGeneratorStore((state) => state.appendActiveGenerationRequest)
@@ -42,6 +43,7 @@ export const useSendRequest = (projectId: string) => {
     },
     settings: {
         mediaType: mediaType,
+        modelId: selectedModelId ?? undefined,
         referencedFiles: uploadedAttachments.map((attachment) => ({
           type: attachment.type,
           url: attachment.url,

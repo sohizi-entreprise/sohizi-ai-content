@@ -1095,7 +1095,7 @@ export const markPendingFileOperationDiffApplied = async(fileNodeId: string) => 
 }
 
 export const listSkills = async (projectId: string) => {
-    const result = await db
+    const projectSkills = await db
                      .select({
                         name: fileNodes.name,
                         description: skills.description,
@@ -1107,8 +1107,30 @@ export const listSkills = async (projectId: string) => {
                         eq(fileNodes.projectId, projectId),
                         eq(fileNodes.format, 'skill'),
                      ));
-    
-    return result;
+
+    const catalogSkills = await db
+                     .select({
+                        name: skills.name,
+                        description: skills.description,
+                        instructions: skills.instructions,
+                     })
+                     .from(skills)
+                     .where(and(
+                        isNull(skills.fileNodeId),
+                        eq(skills.status, 'published'),
+                        eq(skills.visibility, 'public'),
+                     ));
+
+    const byName = new Map<string, { name: string; description: string; instructions: string }>()
+    for (const skill of catalogSkills) {
+        byName.set(skill.name.toLowerCase(), skill)
+    }
+    // Project skills win on name collision
+    for (const skill of projectSkills) {
+        byName.set(skill.name.toLowerCase(), skill)
+    }
+
+    return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export const getSkillByName = async (projectId: string, name: string) => {
@@ -1121,20 +1143,30 @@ export const getSkillByName = async (projectId: string, name: string) => {
                         eq(fileNodes.format, 'skill'),
                      ));
     const fileNode = fileResponse[0];
-    if(!fileNode) {
-        return null;
+    if(fileNode) {
+        const skillResponse = await db
+                         .select()
+                         .from(skills)
+                         .where(and(
+                            eq(skills.fileNodeId, fileNode.id),
+                         ));
+        const skill = skillResponse[0];
+        if(skill) {
+            return skill;
+        }
     }
-    const skillResponse = await db
+
+    const catalogResponse = await db
                      .select()
                      .from(skills)
                      .where(and(
-                        eq(skills.fileNodeId, fileNode.id),
-                     ));
-    const skill = skillResponse[0];
-    if(!skill) {
-        return null;
-    }
-    return skill;
+                        isNull(skills.fileNodeId),
+                        eq(skills.name, name),
+                        eq(skills.status, 'published'),
+                        eq(skills.visibility, 'public'),
+                     ))
+                     .limit(1);
+    return catalogResponse[0] ?? null;
 }
 
 

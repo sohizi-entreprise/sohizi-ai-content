@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { UserModelMessage, userModelMessageSchema } from 'ai';
 import { assertConversationOwner } from '@/lib/authorize';
 import { Conversation, ConversationAgentRun, LlmModel } from '@/db/schema';
-import { BadRequest, NotFound } from '../error';
+import { BadRequest } from '../error';
 import { Session } from '../ai/agent/core/session';
 import { v4 as uuidv4 } from 'uuid';
 import { CheckpointPersistence } from '../ai/agent/core/persistence';
@@ -34,19 +34,7 @@ export const deleteConversation = async (id: string) => {
   return {ok: result, error: result ? null : 'Failed to delete conversation'};
 }
 
-export const listLlmModels = async (categories: string[]) => {
-  const models = await repo.listLlmModels(categories);
-  return models;
-}
-
-export const listModelOptions = async (modelId: string) => {
-  const model = await repo.getModelById(modelId);
-  if(!model){
-    throw new NotFound('Model not found')
-  }
-  const options = await repo.listModelOptions(model.id);
-  return options;
-}
+export { listLlmModels, listModelOptions } from '../models/service'
 
 export const listConversationAgentRuns = async (conversationId: string, options?: CursorPaginationOptions) => {
   const agentRuns = await repo.listConversationAgentRuns(conversationId, options);

@@ -13,9 +13,16 @@ import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthErrorRouteImport } from './routes/auth-error'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as DashboardMainRouteImport } from './routes/dashboard/main'
+import { Route as AdminSkillsRouteImport } from './routes/admin/skills'
+import { Route as AdminOptionsRouteImport } from './routes/admin/options'
+import { Route as AdminModelsRouteImport } from './routes/admin/models'
+import { Route as AdminContentCategoriesRouteImport } from './routes/admin/content-categories'
+import { Route as AdminCommandsRouteImport } from './routes/admin/commands'
 import { Route as DashboardProjectsNewRouteImport } from './routes/dashboard/projects/new'
 import { Route as DashboardProjectsProjectIdRouteImport } from './routes/dashboard/projects/$projectId'
 import { Route as DashboardMainProjectsRouteImport } from './routes/dashboard/main/projects'
@@ -48,6 +55,11 @@ const AuthErrorRoute = AuthErrorRouteImport.update({
   path: '/auth-error',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -58,10 +70,40 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const DashboardMainRoute = DashboardMainRouteImport.update({
   id: '/main',
   path: '/main',
   getParentRoute: () => DashboardRoute,
+} as any)
+const AdminSkillsRoute = AdminSkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOptionsRoute = AdminOptionsRouteImport.update({
+  id: '/options',
+  path: '/options',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminModelsRoute = AdminModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminContentCategoriesRoute = AdminContentCategoriesRouteImport.update({
+  id: '/content-categories',
+  path: '/content-categories',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCommandsRoute = AdminCommandsRouteImport.update({
+  id: '/commands',
+  path: '/commands',
+  getParentRoute: () => AdminRoute,
 } as any)
 const DashboardProjectsNewRoute = DashboardProjectsNewRouteImport.update({
   id: '/projects/new',
@@ -130,11 +172,18 @@ const DashboardProjectsProjectIdEditCharactersRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/auth-error': typeof AuthErrorRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/admin/commands': typeof AdminCommandsRoute
+  '/admin/content-categories': typeof AdminContentCategoriesRoute
+  '/admin/models': typeof AdminModelsRoute
+  '/admin/options': typeof AdminOptionsRoute
+  '/admin/skills': typeof AdminSkillsRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
+  '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/main/projects': typeof DashboardMainProjectsRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
@@ -153,7 +202,13 @@ export interface FileRoutesByTo {
   '/auth-error': typeof AuthErrorRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/admin/commands': typeof AdminCommandsRoute
+  '/admin/content-categories': typeof AdminContentCategoriesRoute
+  '/admin/models': typeof AdminModelsRoute
+  '/admin/options': typeof AdminOptionsRoute
+  '/admin/skills': typeof AdminSkillsRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
+  '/admin': typeof AdminIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/main/projects': typeof DashboardMainProjectsRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
@@ -170,11 +225,18 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/auth-error': typeof AuthErrorRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/admin/commands': typeof AdminCommandsRoute
+  '/admin/content-categories': typeof AdminContentCategoriesRoute
+  '/admin/models': typeof AdminModelsRoute
+  '/admin/options': typeof AdminOptionsRoute
+  '/admin/skills': typeof AdminSkillsRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
+  '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/main/projects': typeof DashboardMainProjectsRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
@@ -192,11 +254,18 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/auth-error'
     | '/dashboard'
     | '/sign-in'
     | '/sign-up'
+    | '/admin/commands'
+    | '/admin/content-categories'
+    | '/admin/models'
+    | '/admin/options'
+    | '/admin/skills'
     | '/dashboard/main'
+    | '/admin/'
     | '/dashboard/'
     | '/dashboard/main/projects'
     | '/dashboard/projects/$projectId'
@@ -215,7 +284,13 @@ export interface FileRouteTypes {
     | '/auth-error'
     | '/sign-in'
     | '/sign-up'
+    | '/admin/commands'
+    | '/admin/content-categories'
+    | '/admin/models'
+    | '/admin/options'
+    | '/admin/skills'
     | '/dashboard/main'
+    | '/admin'
     | '/dashboard'
     | '/dashboard/main/projects'
     | '/dashboard/projects/$projectId'
@@ -231,11 +306,18 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/auth-error'
     | '/dashboard'
     | '/sign-in'
     | '/sign-up'
+    | '/admin/commands'
+    | '/admin/content-categories'
+    | '/admin/models'
+    | '/admin/options'
+    | '/admin/skills'
     | '/dashboard/main'
+    | '/admin/'
     | '/dashboard/'
     | '/dashboard/main/projects'
     | '/dashboard/projects/$projectId'
@@ -252,6 +334,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AuthErrorRoute: typeof AuthErrorRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   SignInRoute: typeof SignInRoute
@@ -288,6 +371,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -302,12 +392,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/dashboard/main': {
       id: '/dashboard/main'
       path: '/main'
       fullPath: '/dashboard/main'
       preLoaderRoute: typeof DashboardMainRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/admin/skills': {
+      id: '/admin/skills'
+      path: '/skills'
+      fullPath: '/admin/skills'
+      preLoaderRoute: typeof AdminSkillsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/options': {
+      id: '/admin/options'
+      path: '/options'
+      fullPath: '/admin/options'
+      preLoaderRoute: typeof AdminOptionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/models': {
+      id: '/admin/models'
+      path: '/models'
+      fullPath: '/admin/models'
+      preLoaderRoute: typeof AdminModelsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/content-categories': {
+      id: '/admin/content-categories'
+      path: '/content-categories'
+      fullPath: '/admin/content-categories'
+      preLoaderRoute: typeof AdminContentCategoriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/commands': {
+      id: '/admin/commands'
+      path: '/commands'
+      fullPath: '/admin/commands'
+      preLoaderRoute: typeof AdminCommandsRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/dashboard/projects/new': {
       id: '/dashboard/projects/new'
@@ -389,6 +521,26 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminCommandsRoute: typeof AdminCommandsRoute
+  AdminContentCategoriesRoute: typeof AdminContentCategoriesRoute
+  AdminModelsRoute: typeof AdminModelsRoute
+  AdminOptionsRoute: typeof AdminOptionsRoute
+  AdminSkillsRoute: typeof AdminSkillsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminCommandsRoute: AdminCommandsRoute,
+  AdminContentCategoriesRoute: AdminContentCategoriesRoute,
+  AdminModelsRoute: AdminModelsRoute,
+  AdminOptionsRoute: AdminOptionsRoute,
+  AdminSkillsRoute: AdminSkillsRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface DashboardMainRouteChildren {
   DashboardMainProjectsRoute: typeof DashboardMainProjectsRoute
 }
@@ -469,6 +621,7 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   AuthErrorRoute: AuthErrorRoute,
   DashboardRoute: DashboardRouteWithChildren,
   SignInRoute: SignInRoute,

@@ -245,7 +245,7 @@ function SignInPage() {
               </div>
 
               <form onSubmit={handleEmailSignIn} className="space-y-4">
-                <div className="space-y-2">
+                <div className="space-y-2" suppressHydrationWarning>
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -254,9 +254,13 @@ function SignInPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    autoComplete="email"
+                    data-lpignore="true"
+                    data-1p-ignore
+                    data-form-type="other"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2" suppressHydrationWarning>
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>
                     <button
@@ -274,6 +278,10 @@ function SignInPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoComplete="current-password"
+                    data-lpignore="true"
+                    data-1p-ignore
+                    data-form-type="other"
                   />
                 </div>
 

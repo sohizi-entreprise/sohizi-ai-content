@@ -614,6 +614,7 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
     name: varchar('name', { length: 100 }).notNull(),
     action: text('action').notNull(),
     isPublic: boolean('is_public').default(false).notNull(),
+    visible: boolean('visible').default(false).notNull(),
     projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
     ...timestamps,
   }, (table) => ([

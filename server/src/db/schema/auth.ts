@@ -4,7 +4,10 @@ import {
   timestamp,
   boolean,
   integer,
+  varchar,
 } from "drizzle-orm/pg-core";
+
+export type UserType = "user" | "admin";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -12,6 +15,7 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  type: varchar("type", { length: 20 }).notNull().default("user").$type<UserType>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

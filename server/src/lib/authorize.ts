@@ -1,7 +1,13 @@
 import { db } from '@/db'
-import { projects, member, conversations } from '@/db/schema'
+import { projects, member, conversations, type UserType } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { Forbidden, NotFound } from '@/features/error'
+
+export function assertAdmin(user: { type?: UserType | string | null }) {
+  if (user.type !== 'admin') {
+    throw new Forbidden('Admin access required')
+  }
+}
 
 export async function assertOrgMember(userId: string, organizationId: string) {
   const membership = await db

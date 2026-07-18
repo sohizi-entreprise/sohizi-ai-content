@@ -24,6 +24,14 @@ import FileAttachment from '@/components/widgets/file-attachments'
 import ChatTextarea from '@/features/chat/components/chat-textarea'
 import SettingsPopover from './media-settings-popover'
 import { useSendRequest } from '../hooks/use-send-request'
+import { useMediaCatalog } from '../hooks/use-media-catalog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { IconLoader2 } from '@tabler/icons-react'
 
 type TaggedFile = {
@@ -93,6 +101,13 @@ export function MediaChatInput({
 
   const updateSettings = useMediaGeneratorStore((state) => state.updateSettings)
   const setPrompt = useMediaGeneratorStore((state) => state.setPrompt)
+
+  const {
+    models,
+    selectedModelId,
+    setSelectedModelId,
+    isLoadingModels,
+  } = useMediaCatalog(mediaType)
  
   const editorRef = useRef<Editor | null>(null)
 
@@ -169,6 +184,25 @@ export function MediaChatInput({
               maxAttachments={5}
               itemSize={40}
             />
+          ) : null}
+
+          {models.length > 0 ? (
+            <Select
+              value={selectedModelId ?? undefined}
+              onValueChange={setSelectedModelId}
+              disabled={isLoadingModels}
+            >
+              <SelectTrigger className="h-8 w-[180px] rounded-lg border-white/10 bg-white/8 text-xs">
+                <SelectValue placeholder={isLoadingModels ? 'Loading…' : 'Select model'} />
+              </SelectTrigger>
+              <SelectContent>
+                {models.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : null}
 
           <SettingsPopover

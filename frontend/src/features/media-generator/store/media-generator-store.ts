@@ -17,6 +17,7 @@ type StoreState = {
   mediaType: MediaType
   prompt: string
   settings: MediaGenerationSettings
+  selectedModelIds: Record<MediaType, string | null>
   attachments: Array<AttachedFile>
   chatInput: Editor | null
   viewRequestInput: {jobs: Record<string, string>[]; status: 'done' | 'blocked' | 'unknown'} | null
@@ -32,6 +33,11 @@ type StoreActions = {
     key: string,
     value: string,
   ) => void
+  replaceSettings: <T extends MediaType>(
+    type: T,
+    settings: MediaGenerationSettings[T],
+  ) => void
+  setSelectedModelId: (type: MediaType, modelId: string | null) => void
   addAttachment: (attachment: AttachedFile) => void
   removeAttachment: (id: string) => void
   reset: () => void
@@ -45,6 +51,11 @@ const initialState: StoreState = {
   mediaType: 'image',
   prompt: '',
   settings: defaultMediaSettings,
+  selectedModelIds: {
+    image: null,
+    video: null,
+    audio: null,
+  },
   attachments: [],
   chatInput: null,
   viewRequestInput: null,
@@ -62,6 +73,20 @@ export const useMediaGeneratorStore = create<StoreState & StoreActions>(
           ...state.settings,
           [type]: state.settings[type].map((setting) => setting.key === key ? { ...setting, currentValue: value } : setting),
 
+        },
+      })),
+    replaceSettings: (type, settings) =>
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          [type]: settings,
+        },
+      })),
+    setSelectedModelId: (type, modelId) =>
+      set((state) => ({
+        selectedModelIds: {
+          ...state.selectedModelIds,
+          [type]: modelId,
         },
       })),
     addAttachment: (data) => set((state) => {

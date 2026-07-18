@@ -14,7 +14,7 @@ globalThis.AI_SDK_LOG_WARNINGS = false;
 
 const corsConfig = {
   origin: ['http://localhost:3000'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Last-Event-ID', 'Accept', 'Cache-Control'],
   credentials: true,
 }
@@ -92,6 +92,8 @@ const app = new Elysia()
                 .use(routes.videoEditorRoutes)
                 .use(routes.generationRequestRoutes)
                 .use(routes.commandRoutes)
+                .use(routes.modelsRoutes)
+                .use(routes.adminRoutes)
                 .listen(3030);
 
 billingService.startSweeper();
