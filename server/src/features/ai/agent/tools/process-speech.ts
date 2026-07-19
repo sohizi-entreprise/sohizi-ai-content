@@ -1,23 +1,28 @@
 import { z } from "zod";
 import { buildBaseTool, ToolResult } from "./tool-definition";
 import { failure, success } from "./utils";
-import { aiAudioBillable } from "@/features/media-engine/generators/billable-ai-audio";
-import {v4 as uuid4} from 'uuid'
+import {
+    createBillableMultiModalClient,
+    type WordsWithText,
+} from "@/features/ai/agent/utils/multi-llm-client";
+import { v4 as uuid4 } from 'uuid'
 import { billingService, withBilling } from "@/features/billing";
 import { Session } from "../core/session";
-import { TranscriptionWord } from "openai/resources/audio/transcriptions";
 import { fileFormat } from "@/features/file-system/constants";
 import { createAssetWithFileNode } from "@/features/media-engine/repo";
 import { createFileWithContentAtPosition } from "@/features/file-system/repo";
 import * as storage from '@/features/media-engine/storage';
 import { parseBuffer } from 'music-metadata';
-import { WordsWithText } from "@/features/media-engine/generators/ai-audio";
+import { googleTtsVoices } from "@/constants/media";
 
-const DEFAULT_AUDIO_DURATION = 5 * 60; // 3 minutes
+const DEFAULT_AUDIO_DURATION = 5 * 60;
+const multimodalBillable = createBillableMultiModalClient();
+const processAiAudio = withBilling(multimodalBillable, billingService);
 
 const textToSpeechInputSchema = z.object({
     cmd: z.literal('text-to-speech').describe('The command to use for text to speech conversion'),
     text: z.string().describe('The text to synthesize into audio'),
+    voice: z.enum(googleTtsVoices).optional().describe('Google Gemini TTS voice. Defaults to Kore.'),
     instructions: z.string().optional().describe('Additional instructions to control the audio synthesis'),
     writeToFolderId: z.string().describe('The ID of the folder to write the audio stream to.'),
     fileName: z.string().optional().describe('The name of the audio file to write to if writeToFolderId is specified. If the name exists, the file will be overwritten.'),
@@ -51,62 +56,60 @@ export const processSpeechTool = buildBaseTool({
 
 
 async function textToSpeech(command: z.infer<typeof textToSpeechInputSchema>, session: Session): Promise<ToolResult> {
-    const processAiAudio = withBilling(aiAudioBillable, billingService);
- 
     try {
         const output = await processAiAudio({
-            type: 'text-to-speech',
-            params: {
-                text: command.text,
+            kind: 'tts',
+            text: command.text,
+            options: {
+                voice: command.voice ?? 'Kore',
                 instructions: command.instructions,
-            }
+            },
         }, {
             organizationId: session.organizationId,
             userId: session.userId,
             metadata: { runId: uuid4() },
-        }
-    )
+        });
 
-    const result = output.result as ArrayBuffer;
-    let fileName = storage.sanitizeFileName(command.fileName ?? 'audio.mp3');
-    if(!fileName.endsWith('.mp3')){
-        fileName += '.mp3';
-    }
-    const destPath = storage.buildStoragePath('audios', fileName);
-    const buffer = Buffer.from(result);
-    const uploaded = await storage.uploadFromBuffer(buffer, destPath, 'audio/mp3')
-    const metadata = await parseBuffer(buffer);
-    // Create asset from the blob
-    const fileResponse = await createAssetWithFileNode({
-        projectId: session.projectId,
-        name: fileName,
-        type: 'audio',
-        url: uploaded.url,
-        source: 'ai-generated',
-        folderId: command.writeToFolderId,
-        storageKey: uploaded.storageKey,
-        metadata: {
-            size: uploaded.size,
-            contentType: 'audio/mp3',
-            duration: metadata.format?.duration ?? 0,
-        },
-        filePosition: 0,
-    })
-    if(!fileResponse){
-        return failure(`Failed to create file node.`);
-    }
-    const fileNode = fileResponse.fileNode;
-    return success(`The audio file is saved in the file [ID ${fileNode.id}] [Format ${fileNode.format}].`);
+        if (output.kind !== 'tts') {
+            return failure(`Text to speech conversion failed.`);
+        }
+
+        const result = output.audio;
+        let fileName = storage.sanitizeFileName(command.fileName ?? 'audio.wav');
+        if(!fileName.endsWith('.wav')){
+            fileName = fileName.replace(/\.(mp3|mpeg)$/i, '') + '.wav';
+        }
+        const destPath = storage.buildStoragePath('audios', fileName);
+        const buffer = Buffer.from(result);
+        const uploaded = await storage.uploadFromBuffer(buffer, destPath, 'audio/wav')
+        const metadata = await parseBuffer(buffer);
+        const fileResponse = await createAssetWithFileNode({
+            projectId: session.projectId,
+            name: fileName,
+            type: 'audio',
+            url: uploaded.url,
+            source: 'ai-generated',
+            folderId: command.writeToFolderId,
+            storageKey: uploaded.storageKey,
+            metadata: {
+                size: uploaded.size,
+                contentType: 'audio/wav',
+                duration: metadata.format?.duration ?? 0,
+            },
+            filePosition: 0,
+        })
+        if(!fileResponse){
+            return failure(`Failed to create file node.`);
+        }
+        const fileNode = fileResponse.fileNode;
+        return success(`The audio file is saved in the file [ID ${fileNode.id}] [Format ${fileNode.format}].`);
     }catch(error){
         return failure(`Text to speech conversion failed.`);
     }
 }
 
 async function speechToText(command: z.infer<typeof speechToTextInputSchema>, session: Session): Promise<ToolResult> {
-    const processAiAudio = withBilling(aiAudioBillable, billingService);
- 
     try {
-        // Get the file from the database
         const file = await session.resolveFileByPathOrId(command.fileId);
         if(!file){
             return failure(`File not found.`);
@@ -123,20 +126,33 @@ async function speechToText(command: z.infer<typeof speechToTextInputSchema>, se
         }
         const audioUrl = content.data.data.url;
         const audioDuration = content.data.data.metadata?.duration ?? DEFAULT_AUDIO_DURATION;
-        const output = await processAiAudio({
-            type: 'speech-to-text',
-            params: {
-                url: audioUrl,
-                audioDurationSeconds: audioDuration,
-                mode: command.mode,
-            }
-        }, {
-            organizationId: session.organizationId,
+
+        const output = await processAiAudio(
+            command.mode === 'caption'
+                ? {
+                    kind: 'caption',
+                    url: audioUrl,
+                    estimatedDurationSeconds: audioDuration,
+                }
+                : {
+                    kind: 'stt',
+                    url: audioUrl,
+                    estimatedDurationSeconds: audioDuration,
+                },
+            {
+                organizationId: session.organizationId,
                 userId: session.userId,
                 metadata: { runId: uuid4() },
-            }
-        )
-        const result = output.result as string | WordsWithText;
+            },
+        );
+
+        const result: string | WordsWithText =
+            output.kind === 'caption'
+                ? { text: output.text, words: output.words }
+                : output.kind === 'stt'
+                  ? output.text
+                  : (() => { throw new Error('Unexpected multimodal output'); })();
+
         const isMarkdown = typeof result === 'string';
 
         if(command.writeToFolderId){
@@ -177,9 +193,6 @@ async function speechToText(command: z.infer<typeof speechToTextInputSchema>, se
         }
         const returnContent = isMarkdown ? result : JSON.stringify(result, null, 2);
         return success(returnContent);
-        // Create asset from the result
-        // Save the file and asset to the database
-        // Return the file id 
     }catch(error){
         return failure(`Speech to text conversion failed.`);
     }

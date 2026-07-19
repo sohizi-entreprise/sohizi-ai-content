@@ -1,16 +1,17 @@
 import { NonRetriableError } from 'inngest';
 import { inngest } from '@/lib/inngest/client';
 import * as repo from './repo';
-import * as streamRepo from '../generation-request/repo';
 import * as storage from './storage';
-import { MediaGenerator, type ImageSizePreset } from './generators/media-generator';
+import { type ImageSizePreset } from '@/constants/media';
 import { v4 as uuidv4 } from 'uuid';
 import { Asset } from '@/db/schema';
 import { billingService } from '@/features/billing';
-import { imageBillable } from './generators/billable-image';
-import { AudioBillableInput } from './generators/billable-ai-audio';
-import { aiAudioBillable } from './generators/billable-ai-audio';
-import { videoBillable, videoActualCredits } from './generators/billable-video';
+import {
+    createBillableMultiModalClient,
+    MultiModalClient,
+    type BillableMultiModalInput,
+    videoActualCredits,
+} from '@/features/ai/agent/utils/multi-llm-client';
 import { isMediaError } from './errors';
 import { decrementKey, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
 
@@ -24,15 +25,47 @@ type ImageEventData = {
     aspectRatio: ImageSizePreset;
     referenceImages?: string[];
     numVariations: number;
-}
+};
+
+type DialogueSpeaker = {
+    name: string;
+    voice: string;
+};
+
+type AudioEventPayload =
+    | {
+          type: 'text-to-speech';
+          params: {
+              text: string;
+              voice?: string;
+              instructions?: string;
+              model?: string;
+          };
+      }
+    | {
+          type: 'dialogue';
+          params: {
+              script: string;
+              speakers: DialogueSpeaker[];
+              instructions?: string;
+              model?: string;
+          };
+      }
+    | {
+          type: 'generate-music';
+          params: {
+              prompt: string;
+              model?: string;
+          };
+      };
 
 type AudioEventData = {
     requestId: string;
     projectId: string;
     organizationId: string;
     userId: string;
-    payload: AudioBillableInput
-}
+    payload: AudioEventPayload;
+};
 
 type VideoEventData = {
     requestId: string;
@@ -44,20 +77,19 @@ type VideoEventData = {
     duration: number;
     aspectRatio: '16:9' | '9:16' | '1:1';
     referenceImage?: string;
-}
+};
 
 const MAX_VIDEO_POLL_ATTEMPTS = 60;
 const VIDEO_POLL_INTERVAL = '10s';
-// TTLs mirror the values declared on the billables; reservations need at
-// least 2x the wall-clock budget for the sweeper-safety check to pass.
-const SYNC_RESERVATION_TTL_MS = 30 * 60 * 1000;        // 30 minutes
-const VIDEO_RESERVATION_TTL_MS = 60 * 60 * 1000;       // 1 hour
+const SYNC_RESERVATION_TTL_MS = 30 * 60 * 1000;
+const VIDEO_RESERVATION_TTL_MS = 60 * 60 * 1000;
 
-/**
- * Determines if an error should trigger a retry.
- * Only MediaError instances with isRetriable=true are retriable.
- * All other errors (including generic Errors) are non-retriable.
- */
+const multimodal = createBillableMultiModalClient({
+    timeoutMs: 15 * 60 * 1000,
+    ttlMs: VIDEO_RESERVATION_TTL_MS,
+});
+const videoClient = new MultiModalClient();
+
 function shouldRetry(error: unknown): boolean {
     if (isMediaError(error)) {
         return error.isRetriable;
@@ -65,12 +97,6 @@ function shouldRetry(error: unknown): boolean {
     return false;
 }
 
-/**
- * Wraps errors appropriately for Inngest:
- * - MediaError with isRetriable=true: rethrow to trigger retry
- * - MediaError with isRetriable=false: wrap in NonRetriableError
- * - Any other error: wrap in NonRetriableError (no retry for unknown errors)
- */
 function wrapNonRetryable(error: unknown): never {
     if (shouldRetry(error)) {
         throw error;
@@ -80,11 +106,6 @@ function wrapNonRetryable(error: unknown): never {
     const cause = error instanceof Error ? error : undefined;
 
     throw new NonRetriableError(message, { cause });
-}
-
-function getErrorMessage(error: unknown): string {
-    if (error instanceof Error) return error.message;
-    return String(error);
 }
 
 async function safeRefund(reservationId: string | undefined | null, reason: string): Promise<void> {
@@ -97,10 +118,73 @@ async function safeRefund(reservationId: string | undefined | null, reason: stri
 }
 
 async function commitRequest(requestId: string, status: 'finished' | 'error') {
-    const res = await decrementKey(requestId)
-    if(res === 0){
+    const res = await decrementKey(requestId);
+    if (res === 0) {
         await repo.updateAssetRequest(requestId, { status });
         await removeStreamActive(requestId);
+    }
+}
+
+async function uploadImageSource(
+    sourceUrl: string,
+    destinationPath: string,
+): Promise<{ url: string; storageKey: string; size: number }> {
+    if (sourceUrl.startsWith('data:')) {
+        const match = /^data:([^;]+);base64,(.+)$/.exec(sourceUrl);
+        if (!match) {
+            throw new Error('Invalid data URL for image upload');
+        }
+        const contentType = match[1] || 'image/png';
+        const buffer = Buffer.from(match[2], 'base64');
+        return storage.uploadFromBuffer(buffer, destinationPath, contentType);
+    }
+    return storage.uploadFromUrl(sourceUrl, destinationPath);
+}
+
+function buildDialogueInputText(script: string, speakers: DialogueSpeaker[]): string {
+    const trimmed = script.trim();
+    if (/^TTS the following/i.test(trimmed)) {
+        return trimmed;
+    }
+    const names = speakers.map((s) => s.name.trim()).join(' and ');
+    return `TTS the following conversation between ${names}:\n${trimmed}`;
+}
+
+function toAudioBillableInput(payload: AudioEventPayload): BillableMultiModalInput {
+    switch (payload.type) {
+        case 'text-to-speech':
+            return {
+                kind: 'tts',
+                text: payload.params.text,
+                model: payload.params.model,
+                options: {
+                    voice: payload.params.voice ?? 'Kore',
+                    instructions: payload.params.instructions,
+                },
+            };
+        case 'dialogue': {
+            const speakers = payload.params.speakers.map((s) => ({
+                name: s.name.trim(),
+                voice: s.voice,
+            }));
+            return {
+                kind: 'tts',
+                text: buildDialogueInputText(payload.params.script, speakers),
+                model: payload.params.model,
+                options: {
+                    // OpenRouter still requires a top-level voice; use the first speaker.
+                    voice: speakers[0]?.voice ?? 'Kore',
+                    instructions: payload.params.instructions,
+                    speakers,
+                },
+            };
+        }
+        case 'generate-music':
+            return {
+                kind: 'music',
+                prompt: payload.params.prompt,
+                model: payload.params.model,
+            };
     }
 }
 
@@ -114,31 +198,50 @@ export const handleImageGeneration = inngest.createFunction(
         onFailure: async ({ event }) => {
             const data = event.data.event.data as ImageEventData & { _reservationId?: string };
             const reservationId = data._reservationId;
+            // Refund is best-effort: reservation id is not on the event today
+            // (already refunded in the function catch). Keep for safety if added later.
             if (reservationId) {
                 await safeRefund(reservationId, 'image-generation-failed');
-                await commitRequest(data.requestId, 'error')
+            }
+            if (data.requestId) {
+                await commitRequest(data.requestId, 'error');
             }
         },
     },
     async ({ event, step }) => {
         const data = event.data as ImageEventData;
-        const { requestId, projectId, organizationId, userId, prompt, model, aspectRatio, referenceImages, numVariations } = data;
+        const {
+            requestId,
+            projectId,
+            organizationId,
+            userId,
+            prompt,
+            model,
+            aspectRatio,
+            referenceImages,
+            numVariations,
+        } = data;
 
-        const billableInput = {
+        const billableInput: BillableMultiModalInput = {
+            kind: 'image',
             model,
             prompt,
             aspectRatio,
-            numVariations,
-            images: referenceImages,
+            n: numVariations,
+            referenceUrls: referenceImages,
         };
 
         const reservation = await step.run('reserve-credits', async () => {
-            const estimatedCredits = await imageBillable.estimateCost(billableInput);
-            const idempotencyKey = imageBillable.idempotencyKey(billableInput, { organizationId, userId });
+            const estimatedCredits = await multimodal.estimateCost(billableInput);
+            const idempotencyKey = multimodal.idempotencyKey(billableInput, {
+                organizationId,
+                userId,
+                metadata: { runId: requestId },
+            });
             const res = await billingService.reserve({
                 organizationId,
                 userId,
-                operation: imageBillable.operation,
+                operation: 'media:image',
                 estimatedCredits,
                 ttlMs: SYNC_RESERVATION_TTL_MS,
                 idempotencyKey,
@@ -157,10 +260,13 @@ export const handleImageGeneration = inngest.createFunction(
                         signal: new AbortController().signal,
                         reservationId: reservation.id,
                     };
-                    const billable = await imageBillable.execute(billableInput, billCtx);
+                    const billable = await multimodal.execute(billableInput, billCtx);
+                    if (billable.output.kind !== 'image') {
+                        throw new Error('Unexpected multimodal output kind for image');
+                    }
                     return {
                         urls: billable.output.urls,
-                        providerCostUsd: billable.output.providerCostUsd,
+                        providerCostUsd: billable.output.costUsd,
                         actualCredits: billable.actualCredits.toString(),
                     };
                 } catch (error) {
@@ -183,11 +289,12 @@ export const handleImageGeneration = inngest.createFunction(
         const uploads = await step.run('upload-to-gcs', async () => {
             const uploaded = [];
             for (let i = 0; i < result.urls.length; i++) {
-                const imgName = result.urls[i].split('/').pop() ?? `image-${uuidv4().slice(0, 8)}.png`;
+                const imgName = result.urls[i].startsWith('data:')
+                    ? `image-${uuidv4().slice(0, 8)}.png`
+                    : (result.urls[i].split('/').pop() ?? `image-${uuidv4().slice(0, 8)}.png`);
                 const destPath = storage.buildStoragePath('images', imgName);
-                const upload = await storage.uploadFromUrl(result.urls[i], destPath);
+                const upload = await uploadImageSource(result.urls[i], destPath);
                 uploaded.push(upload);
-                // await writeStreamData(requestId, {runId: requestId, event:'media', data: {type: 'image', ...upload}});
             }
             return uploaded;
         });
@@ -207,11 +314,11 @@ export const handleImageGeneration = inngest.createFunction(
                     metadata: fileMetadata,
                     storageKey: upload.storageKey,
                 });
-                await writeStreamData(requestId, {runId: requestId, event:'asset', data: asset});
+                await writeStreamData(requestId, { runId: requestId, event: 'asset', data: asset });
                 newAssets.push(asset);
             }
 
-            await commitRequest(requestId, 'finished')
+            await commitRequest(requestId, 'finished');
             return newAssets;
         });
 
@@ -240,14 +347,20 @@ export const handleAudioGeneration = inngest.createFunction(
     async ({ event, step }) => {
         const data = event.data as AudioEventData;
         const { requestId, projectId, organizationId, userId, payload } = data;
+        const billableInput = toAudioBillableInput(payload);
+        const operation =
+            billableInput.kind === 'music' ? 'media:music' : 'media:tts';
 
         const reservation = await step.run('reserve-credits', async () => {
-            const estimatedCredits = await aiAudioBillable.estimateCost(payload);
-            const idempotencyKey = aiAudioBillable.idempotencyKey(payload, { organizationId });
+            const estimatedCredits = await multimodal.estimateCost(billableInput);
+            const idempotencyKey = multimodal.idempotencyKey(billableInput, {
+                organizationId,
+                metadata: { runId: requestId },
+            });
             const res = await billingService.reserve({
                 organizationId,
                 userId,
-                operation: aiAudioBillable.operation,
+                operation,
                 estimatedCredits,
                 ttlMs: SYNC_RESERVATION_TTL_MS,
                 idempotencyKey,
@@ -266,11 +379,16 @@ export const handleAudioGeneration = inngest.createFunction(
                         signal: new AbortController().signal,
                         reservationId: reservation.id,
                     };
-                    const billable = await aiAudioBillable.execute(payload, billCtx);
-                    const buffer = Buffer.from(billable.output.result as ArrayBuffer);
-                    const fileName = `audio-${uuidv4().slice(0, 8)}.mp3`;
+                    const billable = await multimodal.execute(billableInput, billCtx);
+                    if (billable.output.kind !== 'tts' && billable.output.kind !== 'music') {
+                        throw new Error('Unexpected multimodal output kind for audio');
+                    }
+                    const buffer = Buffer.from(billable.output.audio);
+                    const ext = billable.output.kind === 'tts' ? 'wav' : 'mp3';
+                    const contentType = billable.output.kind === 'tts' ? 'audio/wav' : 'audio/mpeg';
+                    const fileName = `audio-${uuidv4().slice(0, 8)}.${ext}`;
                     const destPath = storage.buildStoragePath('audios', fileName);
-                    const uploaded = await storage.uploadFromBuffer(buffer, destPath, 'audio/mpeg');
+                    const uploaded = await storage.uploadFromBuffer(buffer, destPath, contentType);
                     return {
                         upload: uploaded,
                         actualCredits: billable.actualCredits.toString(),
@@ -296,7 +414,7 @@ export const handleAudioGeneration = inngest.createFunction(
             const fileMetadata = await storage.getFileMetadata(result.upload.storageKey);
             const asset = await repo.createAsset({
                 projectId,
-                name: result.upload.storageKey.split('/').pop() ?? `audio-${uuidv4().slice(0, 8)}.mp3`,
+                name: result.upload.storageKey.split('/').pop() ?? `audio-${uuidv4().slice(0, 8)}.wav`,
                 type: 'audio',
                 url: result.upload.url,
                 source: 'ai-generated',
@@ -328,29 +446,44 @@ export const handleVideoGeneration = inngest.createFunction(
                 await safeRefund(reservationId, 'video-generation-failed');
             }
             if (requestId) {
-                await commitRequest(requestId, 'error')
+                await commitRequest(requestId, 'error');
             }
         },
     },
     async ({ event, step }) => {
         const data = event.data as VideoEventData;
-        const { requestId, projectId, organizationId, userId, prompt, model, duration, aspectRatio, referenceImage } = data;
+        const {
+            requestId,
+            projectId,
+            organizationId,
+            userId,
+            prompt,
+            model,
+            duration,
+            aspectRatio,
+            referenceImage,
+        } = data;
 
-        const billableInput = {
+        const billableInput: BillableMultiModalInput = {
+            kind: 'video',
             model,
             prompt,
             duration,
             aspectRatio,
-            referenceImage,
+            referenceUrl: referenceImage,
         };
 
         const reservation = await step.run('reserve-credits', async () => {
-            const estimatedCredits = await videoBillable.estimateCost(billableInput);
-            const idempotencyKey = videoBillable.idempotencyKey(billableInput, { organizationId, userId });
+            const estimatedCredits = await multimodal.estimateCost(billableInput);
+            const idempotencyKey = multimodal.idempotencyKey(billableInput, {
+                organizationId,
+                userId,
+                metadata: { runId: requestId },
+            });
             const res = await billingService.reserve({
                 organizationId,
                 userId,
-                operation: videoBillable.operation,
+                operation: 'media:video',
                 estimatedCredits,
                 ttlMs: VIDEO_RESERVATION_TTL_MS,
                 idempotencyKey,
@@ -363,15 +496,17 @@ export const handleVideoGeneration = inngest.createFunction(
         try {
             submission = await step.run('submit-video', async () => {
                 try {
-                    const handle = await videoBillable.submit(billableInput, {
-                        organizationId,
-                        userId,
-                        signal: new AbortController().signal,
-                        reservationId: reservation.id,
+                    const handle = await videoClient.submitVideoGeneration({
+                        model,
+                        prompt,
+                        duration,
+                        aspectRatio,
+                        referenceUrl: referenceImage,
+                        idempotencyKey: `${organizationId}:${requestId}`,
                     });
                     return {
-                        id: handle.submission.id,
-                        estimatedProviderCostUsd: handle.estimatedProviderCostUsd,
+                        id: handle.id,
+                        estimatedProviderCostUsd: handle.costEstimate.cost ?? 0,
                     };
                 } catch (error) {
                     wrapNonRetryable(error);
@@ -388,8 +523,6 @@ export const handleVideoGeneration = inngest.createFunction(
         for (let attempt = 0; attempt < MAX_VIDEO_POLL_ATTEMPTS; attempt++) {
             await step.sleep(`wait-for-video-${attempt}`, VIDEO_POLL_INTERVAL);
 
-            // Keep the reservation alive while we poll. Sweeper would
-            // otherwise refund + expire our reservation under us.
             await step.run(`renew-reservation-${attempt}`, async () => {
                 const current = await billingService.getReservation(reservation.id);
                 if (!current || current.status !== 'reserved') return;
@@ -400,8 +533,7 @@ export const handleVideoGeneration = inngest.createFunction(
 
             const pollResult = await step.run(`poll-video-${attempt}`, async () => {
                 try {
-                    const generator = new MediaGenerator(model);
-                    return await generator.pollVideoGeneration(submission.id);
+                    return await videoClient.pollVideoGeneration(submission.id);
                 } catch (error) {
                     wrapNonRetryable(error);
                 }

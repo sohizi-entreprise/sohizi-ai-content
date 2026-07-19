@@ -12,7 +12,13 @@ import { generateSystemPrompt } from "./sys-prompt";
 import { BaseTool } from "../tools/tool-definition";
 import { z } from "zod";
 
-export const supportedAgents = ['media-generator', 'main-agent', 'explorer', 'researcher', 'motion-graphic'] as const;
+export const supportedAgents = [
+    'media-generator', 
+    'main-agent', 
+    'explorer', 
+    'researcher', 
+    'motion-graphic'
+] as const;
 
 type AgentName = typeof supportedAgents[number];
 

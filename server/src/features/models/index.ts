@@ -1,18 +1,28 @@
 import { Elysia } from 'elysia'
 import { z } from 'zod'
 import { authMiddleware } from '@/lib/auth-middleware'
+import { mediaConstants } from '@/constants'
 import * as modelsService from './service'
+
+const categoriesQuerySchema = z
+  .union([z.string().min(1), z.array(z.string().min(1)).min(1)])
+  .transform((value) =>
+    (Array.isArray(value) ? value : value.split(','))
+      .flatMap((item) => item.split(','))
+      .map((item) => item.trim())
+      .filter(Boolean),
+  )
 
 export const modelsRoutes = new Elysia({ prefix: '/models' })
   .use(authMiddleware)
   .get('/', async ({ query }) => {
-    const categories = query.categories.split(',').map((value) => value.trim()).filter(Boolean)
-    return modelsService.listLlmModels(categories)
+    return modelsService.listLlmModels(query.categories)
   }, {
     query: z.object({
-      categories: z.string().min(1),
+      categories: categoriesQuerySchema,
     }),
   })
+  .get('/voices', () => mediaConstants.googleVoiceDescriptions)
   .get('/:modelId/options', async ({ params }) => {
     return modelsService.listModelOptions(params.modelId)
   }, {

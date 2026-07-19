@@ -48,6 +48,4 @@ export type MediaTuning = {
   }>
 }
 
-export type MediaGenerationSettings = Record<MediaType, MediaTuning[]>
-
 

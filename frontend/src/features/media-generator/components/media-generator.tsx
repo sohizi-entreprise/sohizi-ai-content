@@ -1,7 +1,6 @@
 import { Download, Folder, ImagePlus, Sparkles, Trash2, X } from 'lucide-react'
 import { useParams } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
-import { mediaFilterOptions } from '../constants'
 import { useMediaGeneratorStore } from '../store/media-generator-store'
 import { MediaCard } from './media-card'
 import type { MediaFilter } from '../types'
@@ -34,6 +33,25 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+
+const mediaFilterOptions = [
+  {
+    label: 'All',
+    value: 'all',
+  },
+  {
+    label: 'Image',
+    value: 'image',
+  },
+  {
+    label: 'Video',
+    value: 'video',
+  },
+  {
+    label: 'Audio',
+    value: 'audio',
+  },
+]
 
 export function MediaGenerator() {
   const { projectId } = useParams({

@@ -123,9 +123,8 @@ const RenderAssistantMessage = ({run}: {run: MediaGenerationRun;}) => {
 
   const isRunning = runStatus === 'pending' || runStatus === 'running';
 
-  const onFinish = () =>{
-    // Refresh the cash for listing 
-    setRunStatus('finished')
+  const onFinish = (status: MediaGenerationRun['status']) => {
+    setRunStatus(status === 'error' ? 'error' : 'finished')
     removeActiveGenerationRequest(run.id)
   }
 
@@ -152,7 +151,7 @@ const RenderAssistantMessage = ({run}: {run: MediaGenerationRun;}) => {
 }
 
 function AssistantMessage({messages, isLoading, className}: {messages: Message[]; isLoading: boolean; className?: string;}){
-  const text = extractLastMessageContent(messages)
+  const text = extractLastMessageContent(messages, isLoading)
   const input = extractSubmitMediaJobsInput(messages);
 
   const showViewPrompt = !isLoading && input.jobs.length > 0;
@@ -342,38 +341,51 @@ type SubmitMediaJobsInput = {
   message: string
 }
 
-function extractLastMessageContent(messages: Message[]) {
-  let text = 'Processing ...'
+function extractLastMessageContent(messages: Message[], isLoading = false) {
+  let submitMediaJobsMessage: string | undefined
+  let textContent: string | undefined
+  let hasStreamingReasoning = false
+  let streamingToolName: string | undefined
+
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index]
     if (message.role !== 'assistant') continue
 
-    const lastPart = message.content[message.content.length - 1]
-    if (!lastPart) return text
-
-    switch (lastPart.type) {
-      case 'text':
-        text = lastPart.text;
-        break;
-      case 'reasoning':
-        text = 'Thinking ...'
-        break;
-      case 'tool-call':{
-        text = `Calling tool ${lastPart.toolName}...`
-        const toolName = lastPart.toolName;
-        if(toolName === 'submitMediaJobs'){
-          const input = lastPart.input as SubmitMediaJobsInput;
-          text = input.message || text;
+    for (const part of message.content) {
+      switch (part.type) {
+        case 'text':
+          if (part.text) textContent = part.text
+          break
+        case 'reasoning':
+          if (part.isStreaming) hasStreamingReasoning = true
+          break
+        case 'tool-call': {
+          if (part.toolName === 'submitMediaJobs') {
+            const input = part.input as Partial<SubmitMediaJobsInput>
+            if (typeof input.message === 'string' && input.message.trim()) {
+              submitMediaJobsMessage = input.message
+            }
+          }
+          if (part.isStreaming) {
+            streamingToolName = part.toolName
+          }
+          break
         }
-        break;
       }
     }
 
-    return text;
+    break
   }
 
-  return text;
-
+  if (submitMediaJobsMessage) return submitMediaJobsMessage
+  if (textContent) return textContent
+  if (hasStreamingReasoning) return 'Thinking ...'
+  if (streamingToolName) {
+    return streamingToolName === 'submitMediaJobs'
+      ? 'Preparing media jobs...'
+      : `Calling tool ${streamingToolName}...`
+  }
+  return isLoading ? 'Processing ...' : ''
 }
 
 
@@ -408,22 +420,23 @@ function getDisplayUrls(attachment: Attachment) {
 }
 
 function extractSubmitMediaJobsInput(messages: Message[]): Omit<SubmitMediaJobsInput, 'message'> {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (message.role !== 'assistant') continue
 
-  for (const message of messages) {
-    if (message.role !== 'assistant') continue;
-    const toolCall = message.content.find(
-      (part) => part.type === 'tool-call'
-    );
-    if (toolCall && toolCall.toolName === 'submitMediaJobs') {
-      const input = toolCall.input as SubmitMediaJobsInput;
+    for (let partIndex = message.content.length - 1; partIndex >= 0; partIndex -= 1) {
+      const part = message.content[partIndex]
+      if (part.type !== 'tool-call' || part.toolName !== 'submitMediaJobs') continue
+
+      const input = part.input as Partial<SubmitMediaJobsInput>
       return {
         jobs: input.jobs || [],
         status: input.status || 'done',
-      };
+      }
     }
   }
 
-  return {jobs: [], status: 'done'};
+  return { jobs: [], status: 'done' }
 }
 
 function getMediaType(mediaType: string): MediaType {

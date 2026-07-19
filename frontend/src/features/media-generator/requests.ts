@@ -58,11 +58,23 @@ export type CancelGenerationResponse = {
   error: string | null
 }
 
+export type GoogleVoiceDescription = {
+  name: string
+  gender: 'female' | 'male'
+  description: string
+  previewUrl: string
+}
+
 export type MediaStreamEvent = {
   runId: string
   event: string
   chunk?: unknown
   [key: string]: unknown
+}
+
+export const listGoogleVoices = async (): Promise<GoogleVoiceDescription[]> => {
+  const response = await api.get('/models/voices')
+  return response.data
 }
 
 export const listAssetsRequests = async (

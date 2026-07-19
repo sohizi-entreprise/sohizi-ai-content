@@ -20,7 +20,8 @@ const keysFactory = {
   commands: ['admin', 'commands'] as const,
   contentCategories: ['admin', 'content-categories'] as const,
   skills: ['admin', 'skills'] as const,
-  catalogModels: (categories: string[]) => ['catalog', 'models', categories] as const,
+  catalogModels: (categories: string | string[]) =>
+    ['catalog', 'models', Array.isArray(categories) ? categories : [categories]] as const,
   catalogOptions: (modelId: string) => ['catalog', 'options', modelId] as const,
 }
 
@@ -92,11 +93,11 @@ export const deactivateAdminOptionMutationOptions = () =>
     },
   })
 
-export const listCatalogModelsQueryOptions = (categories: string[]) =>
+export const listCatalogModelsQueryOptions = (categories: string | string[]) =>
   queryOptions({
     queryKey: keysFactory.catalogModels(categories),
     queryFn: () => requests.listCatalogModels(categories),
-    enabled: categories.length > 0,
+    enabled: (Array.isArray(categories) ? categories.join(',') : categories).length > 0,
   })
 
 export const listCatalogModelOptionsQueryOptions = (modelId: string | null) =>

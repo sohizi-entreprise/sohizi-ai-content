@@ -4,7 +4,6 @@ export type {
   AudioGenerationSettings,
   ImageGenerationSettings,
   MediaFilter,
-  MediaGenerationSettings,
   MediaType,
   MediaVariant,
   VideoGenerationSettings,

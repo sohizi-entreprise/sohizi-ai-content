@@ -65,9 +65,12 @@ export const deactivateAdminOption = async (id: string): Promise<AdminOption> =>
   return response.data
 }
 
-export const listCatalogModels = async (categories: string[]): Promise<CatalogModel[]> => {
+export const listCatalogModels = async (
+  categories: string | string[],
+): Promise<CatalogModel[]> => {
+  const categoriesParam = Array.isArray(categories) ? categories.join(',') : categories
   const response = await api.get('/models', {
-    params: { categories: categories.join(',') },
+    params: { categories: categoriesParam },
   })
   return response.data
 }

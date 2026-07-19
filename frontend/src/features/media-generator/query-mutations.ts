@@ -1,4 +1,4 @@
-import { mutationOptions, infiniteQueryOptions, keepPreviousData, type InfiniteData, useQueryClient } from "@tanstack/react-query";
+import { mutationOptions, infiniteQueryOptions, keepPreviousData, queryOptions, type InfiniteData, useQueryClient } from "@tanstack/react-query";
 import * as requests from './requests';
 import { MediaAsset } from "./requests";
 import { useCallback } from "react";
@@ -16,7 +16,14 @@ type AiGeneratedAssetsInfiniteData = InfiniteData<
 export const mediaGeneratorKeys = {
   assetsRequests: (projectId: string, options?: requests.ListAssetsOptions) => ['media', projectId, 'assets', options],
   aiGeneratedAssets: (projectId: string, options?: requests.ListAssetsOptions) => ['media', projectId, 'ai-assets', options],
+  googleVoices: ['media', 'google-voices'] as const,
 }
+
+export const listGoogleVoicesQueryOptions = queryOptions({
+  queryKey: mediaGeneratorKeys.googleVoices,
+  queryFn: () => requests.listGoogleVoices(),
+  staleTime: Infinity,
+})
 
 export const listAssetsRequestsQueryOptions = (projectId: string, options?: requests.ListAssetsOptions) =>
   infiniteQueryOptions({
@@ -25,7 +32,9 @@ export const listAssetsRequestsQueryOptions = (projectId: string, options?: requ
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
     placeholderData: keepPreviousData,
-    select: (data) => data.pages.flatMap(page => page.data),
+    // Backend returns each page oldest→newest; page[0] is the newest batch.
+    // Reverse pages so older batches render above newer ones (chat order).
+    select: (data) => [...data.pages].reverse().flatMap((page) => page.data),
   })
 
 export const listAiGeneratedAssetsQueryOptions = (projectId: string, options?: requests.ListAssetsOptions) =>
@@ -212,8 +221,9 @@ function appendAssetRequest(
     return { ...current, pages }
   }
 
-  const lastPage = pages[pages.length - 1]
-  if (!lastPage) {
+  // pages[0] is the newest batch (matches listMessages / chat upsert pattern).
+  const [firstPage, ...restPages] = pages
+  if (!firstPage) {
     return {
       ...current,
       pages: [{
@@ -224,9 +234,8 @@ function appendAssetRequest(
     }
   }
 
-  const leadingPages = pages.slice(0, -1)
   return {
     ...current,
-    pages: [...leadingPages, { ...lastPage, data: [...lastPage.data, request] }],
+    pages: [{ ...firstPage, data: [...firstPage.data, request] }, ...restPages],
   }
 }

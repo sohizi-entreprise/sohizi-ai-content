@@ -1,56 +1,116 @@
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-  } from '@/components/ui/popover'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MediaTuning } from '../types'
+import { useMediaCatalog } from '../hooks/use-media-catalog'
+import { useMediaGeneratorStore } from '../store/media-generator-store'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CatalogModel } from '@/features/admin/types'
+import { Skeleton } from '@/components/ui/skeleton'
+import { MediaVoiceSelector } from './media-voice-selector'
+import { listGoogleVoicesQueryOptions } from '../query-mutations'
+import { useQuery } from '@tanstack/react-query'
 
 
-type Props = {
-    settings: MediaTuning[]
-    onUpdate: (key: string, value: string) => void
-}
 
-export default function SettingsPopover(props: Props) {
+export default function SettingsPopover() {
+
+  const updatePromptSettings = useMediaGeneratorStore((state) => state.updatePromptSettings)
+  const promptSettings = useMediaGeneratorStore((state) => state.promptSettings)
+  const mediaType = useMediaGeneratorStore((state) => state.mediaType)
+  const {
+      models,
+      selectedModelId,
+      setSelectedModelId,
+      options,
+      isLoadingModels,
+    } = useMediaCatalog(mediaType)
+
+  const { data: voices = [], isLoading } = useQuery(listGoogleVoicesQueryOptions)
+
+  useEffect(()=>{
+    if (selectedModelId && mediaType !== 'audio') {
+      updatePromptSettings(mediaType, 'model', selectedModelId)
+    }
+  }, [selectedModelId, mediaType])
+
+  if(mediaType === 'audio'){
+    return <MediaVoiceSelector voices={voices} isLoading={isLoading} />
+  }
+
+  
     return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-8 rounded-lg bg-white/12 px-3 text-xs text-white hover:bg-white/16 hover:text-white"
+      <div className="flex items-center gap-2">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-8 rounded-lg bg-white/12 px-3 text-xs text-white hover:bg-white/16 hover:text-white"
+            >
+              Settings
+              <ChevronsUpDown className="size-3.5" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent
+            className="w-[min(760px,calc(100vw-32px))] max-w-[760px] rounded-xl border-white/8 bg-[#1e2022] p-4 text-white shadow-2xl"
           >
-            Settings
-            <ChevronsUpDown className="size-3.5" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          side="top"
-          sideOffset={10}
-          className="w-[min(760px,calc(100vw-32px))] rounded-xl border-white/8 bg-[#1e2022] p-4 text-white shadow-2xl"
-        >
-          <div className="space-y-4">
-            {
-                props.settings.map((setting) => (
-                    <OptionRow key={setting.label} label={setting.label}>
-                        <SegmentedOptions
-                            value={setting.currentValue ?? ''}
-                            options={setting.options}
-                            onChange={(value) => props.onUpdate(setting.key, value)}
-                        />
-                    </OptionRow>
-                ))
-            }
-          </div>
-        </PopoverContent>
-      </Popover>
+            <DialogHeader>
+              <DialogTitle className="text-white">Settings</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <SelectModel models={models} selectedModelId={selectedModelId} setSelectedModelId={setSelectedModelId} isLoadingModels={isLoadingModels} />
+              {
+                  options.map((setting) => (
+                      <OptionRow key={setting.label} label={setting.label}>
+                          <SegmentedOptions
+                              value={promptSettings[mediaType][setting.key] ?? ''}
+                              options={setting.options}
+                              onChange={(value) => updatePromptSettings(mediaType, setting.key, value)}
+                          />
+                      </OptionRow>
+                  ))
+              }
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     )
   }
+
+function SelectModel(props: {models: CatalogModel[], selectedModelId: string | null, setSelectedModelId: (modelId: string) => void, isLoadingModels: boolean}){
+  const {models, selectedModelId, setSelectedModelId, isLoadingModels} = props
+  if(isLoadingModels) return (
+    <Skeleton className="h-8 w-[180px] rounded-lg"/>
+  )
+  return (
+    <Select
+      value={selectedModelId ?? undefined}
+      onValueChange={setSelectedModelId}
+      disabled={isLoadingModels}
+    >
+      <SelectTrigger className="h-8 w-[180px] rounded-lg border-white/10 bg-white/8 text-xs">
+        <SelectValue placeholder={isLoadingModels ? 'Loading…' : 'Select model'} />
+      </SelectTrigger>
+      <SelectContent>
+        {models.map((model) => (
+          <SelectItem key={model.id} value={model.id}>
+            {model.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+
+  )
+}
 
 function OptionRow({
     label,

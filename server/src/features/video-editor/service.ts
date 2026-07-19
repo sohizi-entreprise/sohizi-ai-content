@@ -12,9 +12,11 @@ import type {
 import { BadRequest, InternalServerError, NotFound } from '../error';
 import type { AudioMediaClipProperties, VideoClipProperties, VideoMediaClipProperties } from '@/type';
 import type { VideoComposition, VideoTrack, VideoClip } from '@/db/schema';
-import { WordsWithText } from '../media-engine/generators/ai-audio';
+import {
+  createBillableMultiModalClient,
+  type WordsWithText,
+} from '../ai/agent/utils/multi-llm-client';
 import { billingService, withBilling } from '../billing';
-import { aiAudioBillable } from '../media-engine/generators/billable-ai-audio';
 import { v4 as uuidv4 } from 'uuid';
 import { getProjectById } from '../project/repo';
 import { z } from 'zod';
@@ -290,18 +292,15 @@ export const addCaption = async (trackId: string, projectId: string, userId: str
     throw new BadRequest('No clips found to generate caption for');
   }
 
-  const audioClient = withBilling(aiAudioBillable, billingService);
+  const audioClient = withBilling(createBillableMultiModalClient(), billingService);
 
   const promises = payload.map((p) => {
     return (async() => {
 
       const transcription = await audioClient({
-        type: 'speech-to-text',
-        params: {
-          url: p.url,
-          mode: 'caption',
-          audioDurationSeconds: (p.endFrame - p.startFrame) / composition.fps
-        },
+        kind: 'caption',
+        url: p.url,
+        estimatedDurationSeconds: (p.endFrame - p.startFrame) / composition.fps,
       }, {
         organizationId: project.organizationId,
         userId,
@@ -310,8 +309,15 @@ export const addCaption = async (trackId: string, projectId: string, userId: str
         },
       });
 
+      if (transcription.kind !== 'caption') {
+        throw new InternalServerError('Unexpected multimodal output for caption');
+      }
+
       return {
-        transcriptions: transcription.result as WordsWithText,
+        transcriptions: {
+          text: transcription.text,
+          words: transcription.words,
+        } satisfies WordsWithText,
         startFrame: p.startFrame,
         endFrame: p.endFrame,
         sourceStartFrame: p.sourceStartFrame,

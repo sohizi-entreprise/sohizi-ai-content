@@ -107,35 +107,3 @@ export const providerCostToActualCredits = (
     return providerCostToCredits(providerCostUsd, { ...options, overbookingFactor: 1 });
 }
 
-// ---- ElevenLabs cost estimation ----------------------------------------
-//
-// ElevenLabs has no dryRun endpoint, so we approximate from their published
-// pricing (https://elevenlabs.io/pricing/api). These rates can drift over
-// time; keep them in sync with the provider's API pricing page.
-
-export const ELEVENLABS_RATES = {
-    speechPer1KCharsUsd: 0.10,     // Multilingual v2/v3
-    soundEffectPerGenerationUsd: 0.07,
-    musicPerMinuteUsd: 0.28,
-} as const;
-
-export type ElevenLabsAudioType = 'speech' | 'sound-effect' | 'music' | 'dialogue';
-
-export const estimateElevenLabsCostUsd = (
-    audioType: ElevenLabsAudioType,
-    prompt: string,
-    opts?: { musicLengthMs?: number },
-): number => {
-    switch (audioType) {
-        case 'speech':
-        case 'dialogue':
-            return (prompt.length / 1000) * ELEVENLABS_RATES.speechPer1KCharsUsd;
-        case 'sound-effect':
-            return ELEVENLABS_RATES.soundEffectPerGenerationUsd;
-        case 'music': {
-            const musicLengthMs = opts?.musicLengthMs ?? 10_000;
-            const minutes = musicLengthMs / 60_000;
-            return minutes * ELEVENLABS_RATES.musicPerMinuteUsd;
-        }
-    }
-}

@@ -1,7 +1,5 @@
 import { create } from 'zustand'
-import { defaultMediaSettings } from '../constants'
 import type {
-  MediaGenerationSettings,
   MediaType,
 } from '../types'
 import { AttachedFile } from '@/components/widgets/file-attachments'
@@ -12,12 +10,17 @@ type ActiveGenerationRequest = {
   error?: string
 }
 
+type PromptSettings = {
+  image: Record<string, string>
+  video: Record<string, string>
+  audio: Record<string, string>
+}
+
 type StoreState = {
   activeGenerationRequests: Array<ActiveGenerationRequest>
   mediaType: MediaType
   prompt: string
-  settings: MediaGenerationSettings
-  selectedModelIds: Record<MediaType, string | null>
+  promptSettings: PromptSettings
   attachments: Array<AttachedFile>
   chatInput: Editor | null
   viewRequestInput: {jobs: Record<string, string>[]; status: 'done' | 'blocked' | 'unknown'} | null
@@ -28,16 +31,11 @@ type StoreActions = {
   removeActiveGenerationRequest: (requestId: string) => void
   setMediaType: (mediaType: MediaType) => void
   setPrompt: (prompt: string) => void
-  updateSettings: <T extends MediaType>(
+  updatePromptSettings: <T extends MediaType>(
     type: T,
     key: string,
     value: string,
   ) => void
-  replaceSettings: <T extends MediaType>(
-    type: T,
-    settings: MediaGenerationSettings[T],
-  ) => void
-  setSelectedModelId: (type: MediaType, modelId: string | null) => void
   addAttachment: (attachment: AttachedFile) => void
   removeAttachment: (id: string) => void
   reset: () => void
@@ -50,11 +48,10 @@ const initialState: StoreState = {
   activeGenerationRequests: [],
   mediaType: 'image',
   prompt: '',
-  settings: defaultMediaSettings,
-  selectedModelIds: {
-    image: null,
-    video: null,
-    audio: null,
+  promptSettings: {
+    image: {},
+    video: {},
+    audio: {voice: 'Kore'},
   },
   attachments: [],
   chatInput: null,
@@ -67,26 +64,11 @@ export const useMediaGeneratorStore = create<StoreState & StoreActions>(
     ...initialState,
     setPrompt: (data) => set({ prompt: data }),
     setMediaType: (data) => set({ mediaType: data }),
-    updateSettings: (type, key, value) =>
+    updatePromptSettings: (type, key, value) =>
       set((state) => ({
-        settings: {
-          ...state.settings,
-          [type]: state.settings[type].map((setting) => setting.key === key ? { ...setting, currentValue: value } : setting),
-
-        },
-      })),
-    replaceSettings: (type, settings) =>
-      set((state) => ({
-        settings: {
-          ...state.settings,
-          [type]: settings,
-        },
-      })),
-    setSelectedModelId: (type, modelId) =>
-      set((state) => ({
-        selectedModelIds: {
-          ...state.selectedModelIds,
-          [type]: modelId,
+        promptSettings: {
+          ...state.promptSettings,
+          [type]: { ...state.promptSettings[type], [key]: value },
         },
       })),
     addAttachment: (data) => set((state) => {

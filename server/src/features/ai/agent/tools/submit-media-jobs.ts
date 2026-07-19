@@ -25,10 +25,7 @@ const models = {
     ],
 }
 
-const textToSpeechVoices = [
-    'alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'onyx', 'nova', 'sage', 'shimmer', 'verse', 'marin', 'cedar'
-]
-
+const ttsVoices = z.enum(mediaConstants.googleTtsVoices);
 const imageModels = z.enum(models.image);
 const videoModels = z.enum(models.video);
 const videoAspectRatios = ['16:9', '9:16', '1:1'] as const;
@@ -58,12 +55,50 @@ const musicJobSchema = z.object({
 
 const textToSpeechJobSchema = z.object({
     type: z.literal('text-to-speech'),
-    text: z.string().min(1).describe('The text to convert to speech'),
-    voice: z.enum(textToSpeechVoices).describe('The voice to use for text to speech'),
-    instructions: z.string().optional().describe('Optional instructions to guide the generation'),
+    text: z.string().min(1).describe('The text to convert to speech (single speaker)'),
+    voice: ttsVoices.describe('The voice to use for text to speech'),
+    instructions: z.string().optional().describe('Optional style notes: tone, accent, pacing, emotion'),
 });
 
-const mediaJobSchema = z.discriminatedUnion('type', [imageJobSchema, videoJobSchema, musicJobSchema, textToSpeechJobSchema]);
+const dialogueSpeakerSchema = z.object({
+    name: z.string().min(1).describe('Speaker label used in the script. Must match "Name:" line prefixes exactly.'),
+    voice: ttsVoices.describe('Gemini TTS voice for this speaker'),
+});
+
+/**
+ * Multi-speaker TTS (exactly 2 speakers). Gemini Flash TTS dialogue format.
+ * Script lines must be `SpeakerName: spoken text` with names matching speakers[].name.
+ */
+const dialogueJobSchema = z.object({
+    type: z.literal('dialogue'),
+    script: z.string().min(1).describe(
+        'Dialogue transcript only. One turn per line as "SpeakerName: line". '
+        + 'Do NOT wrap with "TTS the following…". Speaker names must match speakers[].name exactly.',
+    ),
+    speakers: z.array(dialogueSpeakerSchema).length(2).describe(
+        'Exactly 2 speakers. Names must be unique and match script prefixes.',
+    ),
+    instructions: z.string().optional().describe(
+        'Optional scene direction for the whole dialogue: accents, moods, pacing, relationship energy.',
+    ),
+}).superRefine((job, ctx) => {
+    const names = job.speakers.map((s) => s.name.trim());
+    if (new Set(names).size !== names.length) {
+        ctx.addIssue({
+            code: 'custom',
+            path: ['speakers'],
+            message: 'Speaker names must be unique',
+        });
+    }
+});
+
+const mediaJobSchema = z.discriminatedUnion('type', [
+    imageJobSchema,
+    videoJobSchema,
+    musicJobSchema,
+    textToSpeechJobSchema,
+    dialogueJobSchema,
+]);
 
 export type MediaJob = z.infer<typeof mediaJobSchema>;
 
@@ -158,8 +193,25 @@ export const submitMediaJobsTool = buildBaseTool({
                         },
                     });
                     break;
-                // default:
-                //     throw new Error(`Invalid job type: ${job.type}`);
+                case 'dialogue':
+                    await inngest.send({
+                        name: 'media/generate.audio',
+                        data: {
+                            requestId: session.runId,
+                            projectId: session.projectId,
+                            organizationId: session.organizationId,
+                            userId: session.userId,
+                            payload: {
+                                type: 'dialogue',
+                                params: {
+                                    script: job.script,
+                                    speakers: job.speakers,
+                                    instructions: job.instructions,
+                                },
+                            },
+                        },
+                    });
+                    break;
             }
         }
         

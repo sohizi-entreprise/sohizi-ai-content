@@ -11,9 +11,8 @@ export const useSendRequest = (projectId: string) => {
 
   const prompt = useMediaGeneratorStore((state) => state.prompt)
   const attachments = useMediaGeneratorStore((state) => state.attachments)
-  const settings = useMediaGeneratorStore((state) => state.settings)
+  const promptSettings = useMediaGeneratorStore((state) => state.promptSettings)
   const mediaType = useMediaGeneratorStore((state) => state.mediaType)
-  const selectedModelId = useMediaGeneratorStore((state) => state.selectedModelIds[mediaType])
   const clearChatInput = useMediaGeneratorStore((state) => state.clearChatInput)
 
   const appendActiveGenerationRequest = useMediaGeneratorStore((state) => state.appendActiveGenerationRequest)
@@ -32,9 +31,7 @@ export const useSendRequest = (projectId: string) => {
     })),
   ]
 
-  const payloadSettings = Object.fromEntries(
-    settings[mediaType]?.map((item) => [item.key, item.currentValue]) ?? [],
-  )
+  const payloadSettings = promptSettings[mediaType]
   
   const payload: AssetRequest= {
     userPrompt: {
@@ -43,7 +40,6 @@ export const useSendRequest = (projectId: string) => {
     },
     settings: {
         mediaType: mediaType,
-        modelId: selectedModelId ?? undefined,
         referencedFiles: uploadedAttachments.map((attachment) => ({
           type: attachment.type,
           url: attachment.url,

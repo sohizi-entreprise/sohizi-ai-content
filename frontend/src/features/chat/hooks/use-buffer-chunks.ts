@@ -106,11 +106,20 @@ function applyChunkToMessage(message: AssistantMessage, chunk: ChatStreamChunk, 
     case 'tool_call_delta':
       return {
         ...currentMessage,
-        content: currentMessage.content.map((part) =>
-          part.type === 'tool-call' && part.toolCallId === chunk.toolCallId
-            ? { ...part, input: parse(chunk.input) }
-            : part,
-        ),
+        content: currentMessage.content.map((part) => {
+          if (part.type !== 'tool-call' || part.toolCallId !== chunk.toolCallId) {
+            return part
+          }
+          if (!chunk.input.trim()) {
+            return part
+          }
+          try {
+            return { ...part, input: parse(chunk.input) }
+          } catch {
+            // Partial JSON not yet parseable; keep previous input
+            return part
+          }
+        }),
       }
     // case 'tool_call_end':
     //   return {

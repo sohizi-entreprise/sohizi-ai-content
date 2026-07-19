@@ -57,7 +57,7 @@ export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
     <div className="flex h-full flex-col">
       <div className="flex h-9 shrink-0 items-center justify-between px-3">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Explorer
+          Files
         </span>
         <div className="flex items-center gap-0.5">
           <FileNodeMenu options={menuOptions} onChange={handleOnCreate}>
