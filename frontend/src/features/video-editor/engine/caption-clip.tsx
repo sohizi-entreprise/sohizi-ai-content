@@ -20,15 +20,14 @@ export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
     const {
         fontSize=48,
         color='#ffffff',
-        // fontFamily='Inter',
         fontWeight='bold',
         align='center',
-        // opacity=1,
+        opacity=1,
         xRatio=0.5,
         yRatio=0.85,
         widthRatio=0.7,
+        heightRatio=0.18,
         hightlightColor='#FFD700',
-        // backgroundColor='black',
     } = clip.properties
   
     const currentPage = pages.find(
@@ -38,16 +37,20 @@ export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
     return (
       <div style={{
         position: 'absolute',
-        bottom: 100,
         left: `${xRatio * 100}%`,
         top: `${yRatio * 100}%`,
         width: `${widthRatio * 100}%`,
-        transform: 'translateX(-50%)',
+        height: `${heightRatio * 100}%`,
+        transform: 'translate(-50%, -50%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center',
         fontSize,
         fontWeight,
         textAlign: align,
         whiteSpace: 'pre',
-        maxWidth: '80%',
+        opacity,
+        pointerEvents: 'none',
       }}>
         {currentPage?.tokens.map((token, i) => {
           const isActive = timeMs >= token.fromMs && timeMs < token.toMs;

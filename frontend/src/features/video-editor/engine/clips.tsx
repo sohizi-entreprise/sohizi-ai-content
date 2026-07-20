@@ -13,25 +13,33 @@ interface VideoClipRendererProps {
 
 export function VideoClipRenderer({ clip, muted }: VideoClipRendererProps) {
   return (
-    <AbsoluteFill
-      style={{
-        opacity: clip.opacity,
-        borderRadius: clip.borderRadius,
-        overflow: 'hidden',
-      }}
-    >
-      <OffthreadVideo
-        src={clip.url}
-        muted={muted}
-        volume={muted ? 0 : clip.volume}
-        playbackRate={clip.speed}
-        trimBefore={clip.sourceStartFrame}
+    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+      <div
         style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
+          position: 'absolute',
+          left: `${clip.xRatio * 100}%`,
+          top: `${clip.yRatio * 100}%`,
+          width: `${clip.widthRatio * 100}%`,
+          height: `${clip.heightRatio * 100}%`,
+          transform: 'translate(-50%, -50%)',
+          opacity: clip.opacity,
+          borderRadius: clip.borderRadius,
+          overflow: 'hidden',
         }}
-      />
+      >
+        <OffthreadVideo
+          src={clip.url}
+          muted={muted}
+          volume={muted ? 0 : clip.volume}
+          playbackRate={clip.speed}
+          trimBefore={clip.sourceStartFrame}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+          }}
+        />
+      </div>
     </AbsoluteFill>
   )
 }
@@ -105,7 +113,7 @@ interface ImageClipRendererProps {
 
 export function ImageClipRenderer({ clip }: ImageClipRendererProps) {
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <div
         style={{
           position: 'absolute',

@@ -10,8 +10,10 @@ import type {
   AspectRatio,
   AudioClip,
   Clip,
+  FontWeight,
   ImageClip,
   ProjectState,
+  TextAlign,
   TextClip,
   Track,
   TrackType,
@@ -60,6 +62,16 @@ interface EditorActions {
     text: string
     durationInFrames: number
     startFrame?: number
+    fontSize?: number
+    color?: string
+    fontFamily?: string
+    fontWeight?: FontWeight
+    align?: TextAlign
+    opacity?: number
+    xRatio?: number
+    yRatio?: number
+    widthRatio?: number
+    heightRatio?: number
   }) => string
   addImageClip: (params: {
     trackId?: string
@@ -333,6 +345,10 @@ const creator: StateCreator<
         opacity: 1,
         speed: 1,
         borderRadius: 0,
+        xRatio: 0.5,
+        yRatio: 0.5,
+        widthRatio: 1,
+        heightRatio: 1,
       }
       track.clips.push(clip)
       recomputeDuration(state)
@@ -368,7 +384,22 @@ const creator: StateCreator<
     return id
   },
 
-  addTextClip: ({ trackId, text, durationInFrames, startFrame }) => {
+  addTextClip: ({
+    trackId,
+    text,
+    durationInFrames,
+    startFrame,
+    fontSize,
+    color,
+    fontFamily,
+    fontWeight,
+    align,
+    opacity,
+    xRatio,
+    yRatio,
+    widthRatio,
+    heightRatio,
+  }) => {
     const id = uuidv4()
     set((state) => {
       const track = trackId
@@ -386,16 +417,16 @@ const creator: StateCreator<
         sourceStartFrame: 0,
         sourceDurationInFrames: Math.max(1, durationInFrames),
         text,
-        fontSize: 64,
-        color: '#ffffff',
-        fontFamily: 'Inter',
-        fontWeight: 'bold',
-        align: 'center',
-        opacity: 1,
-        xRatio: 0.5,
-        yRatio: 0.85,
-        widthRatio: 0.7,
-        heightRatio: 0.18,
+        fontSize: fontSize ?? 64,
+        color: color ?? '#ffffff',
+        fontFamily: fontFamily ?? 'Inter',
+        fontWeight: fontWeight ?? 'bold',
+        align: align ?? 'center',
+        opacity: opacity ?? 1,
+        xRatio: xRatio ?? 0.5,
+        yRatio: yRatio ?? 0.85,
+        widthRatio: widthRatio ?? 0.7,
+        heightRatio: heightRatio ?? 0.18,
       }
       track.clips.push(clip)
       recomputeDuration(state)

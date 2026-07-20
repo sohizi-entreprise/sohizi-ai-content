@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useVideoEditorStore } from '../store/editor-store'
-import type { TextClip } from '../store/types'
+import {
+  getClipLayout,
+  isCanvasEditableClip,
+  type CanvasEditableClip,
+  type SpatialLayout,
+} from '../store/types'
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
@@ -18,7 +23,7 @@ interface DragState {
   boxWidth: number
   boxHeight: number
   rafId: number | null
-  pendingPatch: Partial<TextClip> | null
+  pendingPatch: Partial<SpatialLayout> | null
 }
 
 const MIN_WIDTH_RATIO = 0.05
@@ -36,12 +41,12 @@ export function CanvasOverlay() {
   const dragRef = useRef<DragState | null>(null)
   const [, forceRender] = useState(0)
 
-  const activeTextClips = useMemo<Array<TextClip>>(() => {
-    const result: Array<TextClip> = []
+  const activeClips = useMemo<Array<CanvasEditableClip>>(() => {
+    const result: Array<CanvasEditableClip> = []
     for (const track of tracks) {
       if (track.hidden) continue
       for (const clip of track.clips) {
-        if (!clip || clip.type !== 'text') continue
+        if (!clip || !isCanvasEditableClip(clip)) continue
         if (currentFrame < clip.startFrame || currentFrame >= clip.endFrame) {
           continue
         }
@@ -53,9 +58,34 @@ export function CanvasOverlay() {
 
   const selectedId =
     selection.clipIds.length === 1 ? selection.clipIds[0] : null
-  const selectedClip = useMemo<TextClip | null>(
-    () => activeTextClips.find((c) => c.id === selectedId) ?? null,
-    [activeTextClips, selectedId],
+  const selectedClip = useMemo<CanvasEditableClip | null>(
+    () => activeClips.find((c) => c.id === selectedId) ?? null,
+    [activeClips, selectedId],
+  )
+
+  const applyLayoutPatch = useCallback(
+    (clip: CanvasEditableClip, patch: Partial<SpatialLayout>) => {
+      if (clip.type === 'caption') {
+        // Read latest properties from the store so rAF-batched patches
+        // don't overwrite each other with a stale React snapshot.
+        const tracks = useVideoEditorStore.getState().tracks
+        let current = clip
+        for (const track of tracks) {
+          const found = track.clips.find((c) => c.id === clip.id)
+          if (found && found.type === 'caption') {
+            current = found
+            break
+          }
+        }
+        if (current.type !== 'caption') return
+        updateClip(clip.id, {
+          properties: { ...current.properties, ...patch },
+        })
+        return
+      }
+      updateClip(clip.id, patch)
+    },
+    [updateClip],
   )
 
   const flushDrag = useCallback(() => {
@@ -64,20 +94,22 @@ export function CanvasOverlay() {
     drag.rafId = null
     if (!drag.pendingPatch) return
     if (!selectedClip) return
-    updateClip(selectedClip.id, drag.pendingPatch)
+    applyLayoutPatch(selectedClip, drag.pendingPatch)
     drag.pendingPatch = null
-  }, [selectedClip, updateClip])
+  }, [selectedClip, applyLayoutPatch])
 
   const beginDrag = useCallback(
     (
       e: React.PointerEvent<HTMLDivElement>,
       mode: DragMode,
-      clip: TextClip,
+      clip: CanvasEditableClip,
     ) => {
       const container = containerRef.current
       if (!container) return
       const rect = container.getBoundingClientRect()
       if (rect.width <= 0 || rect.height <= 0) return
+
+      const layout = getClipLayout(clip)
 
       try {
         e.currentTarget.setPointerCapture(e.pointerId)
@@ -98,10 +130,10 @@ export function CanvasOverlay() {
         mode,
         startClientX: e.clientX,
         startClientY: e.clientY,
-        startXRatio: clip.xRatio,
-        startYRatio: clip.yRatio,
-        startWidthRatio: clip.widthRatio,
-        startHeightRatio: clip.heightRatio,
+        startXRatio: layout.xRatio,
+        startYRatio: layout.yRatio,
+        startWidthRatio: layout.widthRatio,
+        startHeightRatio: layout.heightRatio,
         boxWidth: rect.width,
         boxHeight: rect.height,
         rafId: null,
@@ -112,7 +144,11 @@ export function CanvasOverlay() {
   )
 
   const computePatch = useCallback(
-    (drag: DragState, clientX: number, clientY: number): Partial<TextClip> => {
+    (
+      drag: DragState,
+      clientX: number,
+      clientY: number,
+    ): Partial<SpatialLayout> => {
       const dxNorm = (clientX - drag.startClientX) / drag.boxWidth
       const dyNorm = (clientY - drag.startClientY) / drag.boxHeight
 
@@ -123,9 +159,6 @@ export function CanvasOverlay() {
         }
       }
 
-      // Center-anchored resize: dragging an edge by `d` grows the
-      // dimension by `2 * d` (because the opposite edge moves the
-      // other way to keep the box centered on x/yRatio).
       const dir = drag.mode.resize
       const wFactor =
         dir === 'e' || dir === 'ne' || dir === 'se'
@@ -194,12 +227,12 @@ export function CanvasOverlay() {
         // ignore
       }
       if (selectedClip) {
-        updateClip(selectedClip.id, finalPatch)
+        applyLayoutPatch(selectedClip, finalPatch)
       }
       dragRef.current = null
       forceRender((n) => n + 1)
     },
-    [computePatch, selectedClip, updateClip],
+    [computePatch, selectedClip, applyLayoutPatch],
   )
 
   useEffect(() => {
@@ -210,43 +243,46 @@ export function CanvasOverlay() {
     }
   }, [selectedClip])
 
+  const selectedLayout = selectedClip ? getClipLayout(selectedClip) : null
+
   return (
     <div
       ref={containerRef}
       className="pointer-events-none absolute inset-0"
       data-slot="canvas-overlay"
     >
-      {activeTextClips.map((clip) => {
+      {activeClips.map((clip) => {
         if (selectedClip && clip.id === selectedClip.id) return null
+        const layout = getClipLayout(clip)
         return (
           <button
             key={clip.id}
             type="button"
-            aria-label={`Select text "${clip.text}"`}
+            aria-label={`Select ${clip.type} clip`}
             onClick={(e) => {
               e.stopPropagation()
               selectClip(clip.id)
             }}
             className="pointer-events-auto absolute cursor-pointer border-0 bg-transparent p-0"
             style={{
-              left: `${clip.xRatio * 100}%`,
-              top: `${clip.yRatio * 100}%`,
-              width: `${clip.widthRatio * 100}%`,
-              height: `${clip.heightRatio * 100}%`,
+              left: `${layout.xRatio * 100}%`,
+              top: `${layout.yRatio * 100}%`,
+              width: `${layout.widthRatio * 100}%`,
+              height: `${layout.heightRatio * 100}%`,
               transform: 'translate(-50%, -50%)',
             }}
           />
         )
       })}
 
-      {selectedClip ? (
+      {selectedClip && selectedLayout ? (
         <div
           className="pointer-events-none absolute"
           style={{
-            left: `${selectedClip.xRatio * 100}%`,
-            top: `${selectedClip.yRatio * 100}%`,
-            width: `${selectedClip.widthRatio * 100}%`,
-            height: `${selectedClip.heightRatio * 100}%`,
+            left: `${selectedLayout.xRatio * 100}%`,
+            top: `${selectedLayout.yRatio * 100}%`,
+            width: `${selectedLayout.widthRatio * 100}%`,
+            height: `${selectedLayout.heightRatio * 100}%`,
             transform: 'translate(-50%, -50%)',
           }}
         >
@@ -254,7 +290,7 @@ export function CanvasOverlay() {
           <div
             role="button"
             tabIndex={-1}
-            aria-label="Drag to move text"
+            aria-label={`Drag to move ${selectedClip.type}`}
             onPointerDown={(e) => beginDrag(e, 'move', selectedClip)}
             onPointerMove={handlePointerMove}
             onPointerUp={finalizeDrag}

@@ -1,8 +1,4 @@
 import {
-  ChevronsLeft,
-  ChevronsRight,
-  Pause,
-  Play,
   Redo2,
   Scissors,
   Trash2,
@@ -10,10 +6,10 @@ import {
 } from 'lucide-react'
 import { useVideoEditorStore, useTemporalStore } from '../store/editor-store'
 import { usePlayerRef } from '../engine/player-ref'
-import { Timecode } from './timecode'
-import { AspectRatioSelect } from './aspect-ratio-select'
 import { ZoomSlider } from './zoom-slider'
 import { Button } from '@/components/ui/button'
+import { IconPlayerPauseFilled, IconPlayerPlayFilled, IconPlayerTrackNextFilled, IconPlayerTrackPrevFilled } from '@tabler/icons-react'
+import { formatPlayerTimecode } from '../utils/time'
 
 export function Toolbar() {
   const playerRef = usePlayerRef()
@@ -108,48 +104,76 @@ export function Toolbar() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="size-7"
-          onClick={handleSkipStart}
-          title="Skip to start"
-        >
-          <ChevronsLeft className="size-4" />
-        </Button>
-        <Button
-          variant="default"
-          size="icon-sm"
-          className="size-8 rounded-full"
-          onClick={handleTogglePlay}
-          title={isPlaying ? 'Pause' : 'Play'}
-        >
-          {isPlaying ? (
-            <Pause className="size-4" />
-          ) : (
-            <Play className="size-4" />
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="size-7"
-          onClick={handleSkipEnd}
-          title="Skip to end"
-        >
-          <ChevronsRight className="size-4" />
-        </Button>
-        <div className="mx-2">
-          <Timecode />
-        </div>
-      </div>
+      <RenderCentralPlayControls
+        isPlaying={isPlaying}
+        handleSkipStart={handleSkipStart}
+        handleTogglePlay={handleTogglePlay}
+        handleSkipEnd={handleSkipEnd}
+      />
 
-      <div className="flex items-center gap-3">
+      <ZoomSlider />
+      {/* <div className="flex items-center gap-3">
         <AspectRatioSelect />
-        <ZoomSlider />
-      </div>
+      </div> */}
     </div>
+  )
+}
+
+
+function RenderCentralPlayControls(props: {
+  isPlaying: boolean
+  handleSkipStart: () => void
+  handleTogglePlay: () => void
+  handleSkipEnd: () => void
+}){
+  const { isPlaying, handleSkipStart, handleTogglePlay, handleSkipEnd } = props
+
+  const fps = useVideoEditorStore((s) => s.fps)
+  const currentFrame = useVideoEditorStore((s) => s.currentFrame)
+  const durationInFrames = useVideoEditorStore((s) => s.durationInFrames)
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className='font-mono text-xs tabular-nums text-foreground/90'>
+      {formatPlayerTimecode(currentFrame, fps)}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="size-7"
+        onClick={handleSkipStart}
+        title="Skip to start"
+      >
+        <IconPlayerTrackPrevFilled className="size-4" />
+      </Button>
+      <Button
+        variant="default"
+        size="icon-sm"
+        className="size-8 rounded-full"
+        onClick={handleTogglePlay}
+        title={isPlaying ? 'Pause' : 'Play'}
+      >
+        {isPlaying ? (
+          <IconPlayerPauseFilled className="size-4" />
+        ) : (
+          <IconPlayerPlayFilled className="size-4" />
+        )}
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="size-7"
+        onClick={handleSkipEnd}
+        title="Skip to end"
+      >
+        <IconPlayerTrackNextFilled className="size-4" />
+      </Button>
+      
+      <span className="font-mono text-xs tabular-nums text-muted-foreground">
+        {formatPlayerTimecode(durationInFrames, fps)}
+      </span>
+    </div>
+
   )
 }
 

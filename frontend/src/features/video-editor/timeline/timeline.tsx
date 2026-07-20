@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useDrop } from 'react-dnd'
+import { useDragLayer, useDrop } from 'react-dnd'
 import { useQueryClient } from '@tanstack/react-query'
 import { Timeline } from '@xzdarcy/react-timeline-editor'
 import { useVideoEditorStore } from '../store/editor-store'
@@ -27,7 +27,14 @@ import {
   ARBORIST_NODE_DRAG_TYPE,
   type ArboristNodeDragItem,
 } from '@/features/editor/utils/arborist-dnd'
+import {
+  isPointerOverTimelineDropArea,
+  registerTimelineDropPreviewClear,
+  VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE,
+  type TextPresetDragItem,
+} from '../utils/library-dnd'
 import { ingestFileNodeClip } from '../utils/ingest-file-node-clip'
+import { ingestTextPresetClip } from '../utils/ingest-text-preset-clip'
 
 const ROW_HEIGHT = 44
 const HEADERS_WIDTH = 192
@@ -48,6 +55,7 @@ type DragGuide =
 
 // type ClipKind = 'video' | 'audio' | 'text' | 'image' | 'html' | 'caption'
 type MediaClipKind = 'video' | 'audio' | 'image'
+type ExternalClipKind = MediaClipKind | 'text'
 
 interface ExternalDropPreview {
   startSec: number
@@ -534,14 +542,60 @@ export function VideoTimeline() {
     setExternalEditAreaRect(null)
   }, [])
 
+  // Hover only fires while over the timeline, so leaving it never clears the
+  // guide. Watch pointer position + drag lifecycle and flush when appropriate.
+  const externalDragOverlay = useDragLayer((monitor) => {
+    const type = monitor.getItemType()
+    const isLibraryDrag =
+      monitor.isDragging() &&
+      (type === ARBORIST_NODE_DRAG_TYPE ||
+        type === VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE)
+    const offset = monitor.getClientOffset()
+    return {
+      isLibraryDrag,
+      hasOffset: offset != null,
+      overTimeline: isPointerOverTimelineDropArea(offset),
+      // Force updates as the pointer moves so leave detection is timely.
+      x: offset?.x ?? null,
+      y: offset?.y ?? null,
+    }
+  })
+
+  useEffect(() => {
+    registerTimelineDropPreviewClear(clearExternalDropPreview)
+    return () => registerTimelineDropPreviewClear(null)
+  }, [clearExternalDropPreview])
+
+  useEffect(() => {
+    // Drag finished (cancel / drop outside) — always clear.
+    if (!externalDragOverlay.isLibraryDrag) {
+      clearExternalDropPreview()
+      return
+    }
+    // Still dragging: clear as soon as the pointer leaves the timeline.
+    // Ignore frames with a null offset so we don't flash-clear mid-drag.
+    if (externalDragOverlay.hasOffset && !externalDragOverlay.overTimeline) {
+      clearExternalDropPreview()
+    }
+  }, [
+    externalDragOverlay.isLibraryDrag,
+    externalDragOverlay.hasOffset,
+    externalDragOverlay.overTimeline,
+    clearExternalDropPreview,
+  ])
+
   const updateExternalDropPreview = useCallback(
-    (clientX: number, clientY: number, node: FileTreeNode) => {
+    (
+      clientX: number,
+      clientY: number,
+      clipType: ExternalClipKind,
+      label: string,
+    ) => {
       const editArea = getEditAreaEl()
       if (!editArea) return
 
       const rect = editArea.getBoundingClientRect()
       const tracksList = tracksRef.current
-      const clipType = node.format as MediaClipKind
       const localY = clientY - rect.top + scrollTopRef.current
       const ghostTop = localY - ROW_HEIGHT / 2
       const nextGuide = computeDragGuide(ghostTop, tracksList, clipType)
@@ -576,7 +630,7 @@ export function VideoTimeline() {
         width: widthLocal,
         height: ROW_HEIGHT,
         kind: clipType,
-        label: node.name,
+        label,
         valid,
       })
     },
@@ -594,8 +648,11 @@ export function VideoTimeline() {
 
   const [, dropTimeline] = useDrop(
     () => ({
-      accept: ARBORIST_NODE_DRAG_TYPE,
-      hover(item: ArboristNodeDragItem, monitor) {
+      accept: [ARBORIST_NODE_DRAG_TYPE, VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE],
+      hover(
+        item: ArboristNodeDragItem | TextPresetDragItem,
+        monitor,
+      ) {
         if (!monitor.isOver({ shallow: true })) {
           clearExternalDropPreview()
           return
@@ -603,22 +660,47 @@ export function VideoTimeline() {
         const offset = monitor.getClientOffset()
         if (!offset) return
 
-        const node = findDraggedFileNode(item.id)
-        if (!isMediaFileNode(node)) {
-          clearExternalDropPreview()
-          return
-        }
-        updateExternalDropPreview(offset.x, offset.y, node)
-      },
-      drop(item: ArboristNodeDragItem) {
-        const node = findDraggedFileNode(item.id)
-        if (!isMediaFileNode(node)) {
-          clearExternalDropPreview()
+        const itemType = monitor.getItemType()
+        if (itemType === VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE) {
+          const preset = item as TextPresetDragItem
+          updateExternalDropPreview(
+            offset.x,
+            offset.y,
+            'text',
+            preset.label,
+          )
           return
         }
 
+        const node = findDraggedFileNode((item as ArboristNodeDragItem).id)
+        if (!isMediaFileNode(node)) {
+          clearExternalDropPreview()
+          return
+        }
+        updateExternalDropPreview(
+          offset.x,
+          offset.y,
+          node.format,
+          node.name,
+        )
+      },
+      drop(item: ArboristNodeDragItem | TextPresetDragItem, monitor) {
         const preview = externalDropPreviewRef.current
         clearExternalDropPreview()
+
+        const itemType = monitor.getItemType()
+        if (itemType === VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE) {
+          const preset = item as TextPresetDragItem
+          ingestTextPresetClip({
+            style: preset.style,
+            startFrame: preview?.startFrame ?? 0,
+            guide: preview?.guide ?? null,
+          })
+          return
+        }
+
+        const node = findDraggedFileNode((item as ArboristNodeDragItem).id)
+        if (!isMediaFileNode(node)) return
 
         const activeProjectId = useVideoEditorStore.getState().projectId
         if (!activeProjectId) return
@@ -649,6 +731,7 @@ export function VideoTimeline() {
             dropTimeline(node)
           }}
           className="relative flex-1 overflow-hidden"
+          data-video-editor-timeline-drop=""
         >
           <Timeline
             ref={(node) => {

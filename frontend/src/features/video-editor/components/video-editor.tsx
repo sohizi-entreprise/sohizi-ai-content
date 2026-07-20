@@ -10,9 +10,10 @@ import { VideoTimeline } from '../timeline/timeline'
 import { CanvasWrapper } from './canvas-wrapper'
 import { CanvasOverlay } from './canvas-overlay'
 import { Toolbar } from './toolbar'
-import { MediaDropzone } from './media-dropzone'
-import { SettingsSheet } from './settings/settings-sheet'
+import { SettingsPanel } from './settings/settings-panel'
+import { ActionsButtons } from './actions-buttons'
 import { useVideoEditorAutosave } from '../hooks/use-video-autosave'
+import { useVideoEditorHotkeys } from '../hooks/use-video-editor-hotkeys'
 import { Loader2 } from 'lucide-react'
 import {
   ResizableHandle,
@@ -78,42 +79,58 @@ export function VideoEditor({ projectId, fileNodeId }: VideoEditorProps) {
     )
   }
 
-  return <VideoEditorCanvas projectId={projectId} />
+  return <VideoEditorCanvas />
 }
 
-function VideoEditorCanvas({ projectId }: { projectId: string }) {
-  const width = useVideoEditorStore((s) => s.width)
-  const height = useVideoEditorStore((s) => s.height)
-  const aspectRatio = useMemo(() => width / height, [width, height])
-
+function VideoEditorCanvas() {
   useVideoEditorAutosave()
+  useVideoEditorHotkeys()
 
   return (
     <PlayerRefProvider>
-      <div className="flex h-full w-full flex-col overflow-hidden bg-background">
+      <div className="flex h-full w-full flex-col overflow-hidden">
         <ResizablePanelGroup direction="vertical" className="h-full w-full">
-          <ResizablePanel defaultSize={62} minSize={30}>
-            <CanvasWrapper aspectRatio={aspectRatio}>
-              <VideoEditorPlayer />
-              <CanvasOverlay />
-            </CanvasWrapper>
+          <ResizablePanel defaultSize={65} minSize={40} className="min-h-0">
+            <RenderTopCanvas />
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel
-            defaultSize={38}
-            minSize={20}
-            maxSize={70}
+            defaultSize={35}
+            minSize={30}
+            maxSize={60}
             className="flex flex-col"
           >
             <Toolbar />
-            <MediaDropzone projectId={projectId} />
             <div className="flex-1 overflow-hidden">
               <VideoTimeline />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
-      <SettingsSheet />
     </PlayerRefProvider>
+  )
+}
+
+function RenderTopCanvas(){
+  const width = useVideoEditorStore((s) => s.width)
+  const height = useVideoEditorStore((s) => s.height)
+  const aspectRatio = useMemo(() => width / height, [width, height])
+
+  return (
+    <div className="grid size-full min-h-0 grid-cols-[auto_1fr] grid-rows-[1fr_auto] gap-2 p-2">
+      <div className="row-span-2 min-h-0 w-90 overflow-hidden rounded-lg bg-muted/40">
+        <SettingsPanel />
+      </div>
+
+      <CanvasWrapper
+        aspectRatio={aspectRatio}
+        className="min-h-0 rounded-lg bg-background"
+      >
+        <VideoEditorPlayer />
+        <CanvasOverlay />
+      </CanvasWrapper>
+
+      <ActionsButtons />
+    </div>
   )
 }

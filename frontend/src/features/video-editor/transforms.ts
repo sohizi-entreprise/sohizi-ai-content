@@ -44,6 +44,10 @@ function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
         opacity: (props.opacity as number) ?? 1,
         speed: (props.speed as number) ?? 1,
         borderRadius: (props.borderRadius as number) ?? 0,
+        xRatio: (props.xRatio as number) ?? 0.5,
+        yRatio: (props.yRatio as number) ?? 0.5,
+        widthRatio: (props.widthRatio as number) ?? 1,
+        heightRatio: (props.heightRatio as number) ?? 1,
       } satisfies VideoClip
     case 'audio':
       return {
@@ -94,6 +98,10 @@ function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
         html: (props.html as string) ?? '',
         variables: (props.variables as HtmlClip['variables']) ?? [],
         values: (props.values as HtmlClip['values']) ?? {},
+        xRatio: (props.xRatio as number) ?? 0.5,
+        yRatio: (props.yRatio as number) ?? 0.5,
+        widthRatio: (props.widthRatio as number) ?? 1,
+        heightRatio: (props.heightRatio as number) ?? 1,
       } satisfies HtmlClip
     case 'caption':
       return {
@@ -115,6 +123,7 @@ function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
           xRatio: (props.xRatio as number) ?? 0.5,
           yRatio: (props.yRatio as number) ?? 0.85,
           widthRatio: (props.widthRatio as number) ?? 0.7,
+          heightRatio: (props.heightRatio as number) ?? 0.18,
           hightlightColor: props.hightlightColor as string | undefined,
           backgroundColor: props.backgroundColor as string | undefined,
         },

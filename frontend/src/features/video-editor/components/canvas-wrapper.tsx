@@ -4,20 +4,21 @@ import { cn } from '@/lib/utils'
 interface CanvasWrapperProps {
   aspectRatio: number
   children: ReactNode
+  className?: string
 }
 
-export function CanvasWrapper({ aspectRatio, children }: CanvasWrapperProps) {
+export function CanvasWrapper({ aspectRatio, children, className }: CanvasWrapperProps) {
   return (
     <div
       className={cn(
         'relative flex h-full w-full items-center justify-center overflow-hidden',
+        className,
       )}
       style={{
-        backgroundColor: '#0b0d10',
         backgroundImage:
           'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),' +
           'linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-        backgroundSize: '24px 24px',
+        backgroundSize: '16px 16px',
       }}
     >
       <div
@@ -41,7 +42,7 @@ export function CanvasWrapper({ aspectRatio, children }: CanvasWrapperProps) {
           }}
         >
           <div
-            className="relative h-full w-full overflow-hidden rounded-md shadow-lg ring-1 ring-white/10"
+            className="relative h-full w-full overflow-hidden shadow-lg ring-1 ring-white/10"
             style={{ backgroundColor: 'black' }}
           >
             {children}

@@ -1,9 +1,9 @@
 import { AlignCenter, AlignLeft, AlignRight } from 'lucide-react'
 import { useVideoEditorStore } from '../../store/editor-store'
 import { SettingRow, SettingSection } from './setting-row'
+import { SliderWithValue } from './slider-with-value'
 import type { FontWeight, TextAlign, TextClip } from '../../store/types'
 import { Input } from '@/components/ui/input'
-import { Slider } from '@/components/ui/slider'
 import {
   Select,
   SelectContent,
@@ -36,7 +36,7 @@ export function TextSettings({ clip }: TextSettingsProps) {
   const updateClip = useVideoEditorStore((s) => s.updateClip)
 
   return (
-    <div className="flex flex-col gap-5 px-4 pb-6">
+    <div className="flex flex-col gap-5 pb-2">
       <SettingSection title="Content">
         <SettingRow label="Text" align="start">
           <Textarea
@@ -200,53 +200,6 @@ export function TextSettings({ clip }: TextSettingsProps) {
           />
         </SettingRow>
       </SettingSection>
-    </div>
-  )
-}
-
-interface SliderWithValueProps {
-  min: number
-  max: number
-  step?: number
-  value: number
-  onChange: (value: number) => void
-  suffix?: string
-}
-
-export function SliderWithValue({
-  min,
-  max,
-  step = 1,
-  value,
-  onChange,
-  suffix,
-}: SliderWithValueProps) {
-  return (
-    <div className="flex items-center gap-2">
-      <Slider
-        min={min}
-        max={max}
-        step={step}
-        value={[value]}
-        onValueChange={(vs) => onChange(vs[0] ?? 0)}
-        className="flex-1"
-      />
-      <Input
-        type="number"
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(e) => {
-          const v = Number(e.target.value)
-          if (!Number.isFinite(v)) return
-          onChange(Math.max(min, Math.min(max, v)))
-        }}
-        className="h-8 w-16 text-xs"
-      />
-      {suffix ? (
-        <span className="text-xs text-muted-foreground">{suffix}</span>
-      ) : null}
     </div>
   )
 }

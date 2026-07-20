@@ -17,12 +17,12 @@ export function SettingRow({
   return (
     <div
       className={cn(
-        'grid grid-cols-[88px_1fr] gap-3',
+        'grid grid-cols-[96px_1fr] gap-3',
         align === 'center' ? 'items-center' : 'items-start',
         className,
       )}
     >
-      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-sm text-foreground">{label}</div>
       <div className="min-w-0">{children}</div>
     </div>
   )
@@ -40,13 +40,13 @@ export function SettingSection({
   className,
 }: SettingSectionProps) {
   return (
-    <section className={cn('flex flex-col gap-3', className)}>
+    <section className={cn('flex flex-col gap-2', className)}>
       {title ? (
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-400">
-          {title}
-        </h3>
+        <h3 className="px-0.5 text-sm font-medium text-muted-foreground">{title}</h3>
       ) : null}
-      <div className="flex flex-col gap-3">{children}</div>
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-background p-4">
+        {children}
+      </div>
     </section>
   )
 }

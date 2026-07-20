@@ -17,7 +17,14 @@ export interface BaseClip {
   sourceDurationInFrames: number
 }
 
-export interface VideoClip extends BaseClip {
+export interface SpatialLayout {
+  xRatio: number
+  yRatio: number
+  widthRatio: number
+  heightRatio: number
+}
+
+export interface VideoClip extends BaseClip, SpatialLayout {
   type: 'video'
   url: string
   fileName: string
@@ -37,7 +44,7 @@ export interface AudioClip extends BaseClip {
   speed: number
 }
 
-export interface TextClip extends BaseClip {
+export interface TextClip extends BaseClip, SpatialLayout {
   type: 'text'
   text: string
   fontSize: number
@@ -46,13 +53,9 @@ export interface TextClip extends BaseClip {
   fontWeight: FontWeight
   align: TextAlign
   opacity: number
-  xRatio: number
-  yRatio: number
-  widthRatio: number
-  heightRatio: number
 }
 
-export interface ImageClip extends BaseClip {
+export interface ImageClip extends BaseClip, SpatialLayout {
   type: 'image'
   url: string
   fileName: string
@@ -62,13 +65,9 @@ export interface ImageClip extends BaseClip {
   borderRadius: number
   blur: number
   brightness: number
-  xRatio: number
-  yRatio: number
-  widthRatio: number
-  heightRatio: number
 }
 
-export interface HtmlClip extends BaseClip {
+export interface HtmlClip extends BaseClip, SpatialLayout {
   type: 'html'
   html: string
   variables: CompositionVariable[]                       // schema — declared once by the AI
@@ -88,17 +87,53 @@ export interface CaptionClip extends BaseClip {
     words: ServerCaption[]
   }
   properties: {
-    fontSize: number;
-    color: string;
-    fontFamily: string;
-    fontWeight: FontWeight;
-    align: TextAlign;
-    opacity: number;
-    xRatio: number;
-    yRatio: number;
-    widthRatio: number;
-    hightlightColor?: string;
-    backgroundColor?: string;
+    fontSize: number
+    color: string
+    fontFamily: string
+    fontWeight: FontWeight
+    align: TextAlign
+    opacity: number
+    xRatio: number
+    yRatio: number
+    widthRatio: number
+    heightRatio: number
+    hightlightColor?: string
+    backgroundColor?: string
+  }
+}
+
+/** Clip types that can be selected and transformed on the canvas. */
+export type CanvasEditableClip =
+  | TextClip
+  | ImageClip
+  | VideoClip
+  | HtmlClip
+  | CaptionClip
+
+export function isCanvasEditableClip(clip: Clip): clip is CanvasEditableClip {
+  return (
+    clip.type === 'text' ||
+    clip.type === 'image' ||
+    clip.type === 'video' ||
+    clip.type === 'html' ||
+    clip.type === 'caption'
+  )
+}
+
+export function getClipLayout(clip: CanvasEditableClip): SpatialLayout {
+  if (clip.type === 'caption') {
+    return {
+      xRatio: clip.properties.xRatio,
+      yRatio: clip.properties.yRatio,
+      widthRatio: clip.properties.widthRatio,
+      heightRatio: clip.properties.heightRatio,
+    }
+  }
+  return {
+    xRatio: clip.xRatio,
+    yRatio: clip.yRatio,
+    widthRatio: clip.widthRatio,
+    heightRatio: clip.heightRatio,
   }
 }
 

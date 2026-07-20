@@ -1,6 +1,6 @@
 import { useVideoEditorStore } from '../../store/editor-store'
 import { SettingRow, SettingSection } from './setting-row'
-import { SliderWithValue } from './text-settings'
+import { SliderWithValue } from './slider-with-value'
 import type { VideoClip } from '../../store/types'
 
 interface VideoSettingsProps {
@@ -11,7 +11,7 @@ export function VideoSettings({ clip }: VideoSettingsProps) {
   const updateClip = useVideoEditorStore((s) => s.updateClip)
 
   return (
-    <div className="flex flex-col gap-5 px-4 pb-6">
+    <div className="flex flex-col gap-5 pb-2">
       <SettingSection title="Basic">
         <SettingRow label="Volume">
           <SliderWithValue
