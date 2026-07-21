@@ -56,6 +56,7 @@ function getAssetFolder(contentType: string) {
     if (contentType.startsWith('image/')) return 'images';
     if (contentType.startsWith('video/')) return 'videos';
     if (contentType.startsWith('audio/')) return 'audios';
+    if (contentType === 'text/html' || contentType.startsWith('text/html')) return 'htmls';
     return 'documents';
 }
 
@@ -282,7 +283,7 @@ export async function uploadFromBuffer(
 }
 
 export function buildStoragePath(
-    assetType: 'images' | 'videos' | 'audios' | 'documents',
+    assetType: 'images' | 'videos' | 'audios' | 'documents' | 'htmls',
     filename: string,
 ): string {
     const key = uuidv4()

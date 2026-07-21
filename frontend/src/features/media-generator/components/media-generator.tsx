@@ -51,6 +51,10 @@ const mediaFilterOptions = [
     label: 'Audio',
     value: 'audio',
   },
+  {
+    label: 'HTML',
+    value: 'html',
+  },
 ]
 
 export function MediaGenerator() {
@@ -73,7 +77,7 @@ export function MediaGenerator() {
           <RenderHeader filter={filter} setFilter={setFilter} />
 
           <ScrollArea className="flex-1 min-h-0 px-4">
-            <RenderAssets projectId={projectId} />
+            <RenderAssets projectId={projectId} filter={filter} />
           </ScrollArea>
         </div>
       </ResizablePanel>
@@ -92,9 +96,9 @@ export function MediaGenerator() {
   )
 }
 
-function RenderAssets({projectId}: {projectId: string}){
-
-  const {data: assets, isLoading} = useInfiniteQuery(listAiGeneratedAssetsQueryOptions(projectId))
+function RenderAssets({projectId, filter}: {projectId: string; filter: MediaFilter}){
+  const listOptions = filter === 'all' ? undefined : { type: filter }
+  const {data: assets, isLoading} = useInfiniteQuery(listAiGeneratedAssetsQueryOptions(projectId, listOptions))
   const activeGenerationRequests = useMediaGeneratorStore((state) => state.activeGenerationRequests)
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
 

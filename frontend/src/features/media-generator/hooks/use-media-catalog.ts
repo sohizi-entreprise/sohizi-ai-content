@@ -4,15 +4,15 @@ import {
   listCatalogModelOptionsQueryOptions,
   listCatalogModelsQueryOptions,
 } from '@/features/admin/query-mutation'
-import type { MediaType } from '../types'
+import type { ComposerMediaType } from '../types'
 
-const MEDIA_TYPE_CATEGORIES: Record<MediaType, string[]> = {
+const MEDIA_TYPE_CATEGORIES: Record<ComposerMediaType, string[]> = {
   image: ['text-to-image', 'image-to-image'],
   video: ['text-to-video', 'video-to-video'],
   audio: ['text-to-speech'],
 }
 
-export function useMediaCatalog(mediaType: MediaType) {
+export function useMediaCatalog(mediaType: ComposerMediaType) {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
 
   const categories = MEDIA_TYPE_CATEGORIES[mediaType]

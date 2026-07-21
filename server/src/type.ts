@@ -121,7 +121,7 @@ export type SceneContent =
 
 export type ProseDocument = { type: 'doc'; content: ProseNode[] }
 
-export type AssetType = 'image' | 'video' | 'audio' | 'document';
+export type AssetType = 'image' | 'video' | 'audio' | 'document' | 'html';
 export type AssetSource = 'user-uploaded' | 'ai-generated';
 export type AssetVariantType = 'original' | 'thumbnail' | 'preview' | 'delivery';
 export type AssetStatus = 'pending' | 'processing' | 'completed' | 'failed';
@@ -151,7 +151,14 @@ export type DocumentAssetMetadata = {
 export type AssetMetadata = {
   size: number;
   contentType: string;
-  duration?: number
+  duration?: number;
+  width?: number;
+  height?: number;
+  /** HyperFrames composition variable schema (html assets) */
+  variables?: CompositionVariable[];
+  /** Current / default values keyed by variable id (html assets) */
+  values?: Record<string, string | number | boolean>;
+  compositionId?: string;
 }
 
 export type TemplateAndSkillStatus = 'draft' | 'published'

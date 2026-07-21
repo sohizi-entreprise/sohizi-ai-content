@@ -55,7 +55,7 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
         query: z.object({
             cursor: z.string().optional(),
             limit: z.number().optional(),
-            type: z.enum(['image', 'video', 'audio']).optional(),
+            type: z.enum(['image', 'video', 'audio', 'html']).optional(),
         }),
     })
     .get('/ai-assets', async ({ params, user, query }) => {
@@ -65,7 +65,7 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
         query: z.object({
             cursor: z.string().optional(),
             limit: z.number().optional(),
-            type: z.enum(['image', 'video', 'audio']).optional(),
+            type: z.enum(['image', 'video', 'audio', 'html']).optional(),
         }),
     })
     .post('/assets', async ({ params, user, body }) => {
@@ -133,5 +133,13 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
     }, {
         body: z.object({
             folderId: z.uuid('Invalid folder id'),
+        }),
+    })
+    .patch('/assets/:assetId/html-values', async ({ params, user, body }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.updateHtmlAssetValues(params.projectId, params.assetId, body.values);
+    }, {
+        body: z.object({
+            values: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
         }),
     })

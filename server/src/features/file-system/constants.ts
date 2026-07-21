@@ -5,6 +5,7 @@ export const fileFormat = {
     VIDEO: 'video',
     AUDIO: 'audio',
     DOCUMENT: 'document',
+    HTML: 'html',
     VIDEO_EDITOR: 'video-editor',
     AI_GENERATED: 'ai-generated',
     SKILL: 'skill',

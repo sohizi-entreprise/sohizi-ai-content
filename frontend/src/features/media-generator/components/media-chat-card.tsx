@@ -5,7 +5,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
 import { buildOptimizeddImageUrl, imageUrlTransforms } from "@/utils/transform-url";
-import { Copy, Eye, PlusCircle } from "lucide-react";
+import { Code2, Copy, Eye, PlusCircle } from "lucide-react";
 import { MediaAsset, MediaGenerationRun } from "../requests";
 import { Message } from "@/features/chat";
 import { MediaType } from "../types";
@@ -20,7 +20,7 @@ import { cn, timeFromNow } from "@/lib/utils";
 import AudioPlayer from "./audio-player";
 import { IconAlertTriangle } from "@tabler/icons-react";
 
-type GenerationType = 'image' | 'video' | 'audio';
+type GenerationType = MediaType
 
 type Attachment = {
   type: GenerationType;
@@ -233,6 +233,15 @@ const GenerationCard = (props: {url: string; type: GenerationType;}) => {
     )
   }
 
+  if(type === 'html'){
+    return (
+      <div className={cn(containerClass, "flex flex-col items-center justify-center gap-2")}>
+        <Code2 className="size-6 text-muted-foreground" />
+        <span className="px-2 text-center text-xs text-muted-foreground">HTML video</span>
+      </div>
+    )
+  }
+
   return (
     <div className={containerClass}>
       <img src={url} alt="attachment" className="size-full object-contain" />
@@ -246,6 +255,15 @@ const GenerationCard = (props: {url: string; type: GenerationType;}) => {
 
 const SmallAvatar = (props: {attachment: Attachment}) => {
   const {attachment} = props;
+
+  if (attachment.type === 'html') {
+    return (
+      <div className="flex size-8 items-center justify-center rounded-md border bg-muted">
+        <Code2 className="size-3.5 text-muted-foreground" />
+      </div>
+    )
+  }
+
   const {avatarUrl: thumbnail, url: src} = getDisplayUrls(attachment);
 
   return(
@@ -440,7 +458,6 @@ function extractSubmitMediaJobsInput(messages: Message[]): Omit<SubmitMediaJobsI
 }
 
 function getMediaType(mediaType: string): MediaType {
-  
   if(mediaType.startsWith('image/')){
     return 'image'
   }
@@ -449,6 +466,9 @@ function getMediaType(mediaType: string): MediaType {
   }
   if(mediaType.startsWith('audio/')){
     return 'audio'
+  }
+  if(mediaType === 'text/html' || mediaType.startsWith('text/html')){
+    return 'html'
   }
   return 'image'
 }

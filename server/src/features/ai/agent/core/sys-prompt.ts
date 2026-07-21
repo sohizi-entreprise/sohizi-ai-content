@@ -1,4 +1,3 @@
-import { htmlVideoEditingSkill } from "../skills/video-editing";
 import { navigateContextPrompt } from "../prompts/navigate-context";
 import { fileSystemPrompt } from "../prompts/file-system-prompt";
 import { videoExplorerPrompt } from "../prompts/video-explorer-prompt";

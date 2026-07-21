@@ -1,49 +1,44 @@
-
-
 export const htmlVideoEditingSkill = () => `
-## HTML type VIDEO GENERATION SKILL
----
-Use this skill when asked to build any HTML-based video content, add captions or subtitles synced to audio, generate text-to-speech narration,
-create audio-reactive animation (beat sync, glow, pulse driven by music), add animated text highlighting (marker sweeps, hand-drawn circles, burst lines, scribble, sketchout), 
-or add transitions between scenes (crossfades, wipes, reveals, shader transitions).
-You are generating a HyperFrames composition (plain HTML + GSAP).
+Motion graphics, kinetic typography, animated title cards, HTML explainers, beat-synced visuals, caption overlays, and scene transitions.
 
 The host injects GSAP 3 in <head> before your scripts run. Do NOT add a gsap <script> tag.
 Put timeline setup in an inline <script> at the end of <body> so \`gsap\` is defined.
 
-HARD RULES — violating any of these breaks rendering:
+HARD RULES — these break host rendering if violated:
 
 1. GSAP timeline MUST be created with { paused: true }.
    Never call .play() — the host controls playback.
 
 2. Register EVERY timeline:
    window.__timelines = window.__timelines || {};
-   window.__timelines["<clip-id>"] = tl;
+   window.__timelines["<composition-id>"] = tl;
 
 3. NO Math.random(), Date.now(), or wall-clock logic.
    Animations must be deterministic frame-to-frame.
+   (Math.ceil / Math.floor for finite repeats are fine.)
 
-4. NO repeat: -1. Always finite repeats:
+4. NO repeat: -1. Always finite repeats, e.g.:
    repeat: Math.ceil(duration / cycleDuration) - 1
 
 5. Build timelines SYNCHRONOUSLY — never inside async/await,
    setTimeout, or Promises.
 
-6. Animate with gsap.from() for entrances, gsap.to() only on
-   the FINAL scene for exits. No exit tweens between scenes.
+ANIMATION GUIDELINES (prefer these; keep the timeline deterministic):
+
+6. Prefer gsap.from() for entrances into the CSS hero state.
+   Use gsap.to() for scene-to-scene transitions and for the final-scene exit.
+   Mid-composition exits are allowed when they create a transition into the next scene.
 
 7. LAYOUT BEFORE ANIMATION:
    - Write static CSS for the hero frame (max visibility) first.
-   - Animate FROM the start state TO the CSS position using gsap.from().
-   - Never hardcode absolute pixel positions — use padding + flex.
+   - Animate FROM the start state TO the CSS position using gsap.from() where possible.
+   - Prefer padding + flex over hardcoded absolute pixel positions; absolute positioning is OK when needed for overlays/precise motion.
 
-8. Every element that appears must animate IN. No element may
-   appear fully-formed.
+8. Elements that appear during the composition should animate in — avoid popping on fully formed with no motion.
 
-9. Every multi-scene composition MUST have transitions between
-   scenes. No jump cuts.
+9. Multi-scene compositions should crossfade, wipe, or otherwise transition between scenes — avoid hard jump cuts when practical.
 
-10. NO <br> in text content — use max-width for wrapping instead.
+10. Prefer max-width wrapping over <br> in text content.
 
 DATA ATTRIBUTES (required on every clip element):
   data-start="0"              (seconds, or clip-id reference)
@@ -52,14 +47,15 @@ DATA ATTRIBUTES (required on every clip element):
 
 VIDEO: always muted + playsinline. Audio always as a separate <audio> element.
 
-COMPOSITION ROOT (standalone file, not sub-composition):
-  Put data-composition-id directly in <body> — no <template> wrapper.
+COMPOSITION ROOT (standalone file):
+  Put data-composition-id on <body> (or <html>). No <template> wrapper.
+  Include data-width / data-height when not 1920×1080.
 
-OUTPUT: a single HTML file with inline CSS and JS (GSAP is provided by the host).
+Deliver the composition ONLY through the submitHtmlComposition tool (status "done"), not as chat text.
 The host will call window.__timelines["<id>"].seek(t) on every frame.
 
 ---
-### VARIABLES — declare on the <html> root using data-composition-variables:
+### VARIABLES — declare on the <html> root using data-composition-variables when copy/colors should be editable:
 
 <html
   data-composition-id="{compositionId}"
@@ -74,9 +70,5 @@ The host will call window.__timelines["<id>"].seek(t) on every frame.
 Reference CSS variables in styles:   var(--hf-primaryColor), var(--hf-opacity)
 Reference content in JS:             window.__hfConfig?.headline ?? "Your text here"
 
----
-### FLOW INSTRUCTIONS
-1. Before creating any HTML-based video content, ensure there is a html track in the timeline. You can either create a new use or reuse an existing one depending on the goal.
-2. Before starting writing the actual html content make sure that there is a html clip associated. If there is no clip, create it first. This is critical because rendering the html depends on the clip id.
-3. Write a self-contained HTML composition following the rules and instructions provided in the skill.
+Prefer declaring variables for user-facing text, brand colors, and toggles so the asset stays customizable.
 `

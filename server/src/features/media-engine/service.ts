@@ -237,6 +237,27 @@ export const deleteAsset = async (assetId: string) => {
     return await repo.deleteAsset(assetId);
 }
 
+export const updateHtmlAssetValues = async (
+    projectId: string,
+    assetId: string,
+    values: Record<string, string | number | boolean>,
+) => {
+    const asset = await repo.getAssetById(projectId, assetId);
+    if (!asset) {
+        throw new NotFound('Asset not found');
+    }
+    if (asset.type !== 'html') {
+        throw new BadRequest('Only HTML assets support composition values');
+    }
+
+    const updated = await repo.updateAssetMetadataValues(projectId, assetId, values);
+    if (!updated) {
+        throw new NotFound('Asset not found');
+    }
+
+    return updated;
+}
+
 export const attachAssetToFileNode = async (projectId: string, assetId: string, folderId: string) => {
     const asset = await repo.getAssetById(projectId, assetId);
     if(!asset || asset.fileNodeId){
@@ -313,6 +334,7 @@ function getAssetType(contentType: string): AssetType {
     if (contentType.startsWith('image/')) return 'image';
     if (contentType.startsWith('video/')) return 'video';
     if (contentType.startsWith('audio/')) return 'audio';
+    if (contentType === 'text/html' || contentType.startsWith('text/html')) return 'html';
     return 'document';
 }
 

@@ -92,12 +92,21 @@ const dialogueJobSchema = z.object({
     }
 });
 
+const htmlVideoJobSchema = z.object({
+    type: z.literal('html-video'),
+    instructions: z.string().min(1).describe(
+        'Clear creative brief for an HTML/HyperFrames motion-graphics video: '
+        + 'duration, aspect ratio, scenes, copy, visual style, transitions, and any dynamic/editable fields.',
+    ),
+});
+
 const mediaJobSchema = z.discriminatedUnion('type', [
     imageJobSchema,
     videoJobSchema,
     musicJobSchema,
     textToSpeechJobSchema,
     dialogueJobSchema,
+    htmlVideoJobSchema,
 ]);
 
 export type MediaJob = z.infer<typeof mediaJobSchema>;
@@ -209,6 +218,18 @@ export const submitMediaJobsTool = buildBaseTool({
                                     instructions: job.instructions,
                                 },
                             },
+                        },
+                    });
+                    break;
+                case 'html-video':
+                    await inngest.send({
+                        name: 'media/generate.html-video',
+                        data: {
+                            requestId: session.runId,
+                            projectId: session.projectId,
+                            organizationId: session.organizationId,
+                            userId: session.userId,
+                            instructions: job.instructions,
                         },
                     });
                     break;

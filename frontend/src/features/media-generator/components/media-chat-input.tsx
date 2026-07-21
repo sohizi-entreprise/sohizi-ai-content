@@ -12,8 +12,8 @@ import type { Editor, JSONContent } from '@tiptap/core'
 import type { LucideIcon } from 'lucide-react'
 import type {
   AudioGenerationSettings,
+  ComposerMediaType,
   ImageGenerationSettings,
-  MediaType,
   VideoGenerationSettings,
 } from '../types'
 import { Button } from '@/components/ui/button'
@@ -55,12 +55,12 @@ type ComposerSettings = {
 }
 
 export type MediaChatGeneratePayload = {
-  type: MediaType
+  type: ComposerMediaType
   prompt: string
   content: JSONContent
   files: Array<TaggedFile>
   images: Array<Omit<ImageAttachment, 'url'>>
-  settings: ComposerSettings[MediaType]
+  settings: ComposerSettings[ComposerMediaType]
 }
 
 export type MediaChatInputProps = {
@@ -68,7 +68,7 @@ export type MediaChatInputProps = {
   className?: string
 }
 
-const TABS: Array<{ value: MediaType; label: string; icon: LucideIcon }> = [
+const TABS: Array<{ value: ComposerMediaType; label: string; icon: LucideIcon }> = [
   { value: 'image', label: 'Image', icon: ImageIcon },
   { value: 'video', label: 'Video', icon: Clapperboard },
   { value: 'audio', label: 'Audio', icon: AudioLines },
@@ -118,7 +118,7 @@ export function MediaChatInput({
         <div className="flex items-start justify-between gap-3">
           <Tabs
             value={mediaType}
-            onValueChange={(value) => setMediaType(value as MediaType)}
+            onValueChange={(value) => setMediaType(value as ComposerMediaType)}
             className="min-w-0 flex-1 p-2"
           >
             <TabsList className="h-9 w-full justify-start gap-1 rounded-none bg-transparent">

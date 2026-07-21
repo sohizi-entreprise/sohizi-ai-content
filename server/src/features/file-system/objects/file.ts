@@ -32,7 +32,7 @@ export type FileContentPayload = {
     type: 'skill';
     data: Skill;
 } | {
-    type: 'image' | 'video' | 'document' | 'audio';
+    type: 'image' | 'video' | 'document' | 'audio' | 'html';
     data: Asset;
 } | {
     type: 'ai-generated';
@@ -424,7 +424,8 @@ export class FileObject {
             case fileFormat.IMAGE:
             case fileFormat.VIDEO:
             case fileFormat.DOCUMENT:
-            case fileFormat.AUDIO:{
+            case fileFormat.AUDIO:
+            case fileFormat.HTML:{
                 const asset = await getAssetByFileNodeId(this.fileNode.projectId, this.fileNode.id);
                 if(!asset) {
                     content = null;

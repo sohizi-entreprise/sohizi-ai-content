@@ -23,6 +23,9 @@ importers:
       '@hyperframes/core':
         specifier: ^0.6.64
         version: 0.6.64(canvas@3.2.3)
+      '@hyperframes/player':
+        specifier: ^0.6.121
+        version: 0.6.121(canvas@3.2.3)
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -1291,6 +1294,14 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
+  '@hyperframes/core@0.6.121':
+    resolution: {integrity: sha512-iv7DKcTxt5zC9XF5ZSDzUF1eg3itkG4nwMn1dlRrma1LI07cbDjKsRlS4PjCwpgoDoiId/ppOW0qVnVlIDgYtA==}
+    peerDependencies:
+      hono: ^4.0.0
+    peerDependenciesMeta:
+      hono:
+        optional: true
+
   '@hyperframes/core@0.6.64':
     resolution: {integrity: sha512-mhNHZKGUIJ7NCR0asvnbTphpndURp13rjeKO7OAjwh/UDY108UMpkr8yRDQtpgyuUmikr14JNeUCtU/z6XevHg==}
     peerDependencies:
@@ -1298,6 +1309,9 @@ packages:
     peerDependenciesMeta:
       hono:
         optional: true
+
+  '@hyperframes/player@0.6.121':
+    resolution: {integrity: sha512-VK+QiUWyOgTkOl0FvWHuADB9n8424OXUZmCmHEJu3JOOHJrOKc6qFA+0BI5X3W0F2AmyAq8Wh1Ky51hXvdBeYw==}
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
@@ -4199,8 +4213,17 @@ packages:
     peerDependencies:
       acorn: ^6.0.0 || ^7.0.0 || ^8.0.0
 
+  acorn-walk@8.3.5:
+    resolution: {integrity: sha512-HEHNfbars9v4pgpW6SO1KSPkfoS0xVOM/9UzkJltjlsHZmJasxg8aXkuZa7SMf8vKGIBhpUsPluQSqhJFCqebw==}
+    engines: {node: '>=0.4.0'}
+
   acorn@8.15.0:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
+  acorn@8.17.0:
+    resolution: {integrity: sha512-xRQbDb9BnwDafYNn6Vwl839DYVjqXYb1XVGtWAZ1kcDc6iwAL4hg3B1dZlRiuENFeO2H53gFG3in621AdERVAg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
 
@@ -4377,6 +4400,9 @@ packages:
 
   boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
+
+  bpm-detective@2.0.5:
+    resolution: {integrity: sha512-FaHFT5WDCR5zwtjVTqxk01o2MDaf22ORHityX1lxMamBcVNX6NWXB6hw7nx4fmlEseRMv0xfuSybINZylljLfA==}
 
   brace-expansion@1.1.14:
     resolution: {integrity: sha512-MWPGfDxnyzKU7rNOW9SP/c50vi3xrmrua/+6hfPbCS2ABNWfx24vPidzvC7krjU/RTo235sV776ymlsMtGKj8g==}
@@ -4567,6 +4593,11 @@ packages:
   css-what@6.2.2:
     resolution: {integrity: sha512-u/O3vwbptzhMs3L1fQE82ZSLHQQfto5gyZzwteVIEyeaY5Fc7R4dapF/BvRoSYFeqfBk4m0V1Vafq5Pjv25wvA==}
     engines: {node: '>= 6'}
+
+  cssesc@3.0.0:
+    resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
+    engines: {node: '>=4'}
+    hasBin: true
 
   cssom@0.5.0:
     resolution: {integrity: sha512-iKuQcq+NdHqlAcwUY0o/HL69XQrUaQdMjmStJ8JFmUaiiQErlhrmuigkg/CU4E2J0IyUKUrMAgl36TvN67MqTw==}
@@ -6292,6 +6323,10 @@ packages:
 
   points-on-path@0.2.1:
     resolution: {integrity: sha512-25ClnWWuw7JbWZcgqY/gJ4FQWadKxGWk+3kR/7kD0tCaDtPPMj7oHu2ToLaVhfpnHrZzYby2w6tUA0eOIuUg8g==}
+
+  postcss-selector-parser@7.1.4:
+    resolution: {integrity: sha512-HeP7D2wyhkR+XaK6v4W8oRF62Dsz4flyuczALJp61GckGm42u1saSSJ/0auvcBqxs3jMRFEcPK34At/0JBKdOg==}
+    engines: {node: '>=4'}
 
   postcss@8.5.15:
     resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
@@ -8167,6 +8202,23 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
+  '@hyperframes/core@0.6.121(canvas@3.2.3)':
+    dependencies:
+      '@babel/parser': 7.28.5
+      '@chenglou/pretext': 0.0.5
+      acorn: 8.17.0
+      acorn-walk: 8.3.5
+      bpm-detective: 2.0.5
+      magic-string: 0.30.21
+      postcss: 8.5.15
+      postcss-selector-parser: 7.1.4
+      recast: 0.23.11
+    optionalDependencies:
+      esbuild: 0.25.12
+      linkedom: 0.18.12(canvas@3.2.3)
+    transitivePeerDependencies:
+      - canvas
+
   '@hyperframes/core@0.6.64(canvas@3.2.3)':
     dependencies:
       '@babel/parser': 7.28.5
@@ -8178,6 +8230,13 @@ snapshots:
       linkedom: 0.18.12(canvas@3.2.3)
     transitivePeerDependencies:
       - canvas
+
+  '@hyperframes/player@0.6.121(canvas@3.2.3)':
+    dependencies:
+      '@hyperframes/core': 0.6.121(canvas@3.2.3)
+    transitivePeerDependencies:
+      - canvas
+      - hono
 
   '@iconify/types@2.0.0': {}
 
@@ -11207,7 +11266,13 @@ snapshots:
     dependencies:
       acorn: 8.15.0
 
+  acorn-walk@8.3.5:
+    dependencies:
+      acorn: 8.17.0
+
   acorn@8.15.0: {}
+
+  acorn@8.17.0: {}
 
   agent-base@7.1.4: {}
 
@@ -11367,6 +11432,8 @@ snapshots:
     optional: true
 
   boolbase@1.0.0: {}
+
+  bpm-detective@2.0.5: {}
 
   brace-expansion@1.1.14:
     dependencies:
@@ -11573,6 +11640,8 @@ snapshots:
       source-map-js: 1.2.1
 
   css-what@6.2.2: {}
+
+  cssesc@3.0.0: {}
 
   cssom@0.5.0:
     optional: true
@@ -13614,6 +13683,11 @@ snapshots:
       path-data-parser: 0.1.0
       points-on-curve: 0.2.0
 
+  postcss-selector-parser@7.1.4:
+    dependencies:
+      cssesc: 3.0.0
+      util-deprecate: 1.0.2
+
   postcss@8.5.15:
     dependencies:
       nanoid: 3.3.12
@@ -14720,8 +14794,7 @@ snapshots:
     dependencies:
       react: 19.2.3
 
-  util-deprecate@1.0.2:
-    optional: true
+  util-deprecate@1.0.2: {}
 
   uuid@13.0.0: {}
 

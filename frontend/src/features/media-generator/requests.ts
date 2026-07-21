@@ -125,6 +125,17 @@ export const moveAssetToFolder = async (
   await api.post(`/media/${projectId}/assets/${assetId}/move-to-folder`, { folderId })
 }
 
+export const updateHtmlAssetValues = async (
+  projectId: string,
+  assetId: string,
+  values: Record<string, string | number | boolean>,
+): Promise<MediaAsset> => {
+  const response = await api.patch(`/media/${projectId}/assets/${assetId}/html-values`, {
+    values,
+  })
+  return response.data
+}
+
 export const bulkMoveAssetsToFolder = async (
   projectId: string,
   assetIds: string[],

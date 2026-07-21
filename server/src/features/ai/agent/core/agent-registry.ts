@@ -4,6 +4,7 @@ import { editFileTool } from "../tools/file-edit";
 import { exploreFileTool } from "../tools/file-explore";
 import { searchFileTool } from "../tools/file-search";
 import { submitMediaJobsTool } from "../tools/submit-media-jobs";
+import { submitHtmlCompositionTool } from "../tools/submit-html-composition";
 import { manageTodoListTool } from "../tools/tasks-manage";
 import { timelineEditTool } from "../tools/timeline-edit";
 import { timelineExploreTool } from "../tools/timeline-explore";
@@ -11,6 +12,7 @@ import { ModelConfig } from "../utils/llm-client";
 import { generateSystemPrompt } from "./sys-prompt";
 import { BaseTool } from "../tools/tool-definition";
 import { z } from "zod";
+import { htmlVideoGeneratorPrompt } from "../prompts/html-video-generator";
 
 export const supportedAgents = [
     'media-generator', 
@@ -86,6 +88,27 @@ registerAgent({
         reasoningSummary: 'auto',
     },
     modelId: 'openai/gpt-5.1',
+    maxContextTokens: 400_000,
+    contextThreshold: 0.8,
+    summaryModelId: 'openai/gpt-5-nano',
+    subAgents: [],
+});
+
+registerAgent({
+    name: 'motion-graphic',
+    description: 'Generate standalone HyperFrames HTML video compositions.',
+    baseSystemPrompt: htmlVideoGeneratorPrompt,
+    modelConfig: {
+        tools: getSchemas([
+            submitHtmlCompositionTool,
+            exploreFileTool,
+            searchFileTool,
+        ]),
+        reasoningEffort: 'medium',
+        reasoningSummary: 'auto',
+        maxOutputTokens: 100_000,
+    },
+    modelId: 'openai/gpt-5.2',
     maxContextTokens: 400_000,
     contextThreshold: 0.8,
     summaryModelId: 'openai/gpt-5-nano',

@@ -1,8 +1,34 @@
 import { ReactNode } from "react"
 
-export type MediaType = 'image' | 'video' | 'audio'
+export type MediaType = 'image' | 'video' | 'audio' | 'html'
 
-export type MediaFilter = 'all' | 'image' | 'video' | 'audio'
+/** Composer tabs / prompt settings — HTML jobs are inferred by the media-generator agent. */
+export type ComposerMediaType = 'image' | 'video' | 'audio'
+
+export type MediaFilter = 'all' | 'image' | 'video' | 'audio' | 'html'
+
+export type HtmlAssetVariable = {
+  id: string
+  type: 'string' | 'number' | 'color' | 'boolean' | 'enum'
+  label: string
+  description?: string
+  default: string | number | boolean
+  min?: number
+  max?: number
+  step?: number
+  options?: Array<{ value: string; label: string }>
+}
+
+export type HtmlAssetMetadata = {
+  size?: number
+  contentType?: string
+  duration?: number
+  width?: number
+  height?: number
+  variables?: HtmlAssetVariable[]
+  values?: Record<string, string | number | boolean>
+  compositionId?: string
+}
 
 export type MediaAspectRatio = '1:1' | '4:3' | '16:9' | '9:16'
 

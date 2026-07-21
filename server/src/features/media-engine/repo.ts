@@ -180,7 +180,12 @@ type AiGeneratedAsset = {
     name: string;
     url: string;
     type: AssetType;
+    source: AssetSource;
+    generationRequestId: string | null;
+    fileNodeId: string | null;
+    metadata: AssetMetadata | null;
     createdAt: Date;
+    updatedAt: Date;
     storageKey: string;
 }
 
@@ -210,7 +215,12 @@ export const listAiGeneratedAssets = async (
             name: assets.name,
             url: assets.url,
             type: assets.type,
+            source: assets.source,
+            generationRequestId: assets.generationRequestId,
+            fileNodeId: assets.fileNodeId,
+            metadata: assets.metadata,
             createdAt: assets.createdAt,
+            updatedAt: assets.updatedAt,
             storageKey: assets.storageKey,
         })
         .from(assets)
@@ -342,6 +352,31 @@ export const getAssetFolder = async (projectId: string) => {
 export const getAssetById = async (projectId: string, assetId: string) => {
     const result = await db.select().from(assets).where(and(eq(assets.projectId, projectId), eq(assets.id, assetId)));
     return result[0];
+}
+
+export const updateAssetMetadataValues = async (
+    projectId: string,
+    assetId: string,
+    values: Record<string, string | number | boolean>,
+) => {
+    const asset = await getAssetById(projectId, assetId);
+    if (!asset) {
+        return null;
+    }
+
+    const existingMetadata = (asset.metadata ?? {}) as AssetMetadata;
+    const metadata: AssetMetadata = {
+        ...existingMetadata,
+        values,
+    };
+
+    const result = await db
+        .update(assets)
+        .set({ metadata, updatedAt: new Date() })
+        .where(and(eq(assets.projectId, projectId), eq(assets.id, assetId)))
+        .returning();
+
+    return result[0] ?? null;
 }
 
 export const getAssetsByIds = async (projectId: string, assetIds: string[]) => {

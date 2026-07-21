@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type {
-  MediaType,
+  ComposerMediaType,
 } from '../types'
 import { AttachedFile } from '@/components/widgets/file-attachments'
 import { Editor } from '@tiptap/core'
@@ -18,7 +18,7 @@ type PromptSettings = {
 
 type StoreState = {
   activeGenerationRequests: Array<ActiveGenerationRequest>
-  mediaType: MediaType
+  mediaType: ComposerMediaType
   prompt: string
   promptSettings: PromptSettings
   attachments: Array<AttachedFile>
@@ -29,9 +29,9 @@ type StoreState = {
 type StoreActions = {
   appendActiveGenerationRequest: (data: ActiveGenerationRequest) => void
   removeActiveGenerationRequest: (requestId: string) => void
-  setMediaType: (mediaType: MediaType) => void
+  setMediaType: (mediaType: ComposerMediaType) => void
   setPrompt: (prompt: string) => void
-  updatePromptSettings: <T extends MediaType>(
+  updatePromptSettings: <T extends ComposerMediaType>(
     type: T,
     key: string,
     value: string,

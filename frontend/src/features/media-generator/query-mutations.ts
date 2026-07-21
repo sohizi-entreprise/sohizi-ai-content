@@ -84,6 +84,22 @@ export const moveAssetToFolderMutationOptions = (projectId: string, assetId: str
     },
   })
 
+export const updateHtmlAssetValuesMutationOptions = (projectId: string, assetId: string) =>
+  mutationOptions({
+    mutationFn: (values: Record<string, string | number | boolean>) =>
+      requests.updateHtmlAssetValues(projectId, assetId, values),
+    onSuccess: (updatedAsset, _variables, _onMutateResult, context) => {
+      context.client.setQueriesData<AiGeneratedAssetsInfiniteData>(
+        { queryKey: mediaGeneratorKeys.aiGeneratedAssets(projectId) },
+        (old) => patchAiGeneratedAsset(old, updatedAsset),
+      )
+      context.client.setQueriesData<AssetRequestsInfiniteData>(
+        { queryKey: mediaGeneratorKeys.assetsRequests(projectId) },
+        (old) => patchAssetInRequests(old, updatedAsset),
+      )
+    },
+  })
+
 export const bulkMoveAssetsToFolderMutationOptions = (projectId: string) =>
   mutationOptions({
     mutationFn: ({ assetIds, folderId }: { assetIds: string[]; folderId: string }) =>
@@ -120,6 +136,43 @@ export const useUpdateAssetsList = (projectId: string) => {
     //   (old) => updateAssetRequestAssets(old, requestId, assets),
     // )
   }, [projectId, queryClient])
+}
+
+function patchAiGeneratedAsset(
+  current: AiGeneratedAssetsInfiniteData | undefined,
+  updatedAsset: MediaAsset,
+): AiGeneratedAssetsInfiniteData | undefined {
+  if (!current) return current
+
+  return {
+    ...current,
+    pages: current.pages.map((page) => ({
+      ...page,
+      data: page.data.map((asset) =>
+        asset.id === updatedAsset.id ? { ...asset, ...updatedAsset } : asset,
+      ),
+    })),
+  }
+}
+
+function patchAssetInRequests(
+  current: AssetRequestsInfiniteData | undefined,
+  updatedAsset: MediaAsset,
+): AssetRequestsInfiniteData | undefined {
+  if (!current) return current
+
+  return {
+    ...current,
+    pages: current.pages.map((page) => ({
+      ...page,
+      data: page.data.map((request) => ({
+        ...request,
+        assets: (request.assets ?? []).map((asset) =>
+          asset.id === updatedAsset.id ? { ...asset, ...updatedAsset } : asset,
+        ),
+      })),
+    })),
+  }
 }
 
 function appendAiGeneratedAssets(

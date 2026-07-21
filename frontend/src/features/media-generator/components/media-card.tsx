@@ -27,6 +27,7 @@ import { useAssetMenu } from '../hooks/use-asset-menu'
 import { toast } from 'sonner'
 import { searchFilesByName } from '@/features/projects/request'
 import AudioPlayer from './audio-player'
+import { RenderHtml } from './html-asset-preview'
 import { Checkbox } from '@/components/ui/checkbox'
 
 type MediaCardProps = {
@@ -74,6 +75,8 @@ function RouteMediaAsset({item}: {item: MediaAsset}) {
       return <RenderVideo item={item} />
     case 'audio':
       return <RenderAudio item={item} />
+    case 'html':
+      return <RenderHtml item={item} />
   }
 }
 
