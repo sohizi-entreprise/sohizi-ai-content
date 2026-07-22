@@ -127,7 +127,7 @@ export const youtubeAnalyzerTool = buildLlmTool({
                         },
                         {
                             type: 'file',
-                            data: data.url,
+                            data: cleanYoutubeUrl(data.url),
                             mediaType: 'video/mp4',
                             providerOptions: {
                                 google: {
@@ -145,5 +145,31 @@ export const youtubeAnalyzerTool = buildLlmTool({
         },
     },
 })
+
+function cleanYoutubeUrl(url: string): string {
+    const decoded = url.replaceAll('&amp;', '&');
+    try {
+        const parsed = new URL(decoded);
+        const host = parsed.hostname.replace(/^www\./, '');
+
+        let videoId: string | null = null;
+        if (host === 'youtu.be') {
+            videoId = parsed.pathname.slice(1).split('/')[0] || null;
+        } else if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+            videoId = parsed.searchParams.get('v');
+            if (!videoId) {
+                const match = parsed.pathname.match(/^\/(embed|shorts|live)\/([^/?]+)/);
+                videoId = match?.[2] ?? null;
+            }
+        }
+
+        if (videoId) {
+            return `https://youtu.be/${videoId}`;
+        }
+    } catch {
+        // fall through
+    }
+    return decoded;
+}
 
 // pdf
