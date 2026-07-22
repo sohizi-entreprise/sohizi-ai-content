@@ -173,6 +173,9 @@ export class LlmTool<T extends z.ZodSchema> extends BaseTool<T>{
             },
         });
         for await (const chunk of billedStream){
+            if(chunk.type == 'error'){
+                console.error('error', chunk.error)
+            }
             if(chunk.type === 'complete'){
                 switch(chunk.finishReason){
                     case 'content-filter':
@@ -191,7 +194,6 @@ export class LlmTool<T extends z.ZodSchema> extends BaseTool<T>{
                 break;
             }
         }
-
         yield result;
     }
 }

@@ -1,4 +1,13 @@
-import { Output, streamText, generateText, ModelMessage, ToolSet, LanguageModelUsage } from "ai";
+import {
+    Output,
+    streamText,
+    generateText,
+    ModelMessage,
+    ToolSet,
+    LanguageModelUsage,
+    createDownload,
+    type Experimental_DownloadFunction,
+} from "ai";
 import { openai } from "@/lib/llm-providers";
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { z } from "zod";
@@ -18,6 +27,34 @@ export type ModelConfig = {
     maxOutputTokens?: number;
     timeout?: number;
 }
+
+const fetchUnsupportedUrl = createDownload();
+
+/** True for public YouTube hosts Gemini/OpenRouter accept as video_url. */
+function isYoutubeUrl(url: URL): boolean {
+    const host = url.hostname.replace(/^www\./, '').toLowerCase();
+    return (
+        host === 'youtu.be' ||
+        host === 'youtube.com' ||
+        host === 'm.youtube.com' ||
+        host === 'music.youtube.com'
+    );
+}
+
+/**
+ * Never download YouTube (or model-supported) URLs — return null so the AI SDK
+ * forwards the original URL to OpenRouter as `video_url` unchanged.
+ */
+const passthroughOpenRouterMedia: Experimental_DownloadFunction = async (downloads) => {
+    return Promise.all(
+        downloads.map(async ({ url, isUrlSupportedByModel }) => {
+            if (isUrlSupportedByModel || isYoutubeUrl(url)) {
+                return null;
+            }
+            return fetchUnsupportedUrl({ url });
+        }),
+    );
+};
 
 export type InvokeRequest = {
     messages: ModelMessage[];
@@ -68,6 +105,7 @@ export class LlmClient {
                 maxRetries: modelConfig?.maxRetries,
                 maxOutputTokens: modelConfig?.maxOutputTokens,
                 output,
+                experimental_download: passthroughOpenRouterMedia,
                 providerOptions: {
                     openai: {
                         reasoningEffort: modelConfig?.reasoningEffort,
@@ -146,6 +184,7 @@ export class LlmClient {
                 maxRetries: modelConfig?.maxRetries,
                 maxOutputTokens: modelConfig?.maxOutputTokens,
                 output,
+                experimental_download: passthroughOpenRouterMedia,
                 providerOptions: {
                     openai: {
                         reasoningEffort: modelConfig?.reasoningEffort,
@@ -284,10 +323,22 @@ export class LlmClient {
             const openrouter = createOpenRouter({
                 apiKey: process.env.OPENROUTER_API_KEY,
             })
-            return openrouter(this.model)
+            // OpenRouter converts video/* file parts → video_url, but its AI SDK
+            // provider never declares video/* in supportedUrls. Without this patch,
+            // streamText downloads YouTube pages as bytes and Google 400s.
+            return withVideoUrlSupport(openrouter(this.model));
         }
         return openai(this.model);
     }
+}
+
+/** Keep video HTTP(S)/data URLs as URLs so OpenRouter can emit `video_url`. */
+function withVideoUrlSupport<T extends { supportedUrls?: Record<string, RegExp[]> }>(model: T): T {
+    const urls = model.supportedUrls ?? (model.supportedUrls = {});
+    if (!urls['video/*']?.length) {
+        urls['video/*'] = [/^https?:\/\/.+/i, /^data:video\//i];
+    }
+    return model;
 }
 
 export type BillableLlmInput = {

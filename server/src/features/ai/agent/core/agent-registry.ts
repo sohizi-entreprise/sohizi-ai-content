@@ -13,6 +13,7 @@ import { generateSystemPrompt } from "./sys-prompt";
 import { BaseTool } from "../tools/tool-definition";
 import { z } from "zod";
 import { htmlVideoGeneratorPrompt } from "../prompts/html-video-generator";
+import { youtubeAnalyzerTool, videoAnalyzerTool, imageAnalyzerTool } from "../tools/media-analyzer";
 
 export const supportedAgents = [
     'media-generator', 
@@ -65,6 +66,9 @@ registerAgent({
             timelineExploreTool, 
             timelineEditTool,
             manageTodoListTool,
+            youtubeAnalyzerTool,
+            videoAnalyzerTool,
+            imageAnalyzerTool,
             editFileTool
         ]),
         reasoningEffort: 'medium',

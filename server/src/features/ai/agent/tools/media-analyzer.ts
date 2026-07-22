@@ -64,7 +64,7 @@ export const videoAnalyzerTool = buildLlmTool({
             return [
                 {
                     role: 'system',
-                    content: ''
+                    content: 'Analyze a video file by its URL and return a summary based on the instructions provided'
                 },
                 {
                     role: 'user',
@@ -116,14 +116,14 @@ export const youtubeAnalyzerTool = buildLlmTool({
             return [
                 {
                     role: 'system',
-                    content: ''
+                    content: 'You are a helpful assistant that analyzes YouTube videos and returns a summary based on the instructions provided',
                 },
                 {
                     role: 'user',
                     content: [
                         {
                             type: 'text',
-                            text: data.instructions
+                            text: data.instructions // `<instructions>${data.instructions}</instructions>\n<youtube_url>${data.url}</youtube_url>`
                         },
                         {
                             type: 'file',
