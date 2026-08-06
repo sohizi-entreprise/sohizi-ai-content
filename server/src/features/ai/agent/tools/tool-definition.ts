@@ -1,6 +1,6 @@
 import { z, toJSONSchema } from "zod";
 import { AgenticToolChunk, OperationChunk, streamEvents, ToolCall, ToolResultComplete } from "../utils/llm-response";
-import { AgentChunk } from "../core/agent";
+import type { AgentChunk } from "../core/agent";
 import { Session } from "../core/session";
 import { FilePendingOperation } from "@/type";
 import { Tool, ModelMessage } from "ai";

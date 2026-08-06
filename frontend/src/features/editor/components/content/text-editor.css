@@ -34,7 +34,7 @@
 }
 
 .tiptap-editor-content p {
-  color: color-mix(in oklch, var(--foreground) 88%, transparent);
+  color: var(--foreground);
 }
 
 .tiptap-editor-content strong {
@@ -43,7 +43,7 @@
 }
 
 .tiptap-editor-content em {
-  color: color-mix(in oklch, var(--foreground) 92%, transparent);
+  color: var(--foreground);
 }
 
 .tiptap-editor-content s {
@@ -369,7 +369,7 @@
 }
 
 .tiptap-editor-content td {
-  color: color-mix(in oklch, var(--foreground) 86%, transparent);
+  color: var(--foreground);
 }
 
 .tiptap-editor-content .selectedCell::after {
@@ -410,7 +410,7 @@
 
 .tiptap-editor-content details > div {
   margin-top: 0.8rem;
-  color: color-mix(in oklch, var(--foreground) 88%, transparent);
+  color: var(--foreground);
 }
 
 .tiptap-editor-content p.is-empty::before {

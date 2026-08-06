@@ -1,12 +1,14 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import Placeholder from '@tiptap/extension-placeholder'
+import { TableKit } from '@tiptap/extension-table'
+import { TaskItem, TaskList } from '@tiptap/extension-list'
 import TextAlign from '@tiptap/extension-text-align'
 import { Markdown, MarkdownManager } from '@tiptap/markdown'
 import { useParams } from '@tanstack/react-router'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { CharacterCount } from '@tiptap/extension-character-count'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import TextEditorBubbleMenu from '../text-editor-extensions/bubble-menu'
 import { useSkillAutosave } from '../../hooks/use-autosave'
 import { serializeMarkdownWithTextAlign } from '../../extensions/markdown-text-align'
@@ -16,7 +18,8 @@ import {
   preprocessFileMentions,
 } from '../../extensions/file-mention'
 import { ImageLayout } from '../../extensions/image-layout'
-import TextEditorToolbar from './text-editor-toolbar'
+import { SlashCommandExtension } from '../../extensions/slash-command'
+import { EditorTopChrome } from './editor-top-chrome'
 import type { EditorTab } from '../../types'
 import type { JSONContent } from '@tiptap/react'
 import { useFileMentionSearch } from '@/hooks/use-file-mention-search'
@@ -106,6 +109,13 @@ const markdownContentExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
   }),
+  TableKit.configure({
+    table: {
+      resizable: true,
+      renderWrapper: true,
+      lastColumnResizable: false,
+    },
+  }),
   TextAlign.configure({
     types: ['heading', 'paragraph'],
   }),
@@ -129,6 +139,21 @@ const skillEditorExtensions = [
     document: false,
     heading: { levels: [1, 2, 3] },
   }),
+  TableKit.configure({
+    table: {
+      resizable: true,
+      renderWrapper: true,
+      lastColumnResizable: false,
+    },
+  }),
+  TaskList,
+  TaskItem.configure({
+    nested: true,
+    a11y: {
+      checkboxLabel: (_node, checked) =>
+        checked ? 'Mark task as incomplete' : 'Mark task as complete',
+    },
+  }),
   CharacterCount.configure({
     limit: MAX_CHARACTER_COUNT,
   }),
@@ -143,7 +168,7 @@ const skillEditorExtensions = [
   }),
   Placeholder.configure({
     includeChildren: true,
-    showOnlyCurrent: false,
+    showOnlyCurrent: true,
     placeholder: ({ editor, node, pos }) => {
       if (node.type.name !== 'paragraph') return ''
 
@@ -158,13 +183,14 @@ const skillEditorExtensions = [
           return 'Describe what this skill does...'
         }
         if (nodeName === 'skillInstruction' && isFirstChild && isSectionEmpty) {
-          return 'Write instructions...'
+          return 'Write instructions or use / command...'
         }
       }
 
       return ''
     },
   }),
+  SlashCommandExtension,
 ]
 
 const skillEditorStyles = `
@@ -262,6 +288,9 @@ export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
     projectId,
     fileId: tab.id,
   })
+  // TipTap does not refresh onUpdate when deps change — always call the latest saver.
+  const saveSkillRef = useRef(saveSkill)
+  saveSkillRef.current = saveSkill
 
   const setEditor = useEditorInputBridge((state) => state.setEditor)
   const clearEditor = useEditorInputBridge((state) => state.clearEditor)
@@ -290,16 +319,13 @@ export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
       },
     },
     onUpdate: ({ editor: updatedEditor }) => {
-      const json = updatedEditor.getJSON()
-      const skill = {
-        description: getNodeMarkdown(json, 'skillDescription'),
-        instruction: getNodeMarkdown(json, 'skillInstruction'),
-      }
-
-      console.log(skill)
-      saveSkill({
-        description: skill.description,
-        instructions: skill.instruction,
+      // Defer JSON/markdown serialization until the autosave debounce fires.
+      saveSkillRef.current(() => {
+        const json = updatedEditor.getJSON()
+        return {
+          description: getNodeMarkdown(json, 'skillDescription'),
+          instructions: getNodeMarkdown(json, 'skillInstruction'),
+        }
       })
     },
     onCreate: ({ editor: createdEditor }) => {
@@ -310,12 +336,14 @@ export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
     },
   })
 
+  if (!editor) return null
+
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-background">
+    <div className="relative flex h-full w-full flex-col bg-surface">
       <style>{skillEditorStyles}</style>
-      <TextEditorToolbar editor={editor} tabId={tab.id} />
+      <EditorTopChrome editor={editor} tabId={tab.id} />
       <div ref={setScrollContainer} className="flex-1 overflow-auto overscroll-none">
-        <div className="mx-auto min-w-2xl max-w-3xl px-6 py-8">
+        <div className="mx-auto min-w-2xl max-w-3xl px-6 pb-8 pt-12">
           <EditorContent
             editor={editor}
             className="[&_.tiptap]:min-h-[420px] [&_.tiptap]:outline-none"

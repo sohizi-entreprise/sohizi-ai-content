@@ -12,6 +12,10 @@
   overscroll-behavior: none;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* Custom fonts */
 body {
   @apply m-0;
@@ -97,6 +101,7 @@ code,
   --shadow-primary: 0 4px 24px oklch(0.77 0.22 148 / 0.15); /* Premium soft green glow */
   --paper-width: 8.5in;
   --paper-padding: 1in;
+  --white-brand: oklch(94.7 0.016 166.7);
 }
 
 /* 
@@ -186,12 +191,14 @@ code,
   --font-space-grotesk: var(--font-space-grotesk);
   --animate-spotlight: spotlight 2s ease 0.75s 1 forwards;
   --animate-aurora: aurora 60s linear infinite;
+  --animate-mesh-a: mesh-drift-a 18s ease-in-out infinite;
+  --animate-mesh-b: mesh-drift-b 22s ease-in-out infinite;
   --spacing-header: var(--header-height);
   --spacing-paper: var(--paper-width);
   --shadow-primary: var(--shadow-primary);
   --spacing-paper-pad: var(--paper-padding);
   --color-surface: var(--surface);
-  
+  --color-white-brand: var(--white-brand);
   /* Gradient utilities */
   --gradient-violet: linear-gradient(135deg, oklch(0.6 0.25 280), oklch(0.65 0.25 310));
   --gradient-fuchsia: linear-gradient(135deg, oklch(0.55 0.25 295), oklch(0.6 0.22 330));
@@ -489,6 +496,32 @@ code,
     background-position:
       350% 50%,
       350% 50%;
+  }
+}
+
+@keyframes mesh-drift-a {
+  0%,
+  100% {
+    transform: translate(-8%, -6%) scale(1);
+  }
+  33% {
+    transform: translate(18%, 10%) scale(1.12);
+  }
+  66% {
+    transform: translate(-4%, 22%) scale(0.94);
+  }
+}
+
+@keyframes mesh-drift-b {
+  0%,
+  100% {
+    transform: translate(12%, 8%) scale(1.05);
+  }
+  40% {
+    transform: translate(-16%, -10%) scale(0.92);
+  }
+  70% {
+    transform: translate(8%, -18%) scale(1.14);
   }
 }
 

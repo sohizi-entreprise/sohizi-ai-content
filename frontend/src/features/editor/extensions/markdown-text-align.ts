@@ -1,15 +1,22 @@
 import { Extension, Node, mergeAttributes, type AnyExtension } from '@tiptap/core'
-import type { JSONContent } from '@tiptap/react'
+import type { JSONContent, RenderContext } from '@tiptap/react'
 import { MarkdownManager } from '@tiptap/markdown'
 
 const TEXT_ALIGN_VALUES = new Set(['left', 'center', 'right', 'justify'])
+const EMPTY_PARAGRAPH_MARKDOWN = '&nbsp;'
 
 type MarkdownTextAlignOptions = {
   headingLevels: Array<1 | 2 | 3 | 4 | 5 | 6>
 }
 
+type MarkdownRenderHelpers = {
+  renderChildren: (nodes: JSONContent[] | JSONContent) => string
+}
+
 const MarkdownAlignedParagraph = Node.create({
   name: 'paragraph',
+  // Outrank StarterKit's paragraph so text-align markdown wins during serialize.
+  priority: 1001,
   group: 'block',
   content: 'inline*',
 
@@ -28,15 +35,25 @@ const MarkdownAlignedParagraph = Node.create({
     }
   },
 
-  renderMarkdown(node, helpers) {
-    const content = helpers.renderChildren(node.content ?? [])
-    const textAlign = getTextAlign(node)
+  // TipTap's Document joins blocks with `\n\n` — do not append extra blank lines here.
+  renderMarkdown(node, helpers: MarkdownRenderHelpers, ctx: RenderContext) {
+    const content = Array.isArray(node.content) ? node.content : []
 
-    if (!textAlign) {
-      return `${content}\n\n`
+    if (content.length === 0) {
+      const previousContent = Array.isArray(ctx?.previousNode?.content)
+        ? ctx.previousNode.content
+        : []
+      const previousNodeIsEmptyParagraph =
+        ctx?.previousNode?.type === 'paragraph' && previousContent.length === 0
+      return previousNodeIsEmptyParagraph ? EMPTY_PARAGRAPH_MARKDOWN : ''
     }
 
-    return `<p style="text-align: ${textAlign}">${inlineContentToHtml(node.content ?? [])}</p>\n\n`
+    const textAlign = getTextAlign(node)
+    if (!textAlign) {
+      return helpers.renderChildren(content)
+    }
+
+    return `<p style="text-align: ${textAlign}">${inlineContentToHtml(content)}</p>`
   },
 
   addCommands() {
@@ -52,6 +69,7 @@ const MarkdownAlignedParagraph = Node.create({
 
 const MarkdownAlignedHeading = Node.create<MarkdownTextAlignOptions>({
   name: 'heading',
+  priority: 1001,
   group: 'block',
   content: 'inline*',
   defining: true,
@@ -94,17 +112,18 @@ const MarkdownAlignedHeading = Node.create<MarkdownTextAlignOptions>({
     }
   },
 
-  renderMarkdown(node, helpers) {
+  renderMarkdown(node, helpers: MarkdownRenderHelpers) {
     const level = Number(node.attrs?.level ?? 1)
-    const content = helpers.renderChildren(node.content ?? [])
-    const textAlign = getTextAlign(node)
+    const content = Array.isArray(node.content) ? node.content : []
+    if (content.length === 0) return ''
 
+    const textAlign = getTextAlign(node)
     if (!textAlign) {
-      return `${'#'.repeat(level)} ${content}\n\n`
+      return `${'#'.repeat(level)} ${helpers.renderChildren(content)}`
     }
 
     const tagName = `h${Math.min(Math.max(level, 1), 6)}`
-    return `<${tagName} style="text-align: ${textAlign}">${inlineContentToHtml(node.content ?? [])}</${tagName}>\n\n`
+    return `<${tagName} style="text-align: ${textAlign}">${inlineContentToHtml(content)}</${tagName}>`
   },
 
   addCommands() {

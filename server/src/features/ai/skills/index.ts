@@ -28,6 +28,7 @@ export { outlineSkill } from './outline'
 export { characterBibleSkill } from './character-bible'
 export { worldBibleSkill } from './world-bible'
 export { proseFormatSkill } from './prose-format'
+export { markdownSyntaxSkill } from './markdown-syntax'
 export { sceneWritingSkill } from './scene-writing'
 export { scriptReviewSkill } from './script-review'
 
@@ -38,6 +39,7 @@ import { outlineSkill } from './outline'
 import { characterBibleSkill } from './character-bible'
 import { worldBibleSkill } from './world-bible'
 import { proseFormatSkill, synopsisProseFormat } from './prose-format'
+import { markdownSyntaxSkill } from './markdown-syntax'
 import { sceneWritingSkill } from './scene-writing'
 import { scriptReviewSkill } from './script-review'
 
@@ -61,6 +63,7 @@ export const skills = {
   
   // Stage 5: Writing
   proseFormat: proseFormatSkill,
+  markdownSyntax: markdownSyntaxSkill,
   sceneWriting: sceneWritingSkill,
   
   // Stage 6: Quality Assurance

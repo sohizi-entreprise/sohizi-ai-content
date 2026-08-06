@@ -19,7 +19,7 @@ import {
   preprocessFileMentions,
 } from '../../extensions/file-mention'
 import { ImageLayout } from '../../extensions/image-layout'
-import TextEditorToolbar from './text-editor-toolbar'
+import { EditorTopChrome } from './editor-top-chrome'
 import type { EditorTab, PendingFileOperation } from '../../types'
 import { useFileMentionSearch } from '@/hooks/use-file-mention-search'
 import { MAX_CHARACTER_COUNT } from '../../constants'
@@ -244,6 +244,8 @@ export function TextEditorView({
     [editor, pendingOperation, saveFileContent, deletePendingOperation],
   )
 
+  // Resolve from the current editor content (not the stored proposal) so any
+  // edits the user made while the diff was pending are preserved.
   const handleAcceptChanges = useCallback(() => {
     if (!editor) return
     void resolvePendingChanges(
@@ -258,18 +260,14 @@ export function TextEditorView({
     )
   }, [editor, resolvePendingChanges])
 
-  return (
-    <div className="flex h-full w-full flex-col overflow-hidden relative">
-      {/* Toolbar */}
-      <div className='h-2 absolute top-14 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-8rem)] max-w-[calc(var(--container-3xl)-4rem)] bg-linear-to-t dark:from-white/45 from-black/30 to-transparent'/>
-      <TextEditorToolbar editor={editor} 
-                         tabId={tab.id} 
-                         className="absolute top-8 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-4rem)] max-w-3xl"
-      />
+  if (!editor) return null
 
-      {/* Editor content */}
+  return (
+    <div className="relative flex h-full w-full flex-col overflow-hidden">
+      <EditorTopChrome editor={editor} tabId={tab.id} />
+
       <div ref={setScrollContainer} className="flex-1 overflow-auto overscroll-none scrollbar-hide">
-        <div className="mx-auto max-w-3xl px-6 pb-8 pt-32 min-w-2xl">
+        <div className="mx-auto min-w-2xl max-w-3xl px-6 pb-8 pt-12">
           <EditorContent
             editor={editor}
             className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[400px]"

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="96 72 540 480" role="img" aria-labelledby="animated-logo-title animated-logo-description">
+  <title id="animated-logo-title">Animated Sohizi hummingbird logo</title>
+  <desc id="animated-logo-description">A lemon-green hummingbird hovering in place with rapidly beating wings.</desc>
+  <defs>
+    <radialGradient id="animated-wing" cx="100%" cy="50%" r="100%" fx="100%" fy="50%">
+      <stop offset="0" stop-color="#8CFF4A" stop-opacity=".96"/>
+      <stop offset=".55" stop-color="#8CFF4A" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#8CFF4A" stop-opacity=".18"/>
+    </radialGradient>
+  </defs>
+  <style>
+    .wing {
+      opacity: .34;
+      animation: wing-sweep 1s ease-in-out infinite;
+    }
+    .wing:nth-child(2) { animation-delay: -.84s; }
+    .wing:nth-child(3) { animation-delay: -.68s; }
+    .wing:nth-child(4) { animation-delay: -.52s; }
+    .wing:nth-child(5) { animation-delay: -.36s; }
+    .wing:nth-child(6) { animation-delay: -.20s; }
+    @keyframes wing-sweep {
+      0%, 100% { opacity: .34; }
+      50% { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .wing { animation: none; opacity: .72; }
+    }
+  </style>
+  <g fill="url(#animated-wing)">
+    <path class="wing" d="M403 310L285 96C257 174 265 268 306 343C321 372 340 397 359 408Z"/>
+    <path class="wing" d="M403 310L216 129C205 207 234 291 291 351C312 374 337 397 359 408Z"/>
+    <path class="wing" d="M403 310L162 187C176 265 216 330 276 370C302 388 331 402 359 408Z"/>
+    <path class="wing" d="M403 310L131 262C169 327 230 377 298 398C320 405 341 409 359 408Z"/>
+    <path class="wing" d="M403 310L130 343C178 389 243 412 307 412C327 412 345 410 359 408Z"/>
+    <path class="wing" d="M403 310L175 412C226 440 291 439 334 422C345 418 353 412 359 408Z"/>
+  </g>
+  <path fill="#8CFF4A" stroke="#8CFF4A" stroke-width="2" stroke-linejoin="round" d="M310 519L403 309C421 275 439 257 461 254C479 252 496 257 513 263C544 269 576 275 610 281C570 277 538 275 515 276C489 277 478 287 475 309C472 324 472 346 469 367C464 406 448 438 421 464C394 490 357 508 310 519Z"/>
+</svg>

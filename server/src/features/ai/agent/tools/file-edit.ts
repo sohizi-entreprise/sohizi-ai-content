@@ -332,7 +332,10 @@ async function executeCreateCommand(input: z.infer<typeof createCommandSchema>, 
             fileName: parentFolder.name,
         };
 
-        return success(`Created ${dir ? 'directory' : 'file'} [ID: ${newFileNode.id}]${dir ? '' : ' (format: ' + newFileNode.format + ')'} successfully.`, [operation]);
+        let msg = `Created ${dir ? 'directory' : 'file'} [ID: ${newFileNode.id}]${dir ? '' : ' (format: ' + newFileNode.format + ')'} successfully.`;
+        msg += `\nThe file name has been normalized to '${normalizedName}' to avoid special characters and spaces.`;
+
+        return success(msg, [operation]);
 
     } catch (error) {
         return failure(getErrorMessage(error, `Failed to create '${name}' inside folder '${parentPathOrId}'`));

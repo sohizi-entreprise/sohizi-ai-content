@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { buildBaseTool } from "./tool-definition";
 import { getAgentDefinition, supportedAgents } from "../core/agent-registry";
-import { Agent } from "../core/agent";
 import { success, failure } from "./utils";
 import { createCancellableController } from "@/features/generation-request/abort-manager";
 
@@ -21,6 +20,8 @@ export const assignTaskTool = buildBaseTool({
         const { controller, cleanup } = await createCancellableController(session.runId);
 
         try {
+            // Lazy import avoids circular init: tasks-assign → agent → tool-registry → tasks-assign
+            const { Agent } = await import("../core/agent");
             const agentDefinition = getAgentDefinition(subAgent);
             if(!agentDefinition){
                 return failure(`Invalid sub-agent name provided. Supported are ${supportedAgents.join(', ')}`)

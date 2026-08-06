@@ -24,7 +24,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'Sohizi - AI Video Storyboard',
+        title: 'Sohizi Lab — AI Video Workspace',
+      },
+      {
+        name: 'description',
+        content:
+          'Write scripts, generate media, storyboard, and edit video in one AI-assisted workspace.',
       },
     ],
     links: [

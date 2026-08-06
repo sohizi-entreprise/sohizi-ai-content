@@ -219,8 +219,13 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>((props, ref) =>
         props.items.map((item, index) => (
           <button
             key={item.title}
+            type="button"
             ref={(el) => { itemRefs.current[index] = el }}
-            onClick={() => selectItem(index)}
+            onMouseDown={(event) => {
+              // Prevent editor blur, which closes the suggestion before click fires.
+              event.preventDefault()
+              selectItem(index)
+            }}
             onMouseEnter={() => setSelectedIndex(index)}
             className={cn(
               'flex items-center px-1 py-2 rounded-xl gap-4',

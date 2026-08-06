@@ -93,6 +93,7 @@ export class Agent {
                 this.stateManager.finishRun();
             }
         } catch (error) {
+            console.log('runLoop error', error);
             const errorMessage = this.captureStepError(error);
             yield this.buildErrorEvent(errorMessage);
         } finally {
@@ -170,6 +171,7 @@ export class Agent {
                         reasoning_text = chunk.reasoningText ?? reasoning_text;
                         if(chunk.finishReason === 'error'){
                             stepError = chunk.error ?? 'Unknown agent error';
+                            console.log('stepError', stepError);
                             this.captureStepError(stepError);
                         }
                         break;
@@ -202,6 +204,7 @@ export class Agent {
                 }
             }
         } catch (error) {
+            console.log('runStep error', error);
             stepError = this.captureStepError(error);
             yield this.buildErrorEvent(stepError);
         } finally {
@@ -314,7 +317,7 @@ export class Agent {
             const errorMessage = this.errorToMessage(error);
             const incompleteToolCalls = validToolCalls.filter((toolCall) => !completedToolCallIds.has(toolCall.toolCallId));
             this.appendToolCallErrors(incompleteToolCalls, errorMessage);
-            throw error;
+            // throw error;
         }
     }
 

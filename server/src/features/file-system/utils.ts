@@ -2,7 +2,7 @@ import { FileNode, FileNodeContent } from "@/db/schema";
 import { fileFormat } from "./constants";
 
 export const normalizeFileName = (name: string) => {
-    return name.trim().toLowerCase().replace(/[\W\s\_]+/g, "-")
+    return name.trim().toLowerCase().replace(/[\W\s]+/g, "-")
 }
 
 

@@ -235,7 +235,10 @@ const AdditionDiffBlock = Node.create({
   }),
 
   renderMarkdown: (node, helpers) => {
-    const content = helpers.renderChildren(node.content || []).trim()
+    // Join child blocks with a blank line so headings, tables and paragraphs
+    // keep their separation. Without an explicit separator they are glued
+    // together (e.g. `## Identity| A | B |`), corrupting multi-block diffs.
+    const content = helpers.renderChildren(node.content || [], '\n\n').trim()
     return `{+${content}+}\n\n`
   },
 })
@@ -280,7 +283,10 @@ const DeletionDiffBlock = Node.create({
   }),
 
   renderMarkdown: (node, helpers) => {
-    const content = helpers.renderChildren(node.content || []).trim()
+    // Join child blocks with a blank line so headings, tables and paragraphs
+    // keep their separation. Without an explicit separator they are glued
+    // together (e.g. `## Identity| A | B |`), corrupting multi-block diffs.
+    const content = helpers.renderChildren(node.content || [], '\n\n').trim()
     return `[-${content}-]\n\n`
   },
 })

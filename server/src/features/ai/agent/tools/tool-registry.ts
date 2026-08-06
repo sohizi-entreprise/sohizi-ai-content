@@ -4,7 +4,7 @@ import { manageTodoListTool } from "./tasks-manage";
 import { exploreFileTool } from "./file-explore";
 import { searchFileTool } from "./file-search";
 import { generateImageTool } from "./generate-image";
-import { generateVideoTool } from "./generate-video";
+// import { generateVideoTool } from "./generate-video";
 import { timelineExploreTool } from "./timeline-explore";
 import { timelineEditTool } from "./timeline-edit";
 import { ToolSet } from "ai";
@@ -21,9 +21,7 @@ import { imageAnalyzerTool, videoAnalyzerTool, youtubeAnalyzerTool } from "./med
 const toolRegistry = new Map<string, BaseTool<z.ZodSchema>>();
 
 export const registerTool = (tool: BaseTool<z.ZodSchema>): void => {
-    if(!toolRegistry.has(tool.params.name)){
-        toolRegistry.set(tool.params.name, tool);
-    }
+    toolRegistry.set(tool.params.name, tool);
 }
 
 export const getTool = (name: string): BaseTool<z.ZodSchema> | undefined => {
@@ -42,7 +40,7 @@ registerTool(exploreFileTool);
 registerTool(searchFileTool);
 registerTool(manageTodoListTool);
 registerTool(generateImageTool);
-registerTool(generateVideoTool);
+// registerTool(generateVideoTool);
 registerTool(finishTool);
 registerTool(timelineExploreTool);
 registerTool(timelineEditTool);

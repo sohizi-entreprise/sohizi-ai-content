@@ -3,7 +3,7 @@ import { buildBaseTool } from "./tool-definition";
 import { success } from "./utils";
 import { mediaConstants } from '@/constants';
 import { incrementKey } from "@/features/generation-request/stream-handler";
-import { inngest } from "@/lib/inngest";
+import { inngest } from "@/lib/inngest/client";
 
 const models = {
     image: [

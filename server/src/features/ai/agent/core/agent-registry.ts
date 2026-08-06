@@ -14,6 +14,8 @@ import { BaseTool } from "../tools/tool-definition";
 import { z } from "zod";
 import { htmlVideoGeneratorPrompt } from "../prompts/html-video-generator";
 import { youtubeAnalyzerTool, videoAnalyzerTool, imageAnalyzerTool } from "../tools/media-analyzer";
+import { generateImageTool } from "../tools/generate-image";
+import { loadSkillTool } from "../tools/load-skill";
 
 export const supportedAgents = [
     'media-generator', 
@@ -69,7 +71,9 @@ registerAgent({
             youtubeAnalyzerTool,
             videoAnalyzerTool,
             imageAnalyzerTool,
-            editFileTool
+            editFileTool,
+            loadSkillTool,
+            generateImageTool
         ]),
         reasoningEffort: 'medium',
         reasoningSummary: 'auto',

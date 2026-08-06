@@ -52,6 +52,7 @@ function ServerRenderedContent({ tab, projectId }: ContentRouterProps & { projec
       />
     case 'skill':
       return <SkillEditorView
+        key={tab.id}
         tab={tab}
         description={data.data.description}
         instruction={data.data.instructions}

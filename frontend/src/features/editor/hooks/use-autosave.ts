@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  getFileContentQueryOptions,
   saveFileContentDiffMutationOptions,
   saveFileContentMutationOptions,
-  saveSkillMutationOptions,
 } from '../query-mutations'
 import { useEditorStore } from '../stores/editor-store'
+import { saveSkill as saveSkillRequest } from '../requests'
 import type { CompactTextDiff } from '../requests'
 import type { SaveSkillPayload } from '../requests'
 import DiffWorker from '@/lib/workers/diff-worker?worker'
@@ -108,6 +109,13 @@ export function useAutoSave({
   return save
 }
 
+/** Pass a getter so callers can defer expensive serialization until the debounce fires. */
+export type SkillAutosaveInput = SaveSkillPayload | (() => SaveSkillPayload)
+
+function resolveSkillAutosaveInput(skill: SkillAutosaveInput): SaveSkillPayload {
+  return typeof skill === 'function' ? skill() : skill
+}
+
 export function useSkillAutosave({
   duration,
   projectId,
@@ -118,30 +126,52 @@ export function useSkillAutosave({
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isSavingRef = useRef(false)
   const pendingSkillRef = useRef<SaveSkillPayload | null>(null)
+  const latestSkillRef = useRef<SkillAutosaveInput | null>(null)
   const onSaveCompleteRef = useRef(onSaveComplete)
   const onSaveErrorRef = useRef(onSaveError)
+  const fileIdRef = useRef(fileId)
+  const projectIdRef = useRef(projectId)
+  const queryClient = useQueryClient()
   const setSavingStatus = useEditorStore((s) => s.setSavingStatus)
-  const { mutateAsync: saveSkill } = useMutation(
-    saveSkillMutationOptions(projectId, fileId),
-  )
 
+  fileIdRef.current = fileId
+  projectIdRef.current = projectId
   onSaveCompleteRef.current = onSaveComplete
   onSaveErrorRef.current = onSaveError
 
+  const { mutateAsync: saveSkill } = useMutation({
+    mutationFn: (skill: SaveSkillPayload) =>
+      saveSkillRequest(projectIdRef.current, fileIdRef.current, skill),
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        getFileContentQueryOptions(projectIdRef.current, fileIdRef.current)
+          .queryKey,
+        {
+          type: 'skill' as const,
+          data,
+        },
+      )
+    },
+  })
+
   const runSave = useCallback(
     async (skill: SaveSkillPayload) => {
+      const activeFileId = fileIdRef.current
+      const activeProjectId = projectIdRef.current
+
       if (isSavingRef.current) {
         pendingSkillRef.current = skill
         return
       }
 
       isSavingRef.current = true
+      setSavingStatus(activeFileId, 'saving')
       try {
         await saveSkill(skill)
         onSaveCompleteRef.current?.()
-        setSavingStatus(fileId, 'saved')
+        setSavingStatus(activeFileId, 'saved')
       } catch (error) {
-        setSavingStatus(fileId, 'error')
+        setSavingStatus(activeFileId, 'error')
         onSaveErrorRef.current?.(
           error instanceof Error ? error : new Error(String(error)),
         )
@@ -151,29 +181,44 @@ export function useSkillAutosave({
         const pendingSkill = pendingSkillRef.current
         pendingSkillRef.current = null
 
-        if (pendingSkill !== null && projectId && fileId) {
+        if (pendingSkill !== null && activeProjectId && activeFileId) {
           void runSave(pendingSkill)
         }
       }
     },
-    [fileId, projectId, saveSkill, setSavingStatus],
+    [saveSkill, setSavingStatus],
   )
 
   const save = useCallback(
-    (skill: SaveSkillPayload) => {
+    (skill: SkillAutosaveInput) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
-      if (!projectId || !fileId) return
+      const activeFileId = fileIdRef.current
+      const activeProjectId = projectIdRef.current
+      if (!activeProjectId || !activeFileId) return
 
-      setSavingStatus(fileId, 'saving')
+      // Keep only a lightweight schedule on each keystroke; serialize when the timer fires.
+      latestSkillRef.current = skill
 
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null
-        void runSave(skill)
+        const pending = latestSkillRef.current
+        latestSkillRef.current = null
+        if (!pending) return
+        void runSave(resolveSkillAutosaveInput(pending))
       }, duration)
     },
-    [duration, fileId, projectId, runSave, setSavingStatus],
+    [duration, runSave],
   )
+
+  useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+    pendingSkillRef.current = null
+    latestSkillRef.current = null
+  }, [fileId, projectId])
 
   useEffect(() => {
     return () => {
