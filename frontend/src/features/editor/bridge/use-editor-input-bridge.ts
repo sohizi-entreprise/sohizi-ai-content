@@ -39,8 +39,23 @@ export const useEditorInputBridge = create<EditorInputState & EditorInputActions
 
     switch (command.type) {
       case 'insertMention': {
-        const text = ` @[${command.mention.display}](${command.mention.id}) `
-        chatEditor.chain().focus().insertContent(text).run()
+        const { displayName, fileId, format, lines, snippet } = command.mention
+        chatEditor
+          .chain()
+          .focus()
+          .insertContent(' ')
+          .insertContent({
+            type: 'fileMention',
+            attrs: {
+              id: fileId,
+              label: displayName,
+              format,
+              lines: lines ?? null,
+              snippet: snippet ?? null,
+            },
+          })
+          .insertContent(' ')
+          .run()
         editor
             ?.chain()
             .setTextSelection(editor.state.selection.to)
@@ -55,8 +70,11 @@ export const useEditorInputBridge = create<EditorInputState & EditorInputActions
 const insertMentionCommand = z.object({
     type: z.literal('insertMention'),
     mention: z.object({
-        id: z.string(),
-        display: z.string(),
+        displayName: z.string(),
+        fileId: z.string(),
+        format: z.string(),
+        lines: z.string().optional(),
+        snippet: z.string().optional(),
     }),
 })
 

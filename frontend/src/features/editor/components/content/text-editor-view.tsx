@@ -275,7 +275,7 @@ export function TextEditorView({
           <TextEditorBubbleMenu
             editor={editor}
             scrollContainer={scrollContainer}
-            file={{ id: tab.id, name: tab.name }}
+            file={{ id: tab.id, name: tab.name, format: tab.format ?? 'markdown' }}
           />
           {
             pendingOperation && 

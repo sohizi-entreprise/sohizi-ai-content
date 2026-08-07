@@ -213,7 +213,13 @@ function inlineNodeToHtml(node: JSONContent): string {
     const label = typeof node.attrs?.label === 'string' ? node.attrs.label : ''
     const id = typeof node.attrs?.id === 'string' ? node.attrs.id : ''
     const format = typeof node.attrs?.format === 'string' ? node.attrs.format : ''
-    return `@[${escapeHtml(label)}](file:${escapeHtml(id)}?format=${escapeHtml(format)})`
+    const lines = typeof node.attrs?.lines === 'string' ? node.attrs.lines : null
+    const snippet = typeof node.attrs?.snippet === 'string' ? node.attrs.snippet : null
+    // Emit a span inside aligned HTML so `&` query separators stay attribute-safe.
+    const linesAttr = lines ? ` data-lines="${escapeAttribute(lines)}"` : ''
+    const snippetAttr = snippet ? ` data-snippet="${escapeAttribute(snippet)}"` : ''
+    const visible = lines ? `${label} ${lines}` : label
+    return `<span data-type="fileMention" data-id="${escapeAttribute(id)}" data-label="${escapeAttribute(label)}" data-format="${escapeAttribute(format)}"${linesAttr}${snippetAttr} class="file-mention">@${escapeHtml(visible)}</span>`
   }
 
   return inlineContentToHtml(node.content ?? [])

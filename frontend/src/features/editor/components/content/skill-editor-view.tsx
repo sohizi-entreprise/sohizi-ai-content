@@ -351,7 +351,7 @@ export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
           <TextEditorBubbleMenu
             editor={editor}
             scrollContainer={scrollContainer}
-            file={{ id: tab.id, name: tab.name }}
+            file={{ id: tab.id, name: tab.name, format: tab.format ?? 'skill' }}
           />
         </div>
       </div>

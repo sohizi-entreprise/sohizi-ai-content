@@ -39,3 +39,7 @@ TODOS Jun 11 - Jun 23
 [ ] clean timeline.tsx - decompose logic into hooks
 [ ] avoid dropping node on the timeline layer - it stucks we should fix that
 [ ] inside the storage.ts the max file size is 15MB for video and audio 
+
+
+===== Final stages ========
+1. Create a temporary context which lives in the session that maintain context between main-agent and sub-agent

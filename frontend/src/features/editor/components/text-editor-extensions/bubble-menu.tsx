@@ -15,6 +15,7 @@ type TextEditorBubbleMenuProps = {
   file: {
     id: string
     name: string
+    format: string
   }
 }
 
@@ -57,20 +58,22 @@ export default function TextEditorBubbleMenu({
     const textThroughSelection = editor.state.doc.textBetween(0, to, '\n')
     const endLine = textThroughSelection.split('\n').length
 
-    const lineRange =
+    const lines =
       startLine === endLine ? `L${startLine}` : `L${startLine}-L${endLine}`
     const snippet =
       selectedText.length > 24
         ? selectedText.slice(0, 24) + '...'
         : selectedText
-    const mentionId = `ID: ${file.id} | Snippet: ${snippet}`
 
     isSuppressedRef.current = true
     runCommand({
       type: 'insertMention',
       mention: {
-        id: mentionId,
-        display: `${file.name} | ${lineRange}`,
+        displayName: file.name,
+        fileId: file.id,
+        format: file.format,
+        lines,
+        snippet,
       },
     })
 

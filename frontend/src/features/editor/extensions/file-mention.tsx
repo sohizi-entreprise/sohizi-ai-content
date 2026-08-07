@@ -9,17 +9,21 @@ import { toast } from 'sonner'
 import type { FileMentionItem } from '@/hooks/use-file-mention-search'
 import { FileMentionList } from './file-mention-list'
 import { useEditorStore } from '../stores/editor-store'
+import {
+  FILE_TAG_REGEX,
+  formatFileTag,
+  parseFileTag,
+} from '@/lib/file-tag'
 
 type MentionConfigureOptions = NonNullable<Parameters<typeof Mention.configure>[0]>
 type FileMentionOptions = MentionConfigureOptions & {
   enableClick: boolean
 }
 
-export const FILE_MENTION_REGEX =
-  /@\[([^\]]+)\]\(file:([^?)\s]+)\?format=([^)]+)\)/g
+export const FILE_MENTION_REGEX = FILE_TAG_REGEX
 
 const FILE_MENTION_PATTERN =
-  /^@\[([^\]]+)\]\(file:([^?)\s]+)\?format=([^)]+)\)/
+  /^@\[([^\]]+)\]\(file:([^?)\s]+)\?([^)]+)\)/
 
 function escapeHtmlAttribute(value: string): string {
   return value
@@ -27,6 +31,15 @@ function escapeHtmlAttribute(value: string): string {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+}
+
+function mentionLabel(attrs: {
+  label?: string | null
+  id?: string | null
+  lines?: string | null
+}): string {
+  const base = attrs.label ?? attrs.id ?? ''
+  return attrs.lines ? `${base} ${attrs.lines}` : base
 }
 
 const FileMentionExtension = Mention.extend<FileMentionOptions>({
@@ -56,6 +69,18 @@ const FileMentionExtension = Mention.extend<FileMentionOptions>({
         parseHTML: (el) => el.getAttribute('data-format'),
         renderHTML: (attrs) => ({ 'data-format': attrs.format }),
       },
+      lines: {
+        default: null,
+        parseHTML: (el) => el.getAttribute('data-lines'),
+        renderHTML: (attrs) =>
+          attrs.lines ? { 'data-lines': attrs.lines } : {},
+      },
+      snippet: {
+        default: null,
+        parseHTML: (el) => el.getAttribute('data-snippet'),
+        renderHTML: (attrs) =>
+          attrs.snippet ? { 'data-snippet': attrs.snippet } : {},
+      },
     }
   },
 
@@ -64,7 +89,7 @@ const FileMentionExtension = Mention.extend<FileMentionOptions>({
   },
 
   renderText({ node }) {
-    return `@${node.attrs.label ?? node.attrs.id ?? ''}`
+    return `@${mentionLabel(node.attrs)}`
   },
 
   renderHTML({ node, HTMLAttributes }) {
@@ -75,15 +100,18 @@ const FileMentionExtension = Mention.extend<FileMentionOptions>({
         HTMLAttributes,
         this.options.HTMLAttributes ?? {},
       ),
-      `@${node.attrs.label ?? node.attrs.id ?? ''}`,
+      `@${mentionLabel(node.attrs)}`,
     ]
   },
 
   renderMarkdown(node) {
-    const label = node.attrs?.label ?? ''
-    const id = node.attrs?.id ?? ''
-    const format = node.attrs?.format ?? ''
-    return `@[${label}](file:${id}?format=${format})`
+    return formatFileTag({
+      displayName: node.attrs?.label ?? '',
+      fileId: node.attrs?.id ?? '',
+      format: node.attrs?.format ?? '',
+      lines: node.attrs?.lines,
+      snippet: node.attrs?.snippet,
+    })
   },
 
   markdownTokenizer: {
@@ -94,12 +122,17 @@ const FileMentionExtension = Mention.extend<FileMentionOptions>({
       const match = FILE_MENTION_PATTERN.exec(src)
       if (!match) return undefined
 
+      const parsed = parseFileTag(match[0])
+      if (!parsed) return undefined
+
       return {
         type: 'fileMention',
         raw: match[0],
-        label: match[1],
-        id: match[2],
-        format: match[3],
+        label: parsed.displayName,
+        id: parsed.fileId,
+        format: parsed.format,
+        lines: parsed.lines ?? null,
+        snippet: parsed.snippet ?? null,
       }
     },
   },
@@ -110,6 +143,8 @@ const FileMentionExtension = Mention.extend<FileMentionOptions>({
       id: token.id,
       label: token.label,
       format: token.format,
+      lines: token.lines ?? null,
+      snippet: token.snippet ?? null,
     },
   }),
 
@@ -118,12 +153,18 @@ const FileMentionExtension = Mention.extend<FileMentionOptions>({
       {
         find: FILE_MENTION_REGEX,
         handler: ({ match, chain, range }) => {
-          const label = match[1]
-          const id = match[2]
-          const format = match[3]
+          const parsed = parseFileTag(match[0])
+          if (!parsed) return
+
           chain().deleteRange(range).insertContentAt(range.from, {
             type: this.name,
-            attrs: { id, label, format },
+            attrs: {
+              id: parsed.fileId,
+              label: parsed.displayName,
+              format: parsed.format,
+              lines: parsed.lines ?? null,
+              snippet: parsed.snippet ?? null,
+            },
           })
         },
       },
@@ -176,12 +217,19 @@ export const FileMention = FileMentionExtension as Omit<
 }
 
 export function preprocessFileMentions(markdown: string): string {
-  return markdown.replace(
-    FILE_MENTION_REGEX,
-    (_match, label, id, format) => {
-      return `<span data-type="fileMention" data-id="${escapeHtmlAttribute(id)}" data-label="${escapeHtmlAttribute(label)}" data-format="${escapeHtmlAttribute(format)}" class="file-mention">@${label}</span>`
-    },
-  )
+  return markdown.replace(FILE_MENTION_REGEX, (match) => {
+    const parsed = parseFileTag(match)
+    if (!parsed) return match
+
+    const linesAttr = parsed.lines
+      ? ` data-lines="${escapeHtmlAttribute(parsed.lines)}"`
+      : ''
+    const snippetAttr = parsed.snippet
+      ? ` data-snippet="${escapeHtmlAttribute(parsed.snippet)}"`
+      : ''
+
+    return `<span data-type="fileMention" data-id="${escapeHtmlAttribute(parsed.fileId)}" data-label="${escapeHtmlAttribute(parsed.displayName)}" data-format="${escapeHtmlAttribute(parsed.format)}"${linesAttr}${snippetAttr} class="file-mention">@${mentionLabel({ label: parsed.displayName, lines: parsed.lines })}</span>`
+  })
 }
 
 type FileMentionListRef = {

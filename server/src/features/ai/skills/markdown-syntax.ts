@@ -20,14 +20,19 @@ Output content in **Sohizi editor markdown** so it round-trips correctly through
 
 Do **not** invent alternate mention, embed, or layout syntax. Use only the forms below.
 
-## Critical: Two Different @ Syntaxes
+## Universal File Tag Syntax
 
-| Context | Syntax | When to use |
-|---------|--------|-------------|
-| **Inside a markdown/skill document** | \`@[Label](file:FILE_ID?format=FORMAT)\` | Tagging a project file so it becomes a clickable mention in the editor |
-| **Chat / user messages** (read-only for you) | \`@[file name \\| L2-L5](ID: … \\| Snippet: …)\` | How users cite selections in chat — never write this into file content |
+One syntax everywhere (documents, skills, and chat):
 
-When tagging files in document content, always use the **file:** form.
+\`\`\`
+@[Display Name](file:FILE_ID?format=FORMAT)
+\`\`\`
+
+Optional chat-citation query params (read-only for you in user messages — do **not** write these into file content):
+
+\`\`\`
+@[Display Name](file:FILE_ID?format=FORMAT&lines=L2-L5&snippet=truncated+text)
+\`\`\`
 
 ---
 
@@ -43,6 +48,7 @@ Rules:
 - \`Display Name\` — the file's display name (no path, no extension)
 - \`FILE_ID\` — the real file node UUID from explore/search tools (never invent IDs)
 - \`FORMAT\` — one of: \`markdown\`, \`json\`, \`skill\`, \`image\`, \`video\`, \`audio\`, \`document\`, \`html\`, \`video-editor\`, \`ai-generated\`
+- \`lines\` / \`snippet\` — optional; only appear in chat citations, never invent them in documents
 - Inline only — place inside a paragraph or heading, not on its own as a fake block
 - Leave a trailing space after the mention when continuing text
 
@@ -57,6 +63,7 @@ WRONG ❌
 - \`@character-bible\`
 - \`@[character-bible](5p9477a5-…)\`
 - \`@[character-bible](file:5p9477a5-…)\` (missing \`?format=\`)
+- \`@[character-bible | L2-L5](ID: … | Snippet: …)\` (legacy chat form — superseded)
 
 ---
 
@@ -251,7 +258,7 @@ File mentions inside aligned HTML stay in the document form:
 
 1. Emit raw markdown/HTML as file content — do not wrap the whole document in a \`\`\`markdown fence unless the user asks for an example.
 2. Never invent file IDs; resolve them with tools first, then emit \`@[…](file:…?format=…)\`.
-3. Never write chat citation syntax (\`ID: … | Snippet: …\`) into documents.
+3. Never write \`lines\` / \`snippet\` query params into document content — those are chat-citation only.
 4. Never write diff markers (\`{+…+}\`, \`[-…-]\`) into content — the system adds those.
 5. Prefer image-layout blocks for placed imagery; use \`:::youtube {src="…"} :::\` for video embeds in markdown files.
 6. Keep headings at h1–h3 only.

@@ -1,5 +1,20 @@
 
 import { FILE_FORMATS } from "@/features/file-system/constants";
+import { formatFileTag } from "@/lib/file-tag";
+
+const fileTagExample = formatFileTag({
+  displayName: "my-file",
+  fileId: "5p9477a5-3634-44ec-b47d-fa2e63bd74c4",
+  format: "markdown",
+});
+
+const chatCitationExample = formatFileTag({
+  displayName: "my-file",
+  fileId: "5p9477a5-3634-44ec-b47d-fa2e63bd74c4",
+  format: "markdown",
+  lines: "L2-L5",
+  snippet: "a sample text ...",
+});
 
 export const fileSystemPrompt = `
 ## file_system
@@ -51,10 +66,13 @@ You can combine operators for highly targeted searches.
 ### Syntax Guidelines
 
 1. File Reference Syntax:
-User can reference files in their message following the syntax
-@[file name | start line - end line](ID: file id | snippet: truncated text snippet)
+Universal file tag (documents, skills, and chat):
+@[Display Name](file:FILE_ID?format=FORMAT)
 
-example: @[my-file | L2-L5](ID: 5p9477a5-3634-44ec-b47d-fa2e63bd74c4 | Snippet: a sample text ...)
+Optional chat-citation query params: \`lines\` (e.g. L2-L5) and \`snippet\` (truncated selection text).
+
+example (file mention): ${fileTagExample}
+example (chat citation): ${chatCitationExample}
 
 2. Diff Syntax (for diffs):
 The user needs to either accept or reject the changes you suggested.
