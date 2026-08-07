@@ -63,6 +63,28 @@ export const fileSystemRoutes = new Elysia({ prefix: '/projects/:projectId/files
       ]).optional(),
     })
   })
+  .get('/by-format', ({params, query}) => {
+    return fileService.listFilesByFormat({
+      projectId: params.projectId,
+      format: query.format,
+      limit: query.limit,
+    })
+  }, {
+    query: z.object({
+      format: z.enum([
+        fileFormat.MARKDOWN,
+        fileFormat.JSON,
+        fileFormat.IMAGE,
+        fileFormat.VIDEO,
+        fileFormat.AUDIO,
+        fileFormat.DOCUMENT,
+        fileFormat.VIDEO_EDITOR,
+        fileFormat.AI_GENERATED,
+        fileFormat.SKILL,
+      ]),
+      limit: z.coerce.number().int().positive().optional(),
+    })
+  })
   .get('/pending-operations', ({params})=>{
     return fileService.listPendingFileOperations(params.projectId)
   })

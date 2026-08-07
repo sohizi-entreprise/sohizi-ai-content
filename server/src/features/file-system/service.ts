@@ -266,6 +266,17 @@ export const searchFilesByName = async(
     });
 }
 
+export const listFilesByFormat = async(
+    request: { projectId: string; format: FileFormat; limit?: number },
+) => {
+    await validateProject(request.projectId);
+    return fileSystemRepo.searchFileNodesByFormat(
+        request.projectId,
+        request.format,
+        request.limit ?? 100,
+    );
+}
+
 export const updateFileNode = async(projectId: string, request: UpdateFileRequest) => {
     await validateProject(projectId);
     try {

@@ -110,6 +110,19 @@ export const searchFilesByName = async (
   return response.data
 }
 
+export const listFilesByFormat = async (
+  projectId: string,
+  format: string,
+  limit = 100,
+  options?: { signal?: AbortSignal },
+): Promise<FileNode[]> => {
+  const response = await api.get(`/projects/${projectId}/files/by-format`, {
+    params: { format, limit },
+    signal: options?.signal,
+  })
+  return response.data
+}
+
 export const createFileNode = async (projectId: string, data: {
   name: string
   directory: boolean

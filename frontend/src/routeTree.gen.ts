@@ -32,6 +32,8 @@ import { Route as DashboardMainProjectsRouteImport } from './routes/dashboard/ma
 import { Route as DashboardProjectsProjectIdGenerateRouteImport } from './routes/dashboard/projects/$projectId/generate'
 import { Route as DashboardProjectsProjectIdEditorRouteImport } from './routes/dashboard/projects/$projectId/editor'
 import { Route as DashboardProjectsProjectIdEditRouteImport } from './routes/dashboard/projects/$projectId/edit'
+import { Route as DashboardProjectsProjectIdVideoEditorIndexRouteImport } from './routes/dashboard/projects/$projectId/video-editor/index'
+import { Route as DashboardProjectsProjectIdVideoEditorFileNodeIdRouteImport } from './routes/dashboard/projects/$projectId/video-editor/$fileNodeId'
 import { Route as DashboardProjectsProjectIdEditStoryboardRouteImport } from './routes/dashboard/projects/$projectId/edit/storyboard'
 import { Route as DashboardProjectsProjectIdEditSettingsRouteImport } from './routes/dashboard/projects/$projectId/edit/settings'
 import { Route as DashboardProjectsProjectIdEditScriptRouteImport } from './routes/dashboard/projects/$projectId/edit/script'
@@ -157,6 +159,18 @@ const DashboardProjectsProjectIdEditRoute =
     path: '/edit',
     getParentRoute: () => DashboardProjectsProjectIdRoute,
   } as any)
+const DashboardProjectsProjectIdVideoEditorIndexRoute =
+  DashboardProjectsProjectIdVideoEditorIndexRouteImport.update({
+    id: '/video-editor/',
+    path: '/video-editor/',
+    getParentRoute: () => DashboardProjectsProjectIdRoute,
+  } as any)
+const DashboardProjectsProjectIdVideoEditorFileNodeIdRoute =
+  DashboardProjectsProjectIdVideoEditorFileNodeIdRouteImport.update({
+    id: '/video-editor/$fileNodeId',
+    path: '/video-editor/$fileNodeId',
+    getParentRoute: () => DashboardProjectsProjectIdRoute,
+  } as any)
 const DashboardProjectsProjectIdEditStoryboardRoute =
   DashboardProjectsProjectIdEditStoryboardRouteImport.update({
     id: '/storyboard',
@@ -217,6 +231,8 @@ export interface FileRoutesByFullPath {
   '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
   '/dashboard/projects/$projectId/edit/settings': typeof DashboardProjectsProjectIdEditSettingsRoute
   '/dashboard/projects/$projectId/edit/storyboard': typeof DashboardProjectsProjectIdEditStoryboardRoute
+  '/dashboard/projects/$projectId/video-editor/$fileNodeId': typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
+  '/dashboard/projects/$projectId/video-editor': typeof DashboardProjectsProjectIdVideoEditorIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -245,6 +261,8 @@ export interface FileRoutesByTo {
   '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
   '/dashboard/projects/$projectId/edit/settings': typeof DashboardProjectsProjectIdEditSettingsRoute
   '/dashboard/projects/$projectId/edit/storyboard': typeof DashboardProjectsProjectIdEditStoryboardRoute
+  '/dashboard/projects/$projectId/video-editor/$fileNodeId': typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
+  '/dashboard/projects/$projectId/video-editor': typeof DashboardProjectsProjectIdVideoEditorIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -276,6 +294,8 @@ export interface FileRoutesById {
   '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
   '/dashboard/projects/$projectId/edit/settings': typeof DashboardProjectsProjectIdEditSettingsRoute
   '/dashboard/projects/$projectId/edit/storyboard': typeof DashboardProjectsProjectIdEditStoryboardRoute
+  '/dashboard/projects/$projectId/video-editor/$fileNodeId': typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
+  '/dashboard/projects/$projectId/video-editor/': typeof DashboardProjectsProjectIdVideoEditorIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -308,6 +328,8 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/edit/script'
     | '/dashboard/projects/$projectId/edit/settings'
     | '/dashboard/projects/$projectId/edit/storyboard'
+    | '/dashboard/projects/$projectId/video-editor/$fileNodeId'
+    | '/dashboard/projects/$projectId/video-editor'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -336,6 +358,8 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/edit/script'
     | '/dashboard/projects/$projectId/edit/settings'
     | '/dashboard/projects/$projectId/edit/storyboard'
+    | '/dashboard/projects/$projectId/video-editor/$fileNodeId'
+    | '/dashboard/projects/$projectId/video-editor'
   id:
     | '__root__'
     | '/'
@@ -366,6 +390,8 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/edit/script'
     | '/dashboard/projects/$projectId/edit/settings'
     | '/dashboard/projects/$projectId/edit/storyboard'
+    | '/dashboard/projects/$projectId/video-editor/$fileNodeId'
+    | '/dashboard/projects/$projectId/video-editor/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -543,6 +569,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProjectsProjectIdEditRouteImport
       parentRoute: typeof DashboardProjectsProjectIdRoute
     }
+    '/dashboard/projects/$projectId/video-editor/': {
+      id: '/dashboard/projects/$projectId/video-editor/'
+      path: '/video-editor'
+      fullPath: '/dashboard/projects/$projectId/video-editor'
+      preLoaderRoute: typeof DashboardProjectsProjectIdVideoEditorIndexRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdRoute
+    }
+    '/dashboard/projects/$projectId/video-editor/$fileNodeId': {
+      id: '/dashboard/projects/$projectId/video-editor/$fileNodeId'
+      path: '/video-editor/$fileNodeId'
+      fullPath: '/dashboard/projects/$projectId/video-editor/$fileNodeId'
+      preLoaderRoute: typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdRoute
+    }
     '/dashboard/projects/$projectId/edit/storyboard': {
       id: '/dashboard/projects/$projectId/edit/storyboard'
       path: '/storyboard'
@@ -644,6 +684,8 @@ interface DashboardProjectsProjectIdRouteChildren {
   DashboardProjectsProjectIdEditRoute: typeof DashboardProjectsProjectIdEditRouteWithChildren
   DashboardProjectsProjectIdEditorRoute: typeof DashboardProjectsProjectIdEditorRoute
   DashboardProjectsProjectIdGenerateRoute: typeof DashboardProjectsProjectIdGenerateRoute
+  DashboardProjectsProjectIdVideoEditorFileNodeIdRoute: typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
+  DashboardProjectsProjectIdVideoEditorIndexRoute: typeof DashboardProjectsProjectIdVideoEditorIndexRoute
 }
 
 const DashboardProjectsProjectIdRouteChildren: DashboardProjectsProjectIdRouteChildren =
@@ -654,6 +696,10 @@ const DashboardProjectsProjectIdRouteChildren: DashboardProjectsProjectIdRouteCh
       DashboardProjectsProjectIdEditorRoute,
     DashboardProjectsProjectIdGenerateRoute:
       DashboardProjectsProjectIdGenerateRoute,
+    DashboardProjectsProjectIdVideoEditorFileNodeIdRoute:
+      DashboardProjectsProjectIdVideoEditorFileNodeIdRoute,
+    DashboardProjectsProjectIdVideoEditorIndexRoute:
+      DashboardProjectsProjectIdVideoEditorIndexRoute,
   }
 
 const DashboardProjectsProjectIdRouteWithChildren =

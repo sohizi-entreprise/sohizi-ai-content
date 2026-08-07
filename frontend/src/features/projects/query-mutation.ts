@@ -8,6 +8,7 @@ const keysFactory = {
     projects: (organizationId?: string) => organizationId ? ['projects', organizationId] : ['projects'],
     project: (id: string) => ['project', id, 'info'],
     fileTree: (projectId: string, parentId: string) => ['project', projectId, 'file-tree', parentId],
+    filesByFormat: (projectId: string, format: string) => ['project', projectId, 'files-by-format', format],
     projectOptions: () => ['projectOptions'],
     templates: () => ['templates'],
     publicTemplates: () => ['templates', 'public'],
@@ -72,6 +73,16 @@ export const getlistFileTreePerDirectoryOptions = (projectId: string, parentId: 
     refetchOnMount: false,
     refetchOnReconnect: true,
 })
+
+export const filesByFormatKey = (projectId: string, format: string) =>
+    keysFactory.filesByFormat(projectId, format)
+
+export const listFilesByFormatQueryOptions = (projectId: string, format: string, limit = 100) =>
+    queryOptions({
+        queryKey: keysFactory.filesByFormat(projectId, format),
+        queryFn: ({ signal }) => requests.listFilesByFormat(projectId, format, limit, { signal }),
+        staleTime: 1000 * 60 * 1,
+    })
 
 export const createFileNodeMutationOptions = (projectId: string) => mutationOptions({
     mutationFn: (data: {
