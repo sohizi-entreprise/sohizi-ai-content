@@ -7,6 +7,7 @@ import { inngest, functions } from "@/lib/inngest";
 import { serve } from "inngest/bun";
 import { auth } from "@/lib/auth";
 import { billingService, InsufficientCreditsError } from "@/features/billing";
+import { NameConflictError } from "@/features/skill-market";
 
 
 // 2. Set the global to false BEFORE importing your AI logic
@@ -47,7 +48,7 @@ const inngestHandler = new Elysia().all("/api/inngest", ({ request }: { request:
 const app = new Elysia()
                 .use(cors(corsConfig))
                 .use(betterAuthPlugin)
-                .error({...errors, InsufficientCreditsError})
+                .error({...errors, InsufficientCreditsError, NameConflictError})
                 .onError(({code, error, request})=>{
                   const url = new URL(request.url)
                   switch(code){
@@ -60,6 +61,8 @@ const app = new Elysia()
                       return error
                     case "InsufficientCreditsError":
                       return (error as InsufficientCreditsError).toResponse()
+                    case "NameConflictError":
+                      return (error as NameConflictError).toResponse()
                     case "VALIDATION":
                       return new errors.BadRequest(error.message)
                     default:
@@ -93,6 +96,7 @@ const app = new Elysia()
                 .use(routes.generationRequestRoutes)
                 .use(routes.commandRoutes)
                 .use(routes.modelsRoutes)
+                .use(routes.skillMarketRoutes)
                 .use(routes.adminRoutes)
                 .listen(3030);
 

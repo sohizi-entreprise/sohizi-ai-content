@@ -1,6 +1,7 @@
 import type { FileCreationRequest, UpdateFileContentRequest } from '../payload';
 import { MAX_FILE_DEPTH, MAX_FILE_IN_DIRECTORY } from '../constants';
 import * as fileSystemRepo from '../repo';
+import type { InitialFileContent } from '../repo';
 import { normalizeFileName } from '../utils';
 import { FileSystemConflictError, FileSystemInputError } from './base';
 
@@ -13,6 +14,7 @@ const EMPTY_FILE_CONTENT: UpdateFileContentRequest = {
 export const createFileNode = async(
     data: FileCreationRequest,
     content: UpdateFileContentRequest = EMPTY_FILE_CONTENT,
+    initialContent?: InitialFileContent,
 ) => {
     if(!data.parentId){
         throw new FileSystemInputError('Parent directory is required');
@@ -50,7 +52,12 @@ export const createFileNode = async(
         return fileNode;
     }
 
-    const fileNode = await fileSystemRepo.createFileWithContent(data.projectId, payload, content);
+    const fileNode = await fileSystemRepo.createFileWithContent(
+        data.projectId,
+        payload,
+        content,
+        initialContent,
+    );
     if (!fileNode) {
         throw new FileSystemConflictError('File name already exists in that parent directory.');
     }

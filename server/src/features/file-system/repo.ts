@@ -458,9 +458,13 @@ export const replaceFileContentChunks = async(
     });
 }
 
-type InitialFileContent = {
+export type InitialFileContent = {
     markdown?: string;
     json?: Record<string, any>;
+    skill?: {
+        description?: string;
+        instructions?: string;
+    };
 }
 
 export const createFileWithContentAtPosition = async(
@@ -525,8 +529,8 @@ async function createContentBasedOnFormat(tx: DbTransaction, fileNode: FileNode,
             await tx.insert(skills).values({
                 name: fileNode.name,
                 fileNodeId: fileNode.id,
-                description: '',
-                instructions: '',
+                description: initialContent?.skill?.description ?? '',
+                instructions: initialContent?.skill?.instructions ?? '',
             })
             break;
         case 'video-editor':
@@ -538,8 +542,13 @@ async function createContentBasedOnFormat(tx: DbTransaction, fileNode: FileNode,
     }
 }
 
-export const createFileWithContent = async(projectId: string, data: FileCreationRequest, content: UpdateFileContentRequest) => {
-    return createFileWithContentAtPosition(projectId, data, null, 'end');
+export const createFileWithContent = async(
+    projectId: string,
+    data: FileCreationRequest,
+    _content: UpdateFileContentRequest,
+    initialContent?: InitialFileContent,
+) => {
+    return createFileWithContentAtPosition(projectId, data, null, 'end', initialContent);
 }
 
 export const insertFileNodeInDirectory = async(

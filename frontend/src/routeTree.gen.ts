@@ -33,7 +33,9 @@ import { Route as DashboardProjectsProjectIdGenerateRouteImport } from './routes
 import { Route as DashboardProjectsProjectIdEditorRouteImport } from './routes/dashboard/projects/$projectId/editor'
 import { Route as DashboardProjectsProjectIdEditRouteImport } from './routes/dashboard/projects/$projectId/edit'
 import { Route as DashboardProjectsProjectIdVideoEditorIndexRouteImport } from './routes/dashboard/projects/$projectId/video-editor/index'
+import { Route as DashboardProjectsProjectIdSkillMarketIndexRouteImport } from './routes/dashboard/projects/$projectId/skill-market/index'
 import { Route as DashboardProjectsProjectIdVideoEditorFileNodeIdRouteImport } from './routes/dashboard/projects/$projectId/video-editor/$fileNodeId'
+import { Route as DashboardProjectsProjectIdSkillMarketSkillIdRouteImport } from './routes/dashboard/projects/$projectId/skill-market/$skillId'
 import { Route as DashboardProjectsProjectIdEditStoryboardRouteImport } from './routes/dashboard/projects/$projectId/edit/storyboard'
 import { Route as DashboardProjectsProjectIdEditSettingsRouteImport } from './routes/dashboard/projects/$projectId/edit/settings'
 import { Route as DashboardProjectsProjectIdEditScriptRouteImport } from './routes/dashboard/projects/$projectId/edit/script'
@@ -165,10 +167,22 @@ const DashboardProjectsProjectIdVideoEditorIndexRoute =
     path: '/video-editor/',
     getParentRoute: () => DashboardProjectsProjectIdRoute,
   } as any)
+const DashboardProjectsProjectIdSkillMarketIndexRoute =
+  DashboardProjectsProjectIdSkillMarketIndexRouteImport.update({
+    id: '/skill-market/',
+    path: '/skill-market/',
+    getParentRoute: () => DashboardProjectsProjectIdRoute,
+  } as any)
 const DashboardProjectsProjectIdVideoEditorFileNodeIdRoute =
   DashboardProjectsProjectIdVideoEditorFileNodeIdRouteImport.update({
     id: '/video-editor/$fileNodeId',
     path: '/video-editor/$fileNodeId',
+    getParentRoute: () => DashboardProjectsProjectIdRoute,
+  } as any)
+const DashboardProjectsProjectIdSkillMarketSkillIdRoute =
+  DashboardProjectsProjectIdSkillMarketSkillIdRouteImport.update({
+    id: '/skill-market/$skillId',
+    path: '/skill-market/$skillId',
     getParentRoute: () => DashboardProjectsProjectIdRoute,
   } as any)
 const DashboardProjectsProjectIdEditStoryboardRoute =
@@ -231,7 +245,9 @@ export interface FileRoutesByFullPath {
   '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
   '/dashboard/projects/$projectId/edit/settings': typeof DashboardProjectsProjectIdEditSettingsRoute
   '/dashboard/projects/$projectId/edit/storyboard': typeof DashboardProjectsProjectIdEditStoryboardRoute
+  '/dashboard/projects/$projectId/skill-market/$skillId': typeof DashboardProjectsProjectIdSkillMarketSkillIdRoute
   '/dashboard/projects/$projectId/video-editor/$fileNodeId': typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
+  '/dashboard/projects/$projectId/skill-market': typeof DashboardProjectsProjectIdSkillMarketIndexRoute
   '/dashboard/projects/$projectId/video-editor': typeof DashboardProjectsProjectIdVideoEditorIndexRoute
 }
 export interface FileRoutesByTo {
@@ -261,7 +277,9 @@ export interface FileRoutesByTo {
   '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
   '/dashboard/projects/$projectId/edit/settings': typeof DashboardProjectsProjectIdEditSettingsRoute
   '/dashboard/projects/$projectId/edit/storyboard': typeof DashboardProjectsProjectIdEditStoryboardRoute
+  '/dashboard/projects/$projectId/skill-market/$skillId': typeof DashboardProjectsProjectIdSkillMarketSkillIdRoute
   '/dashboard/projects/$projectId/video-editor/$fileNodeId': typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
+  '/dashboard/projects/$projectId/skill-market': typeof DashboardProjectsProjectIdSkillMarketIndexRoute
   '/dashboard/projects/$projectId/video-editor': typeof DashboardProjectsProjectIdVideoEditorIndexRoute
 }
 export interface FileRoutesById {
@@ -294,7 +312,9 @@ export interface FileRoutesById {
   '/dashboard/projects/$projectId/edit/script': typeof DashboardProjectsProjectIdEditScriptRoute
   '/dashboard/projects/$projectId/edit/settings': typeof DashboardProjectsProjectIdEditSettingsRoute
   '/dashboard/projects/$projectId/edit/storyboard': typeof DashboardProjectsProjectIdEditStoryboardRoute
+  '/dashboard/projects/$projectId/skill-market/$skillId': typeof DashboardProjectsProjectIdSkillMarketSkillIdRoute
   '/dashboard/projects/$projectId/video-editor/$fileNodeId': typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
+  '/dashboard/projects/$projectId/skill-market/': typeof DashboardProjectsProjectIdSkillMarketIndexRoute
   '/dashboard/projects/$projectId/video-editor/': typeof DashboardProjectsProjectIdVideoEditorIndexRoute
 }
 export interface FileRouteTypes {
@@ -328,7 +348,9 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/edit/script'
     | '/dashboard/projects/$projectId/edit/settings'
     | '/dashboard/projects/$projectId/edit/storyboard'
+    | '/dashboard/projects/$projectId/skill-market/$skillId'
     | '/dashboard/projects/$projectId/video-editor/$fileNodeId'
+    | '/dashboard/projects/$projectId/skill-market'
     | '/dashboard/projects/$projectId/video-editor'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -358,7 +380,9 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/edit/script'
     | '/dashboard/projects/$projectId/edit/settings'
     | '/dashboard/projects/$projectId/edit/storyboard'
+    | '/dashboard/projects/$projectId/skill-market/$skillId'
     | '/dashboard/projects/$projectId/video-editor/$fileNodeId'
+    | '/dashboard/projects/$projectId/skill-market'
     | '/dashboard/projects/$projectId/video-editor'
   id:
     | '__root__'
@@ -390,7 +414,9 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/edit/script'
     | '/dashboard/projects/$projectId/edit/settings'
     | '/dashboard/projects/$projectId/edit/storyboard'
+    | '/dashboard/projects/$projectId/skill-market/$skillId'
     | '/dashboard/projects/$projectId/video-editor/$fileNodeId'
+    | '/dashboard/projects/$projectId/skill-market/'
     | '/dashboard/projects/$projectId/video-editor/'
   fileRoutesById: FileRoutesById
 }
@@ -576,11 +602,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProjectsProjectIdVideoEditorIndexRouteImport
       parentRoute: typeof DashboardProjectsProjectIdRoute
     }
+    '/dashboard/projects/$projectId/skill-market/': {
+      id: '/dashboard/projects/$projectId/skill-market/'
+      path: '/skill-market'
+      fullPath: '/dashboard/projects/$projectId/skill-market'
+      preLoaderRoute: typeof DashboardProjectsProjectIdSkillMarketIndexRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdRoute
+    }
     '/dashboard/projects/$projectId/video-editor/$fileNodeId': {
       id: '/dashboard/projects/$projectId/video-editor/$fileNodeId'
       path: '/video-editor/$fileNodeId'
       fullPath: '/dashboard/projects/$projectId/video-editor/$fileNodeId'
       preLoaderRoute: typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdRoute
+    }
+    '/dashboard/projects/$projectId/skill-market/$skillId': {
+      id: '/dashboard/projects/$projectId/skill-market/$skillId'
+      path: '/skill-market/$skillId'
+      fullPath: '/dashboard/projects/$projectId/skill-market/$skillId'
+      preLoaderRoute: typeof DashboardProjectsProjectIdSkillMarketSkillIdRouteImport
       parentRoute: typeof DashboardProjectsProjectIdRoute
     }
     '/dashboard/projects/$projectId/edit/storyboard': {
@@ -684,7 +724,9 @@ interface DashboardProjectsProjectIdRouteChildren {
   DashboardProjectsProjectIdEditRoute: typeof DashboardProjectsProjectIdEditRouteWithChildren
   DashboardProjectsProjectIdEditorRoute: typeof DashboardProjectsProjectIdEditorRoute
   DashboardProjectsProjectIdGenerateRoute: typeof DashboardProjectsProjectIdGenerateRoute
+  DashboardProjectsProjectIdSkillMarketSkillIdRoute: typeof DashboardProjectsProjectIdSkillMarketSkillIdRoute
   DashboardProjectsProjectIdVideoEditorFileNodeIdRoute: typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
+  DashboardProjectsProjectIdSkillMarketIndexRoute: typeof DashboardProjectsProjectIdSkillMarketIndexRoute
   DashboardProjectsProjectIdVideoEditorIndexRoute: typeof DashboardProjectsProjectIdVideoEditorIndexRoute
 }
 
@@ -696,8 +738,12 @@ const DashboardProjectsProjectIdRouteChildren: DashboardProjectsProjectIdRouteCh
       DashboardProjectsProjectIdEditorRoute,
     DashboardProjectsProjectIdGenerateRoute:
       DashboardProjectsProjectIdGenerateRoute,
+    DashboardProjectsProjectIdSkillMarketSkillIdRoute:
+      DashboardProjectsProjectIdSkillMarketSkillIdRoute,
     DashboardProjectsProjectIdVideoEditorFileNodeIdRoute:
       DashboardProjectsProjectIdVideoEditorFileNodeIdRoute,
+    DashboardProjectsProjectIdSkillMarketIndexRoute:
+      DashboardProjectsProjectIdSkillMarketIndexRoute,
     DashboardProjectsProjectIdVideoEditorIndexRoute:
       DashboardProjectsProjectIdVideoEditorIndexRoute,
   }
