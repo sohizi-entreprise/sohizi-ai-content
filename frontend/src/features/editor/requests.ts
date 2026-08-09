@@ -55,6 +55,8 @@ export const saveFileContentDiff = async (
 export type SaveSkillPayload = {
   description?: string
   instructions?: string
+  status?: Skill['status']
+  visibility?: Skill['visibility']
 }
 
 export const saveSkill = async (

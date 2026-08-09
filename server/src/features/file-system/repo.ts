@@ -1052,6 +1052,8 @@ export const updateSkill = async(fileId: string, request: UpdateSkillRequest) =>
     const payload = {
         ...(request.description !== undefined ? { description: request.description } : {}),
         ...(request.instructions !== undefined ? { instructions: request.instructions } : {}),
+        ...(request.status !== undefined ? { status: request.status } : {}),
+        ...(request.visibility !== undefined ? { visibility: request.visibility } : {}),
     };
     const response = await db.update(skills).set(payload).where(and(
         eq(skills.fileNodeId, fileId),
@@ -1115,6 +1117,7 @@ export const listSkills = async (projectId: string) => {
                      .where(and(
                         eq(fileNodes.projectId, projectId),
                         eq(fileNodes.format, 'skill'),
+                        eq(skills.status, 'published'),
                      ));
 
     const catalogSkills = await db
@@ -1161,6 +1164,9 @@ export const getSkillByName = async (projectId: string, name: string) => {
                          ));
         const skill = skillResponse[0];
         if(skill) {
+            if(skill.status !== 'published') {
+                return null;
+            }
             return skill;
         }
     }

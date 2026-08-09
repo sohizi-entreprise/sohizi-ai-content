@@ -3,6 +3,7 @@ import { Tree } from 'react-arborist'
 import { useDragDropManager } from 'react-dnd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useFileTreeStore } from '../../stores/file-tree-store'
+import { useEditorStore } from '../../stores/editor-store'
 import {
   insertNodeAt as insertNodeInCache,
   isDirLoaded,
@@ -67,6 +68,8 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   const renameMutation = useMutation(renameFileNodeMutationOptions(projectId))
   const moveMutation = useMutation(moveFileNodeMutationOptions(projectId))
   const deleteMutation = useMutation(deleteFileNodeMutationOptions(projectId))
+  const openFile = useEditorStore((s) => s.openFile)
+  const closeTab = useEditorStore((s) => s.closeTab)
 
   const createFileNode = useCallback(
     (
@@ -125,6 +128,9 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
             parentId,
             node.directory ? { ...created, children: [] } : created,
           )
+          if (!created.directory) {
+            openFile(created)
+          }
         },
       })
       return
@@ -209,11 +215,22 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
       const node = findNodeInTree(treeData, id)
       if (!node) continue
 
+      const confirmed = window.confirm(
+        node.directory
+          ? `Delete folder "${node.name}" and all of its contents? This cannot be undone.`
+          : `Delete file "${node.name}"? This cannot be undone.`,
+      )
+      if (!confirmed) continue
+
+      const fileIdsToClose = collectDescendantFileIds(node)
       const parentId = node.parentId ?? rootFolderId
       removeNodeFromCache(queryClient, projectId, parentId, id)
       if (!id.startsWith('temp-')) {
         try {
           await deleteMutation.mutateAsync(id)
+          for (const fileId of fileIdsToClose) {
+            closeTab(fileId)
+          }
         } catch (err) {
           console.error('Failed to delete:', err)
         }
@@ -228,7 +245,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
 
   const nodeRenderer = useCallback(
     (props: NodeRendererProps<FileTreeNode>) => (
-      <div className="pr-4">
+      <div>
         <Node {...props} onCreateFile={createFileNode} />
       </div>
     ),
@@ -259,7 +276,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   return (
     <div
       ref={containerRef}
-      className="min-h-0 flex-1 overflow-hidden **:[scrollbar-color:var(--color-primary)_transparent]!"
+      className="min-h-0 flex-1 overflow-hidden"
     >
       <Tree<FileTreeNode>
         ref={setTree}
@@ -278,7 +295,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
         onRename={onRename}
         onMove={onMove}
         onDelete={onDelete}
-        className="pr-6!"
+        className="scrollbar-hide"
       >
         {nodeRenderer}
       </Tree>
@@ -298,4 +315,14 @@ function findNodeInTree(
     }
   }
   return null
+}
+
+function collectDescendantFileIds(node: FileTreeNode): string[] {
+  if (!node.directory) return [node.id]
+
+  const ids: string[] = []
+  for (const child of node.children ?? []) {
+    ids.push(...collectDescendantFileIds(child))
+  }
+  return ids
 }

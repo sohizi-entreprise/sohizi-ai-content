@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils"
 import { IconMusic, IconFileDescription, IconMovie, IconFileAi, IconFileLambda, IconFolderFilled, IconFolderOpenFilled, IconCameraAi } from "@tabler/icons-react"
 import { Clapperboard, File, FileImage , FileBadge} from "lucide-react"
 
@@ -11,14 +12,19 @@ export function getFileIcon(format: string, name?: string) {
       case 'audio':
         return <IconMusic className="size-4 shrink-0 text-green-400" />
       case 'video':
-        return <IconMovie className="size-4 shrink-0 text-purple-400" />
+        // text-purple-400
+        return <IconMovie className="size-4 shrink-0 text-green-400" />
       case 'image':
-        return <FileImage className="size-4 shrink-0 text-indigo-400" />
+        // text-indigo-400
+        return <FileImage className="size-4 shrink-0 text-green-400" />
       case 'document':
-        return <IconFileLambda className="size-4 shrink-0 text-pink-400" />
+        // text-pink-400
+        return <IconFileLambda className="size-4 shrink-0 text-green-400" />
       case 'video-editor':
-        return <Clapperboard className="size-4 shrink-0 text-yellow-300" />
+        // text-yellow-300
+        return <Clapperboard className="size-4 shrink-0 text-pink-300" />
       case 'ai-generated':
+        // text-yellow-300
         return <IconCameraAi className="size-4 shrink-0 text-yellow-300" />
       
       case 'skill':
@@ -28,12 +34,13 @@ export function getFileIcon(format: string, name?: string) {
     }
 }
 
-export function getDirectoryIcon(isOpen: boolean, _isEditable: boolean) {
+export function getDirectoryIcon(isOpen: boolean, isEditable: boolean, name: string) {
+  const isCoreFolder = name.toLowerCase() === 'core' && !isEditable;
     switch (true) {
       case isOpen:
-        return <IconFolderOpenFilled className="size-4 shrink-0 text-muted-foreground" />
+        return <IconFolderOpenFilled className={cn("size-4 shrink-0 text-muted-foreground", isCoreFolder ? "text-blue-400" : "")} />
       default:
-        return <IconFolderFilled className="size-4 shrink-0 text-muted-foreground" />
+        return <IconFolderFilled className={cn("size-4 shrink-0 text-muted-foreground", isCoreFolder ? "text-blue-400" : "")} />
     }
 }
  

@@ -436,7 +436,7 @@
   /* background-color: var(--color-gray-200);
   border-radius: 0.4rem; */
   box-decoration-break: clone;
-  color: black;
+  color: var(--foreground);
   /* padding: 0.1rem 0.3rem; */
 }
 

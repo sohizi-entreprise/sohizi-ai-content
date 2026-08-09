@@ -26,7 +26,6 @@ export interface EditorTab {
   name: string
   extension: string
   format: FileTreeNode['format']
-  pane: 'left' | 'right'
   content?: string
 }
 
@@ -34,6 +33,7 @@ export type MarkdownContent = {
   type: 'markdown'
   content: string
   revision: number
+  updatedAt: string
 }
 
 export type AssetContent = {

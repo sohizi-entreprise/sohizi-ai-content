@@ -1,4 +1,4 @@
-import { EditorContent, useEditor } from '@tiptap/react'
+import { EditorContent, useEditor, type Editor, type JSONContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TextAlign from '@tiptap/extension-text-align'
@@ -47,7 +47,6 @@ import {
 const editorExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
-    trailingNode: false,
     link: false,
   }),
   Placeholder.configure({
@@ -113,6 +112,10 @@ export function TextEditorView({
     from: '/dashboard/projects/$projectId/editor',
   })
   const baseMarkdown = initialContent || ''
+  const initialEditorContent = useMemo(
+    () => toEditorContent(baseMarkdown),
+    [baseMarkdown],
+  )
 
   const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(null)
   const appliedDiffRef = useRef(false)
@@ -167,8 +170,8 @@ export function TextEditorView({
         },
       }),
     ],
-    content: preprocessFileMentions(baseMarkdown.slice(0, MAX_CHARACTER_COUNT)),
-    contentType: 'markdown',
+    content: initialEditorContent.content,
+    contentType: initialEditorContent.contentType,
     editorProps: {
       attributes: {
         class: 'tiptap-editor-content focus:outline-none',
@@ -211,7 +214,7 @@ export function TextEditorView({
     isApplyingVisualDiffRef.current = true
 
     const markdownDiff = buildDiff(baseMarkdown, payload.content)
-    editor.commands.setContent(markdownDiff, { contentType: 'markdown' })
+    setEditorMarkdownContent(editor, markdownDiff)
     appliedDiffRef.current = true
     isApplyingVisualDiffRef.current = false
 
@@ -226,7 +229,7 @@ export function TextEditorView({
       if (!editor || !pendingOperation) return
 
       isApplyingVisualDiffRef.current = true
-      editor.commands.setContent(content, { contentType: 'markdown' })
+      setEditorMarkdownContent(editor, content)
       appliedDiffRef.current = false
       visualizedPendingKeyRef.current = null
       isApplyingVisualDiffRef.current = false
@@ -309,6 +312,39 @@ export function TextEditorView({
 
 function getPendingOperationKey(operation: PendingFileOperation) {
   return `${operation.fileNodeId}:${operation.updatedAt}`
+}
+
+const EMPTY_EDITOR_DOC: JSONContent = {
+  type: 'doc',
+  content: [{ type: 'paragraph' }],
+}
+
+/**
+ * TipTap's markdown parser turns empty/whitespace input into `{ type: 'doc' }`
+ * with no blocks. ProseMirror then draws a horizontal caret until Enter creates
+ * a paragraph. Always seed at least one empty paragraph instead.
+ */
+function toEditorContent(markdown: string): {
+  content: string | JSONContent
+  contentType?: 'markdown'
+} {
+  const sliced = markdown.slice(0, MAX_CHARACTER_COUNT)
+  if (!sliced.trim()) {
+    return { content: EMPTY_EDITOR_DOC }
+  }
+
+  return {
+    content: preprocessFileMentions(sliced),
+    contentType: 'markdown',
+  }
+}
+
+function setEditorMarkdownContent(editor: Editor, markdown: string) {
+  const next = toEditorContent(markdown)
+  editor.commands.setContent(
+    next.content,
+    next.contentType ? { contentType: next.contentType } : undefined,
+  )
 }
 
 // function buildDiff(text1: string, text2: string) {

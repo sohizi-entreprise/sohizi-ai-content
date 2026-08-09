@@ -1,12 +1,15 @@
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { TextEditorView } from '../content/text-editor-view'
 import { getFileContentQueryOptions } from '../../query-mutations'
+import { useEditorStore } from '../../stores/editor-store'
 import type { EditorTab } from '../../types'
 import { VideoEditor } from '@/features/video-editor'
 import { MediaGenerator } from '@/features/media-generator'
 import AssetViewer from '../content/asset-viewer'
 import { SkillEditorView } from '../content/skill-editor-view'
+import { AssetSkeleton, TextSkeleton } from '@/features/text-editor'
 
 interface ContentRouterProps {
   tab: EditorTab
@@ -33,9 +36,37 @@ export function ContentRouter({ tab }: ContentRouterProps) {
 function ServerRenderedContent({ tab, projectId }: ContentRouterProps & { projectId: string }) {
   const baseQueryOptions = getFileContentQueryOptions(projectId, tab.id)
   const { data, isLoading } = useQuery(baseQueryOptions)
+  const initLastSavedAt = useEditorStore((s) => s.initLastSavedAt)
+
+  useEffect(() => {
+    if (!data) return
+
+    if (data.type === 'markdown' && data.updatedAt) {
+      initLastSavedAt(tab.id, data.updatedAt)
+      return
+    }
+
+    if (data.type === 'skill' && data.data.updatedAt) {
+      initLastSavedAt(tab.id, data.data.updatedAt)
+    }
+  }, [data, initLastSavedAt, tab.id])
 
   if (isLoading) {
-    return <div>Loading...</div>
+    if(tab.format === 'markdown' || tab.format === 'skill') {
+      return (
+        <div className="h-full w-full overflow-hidden">
+          <div className="mx-auto min-w-2xl max-w-3xl px-6 pb-8 pt-12 space-y-4">
+            <TextSkeleton className="animate-pulse" />
+            <TextSkeleton className="animate-pulse" />
+            <TextSkeleton className="animate-pulse" />
+            <TextSkeleton className="animate-pulse" />
+            <TextSkeleton className="animate-pulse" />
+          </div>
+        </div>
+      )
+    }
+
+    return <AssetSkeleton />
   }
 
   if (data === undefined){
@@ -56,6 +87,8 @@ function ServerRenderedContent({ tab, projectId }: ContentRouterProps & { projec
         tab={tab}
         description={data.data.description}
         instruction={data.data.instructions}
+        status={data.data.status}
+        visibility={data.data.visibility}
       />
     case 'audio':
     case 'video':

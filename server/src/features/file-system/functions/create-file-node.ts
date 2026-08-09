@@ -24,6 +24,16 @@ export const createFileNode = async(
         throw new FileSystemInputError('Invalid parent directory');
     }
 
+    if (
+        !data.directory &&
+        parentFileNode.format &&
+        data.format !== parentFileNode.format
+    ) {
+        throw new FileSystemInputError(
+            `This folder only allows files with format "${parentFileNode.format}"`,
+        );
+    }
+
     const parentDepth = await fileSystemRepo.getFileNodeDepthById(data.projectId, data.parentId);
     if (parentDepth === null) {
         throw new FileSystemInputError('Invalid parent directory');

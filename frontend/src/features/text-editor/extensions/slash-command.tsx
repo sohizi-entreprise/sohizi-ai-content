@@ -273,33 +273,37 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>((props, ref) =>
   }))
 
   return (
-    <div className="bg-white border border-gray-200 drop-shadow-2xl rounded-lg p-1 w-70 flex flex-col min-h-60" ref={menuRef}>
+    <div
+      className="flex min-h-60 w-70 flex-col rounded-lg border border-border bg-popover p-1 text-popover-foreground drop-shadow-2xl"
+      ref={menuRef}
+    >
       {props.items.length ? (
         props.items.map((item, index) => (
           <button
             key={item.title}
+            type="button"
             ref={(el) => { itemRefs.current[index] = el }}
             onClick={() => selectItem(index)}
             onMouseEnter={() => setSelectedIndex(index)}
             className={cn(
-              'flex items-center px-1 py-2 rounded gap-4',
-              index === selectedIndex && 'bg-primary/20'
+              'flex items-center gap-4 rounded px-1 py-2 text-left text-popover-foreground',
+              index === selectedIndex && 'bg-accent text-accent-foreground',
             )}
           >
-            <div className="text-gray-400">
+            <div className="text-muted-foreground">
               {item.icon}
             </div>
-            <div className="flex flex-col flex-1 items-start">
-              <span className="text-sm font-medium text-black">{item.title}</span>
+            <div className="flex flex-1 flex-col items-start">
+              <span className="text-sm font-medium">{item.title}</span>
               <span className="text-xs text-muted-foreground">{item.description}</span>
             </div>
-            <span className="bg-gray-200 text-sm rounded text-muted-foreground py-[2px] px-1">
+            <span className="rounded bg-muted px-1 py-[2px] text-sm text-muted-foreground">
               {item.shortcut}
             </span>
           </button>
         ))
       ) : (
-        <div className="text-black text-center p-4">No results</div>
+        <div className="p-4 text-center text-muted-foreground">No results</div>
       )}
     </div>
   )

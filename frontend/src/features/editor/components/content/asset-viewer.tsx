@@ -23,7 +23,7 @@ export default function AssetViewer(props: Props) {
 
 function ImageViewer({ uri, name }: { uri: string; name: string }) {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-black/20 p-4">
+    <div className="flex h-full w-full items-center justify-center p-4">
       <img src={uri} alt={name} className="max-h-full max-w-full object-contain" />
     </div>
   )

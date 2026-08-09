@@ -207,7 +207,12 @@ export const getFileContent = async(projectId: string, fileNodeId: string, pagin
             if (!textContent) {
                 throw new NotFound('File content not found');
             }
-            return {type: 'markdown',content: textContent.content, revision: textContent.revision};
+            return {
+                type: 'markdown',
+                content: textContent.content,
+                revision: textContent.revision,
+                updatedAt: textContent.updatedAt,
+            };
         }
         case fileFormat.AUDIO:
         case fileFormat.VIDEO:

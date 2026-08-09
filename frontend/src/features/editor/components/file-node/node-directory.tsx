@@ -71,8 +71,8 @@ export function DirectoryNode(props: NodeProps) {
       className={cn(
         'group flex cursor-pointer items-center gap-1 rounded-sm px-1 py-0.5 text-sm',
         isSelected
-          ? 'bg-accent/60 text-foreground'
-          : 'text-muted-foreground hover:bg-accent/30 hover:text-foreground',
+          ? 'bg-accent text-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
       )}
       onClick={handleClick}
       data-format={node.data.format}
@@ -86,7 +86,7 @@ export function DirectoryNode(props: NodeProps) {
         )}
       </span>
 
-      {getDirectoryIcon(node.isOpen, node.data.editable)}
+      {getDirectoryIcon(node.isOpen, node.data.editable, node.data.name)}
 
       {node.isEditing ? (
         <input
@@ -155,6 +155,9 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
   const options = getOptions(node.data)
   const [newFolderOption, ...remainingOptions] = options
   const closeNewFileSubmenu = () => setIsNewFileSubmenuOpen(false)
+  const lockedFormatOption = node.data.format
+    ? FILE_FORMAT_OPTIONS.find((format) => format.value === node.data.format)
+    : undefined
 
   return (
     <div>
@@ -189,46 +192,41 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
               {newFolderOption.label}
             </MenubarItem>
 
-            <MenubarGroup>
-              <MenubarSub
-                open={isNewFileSubmenuOpen}
-                onOpenChange={setIsNewFileSubmenuOpen}
+            {lockedFormatOption ? (
+              <MenubarItem
+                onClick={() => createFile(lockedFormatOption.value)}
+                onFocus={closeNewFileSubmenu}
+                onPointerMove={closeNewFileSubmenu}
               >
-                <MenubarSubTrigger className="flex items-center gap-2 cursor-pointer rounded-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground">
-                  <FilePlus className="size-4" />
-                  New file
-                </MenubarSubTrigger>
-                <MenubarSubContent>
-                  <MenubarGroup>
-                    {FILE_FORMAT_OPTIONS.map((format) => (
-                      <MenubarItem
-                        key={format.value}
-                        onClick={() => createFile(format.value)}
-                      >
-                        {format.label}
-                      </MenubarItem>
-                    ))}
-                  </MenubarGroup>
-                </MenubarSubContent>
-              </MenubarSub>
-            </MenubarGroup>
+                <FilePlus className="size-4 text-muted-foreground" />
+                New {lockedFormatOption.label}
+              </MenubarItem>
+            ) : (
+              <MenubarGroup>
+                <MenubarSub
+                  open={isNewFileSubmenuOpen}
+                  onOpenChange={setIsNewFileSubmenuOpen}
+                >
+                  <MenubarSubTrigger className="flex items-center gap-2 cursor-pointer rounded-sm text-foreground transition-colors hover:bg-background/50 ">
+                    <FilePlus className="size-4 text-muted-foreground" />
+                    New file
+                  </MenubarSubTrigger>
+                  <MenubarSubContent>
+                    <MenubarGroup>
+                      {FILE_FORMAT_OPTIONS.map((format) => (
+                        <MenubarItem
+                          key={format.value}
+                          onClick={() => createFile(format.value)}
+                        >
+                          {format.label}
+                        </MenubarItem>
+                      ))}
+                    </MenubarGroup>
+                  </MenubarSubContent>
+                </MenubarSub>
+              </MenubarGroup>
+            )}
 
-            {/* <MenubarSub>
-              <MenubarSubTrigger className="flex items-center gap-2 cursor-pointer rounded-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground">
-                  <FilePlus className="size-4" />
-                  New file
-              </MenubarSubTrigger>
-              <MenubarSubContent onClick={(e) => e.stopPropagation()}>
-                {FILE_FORMAT_OPTIONS.map((format) => (
-                  <MenubarItem
-                    key={format.value}
-                    onClick={() => createFile(format.value)}
-                  >
-                    {format.label}
-                  </MenubarItem>
-                ))}
-              </MenubarSubContent>
-            </MenubarSub> */}
             {remainingOptions.map((option) => (
               <MenubarItem
                 key={option.value}

@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import '@cyntler/react-doc-viewer/dist/index.css'
+import { AssetSkeleton } from '@/features/text-editor'
 
 const DocViewer = lazy(() =>
   import('@cyntler/react-doc-viewer').then((module) => ({
@@ -13,8 +14,8 @@ type Props = {
 
 export function DocumentViewer({ uri }: Props) {
   return (
-    <div className="h-full w-full">
-      <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading document…</div>}>
+    <div className="h-full w-full [&_#pdf-controls]:hidden!">
+      <Suspense fallback={<AssetSkeleton />}>
         <DocViewerLazy uri={uri} />
       </Suspense>
     </div>
@@ -30,7 +31,7 @@ function DocViewerLazy({ uri }: Props) {
           disableHeader: true,
         },
       }}
-      className='bg-black!'
+      className='bg-surface!'
     />
   )
 }

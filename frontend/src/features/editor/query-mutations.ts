@@ -69,6 +69,7 @@ export const saveFileContentMutationOptions = (
         type: 'markdown',
         content: data.content,
         revision: data.revision,
+        updatedAt: new Date().toISOString(),
       })
 
       if (variables.diffApplied) {
@@ -97,6 +98,7 @@ export const saveFileContentDiffMutationOptions = (
         type: 'markdown',
         content: data.content,
         revision: data.revision,
+        updatedAt: new Date().toISOString(),
       })
     },
   })

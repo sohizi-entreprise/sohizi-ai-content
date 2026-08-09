@@ -1,28 +1,18 @@
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from '@/components/ui/resizable'
 import { useEditorStore } from '../../stores/editor-store'
 import { EditorTabs } from './editor-tabs'
 import { ContentRouter } from './content-router'
 
-function PaneContent({ pane }: { pane: 'left' | 'right' }) {
+export function EditorWorkspace() {
   const openTabs = useEditorStore((s) => s.openTabs)
-  const activePaneTab = useEditorStore((s) => s.activePaneTab)
-  const paneTabs = openTabs.filter((t) => t.pane === pane)
-  const activeId = activePaneTab[pane]
-  const activeTab = paneTabs.find((t) => t.id === activeId) ?? paneTabs[0]
+  const activeTabId = useEditorStore((s) => s.activeTabId)
+  const activeTab =
+    openTabs.find((t) => t.id === activeTabId) ?? openTabs[0] ?? null
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
-      <EditorTabs tabs={paneTabs} activeTabId={activeTab?.id ?? null} pane={pane} />
+      <EditorTabs tabs={openTabs} activeTabId={activeTab?.id ?? null} />
       <div className="relative flex-1 overflow-y-auto rounded-t-xl bg-surface">
-        {activeTab ? (
-          <ContentRouter tab={activeTab} />
-        ) : (
-          <EmptyPane />
-        )}
+        {activeTab ? <ContentRouter tab={activeTab} /> : <EmptyPane />}
       </div>
     </div>
   )
@@ -39,25 +29,5 @@ function EmptyPane() {
         <p className="text-xs text-muted-foreground/60">Cmd+P to quick open</p>
       </div>
     </div>
-  )
-}
-
-export function EditorWorkspace() {
-  const splitView = useEditorStore((s) => s.splitView)
-
-  if (!splitView) {
-    return <PaneContent pane="left" />
-  }
-
-  return (
-    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
-      <ResizablePanel defaultSize={50} minSize={25}>
-        <PaneContent pane="left" />
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel defaultSize={50} minSize={25}>
-        <PaneContent pane="right" />
-      </ResizablePanel>
-    </ResizablePanelGroup>
   )
 }

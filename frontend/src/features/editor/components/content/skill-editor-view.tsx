@@ -19,8 +19,10 @@ import {
 } from '../../extensions/file-mention'
 import { ImageLayout } from '../../extensions/image-layout'
 import { SlashCommandExtension } from '../../extensions/slash-command'
+import { NestedTrailingNode } from '../../extensions/nested-trailing-node'
 import { EditorTopChrome } from './editor-top-chrome'
-import type { EditorTab } from '../../types'
+import { SkillMetaBadges } from './skill-meta-badges'
+import type { EditorTab, Skill } from '../../types'
 import type { JSONContent } from '@tiptap/react'
 import { useFileMentionSearch } from '@/hooks/use-file-mention-search'
 import './text-editor.css'
@@ -47,7 +49,7 @@ const SkillDescription = Node.create({
       'section',
       mergeAttributes(HTMLAttributes, {
         'data-type': 'skill-description',
-        class: 'rounded-xl border border-border bg-card/35 px-5 py-4 shadow-sm',
+        class: 'rounded-xl border border-border bg-card px-5 py-4 shadow-sm',
       }),
       [
         'div',
@@ -138,6 +140,11 @@ const skillEditorExtensions = [
   StarterKit.configure({
     document: false,
     heading: { levels: [1, 2, 3] },
+    // Doc-level TrailingNode can't insert into the fixed skill schema; use NestedTrailingNode.
+    trailingNode: false,
+  }),
+  NestedTrailingNode.configure({
+    containers: ['skillDescription', 'skillInstruction'],
   }),
   TableKit.configure({
     table: {
@@ -210,14 +217,17 @@ interface SkillEditorViewProps {
   tab: EditorTab
   description?: string
   instruction?: string
+  status?: Skill['status']
+  visibility?: Skill['visibility']
 }
-
-type SkillEditorContent = Omit<SkillEditorViewProps, 'tab'>
 
 function createSkillContent({
   description = '',
   instruction = '',
-}: SkillEditorContent): JSONContent {
+}: {
+  description?: string
+  instruction?: string
+}): JSONContent {
   return {
     type: 'doc',
     content: [
@@ -278,7 +288,12 @@ function blocksToMarkdown(blocks: Array<JSONContent>) {
   ).trim()
 }
 
-export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
+export function SkillEditorView({
+  tab,
+  status = 'draft',
+  visibility = 'private',
+  ...props
+}: SkillEditorViewProps) {
   const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(null)
   const { projectId } = useParams({
     from: '/dashboard/projects/$projectId/editor',
@@ -344,6 +359,12 @@ export function SkillEditorView({ tab, ...props }: SkillEditorViewProps) {
       <EditorTopChrome editor={editor} tabId={tab.id} />
       <div ref={setScrollContainer} className="flex-1 overflow-auto overscroll-none">
         <div className="mx-auto min-w-2xl max-w-3xl px-6 pb-8 pt-12">
+          <SkillMetaBadges
+            projectId={projectId}
+            fileId={tab.id}
+            status={status}
+            visibility={visibility}
+          />
           <EditorContent
             editor={editor}
             className="[&_.tiptap]:min-h-[420px] [&_.tiptap]:outline-none"

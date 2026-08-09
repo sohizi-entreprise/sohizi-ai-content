@@ -11,7 +11,7 @@ export const FILE_FORMAT_OPTIONS: Array<{
   label: string
   value: FileNodeFormat
 }> = [
-  { label: 'Default', value: 'markdown' },
+  { label: 'Document', value: 'markdown' },
   { label: 'Skill', value: 'skill' },
 ]
 
@@ -48,7 +48,7 @@ export const FileNodeMenu = (props: Props) => {
         ) : (
           <button
             type="button"
-            className="flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+            className="flex size-5 shrink-0 items-center justify-center rounded-sm text-foreground transition-colors hover:bg-accent/50"
           >
             <MoreHorizontal className="size-3.5" />
           </button>

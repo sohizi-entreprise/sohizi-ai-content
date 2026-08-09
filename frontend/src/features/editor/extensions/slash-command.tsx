@@ -214,7 +214,10 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>((props, ref) =>
   }))
 
   return (
-    <div className="bg-popover border drop-shadow-2xl rounded-2xl p-1 w-60 flex flex-col max-h-70 overflow-y-auto" ref={menuRef}>
+    <div
+      className="flex max-h-70 w-60 flex-col overflow-y-auto rounded-2xl border border-border bg-background p-1 text-foreground drop-shadow-2xl"
+      ref={menuRef}
+    >
       {props.items.length ? (
         props.items.map((item, index) => (
           <button
@@ -228,21 +231,21 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>((props, ref) =>
             }}
             onMouseEnter={() => setSelectedIndex(index)}
             className={cn(
-              'flex items-center px-1 py-2 rounded-xl gap-4',
-              index === selectedIndex && 'bg-card'
+              'flex items-center gap-4 rounded-xl px-1 py-2 text-left text-foreground',
+              index === selectedIndex && 'bg-muted',
             )}
           >
-            <div className="text-gray-400">
+            <div className="text-muted-foreground">
               {item.icon}
             </div>
-            <div className="flex flex-col flex-1 items-start">
-              <span className="text-sm font-medium text-foreground">{item.title}</span>
+            <div className="flex flex-1 flex-col items-start">
+              <span className="text-sm font-medium">{item.title}</span>
               <span className="text-xs text-muted-foreground">{item.description}</span>
             </div>
           </button>
         ))
       ) : (
-        <div className="text-muted-foreground text-center p-4">No results</div>
+        <div className="p-4 text-center text-muted-foreground">No results</div>
       )}
     </div>
   )

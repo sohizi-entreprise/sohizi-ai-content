@@ -46,8 +46,8 @@ export function DocumentNode(props: NodeProps) {
       className={cn(
         'group flex cursor-pointer items-center gap-1 rounded-sm px-1 py-0.5 text-sm',
         isSelected
-          ? 'bg-accent/60 text-foreground'
-          : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground',
+          ? 'bg-accent text-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
       )}
       onClick={handleClick}
       data-format={node.data.format}
@@ -114,6 +114,10 @@ function FileMenu({ node, tree, onCreateFile }: NodeProps) {
 
   const options = getOptions(node.data)
   const closeInsertSubmenus = () => setActiveInsertSubmenu(null)
+  const parentFormat = node.parent?.data.format
+  const lockedFormatOption = parentFormat
+    ? FILE_FORMAT_OPTIONS.find((format) => format.value === parentFormat)
+    : undefined
 
   return (
     <Menubar
@@ -138,48 +142,71 @@ function FileMenu({ node, tree, onCreateFile }: NodeProps) {
           onCloseAutoFocus={(e) => e.preventDefault()}
           onClick={(e) => e.stopPropagation()}
         >
-          <MenubarSub
-            open={activeInsertSubmenu === 'above'}
-            onOpenChange={(open) =>
-              setActiveInsertSubmenu(open ? 'above' : null)
-            }
-          >
-            <MenubarSubTrigger>
-              <ArrowUp className="size-4" />
-              Insert above
-            </MenubarSubTrigger>
-            <MenubarSubContent onClick={(e) => e.stopPropagation()}>
-              {FILE_FORMAT_OPTIONS.map((format) => (
-                <MenubarItem
-                  key={format.value}
-                  onClick={() => createSiblingFile('above', format.value)}
-                >
-                  {format.label}
-                </MenubarItem>
-              ))}
-            </MenubarSubContent>
-          </MenubarSub>
-          <MenubarSub
-            open={activeInsertSubmenu === 'below'}
-            onOpenChange={(open) =>
-              setActiveInsertSubmenu(open ? 'below' : null)
-            }
-          >
-            <MenubarSubTrigger>
-              <ArrowDown className="size-4" />
-              Insert below
-            </MenubarSubTrigger>
-            <MenubarSubContent onClick={(e) => e.stopPropagation()}>
-              {FILE_FORMAT_OPTIONS.map((format) => (
-                <MenubarItem
-                  key={format.value}
-                  onClick={() => createSiblingFile('below', format.value)}
-                >
-                  {format.label}
-                </MenubarItem>
-              ))}
-            </MenubarSubContent>
-          </MenubarSub>
+          {lockedFormatOption ? (
+            <>
+              <MenubarItem
+                onClick={() =>
+                  createSiblingFile('above', lockedFormatOption.value)
+                }
+              >
+                <ArrowUp className="size-4" />
+                Insert {lockedFormatOption.label} above
+              </MenubarItem>
+              <MenubarItem
+                onClick={() =>
+                  createSiblingFile('below', lockedFormatOption.value)
+                }
+              >
+                <ArrowDown className="size-4" />
+                Insert {lockedFormatOption.label} below
+              </MenubarItem>
+            </>
+          ) : (
+            <>
+              <MenubarSub
+                open={activeInsertSubmenu === 'above'}
+                onOpenChange={(open) =>
+                  setActiveInsertSubmenu(open ? 'above' : null)
+                }
+              >
+                <MenubarSubTrigger>
+                  <ArrowUp className="size-4" />
+                  Insert above
+                </MenubarSubTrigger>
+                <MenubarSubContent onClick={(e) => e.stopPropagation()}>
+                  {FILE_FORMAT_OPTIONS.map((format) => (
+                    <MenubarItem
+                      key={format.value}
+                      onClick={() => createSiblingFile('above', format.value)}
+                    >
+                      {format.label}
+                    </MenubarItem>
+                  ))}
+                </MenubarSubContent>
+              </MenubarSub>
+              <MenubarSub
+                open={activeInsertSubmenu === 'below'}
+                onOpenChange={(open) =>
+                  setActiveInsertSubmenu(open ? 'below' : null)
+                }
+              >
+                <MenubarSubTrigger>
+                  <ArrowDown className="size-4" />
+                  Insert below
+                </MenubarSubTrigger>
+                <MenubarSubContent onClick={(e) => e.stopPropagation()}>
+                  {FILE_FORMAT_OPTIONS.map((format) => (
+                    <MenubarItem
+                      key={format.value}
+                      onClick={() => createSiblingFile('below', format.value)}
+                    >
+                      {format.label}
+                    </MenubarItem>
+                  ))}
+                </MenubarSubContent>
+              </MenubarSub>
+            </>
+          )}
           {options.map((option) => (
             <MenubarItem
               key={option.value}

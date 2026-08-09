@@ -61,7 +61,7 @@ code,
   --muted: oklch(0.23 0.015 265);          /* Faint backgrounds */
   --muted-foreground: oklch(0.55 0.015 265);  /* Placeholders, secondary text */
   
-  --accent: oklch(0.28 0.02 265);          /* Interactive hover surfaces */
+  --accent: oklch(0.18 0.01 265 / 50%);          /* Interactive hover surfaces oklch(0.28 0.02 265)*/
   --accent-foreground: oklch(0.96 0.005 265);
   
   --destructive: oklch(0.70 0.16 25);      /* Soft Red (Media semantic color) */
@@ -267,6 +267,22 @@ code,
     var(--muted) 100%
   );
   background-size: 200% 100%;
+}
+
+@keyframes asset-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+}
+
+.animate-asset-skeleton-pulse {
+  animation: asset-skeleton-pulse 1.8s ease-in-out infinite;
 }
 
 /* Fade in animation */
