@@ -9,6 +9,10 @@ const keysFactory = {
     project: (id: string) => ['project', id, 'info'],
     fileTree: (projectId: string, parentId: string) => ['project', projectId, 'file-tree', parentId],
     filesByFormat: (projectId: string, format: string) => ['project', projectId, 'files-by-format', format],
+    projectAssets: (
+        projectId: string,
+        params: { name?: string; format?: string },
+    ) => ['project', projectId, 'assets-folder', params],
     projectOptions: () => ['projectOptions'],
     templates: () => ['templates'],
     publicTemplates: () => ['templates', 'public'],
@@ -81,6 +85,33 @@ export const listFilesByFormatQueryOptions = (projectId: string, format: string,
     queryOptions({
         queryKey: keysFactory.filesByFormat(projectId, format),
         queryFn: ({ signal }) => requests.listFilesByFormat(projectId, format, limit, { signal }),
+        staleTime: 1000 * 60 * 1,
+    })
+
+/** Prefix key — use for invalidating every assets-folder query for a project. */
+export const projectAssetsKey = (projectId: string) =>
+    ['project', projectId, 'assets-folder'] as const
+
+export const listProjectAssetsQueryOptions = (
+    projectId: string,
+    options?: {
+        name?: string
+        format?: 'image' | 'video' | 'audio'
+        limit?: number
+    },
+) =>
+    queryOptions({
+        queryKey: keysFactory.projectAssets(projectId, {
+            name: options?.name,
+            format: options?.format,
+        }),
+        queryFn: ({ signal }) =>
+            requests.listProjectAssets(projectId, {
+                name: options?.name,
+                format: options?.format,
+                limit: options?.limit,
+                signal,
+            }),
         staleTime: 1000 * 60 * 1,
     })
 

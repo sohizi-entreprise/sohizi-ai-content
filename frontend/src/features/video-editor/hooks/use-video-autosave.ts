@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useVideoEditorStore } from '../store/editor-store'
+import { useVideoEditorUiStore } from '../store/ui-store'
 import { batchEditMutationOptions } from '../query-mutations'
 import { diffStateToBatchOps, diffableSnapshotsEqual } from '../transforms'
 import { batchEdit } from '../requests'
@@ -56,9 +57,13 @@ export function useVideoEditorAutosave() {
       if (ops.length === 0) return
 
       isSavingRef.current = true
+      const { setSaveStatus } = useVideoEditorUiStore.getState()
+      setSaveStatus('saving')
       try {
         await sendBatch(ops)
+        setSaveStatus('saved')
       } catch (err) {
+        setSaveStatus('idle')
         console.error('[video-autosave] batch save failed:', err)
       } finally {
         isSavingRef.current = false
@@ -102,6 +107,7 @@ export function useVideoEditorAutosave() {
 
     return () => {
       unsubscribe()
+      useVideoEditorUiStore.getState().setSaveStatus('idle')
       if (timerRef.current) {
         clearTimeout(timerRef.current)
         timerRef.current = null

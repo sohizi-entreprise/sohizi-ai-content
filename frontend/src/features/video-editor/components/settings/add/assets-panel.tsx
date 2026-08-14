@@ -1,13 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDrag } from 'react-dnd'
 import { useQuery } from '@tanstack/react-query'
-import { Film, ImageIcon, Music2, Search } from 'lucide-react'
+import { Film, ImageIcon, Loader2, Music2, Search } from 'lucide-react'
 import { ARBORIST_NODE_DRAG_TYPE } from '@/features/editor/utils/arborist-dnd'
-import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
-import { useProjectFileTree } from '@/features/editor/stores/file-tree-cache'
-import { getFileContentQueryOptions } from '@/features/editor/query-mutations'
-import type { FileTreeNode } from '@/features/editor/types'
-import { useVideoEditorStore } from '../../../store/editor-store'
+import type { ProjectAssetFile } from '@/features/projects/type'
+import { listProjectAssetsQueryOptions } from '@/features/projects/query-mutation'
 import { useEmptyDragPreview } from '../../../hooks/use-empty-drag-preview'
 import {
   flushTimelineDropPreview,
@@ -15,6 +12,10 @@ import {
 } from '../../../utils/library-dnd'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import {
+  buildOptimizeddImageUrl,
+  imageUrlTransforms,
+} from '@/utils/transform-url'
 
 type MediaFormat = 'image' | 'video' | 'audio'
 
@@ -24,61 +25,81 @@ const FILTERS: Array<{ id: MediaFormat; label: string }> = [
   { id: 'audio', label: 'Audio' },
 ]
 
-export function AssetsPanel() {
-  const fileTreeProjectId = useFileTreeStore((s) => s.projectId)
-  const rootFolderId = useFileTreeStore((s) => s.rootFolderId)
-  const editorProjectId = useVideoEditorStore((s) => s.projectId)
-  const projectId = fileTreeProjectId ?? editorProjectId
-  const tree = useProjectFileTree(projectId ?? '', rootFolderId)
+interface AssetsPanelProps {
+  projectId: string
+}
 
+export function AssetsPanel({ projectId }: AssetsPanelProps) {
   const [format, setFormat] = useState<MediaFormat>('image')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
 
-  const assets = useMemo(() => {
-    const all = collectMediaNodes(tree)
-    const q = search.trim().toLowerCase()
-    return all.filter((node) => {
-      if (node.format !== format) return false
-      if (!q) return true
-      return node.name.toLowerCase().includes(q)
-    })
-  }, [tree, format, search])
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search.trim())
+    }, 250)
+    return () => window.clearTimeout(timeoutId)
+  }, [search])
+
+  const { data: assets = [], isLoading, isFetching } = useQuery(
+    listProjectAssetsQueryOptions(projectId, {
+      format,
+      name: debouncedSearch || undefined,
+    }),
+  )
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      <div className="relative shrink-0">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search assets..."
-          className="h-9 rounded-lg bg-muted/50 pl-8 text-sm"
-        />
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 flex-col gap-3 px-3.5 pb-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search assets..."
+            className="h-8 rounded-lg border-foreground/15 bg-muted/55 pl-8 text-xs shadow-none focus-visible:border-foreground/25 focus-visible:bg-muted/70 focus-visible:ring-0"
+          />
+          {isFetching && !isLoading ? (
+            <Loader2 className="absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+          ) : null}
+        </div>
+
+        <div
+          className="flex gap-4 border-b border-border/40"
+          role="tablist"
+          aria-label="Asset type"
+        >
+          {FILTERS.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              role="tab"
+              aria-selected={format === filter.id}
+              onClick={() => setFormat(filter.id)}
+              className={cn(
+                'relative pb-2 text-[11px] font-medium transition-colors',
+                format === filter.id
+                  ? 'text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-primary/80'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="flex shrink-0 gap-1.5 overflow-x-auto pb-0.5">
-        {FILTERS.map((filter) => (
-          <button
-            key={filter.id}
-            type="button"
-            onClick={() => setFormat(filter.id)}
-            className={cn(
-              'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-              format === filter.id
-                ? 'bg-muted-foreground/25 text-foreground'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
-            )}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {assets.length === 0 ? (
-          <div className="flex h-full min-h-24 items-center justify-center px-2 text-center">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-3.5">
+        {isLoading ? (
+          <div className="flex h-full min-h-28 items-center justify-center">
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : assets.length === 0 ? (
+          <div className="flex h-full min-h-28 flex-col items-center justify-center gap-1.5 text-center">
             <p className="text-xs text-muted-foreground">
-              No {format} assets found in this project
+              {debouncedSearch
+                ? `No ${format} matches in assets/`
+                : `No ${format} files in assets/`}
             </p>
           </div>
         ) : format === 'audio' ? (
@@ -93,7 +114,6 @@ export function AssetsPanel() {
               <MediaAssetTile
                 key={node.id}
                 node={node}
-                projectId={projectId}
                 format={format}
               />
             ))}
@@ -104,32 +124,18 @@ export function AssetsPanel() {
   )
 }
 
-function collectMediaNodes(nodes: FileTreeNode[]): FileTreeNode[] {
-  const result: FileTreeNode[] = []
-  const walk = (list: FileTreeNode[]) => {
-    for (const node of list) {
-      if (node.directory) {
-        if (node.children) walk(node.children)
-        continue
-      }
-      if (
-        node.format === 'image' ||
-        node.format === 'video' ||
-        node.format === 'audio'
-      ) {
-        result.push(node)
-      }
-    }
-  }
-  walk(nodes)
-  return result
-}
-
-function useAssetDrag(nodeId: string, label: string) {
+function useAssetDrag(node: ProjectAssetFile, format: MediaFormat) {
   const dragState = useDrag<LibraryAssetDragItem, void, { isDragging: boolean }>(
     () => ({
       type: ARBORIST_NODE_DRAG_TYPE,
-      item: { id: nodeId, dragIds: [nodeId], fromLibrary: true, label },
+      item: {
+        id: node.id,
+        dragIds: [node.id],
+        fromLibrary: true,
+        label: node.name,
+        format,
+        url: node.url,
+      },
       end: () => {
         flushTimelineDropPreview()
       },
@@ -137,7 +143,7 @@ function useAssetDrag(nodeId: string, label: string) {
         isDragging: monitor.isDragging(),
       }),
     }),
-    [nodeId, label],
+    [node.id, node.name, node.url, format],
   )
   // Native preview is suppressed; LibraryDragLayer follows the cursor until
   // the pointer enters the timeline, then the timeline ghost takes over.
@@ -147,21 +153,16 @@ function useAssetDrag(nodeId: string, label: string) {
 
 function MediaAssetTile({
   node,
-  projectId,
   format,
 }: {
-  node: FileTreeNode
-  projectId: string | null
+  node: ProjectAssetFile
   format: 'image' | 'video'
 }) {
-  const [{ isDragging }, drag] = useAssetDrag(node.id, node.name)
-  const { data } = useQuery({
-    ...getFileContentQueryOptions(projectId ?? '', node.id),
-    enabled: !!projectId && format === 'image',
-  })
-
-  const url =
-    data && (data.type === 'image' || data.type === 'video') ? data.url : null
+  const [{ isDragging }, drag] = useAssetDrag(node, format)
+  const thumbnailUrl =
+    format === 'image' && node.url
+      ? buildOptimizeddImageUrl(node.url, imageUrlTransforms.thumbnails.small)
+      : null
 
   return (
     <button
@@ -176,10 +177,10 @@ function MediaAssetTile({
       )}
       title={`Drag "${node.name}" to timeline`}
     >
-      <div className="relative aspect-square overflow-hidden rounded-lg bg-muted/70">
-        {url && format === 'image' ? (
+      <div className="relative aspect-square overflow-hidden rounded-xl bg-muted/70 ring-1 ring-border/40 transition-shadow group-hover:ring-border/70">
+        {thumbnailUrl ? (
           <img
-            src={url}
+            src={thumbnailUrl}
             alt=""
             className="size-full object-cover"
             draggable={false}
@@ -187,22 +188,22 @@ function MediaAssetTile({
         ) : (
           <div className="flex size-full items-center justify-center text-muted-foreground">
             {format === 'video' ? (
-              <Film className="size-6" />
+              <Film className="size-5" />
             ) : (
-              <ImageIcon className="size-6" />
+              <ImageIcon className="size-5" />
             )}
           </div>
         )}
       </div>
-      <span className="truncate px-0.5 text-[11px] text-muted-foreground group-hover:text-foreground">
+      <span className="truncate px-0.5 text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
         {node.name}
       </span>
     </button>
   )
 }
 
-function AudioAssetRow({ node }: { node: FileTreeNode }) {
-  const [{ isDragging }, drag] = useAssetDrag(node.id, node.name)
+function AudioAssetRow({ node }: { node: ProjectAssetFile }) {
+  const [{ isDragging }, drag] = useAssetDrag(node, 'audio')
 
   return (
     <li>
@@ -213,12 +214,12 @@ function AudioAssetRow({ node }: { node: FileTreeNode }) {
         type="button"
         draggable={false}
         className={cn(
-          'flex w-full cursor-grab items-center gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-muted/60 active:cursor-grabbing',
+          'flex w-full cursor-grab items-center gap-2.5 rounded-xl px-2 py-2 text-left ring-1 ring-transparent hover:bg-muted/55 hover:ring-border/40 active:cursor-grabbing',
           isDragging && 'opacity-40',
         )}
         title={`Drag "${node.name}" to timeline`}
       >
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <Music2 className="size-4" />
         </div>
         <div className="min-w-0 flex-1">

@@ -1,3 +1,4 @@
+import type { RenderCompositionInput } from '@sohizi/video-composition'
 import api from '@/lib/axios'
 
 // ============================================================================
@@ -44,11 +45,11 @@ export type ServerClip = {
   updatedAt: string
 }
 
-type ServerTrackWithClips = ServerTrack & { clips: ServerClip[] }
+type ServerTrackWithClips = ServerTrack & { clips: Array<ServerClip> }
 
 export type LoadCompositionResponse = {
   composition: ServerComposition
-  tracks: ServerTrackWithClips[]
+  tracks: Array<ServerTrackWithClips>
 }
 
 export type CreateCompositionInput = {
@@ -69,9 +70,32 @@ export type UpdateCompositionInput = {
 }
 
 export type BatchOperation =
-  | { op: 'update_composition'; compositionId: string; patch: UpdateCompositionInput }
-  | { op: 'add_track'; data: { id?: string; type: string; name: string; position?: number; muted?: boolean; hidden?: boolean } }
-  | { op: 'update_track'; trackId: string; patch: { name?: string; position?: number; muted?: boolean; hidden?: boolean } }
+  | {
+      op: 'update_composition'
+      compositionId: string
+      patch: UpdateCompositionInput
+    }
+  | {
+      op: 'add_track'
+      data: {
+        id?: string
+        type: string
+        name: string
+        position?: number
+        muted?: boolean
+        hidden?: boolean
+      }
+    }
+  | {
+      op: 'update_track'
+      trackId: string
+      patch: {
+        name?: string
+        position?: number
+        muted?: boolean
+        hidden?: boolean
+      }
+    }
   | { op: 'remove_track'; trackId: string }
   | {
       op: 'add_clip'
@@ -87,7 +111,18 @@ export type BatchOperation =
         properties: Record<string, unknown>
       }
     }
-  | { op: 'update_clip'; clipId: string; patch: { trackId?: string; startFrame?: number; endFrame?: number; sourceStartFrame?: number; sourceDurationInFrames?: number; properties?: Record<string, unknown> } }
+  | {
+      op: 'update_clip'
+      clipId: string
+      patch: {
+        trackId?: string
+        startFrame?: number
+        endFrame?: number
+        sourceStartFrame?: number
+        sourceDurationInFrames?: number
+        properties?: Record<string, unknown>
+      }
+    }
   | { op: 'remove_clip'; clipId: string }
 
 // ============================================================================
@@ -130,7 +165,7 @@ export async function updateComposition(
 export async function batchEdit(
   projectId: string,
   compositionId: string,
-  operations: BatchOperation[],
+  operations: Array<BatchOperation>,
 ): Promise<Array<{ op: string; id: string }>> {
   const res = await api.post<Array<{ op: string; id: string }>>(
     `/video-editor/${projectId}/compositions/${compositionId}/batch`,
@@ -142,10 +177,88 @@ export async function batchEdit(
 export async function generateCaption(
   projectId: string,
   trackId: string,
-): Promise<{ok: boolean}> {
+): Promise<{ ok: boolean }> {
   const res = await api.post(
     `/video-editor/${projectId}/tracks/${trackId}/captions`,
   )
+  return res.data
+}
+
+// ============================================================================
+// Renders
+// ============================================================================
+
+export type RenderJobStatus =
+  | 'queued'
+  | 'rendering'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+
+export type RenderJob = {
+  id: string
+  status: RenderJobStatus
+  /** Percentage, 0-100. */
+  progress: number
+  fileName: string
+  fps: number
+  width: number
+  height: number
+  durationInFrames: number
+  sizeInBytes: number | null
+  error: { code: string; message: string } | null
+  createdAt: string
+  startedAt: string | null
+  finishedAt: string | null
+}
+
+export type CreateRenderInput = {
+  contractVersion: number
+  fileName: string
+  composition: RenderCompositionInput
+}
+
+export async function createRender(
+  projectId: string,
+  compositionId: string,
+  input: CreateRenderInput,
+): Promise<RenderJob> {
+  const res = await api.post<RenderJob>(
+    `/video-editor/${projectId}/compositions/${compositionId}/renders`,
+    input,
+  )
+  return res.data
+}
+
+export async function getRender(
+  projectId: string,
+  renderJobId: string,
+): Promise<RenderJob> {
+  const res = await api.get<RenderJob>(
+    `/video-editor/${projectId}/renders/${renderJobId}`,
+  )
+  return res.data
+}
+
+export async function cancelRender(
+  projectId: string,
+  renderJobId: string,
+): Promise<RenderJob> {
+  const res = await api.delete<RenderJob>(
+    `/video-editor/${projectId}/renders/${renderJobId}`,
+  )
+  return res.data
+}
+
+export async function getRenderDownload(
+  projectId: string,
+  renderJobId: string,
+): Promise<{ url: string; fileName: string; sizeInBytes: number | null }> {
+  const res = await api.get<{
+    url: string
+    fileName: string
+    sizeInBytes: number | null
+  }>(`/video-editor/${projectId}/renders/${renderJobId}/download`)
   return res.data
 }
 

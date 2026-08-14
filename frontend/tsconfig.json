@@ -23,7 +23,14 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      /* The shared composition package is consumed as source from outside this
+         app. It resolves React and Remotion from its own devDependencies for
+         type checking; `resolve.dedupe` in vite.config.ts collapses them onto
+         this app's copies at runtime. */
+      "@sohizi/video-composition": [
+        "../cloudflare/packages/video-composition/src/index.ts"
+      ]
     }
   }
 }

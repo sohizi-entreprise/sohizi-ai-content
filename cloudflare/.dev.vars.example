@@ -1,0 +1,3 @@
+# Copy to .dev.vars for `wrangler dev`. Deployed environments read this value
+# from `wrangler secret put RENDER_SERVICE_TOKEN`.
+RENDER_SERVICE_TOKEN="local-render-token"

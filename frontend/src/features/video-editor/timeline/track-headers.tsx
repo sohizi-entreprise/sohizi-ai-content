@@ -1,29 +1,55 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  AudioLines,
+  Code2,
   Eye,
   EyeOff,
-  GripVertical,
+  Film,
+  ImageIcon,
+  MoreHorizontal,
+  Subtitles,
   Trash2,
+  Type,
   Volume2,
   VolumeX,
 } from 'lucide-react'
 import { useVideoEditorStore } from '../store/editor-store'
-import type { Track } from '../store/types'
+import type { LucideIcon } from 'lucide-react'
+import type { Track, TrackType } from '../store/types'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface TrackHeadersProps {
   rowHeight: number
   scrollTop: number
   width: number
+  /** Aligns the first row with the timeline's ruler + edit-area offset. */
+  topOffset: number
 }
 
-const ROW_VERTICAL_GAP = 1
+const TRACK_ICON: Record<TrackType, LucideIcon> = {
+  video: Film,
+  audio: AudioLines,
+  image: ImageIcon,
+  text: Type,
+  caption: Subtitles,
+  html: Code2,
+}
+
+const iconBtn =
+  'size-7 shrink-0 rounded-md text-muted-foreground/55 hover:bg-muted/55 hover:text-foreground/80'
 
 export function TrackHeaders({
   rowHeight,
   scrollTop,
   width,
+  topOffset,
 }: TrackHeadersProps) {
   const tracks = useVideoEditorStore((s) => s.tracks)
   const toggleTrackHidden = useVideoEditorStore((s) => s.toggleTrackHidden)
@@ -47,7 +73,7 @@ export function TrackHeaders({
     try {
       e.dataTransfer.setData('text/plain', String(index))
     } catch {
-      // ignore
+      // Some browsers reject custom payloads; the index state is enough.
     }
   }
 
@@ -74,16 +100,17 @@ export function TrackHeaders({
   return (
     <div
       ref={containerRef}
-      className="overflow-hidden border-r border-border bg-card"
+      className="shrink-0 overflow-hidden border-r border-border/40 bg-background/40"
       style={{ width }}
     >
-      <div>
+      <div style={{ paddingTop: topOffset }}>
         {tracks.map((track, index) => (
           <TrackHeaderRow
             key={track.id}
             track={track}
             rowHeight={rowHeight}
             isDragOver={hoverIndex === index && draggingIndex !== index}
+            isDragging={draggingIndex === index}
             onToggleHidden={() => toggleTrackHidden(track.id)}
             onToggleMuted={() => toggleTrackMuted(track.id)}
             onDelete={() => removeTrack(track.id)}
@@ -102,6 +129,7 @@ interface TrackHeaderRowProps {
   track: Track
   rowHeight: number
   isDragOver: boolean
+  isDragging: boolean
   onToggleHidden: () => void
   onToggleMuted: () => void
   onDelete: () => void
@@ -109,12 +137,13 @@ interface TrackHeaderRowProps {
   onDragOver: (e: React.DragEvent) => void
   onDrop: (e: React.DragEvent) => void
   onDragEnd: (e: React.DragEvent) => void
-}
+}   
 
 function TrackHeaderRow({
   track,
   rowHeight,
   isDragOver,
+  isDragging,
   onToggleHidden,
   onToggleMuted,
   onDelete,
@@ -123,61 +152,94 @@ function TrackHeaderRow({
   onDrop,
   onDragEnd,
 }: TrackHeaderRowProps) {
+  const Icon = TRACK_ICON[track.type]
+  const hasAudio = track.type === 'audio' || track.type === 'video'
+
   return (
     <div
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       className={cn(
-        'flex items-center gap-1 px-1.5 text-[11px]',
-        isDragOver ? 'bg-accent/40' : 'bg-transparent',
+        'group/track flex items-center justify-center gap-0.5 border-b border-border/30 px-3 transition-colors',
+        isDragOver && 'bg-surface',
+        isDragging && 'opacity-35',
       )}
-      style={{ height: rowHeight, marginBottom: ROW_VERTICAL_GAP }}
+      style={{ height: rowHeight }}
     >
+      {/* Type identity doubles as drag handle — keeps the rail icon-only. */}
       <div
         draggable
         onDragStart={onDragStart}
-        className="flex h-full cursor-grab items-center px-1 text-muted-foreground active:cursor-grabbing"
-        title="Drag to reorder"
+        title={`${track.name} · drag to reorder`}
+        className={cn(
+          'flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground/65 transition-colors active:cursor-grabbing',
+          'hover:bg-muted/55 hover:text-foreground/80',
+          track.hidden && 'opacity-45',
+        )}
       >
-        <GripVertical className="size-3" />
+        <Icon className="size-3.5" strokeWidth={1.75} />
       </div>
+
       <Button
         variant="ghost"
         size="icon-sm"
-        className="size-6"
+        className={cn(
+          iconBtn,
+          track.hidden && 'bg-muted/45 text-foreground/75',
+        )}
         onClick={onToggleHidden}
         title={track.hidden ? 'Show track' : 'Hide track'}
       >
         {track.hidden ? (
-          <EyeOff className="size-3.5 text-muted-foreground" />
+          <EyeOff className="size-3.5" strokeWidth={1.75} />
         ) : (
-          <Eye className="size-3.5" />
+          <Eye className="size-3.5" strokeWidth={1.75} />
         )}
       </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="size-6"
-        onClick={onToggleMuted}
-        title={track.muted ? 'Unmute track' : 'Mute track'}
-      >
-        {track.muted ? (
-          <VolumeX className="size-3.5 text-muted-foreground" />
-        ) : (
-          <Volume2 className="size-3.5" />
-        )}
-      </Button>
-      <div className="flex-1 truncate text-foreground">{track.name}</div>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="size-6 text-muted-foreground hover:text-destructive"
-        onClick={onDelete}
-        title="Delete track"
-      >
-        <Trash2 className="size-3.5" />
-      </Button>
+
+      {hasAudio ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className={cn(
+            iconBtn,
+            track.muted && 'bg-muted/45 text-foreground/75',
+          )}
+          onClick={onToggleMuted}
+          title={track.muted ? 'Unmute track' : 'Mute track'}
+        >
+          {track.muted ? (
+            <VolumeX className="size-3.5" strokeWidth={1.75} />
+          ) : (
+            <Volume2 className="size-3.5" strokeWidth={1.75} />
+          )}
+        </Button>
+      ) : (
+        <span className="size-7 shrink-0" aria-hidden />
+      )}
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className={iconBtn}
+            title="Track options"
+          >
+            <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="right" className="min-w-36">
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={onDelete}
+          >
+            <Trash2 className="size-3.5" />
+            Delete track
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

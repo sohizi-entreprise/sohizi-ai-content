@@ -26,6 +26,11 @@ export type FileNode = {
     contentEditable: boolean;
 }
 
+/** File node from the assets-folder listing, with media URL joined in. */
+export type ProjectAssetFile = FileNode & {
+    url: string | null
+}
+
 export type FileNodeContent = {
     id: string;
     fileNodeId: string;

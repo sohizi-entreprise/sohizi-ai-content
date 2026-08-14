@@ -14,6 +14,7 @@ import { TextBlock } from './renderers/text-block'
 import { ImageBlock } from './renderers/image-block'
 import { getHtmlClipLabel, HtmlBlock } from './renderers/html-block'
 import { CaptionBlock } from './renderers/caption-block'
+import { CLIP_ACCENT, clipSurface } from './renderers/clip-shell'
 import type { ProjectState, TrackType } from '../store/types'
 import type {
   TimelineEditor,
@@ -31,16 +32,22 @@ import {
   isPointerOverTimelineDropArea,
   registerTimelineDropPreviewClear,
   VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE,
+  type LibraryAssetDragItem,
   type TextPresetDragItem,
 } from '../utils/library-dnd'
 import { ingestFileNodeClip } from '../utils/ingest-file-node-clip'
 import { ingestTextPresetClip } from '../utils/ingest-text-preset-clip'
 
 const ROW_HEIGHT = 44
-const HEADERS_WIDTH = 192
+const HEADERS_WIDTH = 140
 const SCALE_WIDTH_BASE = 80
 const SCALE_SECONDS = 5
 const START_LEFT = 20
+// The library stacks a 32px ruler above the edit area, which our stylesheet
+// offsets by a further 6px. Track headers need the same offset to line up.
+const TIME_AREA_HEIGHT = 32
+const EDIT_AREA_MARGIN_TOP = 6
+const HEADERS_TOP_OFFSET = TIME_AREA_HEIGHT + EDIT_AREA_MARGIN_TOP
 const DEFAULT_MEDIA_DURATION_SEC = 5
 // Fraction of the dragged clip that must overlap a row for the drop to be
 // treated as "insert into this track". Below this threshold the drop is
@@ -637,11 +644,34 @@ export function VideoTimeline() {
     [getEditAreaEl],
   )
 
-  const findDraggedFileNode = useCallback(
-    (id: string): FileTreeNode | null => {
+  const resolveDraggedMedia = useCallback(
+    (
+      item: ArboristNodeDragItem | LibraryAssetDragItem,
+    ): {
+      id: string
+      name: string
+      format: MediaClipKind
+      url?: string | null
+    } | null => {
+      if ('fromLibrary' in item && item.fromLibrary) {
+        if (!['video', 'audio', 'image'].includes(item.format)) return null
+        return {
+          id: item.id,
+          name: item.label,
+          format: item.format,
+          url: item.url,
+        }
+      }
+
       const { projectId, rootFolderId } = useFileTreeStore.getState()
       if (!projectId) return null
-      return findNodeById(queryClient, projectId, rootFolderId, id)
+      const node = findNodeById(queryClient, projectId, rootFolderId, item.id)
+      if (!isMediaFileNode(node)) return null
+      return {
+        id: node.id,
+        name: node.name,
+        format: node.format,
+      }
     },
     [queryClient],
   )
@@ -650,7 +680,7 @@ export function VideoTimeline() {
     () => ({
       accept: [ARBORIST_NODE_DRAG_TYPE, VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE],
       hover(
-        item: ArboristNodeDragItem | TextPresetDragItem,
+        item: ArboristNodeDragItem | LibraryAssetDragItem | TextPresetDragItem,
         monitor,
       ) {
         if (!monitor.isOver({ shallow: true })) {
@@ -672,19 +702,24 @@ export function VideoTimeline() {
           return
         }
 
-        const node = findDraggedFileNode((item as ArboristNodeDragItem).id)
-        if (!isMediaFileNode(node)) {
+        const media = resolveDraggedMedia(
+          item as ArboristNodeDragItem | LibraryAssetDragItem,
+        )
+        if (!media) {
           clearExternalDropPreview()
           return
         }
         updateExternalDropPreview(
           offset.x,
           offset.y,
-          node.format,
-          node.name,
+          media.format,
+          media.name,
         )
       },
-      drop(item: ArboristNodeDragItem | TextPresetDragItem, monitor) {
+      drop(
+        item: ArboristNodeDragItem | LibraryAssetDragItem | TextPresetDragItem,
+        monitor,
+      ) {
         const preview = externalDropPreviewRef.current
         clearExternalDropPreview()
 
@@ -699,15 +734,17 @@ export function VideoTimeline() {
           return
         }
 
-        const node = findDraggedFileNode((item as ArboristNodeDragItem).id)
-        if (!isMediaFileNode(node)) return
+        const media = resolveDraggedMedia(
+          item as ArboristNodeDragItem | LibraryAssetDragItem,
+        )
+        if (!media) return
 
         const activeProjectId = useVideoEditorStore.getState().projectId
         if (!activeProjectId) return
 
         void ingestFileNodeClip({
           projectId: activeProjectId,
-          node,
+          node: media,
           startFrame: preview?.startFrame ?? 0,
           guide: preview?.guide ?? null,
         }).catch((err) => {
@@ -715,16 +752,17 @@ export function VideoTimeline() {
         })
       },
     }),
-    [clearExternalDropPreview, updateExternalDropPreview, findDraggedFileNode],
+    [clearExternalDropPreview, updateExternalDropPreview, resolveDraggedMedia],
   )
 
   return (
-    <div className="flex h-full w-full flex-col bg-background">
+    <div className="flex h-full w-full flex-col">
       <div className="flex flex-1 overflow-hidden">
         <TrackHeaders
           rowHeight={ROW_HEIGHT}
           scrollTop={scrollTop}
           width={HEADERS_WIDTH}
+          topOffset={HEADERS_TOP_OFFSET}
         />
         <div
           ref={(node) => {
@@ -801,10 +839,10 @@ function CrossTrackDragOverlay({
       >
         <div
           className={
-            'h-full w-full rounded-sm border-2 ' +
+            'h-full w-full rounded-md border-2 ' +
             (guide.valid
-              ? 'border-emerald-400/90 bg-emerald-400/10'
-              : 'border-rose-500/90 bg-rose-500/10')
+              ? 'border-primary/80 bg-primary/10'
+              : 'border-destructive/80 bg-destructive/10')
           }
         />
       </div>,
@@ -824,7 +862,7 @@ function CrossTrackDragOverlay({
         height: 3,
       }}
     >
-      <div className="h-full w-full rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
+      <div className="h-full w-full rounded-full bg-primary shadow-[0_0_6px] shadow-primary/70" />
     </div>,
     document.body,
   )
@@ -936,42 +974,6 @@ function clipDisplayLabel(clip: {
   return clip.fileName || clip.type
 }
 
-const GHOST_STYLES: Record<
-TrackType,
-  { bg: string; border: string; fg: string }
-> = {
-  video: {
-    bg: 'linear-gradient(180deg, rgba(37,99,235,0.85) 0%, rgba(29,78,216,0.85) 100%)',
-    border: 'rgba(255,255,255,0.95)',
-    fg: '#eff6ff',
-  },
-  audio: {
-    bg: 'linear-gradient(180deg, rgba(245,158,11,0.85) 0%, rgba(217,119,6,0.85) 100%)',
-    border: 'rgba(255,255,255,0.95)',
-    fg: '#fffbeb',
-  },
-  text: {
-    bg: 'linear-gradient(180deg, rgba(59,130,246,0.85) 0%, rgba(37,99,235,0.85) 100%)',
-    border: 'rgba(255,255,255,0.95)',
-    fg: '#eff6ff',
-  },
-  image: {
-    bg: 'linear-gradient(180deg, rgba(16,185,129,0.85) 0%, rgba(5,150,105,0.85) 100%)',
-    border: 'rgba(255,255,255,0.95)',
-    fg: '#ecfdf5',
-  },
-  html: {
-    bg: 'linear-gradient(180deg, rgba(139,92,246,0.85) 0%, rgba(124,58,237,0.85) 100%)',
-    border: 'rgba(255,255,255,0.95)',
-    fg: '#f5f3ff',
-  },
-  caption: {
-    bg: 'linear-gradient(180deg, rgba(139,92,246,0.85) 0%, rgba(124,58,237,0.85) 100%)',
-    border: 'rgba(255,255,255,0.95)',
-    fg: '#f5f3ff',
-  },
-}
-
 interface DragGhostOverlayProps {
   ghost: DragGhost | null
 }
@@ -979,7 +981,7 @@ interface DragGhostOverlayProps {
 function DragGhostOverlay({ ghost }: DragGhostOverlayProps) {
   if (!ghost) return null
   if (typeof document === 'undefined') return null
-  const style = GHOST_STYLES[ghost.kind]
+  const accent = CLIP_ACCENT[ghost.kind]
   return createPortal(
     <div
       className="pointer-events-none fixed z-50"
@@ -992,11 +994,10 @@ function DragGhostOverlay({ ghost }: DragGhostOverlayProps) {
       }}
     >
       <div
-        className="flex h-full w-full items-center overflow-hidden rounded-md px-2 text-[11px] shadow-lg"
+        className="flex h-full w-full items-center overflow-hidden rounded-md px-2 text-[11px] font-medium text-foreground shadow-lg"
         style={{
-          background: style.bg,
-          border: `1.5px dashed ${ghost.valid ? style.border : 'rgba(244,63,94,0.95)'}`,
-          color: style.fg,
+          background: clipSurface(ghost.kind, true),
+          border: `1.5px dashed ${ghost.valid ? accent : 'var(--destructive)'}`,
         }}
       >
         <span className="truncate">{ghost.label}</span>

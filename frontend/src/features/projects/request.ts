@@ -1,6 +1,6 @@
 import api from '@/lib/axios'
 import { isAxiosError } from 'axios'
-import { ProjectResponse, UpdateProjectInput, ProjectListItem, ProjectOptions, FileNode, Template, CreateTemplateInput, CreateTemplateResponse, PaginatedResponse, PublicTemplate } from './type'
+import { ProjectResponse, UpdateProjectInput, ProjectListItem, ProjectOptions, FileNode, ProjectAssetFile, Template, CreateTemplateInput, CreateTemplateResponse, PaginatedResponse, PublicTemplate } from './type'
 import { createProjectSchema } from './schema'
 import { z } from 'zod'
 
@@ -118,6 +118,28 @@ export const listFilesByFormat = async (
 ): Promise<FileNode[]> => {
   const response = await api.get(`/projects/${projectId}/files/by-format`, {
     params: { format, limit },
+    signal: options?.signal,
+  })
+  return response.data
+}
+
+export type ListProjectAssetsOptions = {
+  name?: string
+  format?: 'image' | 'video' | 'audio'
+  limit?: number
+  signal?: AbortSignal
+}
+
+export const listProjectAssets = async (
+  projectId: string,
+  options?: ListProjectAssetsOptions,
+): Promise<ProjectAssetFile[]> => {
+  const response = await api.get(`/projects/${projectId}/files/assets`, {
+    params: {
+      name: options?.name,
+      format: options?.format,
+      limit: options?.limit,
+    },
     signal: options?.signal,
   })
   return response.data

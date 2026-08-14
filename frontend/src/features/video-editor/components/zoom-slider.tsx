@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const MIN = 0.25
-const MAX = 4
+const MAX = 8
 const STEP = 0.05
 
 export function ZoomSlider() {
@@ -17,7 +17,7 @@ export function ZoomSlider() {
       <Button
         variant="ghost"
         size="icon-sm"
-        className="size-6"
+        className="size-7"
         onClick={() => setZoomScale(Math.max(MIN, zoomScale - 0.25))}
         title="Zoom out"
       >
@@ -25,8 +25,8 @@ export function ZoomSlider() {
       </Button>
       <div
         className={cn(
-          'w-28',
-          '**:data-[slot=slider-track]:h-px **:data-[slot=slider-track]:rounded-full **:data-[slot=slider-track]:bg-surface',
+          'w-32',
+          '**:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:rounded-full **:data-[slot=slider-track]:bg-accent',
           '**:data-[slot=slider-range]:bg-primary',
           '**:data-[slot=slider-thumb]:size-3.5 **:data-[slot=slider-thumb]:border-0! **:data-[slot=slider-thumb]:bg-primary! **:data-[slot=slider-thumb]:shadow-none!',
           '**:data-[slot=slider-thumb]:hover:ring-0! **:data-[slot=slider-thumb]:focus-visible:ring-2 **:data-[slot=slider-thumb]:focus-visible:ring-primary/25',
@@ -47,7 +47,7 @@ export function ZoomSlider() {
       <Button
         variant="ghost"
         size="icon-sm"
-        className="size-6"
+        className="size-7"
         onClick={() => setZoomScale(Math.min(MAX, zoomScale + 0.25))}
         title="Zoom in"
       >

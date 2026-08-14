@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia'
 import { z } from 'zod'
 import * as videoEditorService from './service'
+import * as renderService from './render-service'
 import {
   createCompositionSchema,
   updateCompositionSchema,
@@ -11,6 +12,7 @@ import {
   clipFilterSchema,
   batchRequestSchema,
 } from './schema'
+import { createRenderSchema } from './render-schema'
 import { assertProjectAccess } from '@/lib/authorize'
 import { authMiddleware } from '@/lib/auth-middleware'
 
@@ -36,6 +38,11 @@ const trackParams = z.object({
 const clipParams = z.object({
   projectId: z.uuid('Invalid project id'),
   clipId: z.uuid('Invalid clip id'),
+})
+
+const renderParams = z.object({
+  projectId: z.uuid('Invalid project id'),
+  renderJobId: z.uuid('Invalid render job id'),
 })
 
 export const videoEditorRoutes = new Elysia({ prefix: '/video-editor/:projectId' })
@@ -136,6 +143,44 @@ export const videoEditorRoutes = new Elysia({ prefix: '/video-editor/:projectId'
     return videoEditorService.removeClip(params.clipId, params.projectId)
   }, {
     params: clipParams,
+  })
+
+  // ======================== RENDERS ========================
+
+  .post('/compositions/:compositionId/renders', async ({ params, body, user }) => {
+    await assertProjectAccess(user.id, params.projectId)
+    return renderService.createRender(params.compositionId, params.projectId, user.id, body)
+  }, {
+    params: compositionParams,
+    body: createRenderSchema,
+  })
+
+  .get('/compositions/:compositionId/renders', async ({ params, user }) => {
+    await assertProjectAccess(user.id, params.projectId)
+    return renderService.listRenders(params.compositionId, params.projectId)
+  }, {
+    params: compositionParams,
+  })
+
+  .get('/renders/:renderJobId', async ({ params, user }) => {
+    await assertProjectAccess(user.id, params.projectId)
+    return renderService.getRender(params.renderJobId, params.projectId)
+  }, {
+    params: renderParams,
+  })
+
+  .delete('/renders/:renderJobId', async ({ params, user }) => {
+    await assertProjectAccess(user.id, params.projectId)
+    return renderService.cancelRender(params.renderJobId, params.projectId)
+  }, {
+    params: renderParams,
+  })
+
+  .get('/renders/:renderJobId/download', async ({ params, user }) => {
+    await assertProjectAccess(user.id, params.projectId)
+    return renderService.getRenderDownload(params.renderJobId, params.projectId)
+  }, {
+    params: renderParams,
   })
 
   // ======================== BATCH ========================

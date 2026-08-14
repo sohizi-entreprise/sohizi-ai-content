@@ -1,0 +1,85 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    devDependencies:
+      '@remotion/captions':
+        specifier: 4.0.473
+        version: 4.0.473
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.2.18
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      remotion:
+        specifier: 4.0.459
+        version: 4.0.459(react-dom@19.2.8(react@19.2.3))(react@19.2.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+packages:
+
+  '@remotion/captions@4.0.473':
+    resolution: {integrity: sha512-C/Je9foGYlZZa1MdwdzrFyPFpfRkKzy3IkUyg9JaraAJHgqNtRjQocq+oob3EtNh+3Y5GO2pO+PrccYxTmDzFQ==}
+
+  '@types/react@19.2.18':
+    resolution: {integrity: sha512-AnzbBERsrLKtk2XSfTbYRLjQPdy116Sty4q+T+Bp3IC4l6jNBvreVPAHmpq9qhXQM7CXZPjLVmGMw9sy+hxQ3w==}
+
+  csstype@3.2.3:
+    resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
+
+  react-dom@19.2.8:
+    resolution: {integrity: sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ==}
+    peerDependencies:
+      react: ^19.2.8
+
+  react@19.2.3:
+    resolution: {integrity: sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA==}
+    engines: {node: '>=0.10.0'}
+
+  remotion@4.0.459:
+    resolution: {integrity: sha512-IRhfFepGJ/TPmN07rF2yS2YpFfHK61yKUKa2T35HwGvaYn4MVyOvl28YTByR4wqRfqB4R6Zn2aCYNJBfA8B4zA==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+
+  scheduler@0.27.0:
+    resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
+
+  typescript@5.9.3:
+    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+snapshots:
+
+  '@remotion/captions@4.0.473': {}
+
+  '@types/react@19.2.18':
+    dependencies:
+      csstype: 3.2.3
+
+  csstype@3.2.3: {}
+
+  react-dom@19.2.8(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+      scheduler: 0.27.0
+
+  react@19.2.3: {}
+
+  remotion@4.0.459(react-dom@19.2.8(react@19.2.3))(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+      react-dom: 19.2.8(react@19.2.3)
+
+  scheduler@0.27.0: {}
+
+  typescript@5.9.3: {}

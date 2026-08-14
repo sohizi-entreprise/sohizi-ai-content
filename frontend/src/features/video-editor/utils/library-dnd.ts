@@ -23,12 +23,17 @@ export type TextPresetDragItem = {
   style: TextPresetStyle
 }
 
+export type LibraryMediaFormat = 'image' | 'video' | 'audio'
+
 /** Marks file-tree NODE drags that originate from the Add library panel. */
 export type LibraryAssetDragItem = {
   id: string
   dragIds: string[]
   fromLibrary: true
   label: string
+  format: LibraryMediaFormat
+  /** Joined media URL from the assets list — avoids a file-tree cache lookup. */
+  url: string | null
 }
 
 export function isPointerOverTimelineDropArea(

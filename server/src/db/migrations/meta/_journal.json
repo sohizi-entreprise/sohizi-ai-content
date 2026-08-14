@@ -183,6 +183,13 @@
       "when": 1784390400002,
       "tag": "0025_commands_visible",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1784390400003,
+      "tag": "0026_add_video_render_jobs",
+      "breakpoints": true
     }
   ]
 }

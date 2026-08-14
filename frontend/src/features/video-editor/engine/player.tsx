@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from 'react'
 import { Player } from '@remotion/player'
+import { MainComposition } from '@sohizi/video-composition'
 import { useVideoEditorStore } from '../store/editor-store'
-import { MainComposition } from './composition'
 import { usePlayerRef } from './player-ref'
 import type { CallbackListener } from '@remotion/player'
-import type { MainCompositionProps } from './composition'
+import type { MainCompositionProps } from '@sohizi/video-composition'
 
 interface VideoEditorPlayerProps {
   className?: string

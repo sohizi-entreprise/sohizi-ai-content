@@ -16,16 +16,20 @@ import {
   import { getListProjectsQueryOptions } from '@/features/projects/query-mutation'
   import { Suspense, useState } from 'react'
   import { Skeleton } from '@/components/ui/skeleton'
-  import { Link } from '@tanstack/react-router'
+  import { Link, useRouterState } from '@tanstack/react-router'
   import { IconFocus2, IconSparkle, IconX } from '@tabler/icons-react'
   import { useSession } from '@/lib/auth-client'
-import { useEditorStore } from '@/features/editor/stores/editor-store'
+import {
+  getChatChromeContext,
+  useEditorStore,
+} from '@/features/editor/stores/editor-store'
 import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
 import { SphereLoader } from '../ui/loaders'
   
   export function AppHeader() {
-    
-    const toggleAiPanel = useEditorStore((s) => s.toggleAiPanel)
+    const pathname = useRouterState({ select: (s) => s.location.pathname })
+    const chatContext = getChatChromeContext(pathname)
+    const toggleChatPanel = useEditorStore((s) => s.toggleChatPanel)
     const activateFocusMode = useEditorStore((s) => s.activateFocusMode)
   
     return (
@@ -50,11 +54,11 @@ import { SphereLoader } from '../ui/loaders'
   
           <ThemeToggle />
   
-          <button onClick={activateFocusMode}>
+          <button onClick={() => activateFocusMode(chatContext)}>
             <IconFocus2 className="size-4 text-foreground" />
           </button>
   
-          <button onClick={toggleAiPanel}>
+          <button onClick={() => toggleChatPanel(chatContext)}>
             <IconSparkle className="size-4 text-primary" />
           </button>
         </div>

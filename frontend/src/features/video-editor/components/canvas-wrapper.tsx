@@ -7,29 +7,27 @@ interface CanvasWrapperProps {
   className?: string
 }
 
-export function CanvasWrapper({ aspectRatio, children, className }: CanvasWrapperProps) {
+export function CanvasWrapper({
+  aspectRatio,
+  children,
+  className,
+}: CanvasWrapperProps) {
   return (
     <div
       className={cn(
-        'relative flex h-full w-full items-center justify-center overflow-hidden',
+        'relative flex h-full w-full items-center justify-center overflow-hidden aspect-video bg-black',
         className,
       )}
-      style={{
-        backgroundImage:
-          'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),' +
-          'linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-        backgroundSize: '16px 16px',
-      }}
+      // style={{
+      //   backgroundImage:
+      //     'linear-gradient(var(--border) 1px, transparent 1px),' +
+      //     'linear-gradient(90deg, var(--border) 1px, transparent 1px)',
+      //   backgroundSize: '20px 20px',
+      // }}
     >
       <div
-        className="relative max-h-full max-w-full"
-        style={{
-          aspectRatio,
-          width: '100%',
-          height: '100%',
-          maxWidth: '100%',
-          maxHeight: '100%',
-        }}
+        className="relative h-full max-h-full w-full max-w-full"
+        style={{ aspectRatio }}
       >
         <div
           className="absolute inset-0 m-auto"
@@ -41,10 +39,7 @@ export function CanvasWrapper({ aspectRatio, children, className }: CanvasWrappe
             height: 'auto',
           }}
         >
-          <div
-            className="relative h-full w-full overflow-hidden shadow-lg ring-1 ring-white/10"
-            style={{ backgroundColor: 'black' }}
-          >
+          <div className="relative h-full w-full overflow-hidden">
             {children}
           </div>
         </div>

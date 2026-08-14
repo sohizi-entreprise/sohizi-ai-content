@@ -286,7 +286,7 @@ export function CanvasOverlay() {
             transform: 'translate(-50%, -50%)',
           }}
         >
-          <div className="pointer-events-none absolute inset-0 border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.55)]" />
+          <div className="pointer-events-none absolute inset-0 rounded-[2px] border-2 border-primary shadow-[0_0_0_1px_rgba(0,0,0,0.55)]" />
           <div
             role="button"
             tabIndex={-1}
@@ -332,7 +332,7 @@ export function CanvasOverlay() {
               onPointerMove={handlePointerMove}
               onPointerUp={finalizeDrag}
               onPointerCancel={finalizeDrag}
-              className="pointer-events-auto absolute rounded-sm border border-black/60 bg-white shadow"
+              className="pointer-events-auto absolute rounded-full border border-black/50 bg-primary shadow"
               style={{
                 left: `${h.x}%`,
                 top: `${h.y}%`,

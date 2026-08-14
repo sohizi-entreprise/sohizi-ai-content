@@ -129,6 +129,123 @@ export const searchFileNodesByFormat = async(projectId: string, format: FileForm
              .limit(limit);
 }
 
+const MEDIA_ASSET_FORMATS = [
+    'image',
+    'video',
+    'audio',
+] as const satisfies ReadonlyArray<FileFormat>;
+
+type ListAssetsFolderOptions = {
+    name?: string;
+    format?: FileFormat;
+    limit?: number;
+}
+
+export type AssetFolderFileNode = FileNode & {
+    url: string | null;
+}
+
+/**
+ * Lists media file nodes under a folder (recursive), joining `assets` for the
+ * media URL in one query. Optional name search uses the same ranking as
+ * project-wide name search.
+ */
+export const listFileNodesUnderFolder = async (
+    projectId: string,
+    folderId: string,
+    options?: ListAssetsFolderOptions,
+): Promise<AssetFolderFileNode[]> => {
+    const limit = options?.limit ?? 100;
+    const formats = options?.format
+        ? [options.format]
+        : [...MEDIA_ASSET_FORMATS];
+    const normalizedName = options?.name?.trim() ?? '';
+
+    const nameFilter = normalizedName
+        ? sql`AND fn.name ILIKE ${`%${escapeLikePattern(normalizedName)}%`} ESCAPE '\\'`
+        : sql``;
+
+    const exactName = normalizedName.toLowerCase();
+    const prefixPattern = normalizedName ? `${escapeLikePattern(normalizedName)}%` : '';
+
+    const orderBy = normalizedName
+        ? sql`
+            ORDER BY
+              CASE
+                WHEN lower(fn.name) = ${exactName} THEN 0
+                WHEN fn.name ILIKE ${prefixPattern} ESCAPE '\\' THEN 1
+                ELSE 2
+              END,
+              similarity(fn.name, ${normalizedName}) DESC,
+              length(fn.name),
+              fn.name ASC
+          `
+        : sql`ORDER BY fn.name ASC`;
+
+    const result = await db.execute(sql`
+        WITH RECURSIVE subtree AS (
+            SELECT
+                child.id,
+                child.project_id,
+                child.name,
+                child.directory,
+                child.parent_id,
+                child.position,
+                child.editable,
+                child.content_editable,
+                child.format,
+                child.created_at,
+                child.updated_at
+            FROM file_nodes child
+            WHERE child.project_id = ${projectId}
+              AND child.parent_id = ${folderId}
+
+            UNION ALL
+
+            SELECT
+                descendant.id,
+                descendant.project_id,
+                descendant.name,
+                descendant.directory,
+                descendant.parent_id,
+                descendant.position,
+                descendant.editable,
+                descendant.content_editable,
+                descendant.format,
+                descendant.created_at,
+                descendant.updated_at
+            FROM file_nodes descendant
+            JOIN subtree ON descendant.parent_id = subtree.id
+            WHERE descendant.project_id = ${projectId}
+        ) CYCLE id SET is_cycle USING cycle_path
+        SELECT
+            fn.id,
+            fn.project_id AS "projectId",
+            fn.name,
+            fn.directory,
+            fn.parent_id AS "parentId",
+            fn.position,
+            fn.editable,
+            fn.content_editable AS "contentEditable",
+            fn.format,
+            fn.created_at AS "createdAt",
+            fn.updated_at AS "updatedAt",
+            a.url AS url
+        FROM subtree fn
+        LEFT JOIN assets a
+          ON a.file_node_id = fn.id
+         AND a.project_id = ${projectId}
+        WHERE NOT fn.is_cycle
+          AND fn.directory = false
+          AND fn.format IN (${sql.join(formats.map((format) => sql`${format}`), sql`, `)})
+          ${nameFilter}
+        ${orderBy}
+        LIMIT ${limit}
+    `);
+
+    return result.rows as AssetFolderFileNode[];
+}
+
 export const getFileNodeDepthById = async(projectId: string, id: string) => {
     const result = await db.execute(sql`
         WITH RECURSIVE ancestors AS (

@@ -282,6 +282,30 @@ export const listFilesByFormat = async(
     );
 }
 
+export const listAssetsFolder = async(
+    request: {
+        projectId: string;
+        name?: string;
+        format?: FileFormat;
+        limit?: number;
+    },
+) => {
+    await validateProject(request.projectId);
+    const { assetsFolder } = await mediaRepo.getAssetFolder(request.projectId);
+    if (!assetsFolder) {
+        return [];
+    }
+    return fileSystemRepo.listFileNodesUnderFolder(
+        request.projectId,
+        assetsFolder.id,
+        {
+            name: request.name,
+            format: request.format,
+            limit: request.limit ?? 100,
+        },
+    );
+}
+
 export const updateFileNode = async(projectId: string, request: UpdateFileRequest) => {
     await validateProject(projectId);
     try {

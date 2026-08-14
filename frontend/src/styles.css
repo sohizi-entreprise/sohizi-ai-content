@@ -52,7 +52,7 @@ code,
   --popover: oklch(0.2779 0.0093 276.78);   /* Dropdowns/Modals */
   --popover-foreground: oklch(0.96 0.005 265);
   
-  --primary: oklch(0.77 0.22 148);         /* Luminous Lemon Green */
+  --primary: oklch(0.936036 0.225167 121.2409);         /* Luminous Lemon Green */
   --primary-foreground: oklch(0.18 0.01 265); /* Deep slate for contrast on buttons */
   
   --secondary: oklch(0.28 0.02 265);       /* Hover states / Active item background */

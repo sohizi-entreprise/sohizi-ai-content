@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
-import { Volume2 } from 'lucide-react'
-import { getAudioPeaks } from '../waveform'
+import { useEffect, useRef } from 'react'
+import WaveSurfer from 'wavesurfer.js'
+import { AudioLines } from 'lucide-react'
+import { useVideoEditorStore } from '../../store/editor-store'
+import { framesToSeconds } from '../../utils/time'
+import { getAudioPeaks, sliceAudioPeaks } from '../waveform'
+import { CLIP_ACCENT, ClipShell } from './clip-shell'
 import type { AudioClip } from '../../store/types'
-import { cn } from '@/lib/utils'
 
 interface AudioBlockProps {
   clip: AudioClip
@@ -10,82 +13,129 @@ interface AudioBlockProps {
 }
 
 export function AudioBlock({ clip, selected }: AudioBlockProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const [peaks, setPeaks] = useState<Float32Array | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const fps = useVideoEditorStore((s) => s.fps)
 
   useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
     let cancelled = false
-    getAudioPeaks(clip.id, clip.url)
-      .then((p) => {
-        if (!cancelled) setPeaks(p)
-      })
-      .catch(() => {
-        if (!cancelled) setPeaks(null)
-      })
-    return () => {
-      cancelled = true
+    let wavesurfer: WaveSurfer | null = null
+    let ro: ResizeObserver | null = null
+    let peakChannel: number[] | null = null
+    let duration = 1
+
+    const teardown = () => {
+      ro?.disconnect()
+      ro = null
+      wavesurfer?.destroy()
+      wavesurfer = null
+      el.replaceChildren()
     }
-  }, [clip.id, clip.url])
 
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const parent = canvas.parentElement
-    if (!parent) return
+    const createWave = () => {
+      if (cancelled || !el.isConnected || !peakChannel) return
+      const width = Math.floor(el.clientWidth)
+      const height = Math.floor(el.clientHeight)
+      if (width < 2 || height < 2) return
 
-    const draw = () => {
-      const dpr = window.devicePixelRatio || 1
-      const rect = parent.getBoundingClientRect()
-      const w = Math.max(1, Math.floor(rect.width))
-      const h = Math.max(1, Math.floor(rect.height))
-      canvas.width = Math.floor(w * dpr)
-      canvas.height = Math.floor(h * dpr)
-      canvas.style.width = `${w}px`
-      canvas.style.height = `${h}px`
+      wavesurfer?.destroy()
+      el.replaceChildren()
 
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.clearRect(0, 0, w, h)
+      // Canvas fillStyle cannot parse color-mix(); keep a solid accent.
+      const waveColor = CLIP_ACCENT.audio
+      wavesurfer = WaveSurfer.create({
+        container: el,
+        width,
+        height: Math.max(height - 2, 14),
+        interact: false,
+        dragToSeek: false,
+        cursorWidth: 0,
+        hideScrollbar: true,
+        normalize: true,
+        fillParent: true,
+        waveColor,
+        progressColor: waveColor,
+        barWidth: 1,
+        barGap: 0.5,
+        barRadius: 1,
+        barHeight: 0.9,
+      })
 
-      if (!peaks || peaks.length === 0) return
-      ctx.fillStyle = 'rgba(255,255,255,0.85)'
-      const mid = h / 2
-      for (let i = 0; i < w; i += 1) {
-        const idx = Math.floor((i / w) * peaks.length)
-        const p = peaks[idx] ?? 0
-        const barH = Math.max(1, p * (h * 0.9))
-        ctx.fillRect(i, mid - barH / 2, 1, barH)
+      void wavesurfer.load('', [peakChannel], duration).catch((err: unknown) => {
+        console.warn('[audio-block] wavesurfer load failed', err)
+      })
+    }
+
+    const mount = async () => {
+      try {
+        const { peaks, durationSec } = await getAudioPeaks(clip.id, clip.url)
+        if (cancelled || !el.isConnected) return
+        if (!peaks.length || durationSec <= 0) return
+
+        const clipDurationSec = framesToSeconds(
+          clip.sourceDurationInFrames || clip.endFrame - clip.startFrame,
+          fps,
+        )
+        const clipStartSec = framesToSeconds(clip.sourceStartFrame, fps)
+        const windowPeaks = sliceAudioPeaks(
+          peaks,
+          durationSec,
+          clipStartSec,
+          clipDurationSec || durationSec,
+        )
+        peakChannel = Array.from(windowPeaks)
+        if (peakChannel.every((v) => v === 0)) return
+        duration = Math.max(0.01, clipDurationSec || durationSec)
+
+        createWave()
+
+        let lastW = el.clientWidth
+        let lastH = el.clientHeight
+        ro = new ResizeObserver(() => {
+          if (cancelled || !peakChannel) return
+          const w = el.clientWidth
+          const h = el.clientHeight
+          if (Math.abs(w - lastW) < 2 && Math.abs(h - lastH) < 2) return
+          lastW = w
+          lastH = h
+          createWave()
+        })
+        ro.observe(el)
+      } catch (err) {
+        console.warn('[audio-block] failed to render waveform', err)
       }
     }
 
-    draw()
+    void mount()
 
-    const ro = new ResizeObserver(draw)
-    ro.observe(parent)
-    return () => ro.disconnect()
-  }, [peaks])
+    return () => {
+      cancelled = true
+      teardown()
+    }
+  }, [
+    clip.id,
+    clip.url,
+    clip.sourceStartFrame,
+    clip.sourceDurationInFrames,
+    clip.startFrame,
+    clip.endFrame,
+    fps,
+  ])
 
   return (
-    <div
-      className={cn(
-        'flex h-full w-full items-stretch overflow-hidden rounded-md border',
-        selected ? 'border-white ring-2 ring-white' : 'border-amber-600/70',
-      )}
-      style={{
-        background: selected
-          ? 'linear-gradient(180deg, #f59e0b 0%, #d97706 100%)'
-          : 'linear-gradient(180deg, #d97706 0%, #b45309 100%)',
-      }}
-      title={clip.fileName}
+    <ClipShell
+      type="audio"
+      selected={selected}
+      label={clip.fileName}
+      icon={AudioLines}
+      labelOverlay
     >
-      <div className="flex h-full items-center gap-1 pl-2 pr-1 text-[11px] text-amber-50">
-        <Volume2 className="size-3 shrink-0" />
-        <span className="max-w-[90px] truncate">{clip.fileName}</span>
-      </div>
-      <div className="relative h-full flex-1">
-        <canvas ref={canvasRef} className="block h-full w-full" />
-      </div>
-    </div>
+      <div
+        ref={containerRef}
+        className="pointer-events-none h-full w-full min-h-0 min-w-0"
+      />
+    </ClipShell>
   )
 }

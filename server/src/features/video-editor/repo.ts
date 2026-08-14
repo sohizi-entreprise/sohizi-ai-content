@@ -1,7 +1,8 @@
 import { db } from "@/db";
-import { videoCompositions, videoTracks, videoClips } from "@/db/schema";
-import { eq, and, lte, gt, asc, sql, inArray, gte } from "drizzle-orm";
+import { videoCompositions, videoTracks, videoClips, videoRenderJobs } from "@/db/schema";
+import { eq, and, lte, gt, asc, desc, sql, inArray, gte } from "drizzle-orm";
 import type { VideoTrackType, VideoClipProperties, AspectRatio } from "@/type";
+import type { VideoRenderJobStatus } from "@/db/schema";
 
 // ============================================================================
 // COMPOSITIONS
@@ -296,6 +297,81 @@ export const getFullCompositionByFileNodeId = async (fileNodeId: string) => {
     getClipsByCompositionId(composition.id),
   ]);
   return { composition, tracks, clips };
+};
+
+// ============================================================================
+// RENDER JOBS
+// ============================================================================
+
+const ACTIVE_RENDER_STATUSES = ['queued', 'rendering'] as const satisfies readonly VideoRenderJobStatus[];
+
+export type CreateRenderJobData = {
+  id: string;
+  projectId: string;
+  compositionId: string;
+  userId: string;
+  compositionVersion: number;
+  fps: number;
+  width: number;
+  height: number;
+  durationInFrames: number;
+  fileName: string;
+  remoteJobId: string;
+};
+
+export const createRenderJob = async (data: CreateRenderJobData) => {
+  const result = await db.insert(videoRenderJobs).values(data).returning();
+  return result[0];
+};
+
+export const getRenderJobById = async (id: string) => {
+  const result = await db
+    .select()
+    .from(videoRenderJobs)
+    .where(eq(videoRenderJobs.id, id));
+  return result[0] ?? null;
+};
+
+export const getActiveRenderJobForComposition = async (compositionId: string) => {
+  const result = await db
+    .select()
+    .from(videoRenderJobs)
+    .where(and(
+      eq(videoRenderJobs.compositionId, compositionId),
+      inArray(videoRenderJobs.status, [...ACTIVE_RENDER_STATUSES]),
+    ))
+    .orderBy(desc(videoRenderJobs.createdAt))
+    .limit(1);
+  return result[0] ?? null;
+};
+
+export const listRenderJobsForComposition = async (compositionId: string, limit = 10) => {
+  return db
+    .select()
+    .from(videoRenderJobs)
+    .where(eq(videoRenderJobs.compositionId, compositionId))
+    .orderBy(desc(videoRenderJobs.createdAt))
+    .limit(limit);
+};
+
+export type UpdateRenderJobData = {
+  status?: VideoRenderJobStatus;
+  progress?: number;
+  outputKey?: string | null;
+  outputSizeInBytes?: number | null;
+  failureCode?: string | null;
+  failureMessage?: string | null;
+  startedAt?: Date | null;
+  finishedAt?: Date | null;
+};
+
+export const updateRenderJob = async (id: string, data: UpdateRenderJobData) => {
+  const result = await db
+    .update(videoRenderJobs)
+    .set(data)
+    .where(eq(videoRenderJobs.id, id))
+    .returning();
+  return result[0] ?? null;
 };
 
 // ============================================================================

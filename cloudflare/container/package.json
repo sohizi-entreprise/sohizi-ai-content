@@ -1,0 +1,27 @@
+{
+  "name": "sohizi-remotion-renderer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "HTTP render service that runs inside the Cloudflare Container.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "bundle": "node dist/build-bundle.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.remotion.json",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.459",
+    "@remotion/captions": "4.0.473",
+    "@remotion/renderer": "4.0.459",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.459"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.7.2"
+  }
+}

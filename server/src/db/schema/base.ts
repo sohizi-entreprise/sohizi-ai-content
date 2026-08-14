@@ -453,6 +453,51 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     index('video_clips_asset_id_idx').on(table.assetId),
   ]))
 
+  export const videoRenderJobStatusEnum = pgEnum('video_render_job_status', [
+    'queued',
+    'rendering',
+    'completed',
+    'failed',
+    'cancelled',
+  ]);
+
+  export const videoRenderJobs = pgTable('video_render_jobs', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    projectId: uuid('project_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
+    compositionId: uuid('composition_id')
+      .references(() => videoCompositions.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: text('user_id')
+      .references(() => user.id, { onDelete: 'cascade' })
+      .notNull(),
+    status: videoRenderJobStatusEnum('status').default('queued').notNull(),
+    /** Composition version the snapshot was taken from, for reproducibility. */
+    compositionVersion: integer('composition_version').notNull(),
+    fps: integer('fps').notNull(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    durationInFrames: integer('duration_in_frames').notNull(),
+    fileName: varchar('file_name', { length: 200 }).notNull(),
+    /** Workflow instance id in the Cloudflare render service. */
+    remoteJobId: varchar('remote_job_id', { length: 100 }).notNull(),
+    outputKey: text('output_key'),
+    outputSizeInBytes: bigint('output_size_in_bytes', { mode: 'number' }),
+    progress: integer('progress').default(0).notNull(),
+    /** Operator-safe failure summary; never raw upstream output. */
+    failureCode: varchar('failure_code', { length: 100 }),
+    failureMessage: text('failure_message'),
+    startedAt: timestamp('started_at'),
+    finishedAt: timestamp('finished_at'),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('video_render_jobs_remote_job_id_unique').on(table.remoteJobId),
+    index('video_render_jobs_project_created_at_idx').on(table.projectId, table.createdAt),
+    index('video_render_jobs_composition_status_idx').on(table.compositionId, table.status),
+    index('video_render_jobs_user_id_idx').on(table.userId),
+  ]))
+
 // ======================== SKILLS & TEMPLATES ==========================
 // Maybe let's have some tags for skills and templates
 export const skills = pgTable('skills', {
@@ -660,6 +705,8 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
   export type VideoComposition = typeof videoCompositions.$inferSelect
   export type VideoTrack = typeof videoTracks.$inferSelect
   export type VideoClip = typeof videoClips.$inferSelect
+  export type VideoRenderJob = typeof videoRenderJobs.$inferSelect
+  export type VideoRenderJobStatus = (typeof videoRenderJobStatusEnum.enumValues)[number]
   export type Template = typeof templates.$inferSelect
   export type PendingFileOperation = typeof pendingFileOperations.$inferSelect
   export type Skill = typeof skills.$inferSelect

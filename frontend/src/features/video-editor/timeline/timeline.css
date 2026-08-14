@@ -1,0 +1,115 @@
+/*
+ * Theme overrides for @xzdarcy/react-timeline-editor, whose stylesheet hardcodes
+ * a dark palette. Everything here maps the library chrome onto our design tokens
+ * so the timeline follows the active theme.
+ */
+
+.timeline-editor {
+  background-color: transparent;
+  font-family: inherit;
+}
+
+/* Ruler */
+
+.timeline-editor-time-unit {
+  border-right: 1px solid var(--border);
+}
+
+.timeline-editor-time-unit-scale {
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rows */
+
+.timeline-editor-edit-area {
+  margin-top: 6px;
+}
+
+.timeline-editor-edit-row {
+  background-image:
+    linear-gradient(
+      color-mix(in oklab, var(--muted) 45%, var(--card)),
+      color-mix(in oklab, var(--muted) 45%, var(--card))
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--border) 65%, transparent) 1px,
+      transparent 0
+    );
+}
+
+.timeline-editor-edit-row.ve-track-hidden {
+  opacity: 0.45;
+}
+
+/* Clips — the block renderers own their own visuals.
+ * Vertical inset keeps selection rings from colliding with adjacent rows.
+ * height is set inline to rowHeight; border-box + padding shrinks the content. */
+
+.timeline-editor-action {
+  background-color: transparent;
+  border-radius: 6px;
+  box-sizing: border-box;
+  padding-block: 4px;
+  overflow: visible;
+}
+
+/* Resize chevrons — scale to the inset clip height (matches padding-block). */
+.timeline-editor-action .timeline-editor-action-left-stretch,
+.timeline-editor-action .timeline-editor-action-right-stretch {
+  top: 4px;
+  bottom: 4px;
+  height: auto;
+}
+
+.timeline-editor-action .timeline-editor-action-left-stretch:after,
+.timeline-editor-action .timeline-editor-action-right-stretch:after {
+  top: 0;
+  bottom: 0;
+  margin: 0;
+  height: 100%;
+  width: 7px;
+  border: none;
+  border-radius: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  background: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+
+.timeline-editor-action:hover .timeline-editor-action-left-stretch:after,
+.timeline-editor-action:hover .timeline-editor-action-right-stretch:after {
+  opacity: 1;
+}
+
+.timeline-editor-action .timeline-editor-action-left-stretch:after {
+  left: 0;
+  clip-path: polygon(0 50%, 100% 0, 100% 100%);
+}
+
+.timeline-editor-action .timeline-editor-action-right-stretch:after {
+  right: 0;
+  clip-path: polygon(0 0, 0 100%, 100% 50%);
+}
+
+/* Playhead and snap guides */
+
+.timeline-editor-cursor {
+  border-left-color: var(--primary);
+  border-right-color: var(--primary);
+}
+
+.timeline-editor-cursor-top path {
+  fill: var(--primary);
+}
+
+.timeline-editor-drag-line {
+  border-left-color: color-mix(in oklab, var(--primary) 70%, transparent);
+}
+
+/* Scrollbars */
+
+.timeline-editor-edit-area .ReactVirtualized__Grid::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+}

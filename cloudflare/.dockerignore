@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/remotion-bundle
+.wrangler
+.vscode
+src
+test
+scripts
+worker-configuration.d.ts
+wrangler.jsonc
+pnpm-lock.yaml
+package.json
+vitest.config.mts
+tsconfig.json
+README.md
+AGENTS.md

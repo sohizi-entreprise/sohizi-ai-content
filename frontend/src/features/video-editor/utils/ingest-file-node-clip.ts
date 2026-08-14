@@ -1,5 +1,4 @@
 import { getFileContent } from '@/features/editor/requests'
-import type { FileTreeNode } from '@/features/editor/types'
 import { useVideoEditorStore } from '../store/editor-store'
 import { secondsToFrames } from './time'
 import { probeImageDimensions, probeMediaDuration } from './media-probe'
@@ -10,9 +9,17 @@ type DropGuide =
   | { mode: 'insert'; targetIndex: number; valid: boolean }
   | { mode: 'create'; insertIndex: number }
 
+export type IngestMediaSource = {
+  id: string
+  name: string
+  format: MediaFormat
+  /** When present, skips a second content fetch (e.g. assets library drag). */
+  url?: string | null
+}
+
 export type IngestFileNodeClipParams = {
   projectId: string
-  node: FileTreeNode & { format: MediaFormat }
+  node: IngestMediaSource
   startFrame: number
   guide: DropGuide | null
 }
@@ -30,6 +37,19 @@ function resolveTrackId(guide: DropGuide | null, format: MediaFormat): string | 
   return insertTrackAt(format, guide.insertIndex)
 }
 
+async function resolveMediaUrl(
+  projectId: string,
+  node: IngestMediaSource,
+): Promise<{ url: string; name: string } | null> {
+  if (node.url) {
+    return { url: node.url, name: node.name }
+  }
+
+  const content = await getFileContent(projectId, node.id)
+  if (content.type !== node.format) return null
+  return { url: content.url, name: content.name }
+}
+
 export async function ingestFileNodeClip({
   projectId,
   node,
@@ -38,8 +58,8 @@ export async function ingestFileNodeClip({
 }: IngestFileNodeClipParams): Promise<string | null> {
   if (guide?.mode === 'insert' && !guide.valid) return null
 
-  const content = await getFileContent(projectId, node.id)
-  if (content.type !== node.format) return null
+  const media = await resolveMediaUrl(projectId, node)
+  if (!media) return null
 
   const trackId = resolveTrackId(guide, node.format)
   if (guide?.mode === 'insert' && guide.valid && !trackId) return null
@@ -50,12 +70,12 @@ export async function ingestFileNodeClip({
   const base = {
     trackId,
     startFrame,
-    url: content.url,
-    fileName: content.name,
+    url: media.url,
+    fileName: media.name,
   }
 
   if (node.format === 'video') {
-    const seconds = await probeMediaDuration(content.url, 'video')
+    const seconds = await probeMediaDuration(media.url, 'video')
     return addVideoClip({
       ...base,
       durationInFrames: secondsToFrames(seconds, fps),
@@ -63,14 +83,14 @@ export async function ingestFileNodeClip({
   }
 
   if (node.format === 'audio') {
-    const seconds = await probeMediaDuration(content.url, 'audio')
+    const seconds = await probeMediaDuration(media.url, 'audio')
     return addAudioClip({
       ...base,
       durationInFrames: secondsToFrames(seconds, fps),
     })
   }
 
-  const dims = await probeImageDimensions(content.url)
+  const dims = await probeImageDimensions(media.url)
   return addImageClip({
     ...base,
     width: dims.width,

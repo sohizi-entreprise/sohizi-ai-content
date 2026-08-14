@@ -5,6 +5,12 @@ import type {
   FileTreeNode,
 } from '../types'
 
+export type ChatChromeContext = 'file-system' | 'video-editor'
+
+export function getChatChromeContext(pathname: string): ChatChromeContext {
+  return pathname.includes('/video-editor') ? 'video-editor' : 'file-system'
+}
+
 interface EditorState {
   activeTabId: string | null
   openTabs: Array<EditorTab>
@@ -13,7 +19,7 @@ interface EditorState {
   sidebarCollapsed: boolean
   savingStatus: Record<string, 'saving' | 'saved' | 'error'>
   lastSavedAt: Record<string, string>
-  showAiPanel: boolean
+  chatOpenByContext: Record<ChatChromeContext, boolean>
 
   setSavingStatus: (tabId: string, status: 'saving' | 'saved' | 'error') => void
   initLastSavedAt: (tabId: string, updatedAt: string) => void
@@ -24,8 +30,8 @@ interface EditorState {
   setActivityBarItem: (item: string) => void
   setSelectedFileId: (id: string | null) => void
   toggleSidebar: () => void
-  toggleAiPanel: () => void
-  activateFocusMode: () => void
+  toggleChatPanel: (context: ChatChromeContext) => void
+  activateFocusMode: (context: ChatChromeContext) => void
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -36,7 +42,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   sidebarCollapsed: false,
   savingStatus: {},
   lastSavedAt: {},
-  showAiPanel: true,
+  chatOpenByContext: {
+    'file-system': true,
+    'video-editor': true,
+  },
 
   setSavingStatus: (tabId, status) => {
     if (status === 'saved') {
@@ -142,8 +151,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setActivityBarItem: (item) => set({ activityBarItem: item }),
   setSelectedFileId: (id) => set({ selectedFileId: id }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
-  toggleAiPanel: () => set((s) => ({ showAiPanel: !s.showAiPanel })),
-  activateFocusMode: () => set({ showAiPanel: false, sidebarCollapsed: true }),
+  toggleChatPanel: (context) =>
+    set((s) => ({
+      chatOpenByContext: {
+        ...s.chatOpenByContext,
+        [context]: !s.chatOpenByContext[context],
+      },
+    })),
+  activateFocusMode: (context) =>
+    set((s) => ({
+      sidebarCollapsed: true,
+      chatOpenByContext: {
+        ...s.chatOpenByContext,
+        [context]: false,
+      },
+    })),
 }))
 
 function getFileExtension(filename: string): string {

@@ -52,8 +52,8 @@ function TextPresetCell({ preset }: { preset: TextPreset }) {
       type="button"
       draggable={false}
       className={cn(
-        'flex h-14 cursor-grab items-center justify-center rounded-lg border border-border/60 bg-muted/60 px-1.5 text-center text-foreground active:cursor-grabbing',
-        'hover:bg-muted hover:border-border',
+        'flex h-14 cursor-grab items-center justify-center rounded-xl bg-muted/55 px-1.5 text-center text-foreground ring-1 ring-border/40 active:cursor-grabbing',
+        'hover:bg-muted hover:ring-border/70',
         isDragging && 'opacity-40',
       )}
       title={`Drag "${preset.label}" to timeline`}

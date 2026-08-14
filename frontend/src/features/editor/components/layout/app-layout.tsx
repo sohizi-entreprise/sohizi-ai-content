@@ -16,7 +16,7 @@ interface LayoutProps {
 }
 
 function ExpandedLayout({ projectId, rootFolderId }: LayoutProps) {
-  const showAiPanel = useEditorStore((s) => s.showAiPanel)
+  const showAiPanel = useEditorStore((s) => s.chatOpenByContext['file-system'])
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full w-full">
       <ResizablePanel id="file-explorer" order={1} defaultSize={15} minSize={10} maxSize={25} className="rounded-2xl mb-2 bg-card">
@@ -41,7 +41,7 @@ function ExpandedLayout({ projectId, rootFolderId }: LayoutProps) {
 }
 
 function CollapsedLayout({ projectId }: LayoutProps) {
-  const showAiPanel = useEditorStore((s) => s.showAiPanel)
+  const showAiPanel = useEditorStore((s) => s.chatOpenByContext['file-system'])
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full w-full">
       <ResizablePanel id="editor-workspace" order={1} defaultSize={showAiPanel ? 78 : 100} minSize={40} className="">

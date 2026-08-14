@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { Film } from 'lucide-react'
 import { getVideoThumbnails } from '../thumbnails'
+import { ClipShell } from './clip-shell'
 import type { VideoClip } from '../../store/types'
-import { cn } from '@/lib/utils'
 
 interface VideoBlockProps {
   clip: VideoClip
@@ -27,38 +28,29 @@ export function VideoBlock({ clip, selected, durationSec }: VideoBlockProps) {
     }
   }, [clip.id, clip.url, durationSec])
 
+  const hasThumbs = thumbs.length > 0
+
   return (
-    <div
-      className={cn(
-        'flex h-full w-full items-stretch overflow-hidden rounded-md border',
-        selected ? 'border-white ring-2 ring-white' : 'border-sky-700/60',
-      )}
-      style={{
-        background: selected
-          ? 'linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%)'
-          : 'linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%)',
-      }}
-      title={clip.fileName}
+    <ClipShell
+      type="video"
+      selected={selected}
+      label={clip.fileName}
+      icon={Film}
+      labelOverlay={hasThumbs}
     >
-      <div className="flex h-full flex-1 items-stretch overflow-hidden">
-        {thumbs.length === 0 ? (
-          <div className="flex h-full w-full items-center px-2 text-[11px] text-sky-100/90">
-            <span className="truncate">{clip.fileName}</span>
-          </div>
-        ) : (
-          <div className="flex h-full flex-1 items-stretch">
-            {thumbs.map((src, i) => (
-              <img
-                key={`${clip.id}-${i}`}
-                src={src}
-                alt=""
-                className="h-full w-auto flex-1 object-cover"
-                draggable={false}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      {hasThumbs ? (
+        <div className="flex h-full w-full items-stretch">
+          {thumbs.map((src, i) => (
+            <img
+              key={`${clip.id}-${i}`}
+              src={src}
+              alt=""
+              className="h-full w-auto flex-1 object-cover"
+              draggable={false}
+            />
+          ))}
+        </div>
+      ) : null}
+    </ClipShell>
   )
 }
