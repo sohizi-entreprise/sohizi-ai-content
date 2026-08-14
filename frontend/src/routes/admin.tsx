@@ -9,7 +9,7 @@ export const Route = createFileRoute('/admin')({
 
 type AdminPath =
   | '/admin/models'
-  | '/admin/options'
+  | '/admin/parameters'
   | '/admin/commands'
   | '/admin/skills'
   | '/admin/content-categories'
@@ -51,7 +51,7 @@ function AdminLayout() {
             </Link>
             <nav className="flex flex-wrap items-center gap-1">
               <AdminNavLink to="/admin/models">Models</AdminNavLink>
-              <AdminNavLink to="/admin/options">Options</AdminNavLink>
+              <AdminNavLink to="/admin/parameters">Parameters</AdminNavLink>
               <AdminNavLink to="/admin/commands">Commands</AdminNavLink>
               <AdminNavLink to="/admin/skills">Skills</AdminNavLink>
               <AdminNavLink to="/admin/content-categories">Categories</AdminNavLink>

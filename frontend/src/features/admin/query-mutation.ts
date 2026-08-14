@@ -4,25 +4,26 @@ import type {
   CreateCommandInput,
   CreateContentCategoryInput,
   CreateModelInput,
-  CreateOptionInput,
+  CreateParameterInput,
   CreateSkillInput,
+  ReplaceModelParameterBinding,
   UpdateCommandInput,
   UpdateContentCategoryInput,
   UpdateModelInput,
-  UpdateOptionInput,
+  UpdateParameterInput,
   UpdateSkillInput,
 } from './types'
 
 const keysFactory = {
   models: ['admin', 'models'] as const,
   categories: ['admin', 'categories'] as const,
-  options: ['admin', 'options'] as const,
+  parameters: ['admin', 'parameters'] as const,
+  modelParameters: (modelId: string) => ['admin', 'models', modelId, 'parameters'] as const,
   commands: ['admin', 'commands'] as const,
   contentCategories: ['admin', 'content-categories'] as const,
   skills: ['admin', 'skills'] as const,
   catalogModels: (categories: string | string[]) =>
     ['catalog', 'models', Array.isArray(categories) ? categories : [categories]] as const,
-  catalogOptions: (modelId: string) => ['catalog', 'options', modelId] as const,
 }
 
 export const listAdminModelsQueryOptions = () =>
@@ -37,10 +38,56 @@ export const listAdminCategoriesQueryOptions = () =>
     queryFn: requests.listAdminCategories,
   })
 
-export const listAdminOptionsQueryOptions = () =>
+export const listAdminParametersQueryOptions = () =>
   queryOptions({
-    queryKey: keysFactory.options,
-    queryFn: requests.listAdminOptions,
+    queryKey: keysFactory.parameters,
+    queryFn: requests.listAdminParameters,
+  })
+
+export const createAdminParameterMutationOptions = () =>
+  mutationOptions({
+    mutationFn: (input: CreateParameterInput) => requests.createAdminParameter(input),
+    meta: {
+      invalidateQueries: [keysFactory.parameters],
+    },
+  })
+
+export const updateAdminParameterMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({ id, input }: { id: string; input: UpdateParameterInput }) =>
+      requests.updateAdminParameter(id, input),
+    meta: {
+      invalidateQueries: [keysFactory.parameters],
+    },
+  })
+
+export const deleteAdminParameterMutationOptions = () =>
+  mutationOptions({
+    mutationFn: (id: string) => requests.deleteAdminParameter(id),
+    meta: {
+      invalidateQueries: [keysFactory.parameters],
+    },
+  })
+
+export const listModelParametersQueryOptions = (modelId: string | null) =>
+  queryOptions({
+    queryKey: keysFactory.modelParameters(modelId ?? ''),
+    queryFn: () => requests.listModelParameters(modelId!),
+    enabled: Boolean(modelId),
+  })
+
+export const replaceModelParametersMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({
+      modelId,
+      input,
+    }: {
+      modelId: string
+      input: ReplaceModelParameterBinding[]
+    }) => requests.replaceModelParameters(modelId, input),
+    meta: {
+      invalidateQueries: [keysFactory.models],
+    },
   })
 
 export const createAdminModelMutationOptions = () =>
@@ -60,36 +107,11 @@ export const updateAdminModelMutationOptions = () =>
     },
   })
 
-export const disableAdminModelMutationOptions = () =>
+export const deleteAdminModelMutationOptions = () =>
   mutationOptions({
-    mutationFn: (id: string) => requests.disableAdminModel(id),
+    mutationFn: (id: string) => requests.deleteAdminModel(id),
     meta: {
       invalidateQueries: [keysFactory.models],
-    },
-  })
-
-export const createAdminOptionMutationOptions = () =>
-  mutationOptions({
-    mutationFn: (input: CreateOptionInput) => requests.createAdminOption(input),
-    meta: {
-      invalidateQueries: [keysFactory.options],
-    },
-  })
-
-export const updateAdminOptionMutationOptions = () =>
-  mutationOptions({
-    mutationFn: ({ id, input }: { id: string; input: UpdateOptionInput }) =>
-      requests.updateAdminOption(id, input),
-    meta: {
-      invalidateQueries: [keysFactory.options],
-    },
-  })
-
-export const deactivateAdminOptionMutationOptions = () =>
-  mutationOptions({
-    mutationFn: (id: string) => requests.deactivateAdminOption(id),
-    meta: {
-      invalidateQueries: [keysFactory.options],
     },
   })
 
@@ -98,13 +120,6 @@ export const listCatalogModelsQueryOptions = (categories: string | string[]) =>
     queryKey: keysFactory.catalogModels(categories),
     queryFn: () => requests.listCatalogModels(categories),
     enabled: (Array.isArray(categories) ? categories.join(',') : categories).length > 0,
-  })
-
-export const listCatalogModelOptionsQueryOptions = (modelId: string | null) =>
-  queryOptions({
-    queryKey: keysFactory.catalogOptions(modelId ?? ''),
-    queryFn: () => requests.listCatalogModelOptions(modelId!),
-    enabled: Boolean(modelId),
   })
 
 export const listAdminCommandsQueryOptions = () =>

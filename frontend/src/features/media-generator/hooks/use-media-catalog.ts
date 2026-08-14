@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  listCatalogModelOptionsQueryOptions,
-  listCatalogModelsQueryOptions,
-} from '@/features/admin/query-mutation'
+import { listCatalogModelsQueryOptions } from '@/features/admin/query-mutation'
 import type { ComposerMediaType } from '../types'
 
 const MEDIA_TYPE_CATEGORIES: Record<ComposerMediaType, string[]> = {
@@ -17,7 +14,6 @@ export function useMediaCatalog(mediaType: ComposerMediaType) {
 
   const categories = MEDIA_TYPE_CATEGORIES[mediaType]
   const modelsQuery = useQuery(listCatalogModelsQueryOptions(categories))
-  const optionsQuery = useQuery(listCatalogModelOptionsQueryOptions(selectedModelId))
 
   useEffect(() => {
     setSelectedModelId(null)
@@ -41,10 +37,8 @@ export function useMediaCatalog(mediaType: ComposerMediaType) {
 
   return {
     models: modelsQuery.data ?? [],
-    options: optionsQuery.data ?? [],
     selectedModelId,
     setSelectedModelId,
     isLoadingModels: modelsQuery.isLoading,
-    isLoadingOptions: optionsQuery.isLoading,
   }
 }

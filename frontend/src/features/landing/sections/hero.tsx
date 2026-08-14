@@ -9,7 +9,7 @@ export function HeroSection() {
   return (
     <section className="relative min-h-svh overflow-hidden">
       <div className="pointer-events-none absolute w-full h-1/2 inset-x-0 top-0 bg-[linear-gradient(to_right,oklch(1_0_0/0.04)_1px,transparent_1px),linear-gradient(to_bottom,oklch(1_0_0/0.04)_1px,transparent_1px)] bg-size-[48px_48px] mask-[radial-gradient(ellipse_at_center,black_20%,transparent_75%)]" />
-      <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-0 h-[300px] w-[600px] bg-[radial-gradient(ellipse_at_top,oklch(0.77_0.22_148/0.18),transparent_60%)]" />
+      <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-0 h-[300px] w-[600px] bg-[radial-gradient(ellipse_at_top,oklch(0.936036_0.225167_121.2409/0.18),transparent_60%)]" />
 
       <div className="absolute inset-x-0 top-0 h-1/2">
         <SparklesCore

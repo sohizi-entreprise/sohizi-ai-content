@@ -34,7 +34,7 @@ export const deleteConversation = async (id: string) => {
   return {ok: result, error: result ? null : 'Failed to delete conversation'};
 }
 
-export { listLlmModels, listModelOptions } from '../models/service'
+export { listLlmModels, listModelParameters } from '../models/service'
 
 export const listConversationAgentRuns = async (conversationId: string, options?: CursorPaginationOptions) => {
   const agentRuns = await repo.listConversationAgentRuns(conversationId, options);

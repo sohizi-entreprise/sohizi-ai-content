@@ -22,7 +22,7 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as DashboardMainRouteImport } from './routes/dashboard/main'
 import { Route as AdminSkillsRouteImport } from './routes/admin/skills'
-import { Route as AdminOptionsRouteImport } from './routes/admin/options'
+import { Route as AdminParametersRouteImport } from './routes/admin/parameters'
 import { Route as AdminModelsRouteImport } from './routes/admin/models'
 import { Route as AdminContentCategoriesRouteImport } from './routes/admin/content-categories'
 import { Route as AdminCommandsRouteImport } from './routes/admin/commands'
@@ -107,9 +107,9 @@ const AdminSkillsRoute = AdminSkillsRouteImport.update({
   path: '/skills',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminOptionsRoute = AdminOptionsRouteImport.update({
-  id: '/options',
-  path: '/options',
+const AdminParametersRoute = AdminParametersRouteImport.update({
+  id: '/parameters',
+  path: '/parameters',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminModelsRoute = AdminModelsRouteImport.update({
@@ -229,7 +229,7 @@ export interface FileRoutesByFullPath {
   '/admin/commands': typeof AdminCommandsRoute
   '/admin/content-categories': typeof AdminContentCategoriesRoute
   '/admin/models': typeof AdminModelsRoute
-  '/admin/options': typeof AdminOptionsRoute
+  '/admin/parameters': typeof AdminParametersRoute
   '/admin/skills': typeof AdminSkillsRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/admin/': typeof AdminIndexRoute
@@ -261,7 +261,7 @@ export interface FileRoutesByTo {
   '/admin/commands': typeof AdminCommandsRoute
   '/admin/content-categories': typeof AdminContentCategoriesRoute
   '/admin/models': typeof AdminModelsRoute
-  '/admin/options': typeof AdminOptionsRoute
+  '/admin/parameters': typeof AdminParametersRoute
   '/admin/skills': typeof AdminSkillsRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/admin': typeof AdminIndexRoute
@@ -296,7 +296,7 @@ export interface FileRoutesById {
   '/admin/commands': typeof AdminCommandsRoute
   '/admin/content-categories': typeof AdminContentCategoriesRoute
   '/admin/models': typeof AdminModelsRoute
-  '/admin/options': typeof AdminOptionsRoute
+  '/admin/parameters': typeof AdminParametersRoute
   '/admin/skills': typeof AdminSkillsRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/admin/': typeof AdminIndexRoute
@@ -332,7 +332,7 @@ export interface FileRouteTypes {
     | '/admin/commands'
     | '/admin/content-categories'
     | '/admin/models'
-    | '/admin/options'
+    | '/admin/parameters'
     | '/admin/skills'
     | '/dashboard/main'
     | '/admin/'
@@ -364,7 +364,7 @@ export interface FileRouteTypes {
     | '/admin/commands'
     | '/admin/content-categories'
     | '/admin/models'
-    | '/admin/options'
+    | '/admin/parameters'
     | '/admin/skills'
     | '/dashboard/main'
     | '/admin'
@@ -398,7 +398,7 @@ export interface FileRouteTypes {
     | '/admin/commands'
     | '/admin/content-categories'
     | '/admin/models'
-    | '/admin/options'
+    | '/admin/parameters'
     | '/admin/skills'
     | '/dashboard/main'
     | '/admin/'
@@ -525,11 +525,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSkillsRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/options': {
-      id: '/admin/options'
-      path: '/options'
-      fullPath: '/admin/options'
-      preLoaderRoute: typeof AdminOptionsRouteImport
+    '/admin/parameters': {
+      id: '/admin/parameters'
+      path: '/parameters'
+      fullPath: '/admin/parameters'
+      preLoaderRoute: typeof AdminParametersRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/models': {
@@ -665,7 +665,7 @@ interface AdminRouteChildren {
   AdminCommandsRoute: typeof AdminCommandsRoute
   AdminContentCategoriesRoute: typeof AdminContentCategoriesRoute
   AdminModelsRoute: typeof AdminModelsRoute
-  AdminOptionsRoute: typeof AdminOptionsRoute
+  AdminParametersRoute: typeof AdminParametersRoute
   AdminSkillsRoute: typeof AdminSkillsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -674,7 +674,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCommandsRoute: AdminCommandsRoute,
   AdminContentCategoriesRoute: AdminContentCategoriesRoute,
   AdminModelsRoute: AdminModelsRoute,
-  AdminOptionsRoute: AdminOptionsRoute,
+  AdminParametersRoute: AdminParametersRoute,
   AdminSkillsRoute: AdminSkillsRoute,
   AdminIndexRoute: AdminIndexRoute,
 }

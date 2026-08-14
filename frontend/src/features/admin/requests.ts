@@ -4,19 +4,20 @@ import type {
   AdminCommand,
   AdminContentCategory,
   AdminModel,
-  AdminOption,
+  AdminParameter,
   AdminSkill,
   CatalogModel,
-  CatalogModelOption,
   CreateCommandInput,
   CreateContentCategoryInput,
   CreateModelInput,
-  CreateOptionInput,
+  CreateParameterInput,
   CreateSkillInput,
+  ModelParameterBinding,
+  ReplaceModelParameterBinding,
   UpdateCommandInput,
   UpdateContentCategoryInput,
   UpdateModelInput,
-  UpdateOptionInput,
+  UpdateParameterInput,
   UpdateSkillInput,
 } from './types'
 
@@ -35,7 +36,7 @@ export const updateAdminModel = async (id: string, input: UpdateModelInput): Pro
   return response.data
 }
 
-export const disableAdminModel = async (id: string): Promise<AdminModel> => {
+export const deleteAdminModel = async (id: string): Promise<{ ok: true }> => {
   const response = await api.delete(`/admin/models/${encodeURIComponent(id)}`)
   return response.data
 }
@@ -45,23 +46,39 @@ export const listAdminCategories = async (): Promise<AdminCategory[]> => {
   return response.data
 }
 
-export const listAdminOptions = async (): Promise<AdminOption[]> => {
-  const response = await api.get('/admin/options')
+export const listAdminParameters = async (): Promise<AdminParameter[]> => {
+  const response = await api.get('/admin/parameters')
   return response.data
 }
 
-export const createAdminOption = async (input: CreateOptionInput): Promise<AdminOption> => {
-  const response = await api.post('/admin/options', input)
+export const createAdminParameter = async (input: CreateParameterInput): Promise<AdminParameter> => {
+  const response = await api.post('/admin/parameters', input)
   return response.data
 }
 
-export const updateAdminOption = async (id: string, input: UpdateOptionInput): Promise<AdminOption> => {
-  const response = await api.patch(`/admin/options/${id}`, input)
+export const updateAdminParameter = async (
+  id: string,
+  input: UpdateParameterInput,
+): Promise<AdminParameter> => {
+  const response = await api.patch(`/admin/parameters/${id}`, input)
   return response.data
 }
 
-export const deactivateAdminOption = async (id: string): Promise<AdminOption> => {
-  const response = await api.delete(`/admin/options/${id}`)
+export const deleteAdminParameter = async (id: string): Promise<{ ok: true }> => {
+  const response = await api.delete(`/admin/parameters/${id}`)
+  return response.data
+}
+
+export const listModelParameters = async (modelId: string): Promise<ModelParameterBinding[]> => {
+  const response = await api.get(`/admin/models/${encodeURIComponent(modelId)}/parameters`)
+  return response.data
+}
+
+export const replaceModelParameters = async (
+  modelId: string,
+  input: ReplaceModelParameterBinding[],
+): Promise<ModelParameterBinding[]> => {
+  const response = await api.put(`/admin/models/${encodeURIComponent(modelId)}/parameters`, input)
   return response.data
 }
 
@@ -72,11 +89,6 @@ export const listCatalogModels = async (
   const response = await api.get('/models', {
     params: { categories: categoriesParam },
   })
-  return response.data
-}
-
-export const listCatalogModelOptions = async (modelId: string): Promise<CatalogModelOption[]> => {
-  const response = await api.get(`/models/${encodeURIComponent(modelId)}/options`)
   return response.data
 }
 

@@ -25,23 +25,66 @@ export type AdminCategory = {
   description: string
 }
 
-export type ModelOptionChoice = {
-  value: string
-  label: string
+export type ModelParameterDataType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'array<string>'
+  | 'array<number>'
+
+export type ModelParameterUIComponent = 'select' | 'slider' | 'uploader'
+
+export type ModelParameterConstraint = {
+  min?: number
+  max?: number
+  step?: number
+  fileType?: 'image' | 'video' | 'audio'
 }
 
-export type AdminOption = {
+export type AdminParameter = {
   id: string
   key: string
   label: string
+  type: ModelParameterDataType
   description: string | null
-  options: ModelOptionChoice[]
-  default: string | null
-  active: boolean
-  provider: string
+  xUiComponent: ModelParameterUIComponent | null
   createdAt: string
   updatedAt: string
-  modelIds: string[]
+}
+
+export type CreateParameterInput = {
+  key: string
+  label: string
+  type: ModelParameterDataType
+  description?: string | null
+  xUiComponent?: ModelParameterUIComponent | null
+}
+
+export type UpdateParameterInput = Partial<CreateParameterInput>
+
+export type ModelParameterBinding = {
+  parameterId: string
+  key: string
+  label: string
+  type: ModelParameterDataType
+  description: string | null
+  xUiComponent: ModelParameterUIComponent | null
+  providerParamName: string | null
+  required: boolean
+  sortOrder: number
+  defaultValue: string | null
+  constraints: ModelParameterConstraint | null
+  enum: string[] | null
+}
+
+export type ReplaceModelParameterBinding = {
+  parameterId: string
+  providerParamName?: string | null
+  required?: boolean
+  defaultValue?: string | null
+  constraints?: ModelParameterConstraint | null
+  enum?: string[] | null
+  sortOrder?: number
 }
 
 export type CreateModelInput = {
@@ -56,32 +99,9 @@ export type CreateModelInput = {
 
 export type UpdateModelInput = Partial<Omit<CreateModelInput, 'id'>>
 
-export type CreateOptionInput = {
-  key: string
-  label: string
-  description?: string | null
-  options: ModelOptionChoice[]
-  default?: string | null
-  active?: boolean
-  provider?: string
-  modelIds: string[]
-}
-
-export type UpdateOptionInput = Partial<CreateOptionInput>
-
 export type CatalogModel = {
   id: string
   name: string
-  provider: string
-}
-
-export type CatalogModelOption = {
-  id: string
-  key: string
-  label: string
-  description: string | null
-  options: ModelOptionChoice[]
-  default: string | null
   provider: string
 }
 

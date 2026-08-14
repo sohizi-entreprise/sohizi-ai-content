@@ -448,7 +448,12 @@ export type AgentRunMetadata = {
 
 export type AgentRunMessage = ModelMessage & {id: string}
 
-export type ModelOptionType = {
-  value: string
-  label: string
+export type ModelParameterConstraint = {
+  min?: number
+  max?: number
+  step?: number
+  fileType?: 'image' | 'video' | 'audio'
 }
+
+export type ModelParameterDataType = 'string' | 'number' | 'boolean' | 'array<string>' | 'array<number>';
+export type ModelParameterUIComponent = 'select' | 'slider' | 'uploader' ;

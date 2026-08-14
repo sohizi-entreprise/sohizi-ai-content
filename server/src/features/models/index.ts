@@ -23,8 +23,8 @@ export const modelsRoutes = new Elysia({ prefix: '/models' })
     }),
   })
   .get('/voices', () => mediaConstants.googleVoiceDescriptions)
-  .get('/:modelId/options', async ({ params }) => {
-    return modelsService.listModelOptions(params.modelId)
+  .get('/:modelId/parameters', async ({ params }) => {
+    return modelsService.listModelParameters(params.modelId)
   }, {
     params: z.object({
       modelId: z.string().min(1),

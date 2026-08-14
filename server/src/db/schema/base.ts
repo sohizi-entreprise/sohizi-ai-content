@@ -42,7 +42,9 @@ import {
   AgentRunStatus,
   AgentRunMetadata,
   AgentRunMessage,
-  ModelOptionType,
+  ModelParameterConstraint,
+  ModelParameterDataType,
+  ModelParameterUIComponent,
 } from '@/type';
 import { FileFormat } from '@/features/file-system/constants';
 
@@ -302,30 +304,38 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
   ]))
 
 
-  export const modelsOptions = pgTable('models_options', {
+  /** Catalog of parameter kinds. Per-model enums, defaults, and numeric bounds live on the model map. */
+  export const modelParameters = pgTable('model_parameters', {
     id: uuid('id').defaultRandom().primaryKey(),
     key: varchar('key', { length: 100 }).notNull(),
     label: varchar('label', { length: 100 }).notNull(),
+    type: varchar('type', { length: 50 }).notNull().$type<ModelParameterDataType>(),
     description: text('description'),
-    options: jsonb('options').$type<ModelOptionType[]>().notNull(),
-    default: varchar('default', { length: 100 }),
-    active: boolean('active').default(true).notNull(),
-    provider: varchar('provider', { length: 50 }).default('generic').notNull(),
+    xUiComponent: varchar('x_ui_component', { length: 50 }).$type<ModelParameterUIComponent>(),
     ...timestamps,
   }, (table) => ([
-    uniqueIndex('models_options_provider_key_unique').on(table.provider, table.key),
+    uniqueIndex('model_parameters_key_unique').on(table.key),
   ]))
 
-  export const modelsOptionsAndModels = pgTable('models_options_and_models', {
-    optionId: uuid('option_id')
-      .references(() => modelsOptions.id, { onDelete: 'cascade' })
-      .notNull(),
+
+  /** Which parameters a model exposes, plus per-model API name, default, and numeric constraints. */
+  export const modelsAndParameters = pgTable('models_and_parameters', {
     modelId: varchar('model_id', { length: 50 })
       .references(() => llmModels.id, { onDelete: 'cascade' })
       .notNull(),
+    parameterId: uuid('parameter_id')
+      .references(() => modelParameters.id, { onDelete: 'cascade' })
+      .notNull(),
+    providerParamName: varchar('provider_param_name', { length: 100 }),
+    required: boolean('required').default(false).notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    defaultValue: text('default_value'),
+    constraints: jsonb('constraints').$type<ModelParameterConstraint>(),
+    enum: jsonb('enum').$type<string[]>(),
     ...timestamps,
   }, (table) => ([
-    uniqueIndex('models_options_and_models_option_id_model_id_unique').on(table.optionId, table.modelId),
+    primaryKey({ columns: [table.modelId, table.parameterId] }),
+
   ]))
 
 
@@ -694,6 +704,8 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
   export type Message = typeof messages.$inferSelect
   export type ChatMessageRole = (typeof chatMessageRoleEnum.enumValues)[number]
   export type LlmModel = typeof llmModels.$inferSelect
+  export type ModelParameter = typeof modelParameters.$inferSelect
+  export type ModelAndParameter = typeof modelsAndParameters.$inferSelect
   export type Checkpoint = typeof checkpoints.$inferSelect
   export type Asset = typeof assets.$inferSelect
   export type AssetVariant = typeof assetVariants.$inferSelect

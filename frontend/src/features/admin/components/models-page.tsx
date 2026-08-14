@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table'
 import { Switch } from '@/components/ui/switch'
 import {
-  disableAdminModelMutationOptions,
+  deleteAdminModelMutationOptions,
   listAdminCategoriesQueryOptions,
   listAdminModelsQueryOptions,
   updateAdminModelMutationOptions,
@@ -38,7 +38,7 @@ export function ModelsPage() {
   const [providerFilter, setProviderFilter] = useState(ALL_VALUE)
 
   const updateMutation = useMutation(updateAdminModelMutationOptions())
-  const disableMutation = useMutation(disableAdminModelMutationOptions())
+  const deleteMutation = useMutation(deleteAdminModelMutationOptions())
 
   const providers = useMemo(() => {
     return [...new Set(models.map((model) => model.provider))].sort((a, b) =>
@@ -64,6 +64,11 @@ export function ModelsPage() {
   const openEdit = (model: AdminModel) => {
     setEditing(model)
     setDialogOpen(true)
+  }
+
+  const handleDelete = (model: AdminModel) => {
+    if (!window.confirm(`Delete model “${model.name}”? This cannot be undone.`)) return
+    deleteMutation.mutate(model.id)
   }
 
   const hasActiveFilters = categoryFilter !== ALL_VALUE || providerFilter !== ALL_VALUE
@@ -176,15 +181,13 @@ export function ModelsPage() {
                   <Button size="sm" variant="outline" onClick={() => openEdit(model)}>
                     Edit
                   </Button>
-                  {model.enabled ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => disableMutation.mutate(model.id)}
-                    >
-                      Disable
-                    </Button>
-                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(model)}
+                  >
+                    Delete
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

@@ -97,7 +97,7 @@ export function LandingNav() {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
           <img
-            src="/logo.svg"
+            src={overLight? "/logo-monochrome.svg" :"/logo-monochrome-white.svg"}
             alt=""
             width={32}
             height={28}

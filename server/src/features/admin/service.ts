@@ -5,11 +5,11 @@ import * as contentCategoriesRepo from '../content-categories/repo'
 import * as skillsRepo from '../skills/repo'
 import type {
   createModelSchema,
-  createOptionSchema,
+  createParameterSchema,
   replaceCategoriesSchema,
-  replaceOptionModelsSchema,
+  replaceModelParametersSchema,
   updateModelSchema,
-  updateOptionSchema,
+  updateParameterSchema,
 } from '../models/schema'
 import type { createCommandSchema, updateCommandSchema } from '../command/schema'
 import type {
@@ -26,9 +26,9 @@ import type { z } from 'zod'
 type CreateModelInput = z.infer<typeof createModelSchema>
 type UpdateModelInput = z.infer<typeof updateModelSchema>
 type ReplaceCategoriesInput = z.infer<typeof replaceCategoriesSchema>
-type CreateOptionInput = z.infer<typeof createOptionSchema>
-type UpdateOptionInput = z.infer<typeof updateOptionSchema>
-type ReplaceOptionModelsInput = z.infer<typeof replaceOptionModelsSchema>
+type CreateParameterInput = z.infer<typeof createParameterSchema>
+type UpdateParameterInput = z.infer<typeof updateParameterSchema>
+type ReplaceModelParametersInput = z.infer<typeof replaceModelParametersSchema>
 type CreateCommandInput = z.infer<typeof createCommandSchema>
 type UpdateCommandInput = z.infer<typeof updateCommandSchema>
 type CreateContentCategoryInput = z.infer<typeof createContentCategorySchema>
@@ -100,13 +100,13 @@ export const updateModel = async (id: string, input: UpdateModelInput) => {
   return getModel(id)
 }
 
-export const disableModel = async (id: string) => {
+export const deleteModel = async (id: string) => {
   const existing = await modelsRepo.getModelById(id)
   if (!existing) {
     throw new NotFound('Model not found')
   }
-  await modelsRepo.updateModel(id, { enabled: false })
-  return getModel(id)
+  await modelsRepo.deleteModel(id)
+  return { ok: true as const }
 }
 
 export const replaceModelCategories = async (id: string, input: ReplaceCategoriesInput) => {
@@ -119,87 +119,89 @@ export const replaceModelCategories = async (id: string, input: ReplaceCategorie
   return getModel(id)
 }
 
-export const listOptions = async () => modelsRepo.listAllOptions()
+export const listParameters = async () => modelsRepo.listAllParameters()
 
-export const getOption = async (id: string) => {
-  const options = await modelsRepo.listAllOptions()
-  const option = options.find((item) => item.id === id)
-  if (!option) {
-    throw new NotFound('Option not found')
+export const getParameter = async (id: string) => {
+  const parameter = await modelsRepo.getParameterById(id)
+  if (!parameter) {
+    throw new NotFound('Parameter not found')
   }
-  return option
+  return parameter
 }
 
-export const createOption = async (input: CreateOptionInput) => {
-  if (!(await modelsRepo.modelsExist(input.modelIds))) {
-    throw new BadRequest('One or more modelIds do not exist')
-  }
-
+export const createParameter = async (input: CreateParameterInput) => {
   try {
-    const created = await modelsRepo.createOption({
+    return await modelsRepo.createParameter({
       key: input.key,
       label: input.label,
+      type: input.type,
       description: input.description,
-      options: input.options,
-      default: input.default,
-      active: input.active,
-      provider: input.provider,
+      xUiComponent: input.xUiComponent,
     })
-    await modelsRepo.replaceOptionModels(created.id, input.modelIds)
-    return getOption(created.id)
   } catch (error) {
     if (isUniqueViolation(error)) {
-      throw new Conflict('Option with this provider and key already exists')
+      throw new Conflict('Parameter with this key already exists')
     }
     throw error
   }
 }
 
-export const updateOption = async (id: string, input: UpdateOptionInput) => {
-  const existing = await modelsRepo.getOptionById(id)
+export const updateParameter = async (id: string, input: UpdateParameterInput) => {
+  const existing = await modelsRepo.getParameterById(id)
   if (!existing) {
-    throw new NotFound('Option not found')
+    throw new NotFound('Parameter not found')
   }
 
-  const { modelIds, ...fields } = input
-  if (Object.keys(fields).length > 0) {
-    try {
-      await modelsRepo.updateOption(id, fields)
-    } catch (error) {
-      if (isUniqueViolation(error)) {
-        throw new Conflict('Option with this provider and key already exists')
-      }
-      throw error
-    }
+  if (Object.keys(input).length === 0) {
+    return existing
   }
-  if (modelIds) {
-    if (!(await modelsRepo.modelsExist(modelIds))) {
-      throw new BadRequest('One or more modelIds do not exist')
+
+  try {
+    const updated = await modelsRepo.updateParameter(id, input)
+    if (!updated) {
+      throw new NotFound('Parameter not found')
     }
-    await modelsRepo.replaceOptionModels(id, modelIds)
+    return updated
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new Conflict('Parameter with this key already exists')
+    }
+    throw error
   }
-  return getOption(id)
 }
 
-export const deactivateOption = async (id: string) => {
-  const existing = await modelsRepo.getOptionById(id)
+export const deleteParameter = async (id: string) => {
+  const existing = await modelsRepo.getParameterById(id)
   if (!existing) {
-    throw new NotFound('Option not found')
+    throw new NotFound('Parameter not found')
   }
-  await modelsRepo.updateOption(id, { active: false })
-  return getOption(id)
+  await modelsRepo.deleteParameter(id)
+  return { ok: true as const }
 }
 
-export const replaceOptionModels = async (id: string, input: ReplaceOptionModelsInput) => {
-  const existing = await modelsRepo.getOptionById(id)
+export const listModelParameters = async (id: string) => {
+  const existing = await modelsRepo.getModelById(id)
   if (!existing) {
-    throw new NotFound('Option not found')
+    throw new NotFound('Model not found')
   }
-  if (!(await modelsRepo.modelsExist(input.modelIds))) {
-    throw new BadRequest('One or more modelIds do not exist')
+  return modelsRepo.listModelParameterBindings(id)
+}
+
+export const replaceModelParameters = async (id: string, input: ReplaceModelParametersInput) => {
+  const existing = await modelsRepo.getModelById(id)
+  if (!existing) {
+    throw new NotFound('Model not found')
   }
-  await modelsRepo.replaceOptionModels(id, input.modelIds)
-  return getOption(id)
+  const parameterIds = input.map((binding) => binding.parameterId)
+  if (!(await modelsRepo.parametersExist(parameterIds))) {
+    throw new BadRequest('One or more parameterIds do not exist')
+  }
+  const uniqueIds = new Set(parameterIds)
+  if (uniqueIds.size !== parameterIds.length) {
+    throw new BadRequest('Duplicate parameterIds are not allowed')
+  }
+  await modelsRepo.replaceModelParameters(id, input)
+  return modelsRepo.listModelParameterBindings(id)
 }
 
 // ======================== Commands ========================

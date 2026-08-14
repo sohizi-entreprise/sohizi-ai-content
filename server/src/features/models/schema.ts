@@ -14,9 +14,21 @@ export const tokenPricingSchema = z.object({
   cached_input: z.array(pricingTierSchema).optional(),
 })
 
-export const modelOptionChoiceSchema = z.object({
-  value: z.string().min(1),
-  label: z.string().min(1),
+export const modelParameterTypeSchema = z.enum([
+  'string',
+  'number',
+  'boolean',
+  'array<string>',
+  'array<number>',
+])
+
+export const modelParameterUiComponentSchema = z.enum(['select', 'slider', 'uploader'])
+
+export const modelParameterConstraintSchema = z.object({
+  min: z.number().optional(),
+  max: z.number().optional(),
+  step: z.number().optional(),
+  fileType: z.enum(['image', 'video', 'audio']).optional(),
 })
 
 export const createModelSchema = z.object({
@@ -42,28 +54,30 @@ export const replaceCategoriesSchema = z.object({
   categoryNames: z.array(z.string().min(1)),
 })
 
-export const createOptionSchema = z.object({
+export const createParameterSchema = z.object({
   key: z.string().min(1).max(100),
   label: z.string().min(1).max(100),
+  type: modelParameterTypeSchema,
   description: z.string().nullable().optional(),
-  options: z.array(modelOptionChoiceSchema).min(1),
-  default: z.string().max(100).nullable().optional(),
-  active: z.boolean().optional(),
-  provider: z.string().min(1).max(50).optional(),
-  modelIds: z.array(z.string().min(1)).default([]),
+  xUiComponent: modelParameterUiComponentSchema.nullable().optional(),
 })
 
-export const updateOptionSchema = z.object({
+export const updateParameterSchema = z.object({
   key: z.string().min(1).max(100).optional(),
   label: z.string().min(1).max(100).optional(),
+  type: modelParameterTypeSchema.optional(),
   description: z.string().nullable().optional(),
-  options: z.array(modelOptionChoiceSchema).min(1).optional(),
-  default: z.string().max(100).nullable().optional(),
-  active: z.boolean().optional(),
-  provider: z.string().min(1).max(50).optional(),
-  modelIds: z.array(z.string().min(1)).optional(),
+  xUiComponent: modelParameterUiComponentSchema.nullable().optional(),
 })
 
-export const replaceOptionModelsSchema = z.object({
-  modelIds: z.array(z.string().min(1)),
+export const modelParameterBindingSchema = z.object({
+  parameterId: z.uuid(),
+  providerParamName: z.string().max(100).nullable().optional(),
+  required: z.boolean().optional(),
+  defaultValue: z.string().nullable().optional(),
+  constraints: modelParameterConstraintSchema.nullable().optional(),
+  enum: z.array(z.string()).nullable().optional(),
+  sortOrder: z.number().int().optional(),
 })
+
+export const replaceModelParametersSchema = z.array(modelParameterBindingSchema)

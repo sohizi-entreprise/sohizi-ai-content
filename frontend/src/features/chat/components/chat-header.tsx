@@ -1,10 +1,11 @@
-import { IconPlus, IconBrandOpenai } from '@tabler/icons-react'
+import { IconPlus } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { ChatHistory } from './chat-history'
 import { useChatStore } from '../store/chat-store'
 import { useShallow } from 'zustand/react/shallow'
 import { useEffect } from 'react'
+import { SphereLoader } from '@/components/ui/loaders'
 
 type ChatHeaderProps = {
   projectId: string
@@ -30,9 +31,9 @@ export function ChatHeader({ projectId, className }: ChatHeaderProps) {
   }, [projectId, isNew])
 
   return (
-    <div className={cn('flex items-center justify-between px-4 border-b h-9', className)}>
+    <div className={cn('flex items-center justify-between px-2 border-b h-9', className)}>
       <div className="flex items-center gap-2 min-w-0">
-        <IconBrandOpenai className="size-4 text-primary" />
+        <SphereLoader isLoading={!!conversation?.isStreaming} size={32} showRings={false} />
         <h2 className="text-xs truncate min-w-0 flex-1">
           {title}
         </h2>

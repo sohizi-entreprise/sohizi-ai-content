@@ -4,11 +4,11 @@ import { adminMiddleware } from '@/lib/admin-middleware'
 import * as adminService from './service'
 import {
   createModelSchema,
-  createOptionSchema,
+  createParameterSchema,
   replaceCategoriesSchema,
-  replaceOptionModelsSchema,
+  replaceModelParametersSchema,
   updateModelSchema,
-  updateOptionSchema,
+  updateParameterSchema,
 } from '../models/schema'
 import { createCommandSchema, updateCommandSchema } from '../command/schema'
 import {
@@ -35,30 +35,33 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     params: z.object({ id: z.string().min(1) }),
     body: updateModelSchema,
   })
-  .delete('/models/:id', ({ params }) => adminService.disableModel(params.id), {
+  .delete('/models/:id', ({ params }) => adminService.deleteModel(params.id), {
     params: z.object({ id: z.string().min(1) }),
   })
   .put('/models/:id/categories', ({ params, body }) => adminService.replaceModelCategories(params.id, body), {
     params: z.object({ id: z.string().min(1) }),
     body: replaceCategoriesSchema,
   })
-  .get('/options', () => adminService.listOptions())
-  .post('/options', ({ body }) => adminService.createOption(body), {
-    body: createOptionSchema,
+  .get('/models/:id/parameters', ({ params }) => adminService.listModelParameters(params.id), {
+    params: z.object({ id: z.string().min(1) }),
   })
-  .get('/options/:id', ({ params }) => adminService.getOption(params.id), {
+  .put('/models/:id/parameters', ({ params, body }) => adminService.replaceModelParameters(params.id, body), {
+    params: z.object({ id: z.string().min(1) }),
+    body: replaceModelParametersSchema,
+  })
+  .get('/parameters', () => adminService.listParameters())
+  .post('/parameters', ({ body }) => adminService.createParameter(body), {
+    body: createParameterSchema,
+  })
+  .get('/parameters/:id', ({ params }) => adminService.getParameter(params.id), {
     params: z.object({ id: z.uuid() }),
   })
-  .patch('/options/:id', ({ params, body }) => adminService.updateOption(params.id, body), {
+  .patch('/parameters/:id', ({ params, body }) => adminService.updateParameter(params.id, body), {
     params: z.object({ id: z.uuid() }),
-    body: updateOptionSchema,
+    body: updateParameterSchema,
   })
-  .delete('/options/:id', ({ params }) => adminService.deactivateOption(params.id), {
+  .delete('/parameters/:id', ({ params }) => adminService.deleteParameter(params.id), {
     params: z.object({ id: z.uuid() }),
-  })
-  .put('/options/:id/models', ({ params, body }) => adminService.replaceOptionModels(params.id, body), {
-    params: z.object({ id: z.uuid() }),
-    body: replaceOptionModelsSchema,
   })
   .get('/commands', () => adminService.listCommands())
   .post('/commands', ({ body }) => adminService.createCommand(body), {

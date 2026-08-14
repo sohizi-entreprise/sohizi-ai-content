@@ -50,8 +50,8 @@ export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
       categories: z.string(),
     }),
   })
-  .get('/models/:modelId/options', async ({ params }) => {
-    return chatService.listModelOptions(params.modelId)
+  .get('/models/:modelId/parameters', async ({ params }) => {
+    return chatService.listModelParameters(params.modelId)
   }, {
     params: z.object({
       modelId: z.string(),

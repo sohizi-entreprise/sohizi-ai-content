@@ -17,14 +17,13 @@ import {
   import { Suspense, useState } from 'react'
   import { Skeleton } from '@/components/ui/skeleton'
   import { Link, useRouterState } from '@tanstack/react-router'
-  import { IconFocus2, IconSparkle, IconX } from '@tabler/icons-react'
+  import { IconBrain, IconFocus2, IconX } from '@tabler/icons-react'
   import { useSession } from '@/lib/auth-client'
 import {
   getChatChromeContext,
   useEditorStore,
 } from '@/features/editor/stores/editor-store'
 import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
-import { SphereLoader } from '../ui/loaders'
   
   export function AppHeader() {
     const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -36,11 +35,14 @@ import { SphereLoader } from '../ui/loaders'
       <header className="flex h-11 shrink-0 items-center justify-between border-border  px-3">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            {/* <div className="flex size-6 items-center justify-center rounded-md bg-primary">
-              <span className="text-xs font-bold text-primary-foreground">S</span>
-            </div> */}
-            <SphereLoader isLoading={true} size={32} showRings={false} />
-            <span className="text-sm font-semibold text-foreground">Sohizi Lab</span>
+            <img
+              src="/logo.svg"
+              alt=""
+              width={32}
+              height={28}
+              className="h-7 w-8 shrink-0 object-contain sm:h-8 sm:w-9 -mt-2"
+            />
+            <span className="text-sm font-semibold text-muted-foreground">Sohizi Lab</span>
           </div>
   
           <span className="text-muted-foreground/40">|</span>
@@ -50,16 +52,19 @@ import { SphereLoader } from '../ui/loaders'
           </Suspense>
         </div>
   
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
   
           <ThemeToggle />
   
           <button onClick={() => activateFocusMode(chatContext)}>
-            <IconFocus2 className="size-4 text-foreground" />
+            <IconFocus2 className="size-5 text-foreground" />
           </button>
   
           <button onClick={() => toggleChatPanel(chatContext)}>
-            <IconSparkle className="size-4 text-primary" />
+            {
+              <IconBrain className="size-5 text-primary" />
+
+            }
           </button>
         </div>
       </header>
@@ -90,9 +95,9 @@ import { SphereLoader } from '../ui/loaders'
   
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-muted-foreground hover:text-foreground">
-            <span className="text-xs">{currentProjectTitle}</span>
-            <ChevronDown className="size-3" />
+          <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-foreground hover:text-foreground cursor-pointer">
+            <span className="text-sm">{currentProjectTitle}</span>
+            <ChevronDown className="size-4 mt-1" />
           </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl h-[70%] max-h-[800px] bg-gray-800 rounded-xl flex flex-col" showCloseButton={false}>
