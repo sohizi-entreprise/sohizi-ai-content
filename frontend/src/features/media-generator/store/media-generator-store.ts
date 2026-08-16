@@ -1,7 +1,6 @@
 import { create } from 'zustand'
-import type {
-  ComposerMediaType,
-} from '../types'
+import type { GenerationSubtype, GenerationType } from '../types'
+import { getDefaultSubtype } from '../constants'
 import { AttachedFile } from '@/components/widgets/file-attachments'
 import { Editor } from '@tiptap/core'
 
@@ -11,14 +10,15 @@ type ActiveGenerationRequest = {
 }
 
 type PromptSettings = {
-  image: Record<string, string>
-  video: Record<string, string>
   audio: Record<string, string>
 }
 
 type StoreState = {
   activeGenerationRequests: Array<ActiveGenerationRequest>
-  mediaType: ComposerMediaType
+  generationType: GenerationType
+  generationSubtype: GenerationSubtype | null
+  selectedModelId: string | null
+  parameterValues: Record<string, string>
   prompt: string
   promptSettings: PromptSettings
   attachments: Array<AttachedFile>
@@ -29,13 +29,13 @@ type StoreState = {
 type StoreActions = {
   appendActiveGenerationRequest: (data: ActiveGenerationRequest) => void
   removeActiveGenerationRequest: (requestId: string) => void
-  setMediaType: (mediaType: ComposerMediaType) => void
+  setGenerationType: (generationType: GenerationType) => void
+  setGenerationSubtype: (generationSubtype: GenerationSubtype) => void
+  setSelectedModelId: (selectedModelId: string | null) => void
+  setParameterValues: (parameterValues: Record<string, string>) => void
+  updateParameterValue: (key: string, value: string) => void
   setPrompt: (prompt: string) => void
-  updatePromptSettings: <T extends ComposerMediaType>(
-    type: T,
-    key: string,
-    value: string,
-  ) => void
+  updatePromptSettings: (type: 'audio', key: string, value: string) => void
   addAttachment: (attachment: AttachedFile) => void
   removeAttachment: (id: string) => void
   reset: () => void
@@ -46,11 +46,12 @@ type StoreActions = {
 
 const initialState: StoreState = {
   activeGenerationRequests: [],
-  mediaType: 'image',
+  generationType: 'image',
+  generationSubtype: null,
+  selectedModelId: null,
+  parameterValues: {},
   prompt: '',
   promptSettings: {
-    image: {},
-    video: {},
     audio: {voice: 'Kore'},
   },
   attachments: [],
@@ -60,10 +61,33 @@ const initialState: StoreState = {
 
 
 export const useMediaGeneratorStore = create<StoreState & StoreActions>(
-  (set, _get) => ({
+  (set) => ({
     ...initialState,
     setPrompt: (data) => set({ prompt: data }),
-    setMediaType: (data) => set({ mediaType: data }),
+    setGenerationType: (generationType) =>
+      set({
+        generationType,
+        generationSubtype: getDefaultSubtype(generationType),
+        selectedModelId: null,
+        parameterValues: {},
+        attachments: [],
+      }),
+    setGenerationSubtype: (generationSubtype) =>
+      set({
+        generationSubtype,
+        selectedModelId: null,
+        parameterValues: {},
+      }),
+    setSelectedModelId: (selectedModelId) =>
+      set({
+        selectedModelId,
+        parameterValues: {},
+      }),
+    setParameterValues: (parameterValues) => set({ parameterValues }),
+    updateParameterValue: (key, value) =>
+      set((state) => ({
+        parameterValues: { ...state.parameterValues, [key]: value },
+      })),
     updatePromptSettings: (type, key, value) =>
       set((state) => ({
         promptSettings: {

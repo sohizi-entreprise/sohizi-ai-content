@@ -456,4 +456,4 @@ export type ModelParameterConstraint = {
 }
 
 export type ModelParameterDataType = 'string' | 'number' | 'boolean' | 'array<string>' | 'array<number>';
-export type ModelParameterUIComponent = 'select' | 'slider' | 'uploader' ;
+export type ModelParameterUIComponent = 'select' | 'slider' | 'uploader' | 'textarea' | 'checkbox' ;

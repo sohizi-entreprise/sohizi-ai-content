@@ -1,7 +1,15 @@
-import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { useSession } from '@/lib/auth-client'
 import { cn } from '@/lib/utils'
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from '@/components/ui/navigation-menu'
 
 export const Route = createFileRoute('/admin')({
   component: AdminLayout,
@@ -10,9 +18,11 @@ export const Route = createFileRoute('/admin')({
 type AdminPath =
   | '/admin/models'
   | '/admin/parameters'
+  | '/admin/vendors'
   | '/admin/commands'
   | '/admin/skills'
-  | '/admin/content-categories'
+  | '/admin/categories/models'
+  | '/admin/categories/content'
 
 function AdminLayout() {
   const { data: session, isPending } = useSession()
@@ -52,9 +62,10 @@ function AdminLayout() {
             <nav className="flex flex-wrap items-center gap-1">
               <AdminNavLink to="/admin/models">Models</AdminNavLink>
               <AdminNavLink to="/admin/parameters">Parameters</AdminNavLink>
+              <AdminNavLink to="/admin/vendors">Vendors</AdminNavLink>
               <AdminNavLink to="/admin/commands">Commands</AdminNavLink>
               <AdminNavLink to="/admin/skills">Skills</AdminNavLink>
-              <AdminNavLink to="/admin/content-categories">Categories</AdminNavLink>
+              <CategoriesNavMenu />
             </nav>
           </div>
           <Link
@@ -91,5 +102,53 @@ function AdminNavLink({
     >
       {children}
     </Link>
+  )
+}
+
+function CategoriesNavMenu() {
+  const matchRoute = useMatchRoute()
+  const modelsActive = Boolean(matchRoute({ to: '/admin/categories/models', fuzzy: false }))
+  const contentActive = Boolean(matchRoute({ to: '/admin/categories/content', fuzzy: false }))
+  const categoriesActive = modelsActive || contentActive
+
+  return (
+    <NavigationMenu viewport={false} className="max-w-none flex-none">
+      <NavigationMenuList>
+        <NavigationMenuItem>
+          <NavigationMenuTrigger
+            className={cn(
+              'h-auto bg-transparent px-3 py-1.5 text-sm font-normal text-muted-foreground hover:bg-muted hover:text-foreground focus:bg-muted data-[state=open]:bg-muted data-[state=open]:text-foreground',
+              categoriesActive && 'bg-muted text-foreground',
+            )}
+          >
+            Categories
+          </NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <ul className="grid w-[280px] gap-1 p-1">
+              <li>
+                <NavigationMenuLink asChild active={modelsActive}>
+                  <Link to="/admin/categories/models">
+                    <span className="font-medium">Models</span>
+                    <span className="text-muted-foreground text-xs">
+                      Catalog types for chat and media generation
+                    </span>
+                  </Link>
+                </NavigationMenuLink>
+              </li>
+              <li>
+                <NavigationMenuLink asChild active={contentActive}>
+                  <Link to="/admin/categories/content">
+                    <span className="font-medium">Content</span>
+                    <span className="text-muted-foreground text-xs">
+                      Taxonomy for skills, projects, and more
+                    </span>
+                  </Link>
+                </NavigationMenuLink>
+              </li>
+            </ul>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+      </NavigationMenuList>
+    </NavigationMenu>
   )
 }

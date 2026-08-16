@@ -54,12 +54,29 @@ export const replaceCategoriesSchema = z.object({
   categoryNames: z.array(z.string().min(1)),
 })
 
+export const createCategorySchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Name must be lowercase kebab-case'),
+  description: z.string().trim().max(1000).optional().default(''),
+})
+
+export const parameterOptionInputSchema = z.object({
+  label: z.string().trim().min(1).max(100),
+  value: z.string().min(1),
+  description: z.string().nullable().optional(),
+})
+
 export const createParameterSchema = z.object({
   key: z.string().min(1).max(100),
   label: z.string().min(1).max(100),
   type: modelParameterTypeSchema,
   description: z.string().nullable().optional(),
   xUiComponent: modelParameterUiComponentSchema.nullable().optional(),
+  options: z.array(parameterOptionInputSchema).optional(),
 })
 
 export const updateParameterSchema = z.object({
@@ -70,13 +87,53 @@ export const updateParameterSchema = z.object({
   xUiComponent: modelParameterUiComponentSchema.nullable().optional(),
 })
 
+export const createParameterOptionSchema = parameterOptionInputSchema
+
+export const updateParameterOptionSchema = z.object({
+  label: z.string().trim().min(1).max(100).optional(),
+  value: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+})
+
+export const upsertVendorOptionMapSchema = z.object({
+  vendorOptionValue: z.string().min(1),
+})
+
+export const upsertVendorParameterMapSchema = z.object({
+  vendorParamName: z.string().max(100).nullable().optional(),
+  vendorDefaultValue: z.string().nullable().optional(),
+})
+
+export const createVendorSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  enabled: z.boolean().optional(),
+})
+
+export const updateVendorSchema = z.object({
+  name: z.string().trim().min(1).max(100).optional(),
+  enabled: z.boolean().optional(),
+})
+
+export const createModelVendorBindingSchema = z.object({
+  vendorId: z.uuid(),
+  apiName: z.string().min(1).max(50),
+  pricing: tokenPricingSchema.nullable().optional(),
+  enabled: z.boolean().optional(),
+})
+
+export const updateModelVendorBindingSchema = z.object({
+  apiName: z.string().min(1).max(50).optional(),
+  pricing: tokenPricingSchema.nullable().optional(),
+  enabled: z.boolean().optional(),
+})
+
 export const modelParameterBindingSchema = z.object({
   parameterId: z.uuid(),
   providerParamName: z.string().max(100).nullable().optional(),
   required: z.boolean().optional(),
   defaultValue: z.string().nullable().optional(),
   constraints: modelParameterConstraintSchema.nullable().optional(),
-  enum: z.array(z.string()).nullable().optional(),
+  optionIds: z.array(z.uuid()).optional(),
   sortOrder: z.number().int().optional(),
 })
 

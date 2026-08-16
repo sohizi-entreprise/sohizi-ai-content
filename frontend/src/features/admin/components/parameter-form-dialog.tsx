@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { Plus, Trash2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -17,13 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  createAdminParameterMutationOptions,
-  updateAdminParameterMutationOptions,
-} from '../query-mutation'
+import { createAdminParameterMutationOptions } from '../query-mutation'
 import type {
-  AdminParameter,
   CreateParameterInput,
+  CreateParameterOptionInput,
   ModelParameterDataType,
   ModelParameterUIComponent,
 } from '../types'
@@ -31,7 +29,7 @@ import type {
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  parameter?: AdminParameter | null
+  onCreated?: (parameterId: string) => void
 }
 
 const PARAMETER_TYPES: ModelParameterDataType[] = [
@@ -53,47 +51,47 @@ const emptyForm = {
   xUiComponent: '' as ModelParameterUIComponent | '',
 }
 
-export function ParameterFormDialog({ open, onOpenChange, parameter }: Props) {
-  const isEdit = Boolean(parameter)
+const emptyOption = (): CreateParameterOptionInput => ({ label: '', value: '', description: '' })
+
+export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
   const [form, setForm] = useState(emptyForm)
+  const [options, setOptions] = useState<CreateParameterOptionInput[]>([emptyOption()])
   const [error, setError] = useState<string | null>(null)
 
   const createMutation = useMutation(createAdminParameterMutationOptions())
-  const updateMutation = useMutation(updateAdminParameterMutationOptions())
 
   useEffect(() => {
     if (!open) return
-    if (parameter) {
-      setForm({
-        key: parameter.key,
-        label: parameter.label,
-        type: parameter.type,
-        description: parameter.description ?? '',
-        xUiComponent: parameter.xUiComponent ?? '',
-      })
-    } else {
-      setForm(emptyForm)
-    }
+    setForm(emptyForm)
+    setOptions([emptyOption()])
     setError(null)
-  }, [open, parameter])
+  }, [open])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError(null)
     try {
+      const seededOptions = options
+        .map((option) => ({
+          label: option.label.trim(),
+          value: option.value.trim(),
+          description: option.description?.trim() || null,
+        }))
+        .filter((option) => option.label && option.value)
+
       const payload: CreateParameterInput = {
         key: form.key,
         label: form.label,
         type: form.type,
         description: form.description || null,
         xUiComponent: form.xUiComponent || null,
+        ...(form.xUiComponent === 'select' && seededOptions.length > 0
+          ? { options: seededOptions }
+          : {}),
       }
-      if (isEdit && parameter) {
-        await updateMutation.mutateAsync({ id: parameter.id, input: payload })
-      } else {
-        await createMutation.mutateAsync(payload)
-      }
+      const created = await createMutation.mutateAsync(payload)
       onOpenChange(false)
+      onCreated?.(created.id)
     } catch (err) {
       const message =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
@@ -102,13 +100,11 @@ export function ParameterFormDialog({ open, onOpenChange, parameter }: Props) {
     }
   }
 
-  const pending = createMutation.isPending || updateMutation.isPending
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit parameter' : 'Add parameter'}</DialogTitle>
+          <DialogTitle>Add parameter</DialogTitle>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-3">
@@ -187,13 +183,67 @@ export function ParameterFormDialog({ open, onOpenChange, parameter }: Props) {
               onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
             />
           </div>
+          {form.xUiComponent === 'select' ? (
+            <div className="space-y-2">
+              <Label>Initial options</Label>
+              <div className="space-y-2">
+                {options.map((option, index) => (
+                  <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                    <Input
+                      value={option.label}
+                      placeholder="Label"
+                      onChange={(event) =>
+                        setOptions((prev) =>
+                          prev.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, label: event.target.value } : item,
+                          ),
+                        )
+                      }
+                    />
+                    <Input
+                      value={option.value}
+                      placeholder="Value"
+                      onChange={(event) =>
+                        setOptions((prev) =>
+                          prev.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, value: event.target.value } : item,
+                          ),
+                        )
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={options.length <= 1}
+                      onClick={() =>
+                        setOptions((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+                      }
+                      aria-label="Remove option"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setOptions((prev) => [...prev, emptyOption()])}
+                >
+                  <Plus className="size-4" />
+                  Add option
+                </Button>
+              </div>
+            </div>
+          ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Saving…' : 'Save'}
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Saving…' : 'Create'}
             </Button>
           </DialogFooter>
         </form>

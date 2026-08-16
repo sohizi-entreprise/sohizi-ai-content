@@ -1,13 +1,45 @@
 import { db } from '@/db'
 import {
   llmModels,
+  llmVendors,
+  llmVendorsAndModels,
+  llmVendorsAndParameterOptions,
+  llmVendorsAndParameters,
   modelCategories,
   modelParameters,
   modelsAndCategories,
+  modelsAndParameterOptions,
   modelsAndParameters,
+  parameterOptions,
 } from '@/db/schema'
-import { and, eq, inArray } from 'drizzle-orm'
-import type { ModelParameterConstraint } from '@/type'
+import { and, count, eq, inArray, sql } from 'drizzle-orm'
+import type { ModelParameterConstraint, TokenPricing } from '@/type'
+
+type ParameterOptionRow = {
+  id: string
+  label: string
+  value: string
+  description: string | null
+}
+
+type OptionVendorMappingRow = {
+  vendorId: string
+  vendorName: string
+  vendorOptionValue: string
+}
+
+type ParameterVendorMappingRow = {
+  vendorId: string
+  vendorName: string
+  vendorParamName: string | null
+  vendorDefaultValue: string | null
+}
+
+type ParameterOptionDetailRow = ParameterOptionRow & {
+  createdAt: string
+  updatedAt: string
+  vendorMappings: OptionVendorMappingRow[]
+}
 
 export const listEnabledModelsByCategories = async (categories: string[]) => {
   if (categories.length === 0) {
@@ -33,28 +65,173 @@ export const getModelById = async (id: string) => {
   return result[0]
 }
 
-const modelParameterBindingSelect = {
-  parameterId: modelParameters.id,
-  key: modelParameters.key,
-  label: modelParameters.label,
-  type: modelParameters.type,
-  description: modelParameters.description,
-  xUiComponent: modelParameters.xUiComponent,
-  providerParamName: modelsAndParameters.providerParamName,
-  required: modelsAndParameters.required,
-  sortOrder: modelsAndParameters.sortOrder,
-  defaultValue: modelsAndParameters.defaultValue,
-  constraints: modelsAndParameters.constraints,
-  enum: modelsAndParameters.enum,
+export const getModelWithRelations = async (id: string) => {
+  const rows = await db
+    .select({
+      id: llmModels.id,
+      provider: llmModels.provider,
+      name: llmModels.name,
+      apiName: llmModels.apiName,
+      pricing: llmModels.pricing,
+      enabled: llmModels.enabled,
+      createdAt: llmModels.createdAt,
+      updatedAt: llmModels.updatedAt,
+      categoryName: modelCategories.name,
+      vendorId: llmVendors.id,
+      vendorName: llmVendors.name,
+      vendorApiName: llmVendorsAndModels.apiName,
+      vendorPricing: llmVendorsAndModels.pricing,
+      vendorEnabled: llmVendorsAndModels.enabled,
+    })
+    .from(llmModels)
+    .leftJoin(modelsAndCategories, eq(llmModels.id, modelsAndCategories.modelId))
+    .leftJoin(modelCategories, eq(modelsAndCategories.categoryId, modelCategories.id))
+    .leftJoin(llmVendorsAndModels, eq(llmVendorsAndModels.modelId, llmModels.id))
+    .leftJoin(llmVendors, eq(llmVendors.id, llmVendorsAndModels.vendorId))
+    .where(eq(llmModels.id, id))
+
+  if (rows.length === 0) {
+    return undefined
+  }
+
+  const first = rows[0]
+  const categories: string[] = []
+  const vendors: Array<{
+    vendorId: string
+    name: string
+    apiName: string
+    pricing: (typeof rows)[number]['vendorPricing']
+    enabled: boolean
+  }> = []
+  const seenCategories = new Set<string>()
+  const seenVendors = new Set<string>()
+
+  for (const row of rows) {
+    if (row.categoryName && !seenCategories.has(row.categoryName)) {
+      seenCategories.add(row.categoryName)
+      categories.push(row.categoryName)
+    }
+    if (row.vendorId && !seenVendors.has(row.vendorId)) {
+      seenVendors.add(row.vendorId)
+      vendors.push({
+        vendorId: row.vendorId,
+        name: row.vendorName!,
+        apiName: row.vendorApiName!,
+        pricing: row.vendorPricing,
+        enabled: row.vendorEnabled!,
+      })
+    }
+  }
+
+  return {
+    id: first.id,
+    provider: first.provider,
+    name: first.name,
+    apiName: first.apiName,
+    pricing: first.pricing,
+    enabled: first.enabled,
+    createdAt: first.createdAt,
+    updatedAt: first.updatedAt,
+    categories,
+    vendors,
+  }
 }
 
 export const listModelParameterBindings = async (modelId: string) => {
-  return db
-    .select(modelParameterBindingSelect)
-    .from(modelsAndParameters)
-    .innerJoin(modelParameters, eq(modelsAndParameters.parameterId, modelParameters.id))
-    .where(eq(modelsAndParameters.modelId, modelId))
-    .orderBy(modelsAndParameters.sortOrder, modelParameters.key)
+  const rows = await db
+    .select({
+      modelId: llmModels.id,
+      parameterId: modelParameters.id,
+      key: modelParameters.key,
+      label: modelParameters.label,
+      type: modelParameters.type,
+      description: modelParameters.description,
+      xUiComponent: modelParameters.xUiComponent,
+      providerParamName: modelsAndParameters.providerParamName,
+      required: modelsAndParameters.required,
+      sortOrder: modelsAndParameters.sortOrder,
+      defaultValue: modelsAndParameters.defaultValue,
+      constraints: modelsAndParameters.constraints,
+      optionId: parameterOptions.id,
+      optionLabel: parameterOptions.label,
+      optionValue: parameterOptions.value,
+      optionDescription: parameterOptions.description,
+    })
+    .from(llmModels)
+    .leftJoin(modelsAndParameters, eq(modelsAndParameters.modelId, llmModels.id))
+    .leftJoin(modelParameters, eq(modelsAndParameters.parameterId, modelParameters.id))
+    .leftJoin(
+      modelsAndParameterOptions,
+      and(
+        eq(modelsAndParameterOptions.modelId, modelsAndParameters.modelId),
+        eq(modelsAndParameterOptions.parameterId, modelsAndParameters.parameterId),
+      ),
+    )
+    .leftJoin(
+      parameterOptions,
+      and(
+        eq(parameterOptions.id, modelsAndParameterOptions.optionId),
+        eq(parameterOptions.parameterId, modelsAndParameterOptions.parameterId),
+      ),
+    )
+    .where(eq(llmModels.id, modelId))
+    .orderBy(modelsAndParameters.sortOrder, modelParameters.key, parameterOptions.label)
+
+  if (rows.length === 0) {
+    return { found: false as const, bindings: [] }
+  }
+
+  const byParameter = new Map<
+    string,
+    {
+      parameterId: string
+      key: string
+      label: string
+      type: (typeof rows)[number]['type']
+      description: string | null
+      xUiComponent: (typeof rows)[number]['xUiComponent']
+      providerParamName: string | null
+      required: boolean
+      sortOrder: number
+      defaultValue: string | null
+      constraints: (typeof rows)[number]['constraints']
+      options: ParameterOptionRow[]
+    }
+  >()
+
+  for (const row of rows) {
+    if (!row.parameterId || !row.key || !row.label || row.required == null || row.sortOrder == null) {
+      continue
+    }
+    let binding = byParameter.get(row.parameterId)
+    if (!binding) {
+      binding = {
+        parameterId: row.parameterId,
+        key: row.key,
+        label: row.label,
+        type: row.type!,
+        description: row.description,
+        xUiComponent: row.xUiComponent,
+        providerParamName: row.providerParamName,
+        required: row.required,
+        sortOrder: row.sortOrder,
+        defaultValue: row.defaultValue,
+        constraints: row.constraints,
+        options: [],
+      }
+      byParameter.set(row.parameterId, binding)
+    }
+    if (row.optionId) {
+      binding.options.push({
+        id: row.optionId,
+        label: row.optionLabel!,
+        value: row.optionValue!,
+        description: row.optionDescription,
+      })
+    }
+  }
+
+  return { found: true as const, bindings: [...byParameter.values()] }
 }
 
 export const listAllModels = async () => {
@@ -114,7 +291,7 @@ export const listAllModels = async () => {
   return [...byId.values()]
 }
 
-export const listCategories = async () => {
+export const listCategoryOptions = async () => {
   return db
     .select({
       id: modelCategories.id,
@@ -125,6 +302,25 @@ export const listCategories = async () => {
     .orderBy(modelCategories.name)
 }
 
+export const listCategories = async () => {
+  const rows = await db
+    .select({
+      id: modelCategories.id,
+      name: modelCategories.name,
+      description: modelCategories.description,
+      modelCount: count(modelsAndCategories.modelId),
+    })
+    .from(modelCategories)
+    .leftJoin(modelsAndCategories, eq(modelsAndCategories.categoryId, modelCategories.id))
+    .groupBy(modelCategories.id)
+    .orderBy(modelCategories.name)
+
+  return rows.map((row) => ({
+    ...row,
+    modelCount: Number(row.modelCount),
+  }))
+}
+
 export const getCategoryIdsByNames = async (names: string[]) => {
   if (names.length === 0) {
     return []
@@ -133,6 +329,30 @@ export const getCategoryIdsByNames = async (names: string[]) => {
     .select({ id: modelCategories.id, name: modelCategories.name })
     .from(modelCategories)
     .where(inArray(modelCategories.name, names))
+}
+
+export const getCategoryById = async (id: string) => {
+  const result = await db.select().from(modelCategories).where(eq(modelCategories.id, id))
+  return result[0]
+}
+
+export const createCategory = async (data: { name: string; description: string }) => {
+  const [created] = await db
+    .insert(modelCategories)
+    .values({
+      name: data.name,
+      description: data.description,
+    })
+    .returning({
+      id: modelCategories.id,
+      name: modelCategories.name,
+      description: modelCategories.description,
+    })
+  return { ...created, modelCount: 0 }
+}
+
+export const deleteCategory = async (id: string) => {
+  await db.delete(modelCategories).where(eq(modelCategories.id, id))
 }
 
 export const createModel = async (data: {
@@ -193,7 +413,7 @@ export const replaceModelCategories = async (modelId: string, categoryIds: strin
 }
 
 export const listAllParameters = async () => {
-  return db
+  const rows = await db
     .select({
       id: modelParameters.id,
       key: modelParameters.key,
@@ -203,14 +423,109 @@ export const listAllParameters = async () => {
       xUiComponent: modelParameters.xUiComponent,
       createdAt: modelParameters.createdAt,
       updatedAt: modelParameters.updatedAt,
+      optionCount: count(parameterOptions.id),
+      options: sql<ParameterOptionRow[]>`
+        coalesce(
+          jsonb_agg(
+            jsonb_build_object(
+              'id', ${parameterOptions.id},
+              'label', ${parameterOptions.label},
+              'value', ${parameterOptions.value},
+              'description', ${parameterOptions.description}
+            )
+            ORDER BY ${parameterOptions.label}
+          ) FILTER (WHERE ${parameterOptions.id} IS NOT NULL),
+          '[]'::jsonb
+        )
+      `,
     })
     .from(modelParameters)
+    .leftJoin(parameterOptions, eq(parameterOptions.parameterId, modelParameters.id))
+    .groupBy(modelParameters.id)
     .orderBy(modelParameters.key)
+
+  return rows.map((row) => ({
+    ...row,
+    optionCount: Number(row.optionCount),
+    options: Array.isArray(row.options) ? row.options : [],
+  }))
 }
 
 export const getParameterById = async (id: string) => {
   const result = await db.select().from(modelParameters).where(eq(modelParameters.id, id))
   return result[0]
+}
+
+export const getParameterDetail = async (id: string) => {
+  const [row] = await db
+    .select({
+      id: modelParameters.id,
+      key: modelParameters.key,
+      label: modelParameters.label,
+      type: modelParameters.type,
+      description: modelParameters.description,
+      xUiComponent: modelParameters.xUiComponent,
+      createdAt: modelParameters.createdAt,
+      updatedAt: modelParameters.updatedAt,
+      options: sql<ParameterOptionDetailRow[]>`
+        coalesce((
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'id', o.id,
+              'label', o.label,
+              'value', o.value,
+              'description', o.description,
+              'createdAt', o.created_at,
+              'updatedAt', o.updated_at,
+              'vendorMappings', coalesce((
+                SELECT jsonb_agg(
+                  jsonb_build_object(
+                    'vendorId', v.id,
+                    'vendorName', v.name,
+                    'vendorOptionValue', m.vendor_option_value
+                  )
+                  ORDER BY v.name
+                )
+                FROM llm_vendors_and_parameter_options m
+                INNER JOIN llm_vendors v ON v.id = m.vendor_id
+                WHERE m.parameter_option_id = o.id
+              ), '[]'::jsonb)
+            )
+            ORDER BY o.label
+          )
+          FROM parameter_options o
+          WHERE o.parameter_id = ${id}::uuid
+        ), '[]'::jsonb)
+      `,
+      vendorMappings: sql<ParameterVendorMappingRow[]>`
+        coalesce((
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'vendorId', v.id,
+              'vendorName', v.name,
+              'vendorParamName', m.vendor_param_name,
+              'vendorDefaultValue', m.vendor_default_value
+            )
+            ORDER BY v.name
+          )
+          FROM llm_vendors_and_parameters m
+          INNER JOIN llm_vendors v ON v.id = m.vendor_id
+          WHERE m.parameter_id = ${id}::uuid
+        ), '[]'::jsonb)
+      `,
+    })
+    .from(modelParameters)
+    .where(eq(modelParameters.id, id))
+
+  if (!row) {
+    return row
+  }
+
+  return {
+    ...row,
+    options: Array.isArray(row.options) ? row.options : [],
+    vendorMappings: Array.isArray(row.vendorMappings) ? row.vendorMappings : [],
+  }
 }
 
 export const createParameter = async (data: {
@@ -219,18 +534,33 @@ export const createParameter = async (data: {
   type: typeof modelParameters.$inferInsert.type
   description?: string | null
   xUiComponent?: typeof modelParameters.$inferInsert.xUiComponent
+  options?: Array<{ label: string; value: string; description?: string | null }>
 }) => {
-  const [created] = await db
-    .insert(modelParameters)
-    .values({
-      key: data.key,
-      label: data.label,
-      type: data.type,
-      description: data.description ?? null,
-      xUiComponent: data.xUiComponent ?? null,
-    })
-    .returning()
-  return created
+  return db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(modelParameters)
+      .values({
+        key: data.key,
+        label: data.label,
+        type: data.type,
+        description: data.description ?? null,
+        xUiComponent: data.xUiComponent ?? null,
+      })
+      .returning()
+
+    if (data.options && data.options.length > 0) {
+      await tx.insert(parameterOptions).values(
+        data.options.map((option) => ({
+          parameterId: created.id,
+          label: option.label,
+          value: option.value,
+          description: option.description ?? null,
+        })),
+      )
+    }
+
+    return created
+  })
 }
 
 export const updateParameter = async (
@@ -252,7 +582,144 @@ export const updateParameter = async (
 }
 
 export const deleteParameter = async (id: string) => {
-  await db.delete(modelParameters).where(eq(modelParameters.id, id))
+  const [deleted] = await db
+    .delete(modelParameters)
+    .where(eq(modelParameters.id, id))
+    .returning({ id: modelParameters.id })
+  return deleted
+}
+
+export const createParameterOption = async (data: {
+  parameterId: string
+  label: string
+  value: string
+  description?: string | null
+}) => {
+  const [created] = await db
+    .insert(parameterOptions)
+    .values({
+      parameterId: data.parameterId,
+      label: data.label,
+      value: data.value,
+      description: data.description ?? null,
+    })
+    .returning()
+  return created
+}
+
+export const updateParameterOption = async (
+  parameterId: string,
+  optionId: string,
+  data: Partial<{
+    label: string
+    value: string
+    description: string | null
+  }>,
+) => {
+  const [updated] = await db
+    .update(parameterOptions)
+    .set(data)
+    .where(and(eq(parameterOptions.id, optionId), eq(parameterOptions.parameterId, parameterId)))
+    .returning()
+  return updated
+}
+
+export const deleteParameterOption = async (parameterId: string, optionId: string) => {
+  const [deleted] = await db
+    .delete(parameterOptions)
+    .where(and(eq(parameterOptions.id, optionId), eq(parameterOptions.parameterId, parameterId)))
+    .returning({ id: parameterOptions.id })
+  return deleted
+}
+
+export const upsertVendorOptionMapping = async (data: {
+  parameterId: string
+  optionId: string
+  vendorId: string
+  vendorOptionValue: string
+}) => {
+  const result = await db.execute(sql`
+    INSERT INTO llm_vendors_and_parameter_options (vendor_id, parameter_option_id, vendor_option_value)
+    SELECT ${data.vendorId}::uuid, o.id, ${data.vendorOptionValue}
+    FROM parameter_options o
+    WHERE o.id = ${data.optionId}::uuid
+      AND o.parameter_id = ${data.parameterId}::uuid
+    ON CONFLICT (vendor_id, parameter_option_id)
+    DO UPDATE SET
+      vendor_option_value = excluded.vendor_option_value,
+      updated_at = now()
+    RETURNING vendor_id, parameter_option_id, vendor_option_value
+  `)
+
+  return result.rows[0] as
+    | { vendor_id: string; parameter_option_id: string; vendor_option_value: string }
+    | undefined
+}
+
+export const deleteVendorOptionMapping = async (
+  parameterId: string,
+  optionId: string,
+  vendorId: string,
+) => {
+  const [deleted] = await db
+    .delete(llmVendorsAndParameterOptions)
+    .where(
+      and(
+        eq(llmVendorsAndParameterOptions.vendorId, vendorId),
+        eq(llmVendorsAndParameterOptions.parameterOptionId, optionId),
+        sql`exists (
+          select 1 from ${parameterOptions}
+          where ${parameterOptions.id} = ${optionId}::uuid
+            and ${parameterOptions.parameterId} = ${parameterId}::uuid
+        )`,
+      ),
+    )
+    .returning({
+      vendorId: llmVendorsAndParameterOptions.vendorId,
+      parameterOptionId: llmVendorsAndParameterOptions.parameterOptionId,
+    })
+  return deleted
+}
+
+export const upsertVendorParameterMapping = async (data: {
+  parameterId: string
+  vendorId: string
+  vendorParamName?: string | null
+  vendorDefaultValue?: string | null
+}) => {
+  const [row] = await db
+    .insert(llmVendorsAndParameters)
+    .values({
+      vendorId: data.vendorId,
+      parameterId: data.parameterId,
+      vendorParamName: data.vendorParamName ?? null,
+      vendorDefaultValue: data.vendorDefaultValue ?? null,
+    })
+    .onConflictDoUpdate({
+      target: [llmVendorsAndParameters.vendorId, llmVendorsAndParameters.parameterId],
+      set: {
+        vendorParamName: data.vendorParamName ?? null,
+        vendorDefaultValue: data.vendorDefaultValue ?? null,
+      },
+    })
+    .returning()
+  return row
+}
+
+export const deleteVendorParameterMapping = async (parameterId: string, vendorId: string) => {
+  const [deleted] = await db
+    .delete(llmVendorsAndParameters)
+    .where(
+      and(
+        eq(llmVendorsAndParameters.vendorId, vendorId),
+        eq(llmVendorsAndParameters.parameterId, parameterId),
+      ),
+    )
+    .returning({
+      vendorId: llmVendorsAndParameters.vendorId,
+      parameterId: llmVendorsAndParameters.parameterId,
+    })
+  return deleted
 }
 
 export const replaceModelParameters = async (
@@ -263,36 +730,182 @@ export const replaceModelParameters = async (
     required?: boolean
     defaultValue?: string | null
     constraints?: ModelParameterConstraint | null
-    enum?: string[] | null
+    optionIds?: string[]
     sortOrder?: number
   }>,
 ) => {
-  await db.delete(modelsAndParameters).where(eq(modelsAndParameters.modelId, modelId))
-  if (bindings.length === 0) {
-    return
-  }
-  await db.insert(modelsAndParameters).values(
-    bindings.map((binding, index) => ({
-      modelId,
-      parameterId: binding.parameterId,
-      providerParamName: binding.providerParamName ?? null,
-      required: binding.required ?? false,
-      defaultValue: binding.defaultValue ?? null,
-      constraints: binding.constraints ?? null,
-      enum: binding.enum ?? null,
-      sortOrder: binding.sortOrder ?? index,
-    })),
-  )
+  return db.transaction(async (tx) => {
+    const parameterIds = [...new Set(bindings.map((binding) => binding.parameterId))]
+    const optionIds = [
+      ...new Set(bindings.flatMap((binding) => binding.optionIds ?? [])),
+    ]
+
+    if (parameterIds.length > 0) {
+      const ownershipRows = await tx
+        .select({
+          parameterId: modelParameters.id,
+          optionId: parameterOptions.id,
+        })
+        .from(modelParameters)
+        .leftJoin(
+          parameterOptions,
+          and(
+            eq(parameterOptions.parameterId, modelParameters.id),
+            optionIds.length > 0 ? inArray(parameterOptions.id, optionIds) : sql`false`,
+          ),
+        )
+        .where(inArray(modelParameters.id, parameterIds))
+
+      const foundParameterIds = new Set(ownershipRows.map((row) => row.parameterId))
+      if (foundParameterIds.size !== parameterIds.length) {
+        return { error: 'missing-parameters' as const }
+      }
+
+      const foundPairs = new Set(
+        ownershipRows
+          .filter((row) => row.optionId)
+          .map((row) => `${row.parameterId}:${row.optionId}`),
+      )
+      const requestedPairs = bindings.flatMap((binding) =>
+        (binding.optionIds ?? []).map((optionId) => `${binding.parameterId}:${optionId}`),
+      )
+      if (requestedPairs.some((pair) => !foundPairs.has(pair))) {
+        return { error: 'invalid-options' as const }
+      }
+    }
+
+    await tx.delete(modelsAndParameters).where(eq(modelsAndParameters.modelId, modelId))
+    if (bindings.length === 0) {
+      return { error: null }
+    }
+
+    await tx.insert(modelsAndParameters).values(
+      bindings.map((binding, index) => ({
+        modelId,
+        parameterId: binding.parameterId,
+        providerParamName: binding.providerParamName ?? null,
+        required: binding.required ?? false,
+        defaultValue: binding.defaultValue ?? null,
+        constraints: binding.constraints ?? null,
+        sortOrder: binding.sortOrder ?? index,
+      })),
+    )
+
+    const optionRows = bindings.flatMap((binding) =>
+      (binding.optionIds ?? []).map((optionId) => ({
+        modelId,
+        parameterId: binding.parameterId,
+        optionId,
+      })),
+    )
+    if (optionRows.length > 0) {
+      await tx.insert(modelsAndParameterOptions).values(optionRows)
+    }
+
+    return { error: null }
+  })
 }
 
-export const parametersExist = async (parameterIds: string[]) => {
-  if (parameterIds.length === 0) {
-    return true
-  }
-  const uniqueIds = [...new Set(parameterIds)]
+export const listVendors = async () => {
   const rows = await db
-    .select({ id: modelParameters.id })
-    .from(modelParameters)
-    .where(inArray(modelParameters.id, uniqueIds))
-  return rows.length === uniqueIds.length
+    .select({
+      id: llmVendors.id,
+      name: llmVendors.name,
+      enabled: llmVendors.enabled,
+      createdAt: llmVendors.createdAt,
+      updatedAt: llmVendors.updatedAt,
+      modelCount: count(llmVendorsAndModels.modelId),
+    })
+    .from(llmVendors)
+    .leftJoin(llmVendorsAndModels, eq(llmVendorsAndModels.vendorId, llmVendors.id))
+    .groupBy(llmVendors.id)
+    .orderBy(llmVendors.name)
+
+  return rows.map((row) => ({
+    ...row,
+    modelCount: Number(row.modelCount),
+  }))
+}
+
+export const createVendor = async (data: { name: string; enabled?: boolean }) => {
+  const [created] = await db
+    .insert(llmVendors)
+    .values({
+      name: data.name,
+      enabled: data.enabled ?? true,
+    })
+    .returning()
+  return { ...created, modelCount: 0 }
+}
+
+export const updateVendor = async (
+  id: string,
+  data: Partial<{ name: string; enabled: boolean }>,
+) => {
+  const [updated] = await db
+    .update(llmVendors)
+    .set(data)
+    .where(eq(llmVendors.id, id))
+    .returning()
+  return updated
+}
+
+export const deleteVendor = async (id: string) => {
+  const [deleted] = await db
+    .delete(llmVendors)
+    .where(eq(llmVendors.id, id))
+    .returning({ id: llmVendors.id })
+  return deleted
+}
+
+export const createModelVendorBinding = async (data: {
+  modelId: string
+  vendorId: string
+  apiName: string
+  pricing?: TokenPricing | null
+  enabled?: boolean
+}) => {
+  const [created] = await db
+    .insert(llmVendorsAndModels)
+    .values({
+      modelId: data.modelId,
+      vendorId: data.vendorId,
+      apiName: data.apiName,
+      pricing: data.pricing ?? null,
+      enabled: data.enabled ?? true,
+    })
+    .returning()
+  return created
+}
+
+export const updateModelVendorBinding = async (
+  modelId: string,
+  vendorId: string,
+  data: Partial<{
+    apiName: string
+    pricing: TokenPricing | null
+    enabled: boolean
+  }>,
+) => {
+  const [updated] = await db
+    .update(llmVendorsAndModels)
+    .set(data)
+    .where(
+      and(eq(llmVendorsAndModels.modelId, modelId), eq(llmVendorsAndModels.vendorId, vendorId)),
+    )
+    .returning()
+  return updated
+}
+
+export const deleteModelVendorBinding = async (modelId: string, vendorId: string) => {
+  const [deleted] = await db
+    .delete(llmVendorsAndModels)
+    .where(
+      and(eq(llmVendorsAndModels.modelId, modelId), eq(llmVendorsAndModels.vendorId, vendorId)),
+    )
+    .returning({
+      vendorId: llmVendorsAndModels.vendorId,
+      modelId: llmVendorsAndModels.modelId,
+    })
+  return deleted
 }

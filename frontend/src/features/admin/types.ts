@@ -7,6 +7,14 @@ export type TokenPricing = {
   cached_input?: Array<{ up_to: number | null; rate: number }>
 }
 
+export type AdminModelVendor = {
+  vendorId: string
+  name: string
+  apiName: string
+  pricing: TokenPricing | null
+  enabled: boolean
+}
+
 export type AdminModel = {
   id: string
   provider: string
@@ -19,10 +27,28 @@ export type AdminModel = {
   categories: string[]
 }
 
-export type AdminCategory = {
+export type AdminModelDetail = AdminModel & {
+  vendors: AdminModelVendor[]
+}
+
+export type AdminCategoryOption = {
   id: string
   name: string
   description: string
+}
+
+export type AdminCategory = AdminCategoryOption & {
+  modelCount: number
+}
+
+export type AdminModelsCatalog = {
+  models: AdminModel[]
+  categories: AdminCategoryOption[]
+}
+
+export type CreateCategoryInput = {
+  name: string
+  description?: string
 }
 
 export type ModelParameterDataType =
@@ -41,6 +67,32 @@ export type ModelParameterConstraint = {
   fileType?: 'image' | 'video' | 'audio'
 }
 
+export type ParameterOptionSummary = {
+  id: string
+  label: string
+  value: string
+  description: string | null
+}
+
+export type OptionVendorMapping = {
+  vendorId: string
+  vendorName: string
+  vendorOptionValue: string
+}
+
+export type ParameterVendorMapping = {
+  vendorId: string
+  vendorName: string
+  vendorParamName: string | null
+  vendorDefaultValue: string | null
+}
+
+export type AdminParameterOption = ParameterOptionSummary & {
+  createdAt: string
+  updatedAt: string
+  vendorMappings: OptionVendorMapping[]
+}
+
 export type AdminParameter = {
   id: string
   key: string
@@ -50,7 +102,22 @@ export type AdminParameter = {
   xUiComponent: ModelParameterUIComponent | null
   createdAt: string
   updatedAt: string
+  optionCount: number
+  options: ParameterOptionSummary[]
 }
+
+export type AdminParameterDetail = Omit<AdminParameter, 'optionCount' | 'options'> & {
+  options: AdminParameterOption[]
+  vendorMappings: ParameterVendorMapping[]
+}
+
+export type CreateParameterOptionInput = {
+  label: string
+  value: string
+  description?: string | null
+}
+
+export type UpdateParameterOptionInput = Partial<CreateParameterOptionInput>
 
 export type CreateParameterInput = {
   key: string
@@ -58,9 +125,10 @@ export type CreateParameterInput = {
   type: ModelParameterDataType
   description?: string | null
   xUiComponent?: ModelParameterUIComponent | null
+  options?: CreateParameterOptionInput[]
 }
 
-export type UpdateParameterInput = Partial<CreateParameterInput>
+export type UpdateParameterInput = Partial<Omit<CreateParameterInput, 'options'>>
 
 export type ModelParameterBinding = {
   parameterId: string
@@ -74,7 +142,7 @@ export type ModelParameterBinding = {
   sortOrder: number
   defaultValue: string | null
   constraints: ModelParameterConstraint | null
-  enum: string[] | null
+  options: ParameterOptionSummary[]
 }
 
 export type ReplaceModelParameterBinding = {
@@ -83,8 +151,42 @@ export type ReplaceModelParameterBinding = {
   required?: boolean
   defaultValue?: string | null
   constraints?: ModelParameterConstraint | null
-  enum?: string[] | null
+  optionIds?: string[]
   sortOrder?: number
+}
+
+export type AdminVendor = {
+  id: string
+  name: string
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
+  modelCount: number
+}
+
+export type CreateVendorInput = {
+  name: string
+  enabled?: boolean
+}
+
+export type UpdateVendorInput = Partial<CreateVendorInput>
+
+export type CreateModelVendorBindingInput = {
+  vendorId: string
+  apiName: string
+  pricing?: TokenPricing | null
+  enabled?: boolean
+}
+
+export type UpdateModelVendorBindingInput = Partial<Omit<CreateModelVendorBindingInput, 'vendorId'>>
+
+export type UpsertVendorOptionMapInput = {
+  vendorOptionValue: string
+}
+
+export type UpsertVendorParameterMapInput = {
+  vendorParamName?: string | null
+  vendorDefaultValue?: string | null
 }
 
 export type CreateModelInput = {

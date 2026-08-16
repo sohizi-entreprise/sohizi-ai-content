@@ -12,7 +12,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
-import MediaChat from './media-chat'
+import MediaComposer from './media-composer'
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
 import {
   bulkDeleteAssetsMutationOptions,
@@ -89,7 +89,7 @@ export function MediaGenerator() {
         // maxSize={40}
         className="rounded-2xl mb-2 bg-card"
       >
-        <MediaChat projectId={projectId} />
+        <MediaComposer projectId={projectId} />
       </ResizablePanel>
 
     </ResizablePanelGroup>

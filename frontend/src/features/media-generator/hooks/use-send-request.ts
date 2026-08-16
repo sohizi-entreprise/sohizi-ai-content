@@ -4,6 +4,7 @@ import { AssetRequest } from "../requests"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
 import { ImagePart, MsgTextPart, FilePart } from "@/features/chat/types"
 import { cleanMediaType } from "@/utils/clean-mediaType"
+import { getAgentMediaType, showsVoiceSelector } from "../constants"
 
 
 export const useSendRequest = (projectId: string) => {
@@ -12,7 +13,10 @@ export const useSendRequest = (projectId: string) => {
   const prompt = useMediaGeneratorStore((state) => state.prompt)
   const attachments = useMediaGeneratorStore((state) => state.attachments)
   const promptSettings = useMediaGeneratorStore((state) => state.promptSettings)
-  const mediaType = useMediaGeneratorStore((state) => state.mediaType)
+  const generationType = useMediaGeneratorStore((state) => state.generationType)
+  const generationSubtype = useMediaGeneratorStore((state) => state.generationSubtype)
+  const selectedModelId = useMediaGeneratorStore((state) => state.selectedModelId)
+  const parameterValues = useMediaGeneratorStore((state) => state.parameterValues)
   const clearChatInput = useMediaGeneratorStore((state) => state.clearChatInput)
 
   const appendActiveGenerationRequest = useMediaGeneratorStore((state) => state.appendActiveGenerationRequest)
@@ -31,20 +35,24 @@ export const useSendRequest = (projectId: string) => {
     })),
   ]
 
-  const payloadSettings = promptSettings[mediaType]
-  
   const payload: AssetRequest= {
     userPrompt: {
         role: 'user',
         content
     },
     settings: {
-        mediaType: mediaType,
+        mediaType: getAgentMediaType(generationType, generationSubtype),
+        generationType,
+        subtype: generationSubtype,
+        model: selectedModelId,
         referencedFiles: uploadedAttachments.map((attachment) => ({
           type: attachment.type,
           url: attachment.url,
         })),
-        ...payloadSettings,
+        ...(showsVoiceSelector(generationType, generationSubtype)
+          ? { voice: promptSettings.audio.voice }
+          : {}),
+        ...parameterValues,
     }
   }
 

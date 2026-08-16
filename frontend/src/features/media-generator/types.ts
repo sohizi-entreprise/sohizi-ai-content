@@ -2,8 +2,20 @@ import { ReactNode } from "react"
 
 export type MediaType = 'image' | 'video' | 'audio' | 'html'
 
-/** Composer tabs / prompt settings — HTML jobs are inferred by the media-generator agent. */
-export type ComposerMediaType = 'image' | 'video' | 'audio'
+export type GenerationType =
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'motion-graphic'
+  | 'motion-transfer'
+  | 'clone-voice'
+
+export type VideoSubtype = 'create' | 'edit' | 'extend'
+export type AudioSubtype = 'tts' | 'music' | 'dialogue'
+export type GenerationSubtype = VideoSubtype | AudioSubtype
+
+/** @deprecated Use GenerationType */
+export type ComposerMediaType = GenerationType
 
 export type MediaFilter = 'all' | 'image' | 'video' | 'audio' | 'html'
 

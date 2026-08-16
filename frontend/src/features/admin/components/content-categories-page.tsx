@@ -47,9 +47,9 @@ export function ContentCategoriesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Categories</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Content categories</h1>
           <p className="text-sm text-muted-foreground">
-            Content taxonomy for skills and projects (genre, format, audience, platform).
+            Taxonomy for skills and projects (genre, format, audience, platform).
           </p>
         </div>
         <Button onClick={openCreate}>Add category</Button>

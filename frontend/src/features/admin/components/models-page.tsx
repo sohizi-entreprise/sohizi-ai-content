@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,7 +21,6 @@ import {
 import { Switch } from '@/components/ui/switch'
 import {
   deleteAdminModelMutationOptions,
-  listAdminCategoriesQueryOptions,
   listAdminModelsQueryOptions,
   updateAdminModelMutationOptions,
 } from '../query-mutation'
@@ -30,10 +30,11 @@ import { ModelFormDialog } from './model-form-dialog'
 const ALL_VALUE = '__all__'
 
 export function ModelsPage() {
-  const { data: models = [], isLoading, error } = useQuery(listAdminModelsQueryOptions())
-  const { data: categories = [] } = useQuery(listAdminCategoriesQueryOptions())
+  const navigate = useNavigate()
+  const { data, isLoading, error } = useQuery(listAdminModelsQueryOptions())
+  const models = data?.models ?? []
+  const categories = data?.categories ?? []
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<AdminModel | null>(null)
   const [categoryFilter, setCategoryFilter] = useState(ALL_VALUE)
   const [providerFilter, setProviderFilter] = useState(ALL_VALUE)
 
@@ -57,13 +58,11 @@ export function ModelsPage() {
   }, [models, categoryFilter, providerFilter])
 
   const openCreate = () => {
-    setEditing(null)
     setDialogOpen(true)
   }
 
   const openEdit = (model: AdminModel) => {
-    setEditing(model)
-    setDialogOpen(true)
+    navigate({ to: '/admin/models/$modelId', params: { modelId: model.id } })
   }
 
   const handleDelete = (model: AdminModel) => {
@@ -153,7 +152,11 @@ export function ModelsPage() {
           </TableHeader>
           <TableBody>
             {filteredModels.map((model) => (
-              <TableRow key={model.id}>
+              <TableRow
+                key={model.id}
+                className="cursor-pointer"
+                onClick={() => openEdit(model)}
+              >
                 <TableCell className="font-medium">{model.name}</TableCell>
                 <TableCell className="font-mono text-xs">{model.id}</TableCell>
                 <TableCell>{model.provider}</TableCell>
@@ -169,7 +172,7 @@ export function ModelsPage() {
                 <TableCell className="text-xs text-muted-foreground">
                   {model.pricing ? 'Configured' : '—'}
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={(event) => event.stopPropagation()}>
                   <Switch
                     checked={model.enabled}
                     onCheckedChange={(checked) =>
@@ -177,9 +180,9 @@ export function ModelsPage() {
                     }
                   />
                 </TableCell>
-                <TableCell className="space-x-2 text-right">
+                <TableCell className="space-x-2 text-right" onClick={(event) => event.stopPropagation()}>
                   <Button size="sm" variant="outline" onClick={() => openEdit(model)}>
-                    Edit
+                    Open
                   </Button>
                   <Button
                     size="sm"
@@ -202,7 +205,14 @@ export function ModelsPage() {
         </Table>
       </div>
 
-      <ModelFormDialog open={dialogOpen} onOpenChange={setDialogOpen} model={editing} />
+      <ModelFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        categories={categories}
+        onCreated={(modelId) =>
+          navigate({ to: '/admin/models/$modelId', params: { modelId } })
+        }
+      />
     </div>
   )
 }

@@ -29,10 +29,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import type {
   AdminParameter,
   ModelParameterBinding,
   ModelParameterConstraint,
+  ParameterOptionSummary,
   ReplaceModelParameterBinding,
 } from '../types'
 
@@ -47,27 +49,34 @@ export type ParameterBindingDraft = {
   required: boolean
   defaultValue: string
   constraints: ModelParameterConstraint | null
-  enumValues: string[]
+  optionIds: string[]
+  catalogOptions: ParameterOptionSummary[]
 }
 
-export const bindingsToDrafts = (bindings: ModelParameterBinding[]): ParameterBindingDraft[] =>
-  bindings.map((binding) => ({
-    parameterId: binding.parameterId,
-    key: binding.key,
-    label: binding.label,
-    type: binding.type,
-    description: binding.description,
-    xUiComponent: binding.xUiComponent,
-    providerParamName: binding.providerParamName ?? '',
-    required: binding.required,
-    defaultValue: binding.defaultValue ?? '',
-    constraints: binding.constraints,
-    enumValues: binding.enum ?? [],
-  }))
+export const bindingsToDrafts = (
+  bindings: ModelParameterBinding[],
+  catalog: AdminParameter[],
+): ParameterBindingDraft[] =>
+  bindings.map((binding) => {
+    const catalogParameter = catalog.find((item) => item.id === binding.parameterId)
+    return {
+      parameterId: binding.parameterId,
+      key: binding.key,
+      label: binding.label,
+      type: binding.type,
+      description: binding.description,
+      xUiComponent: binding.xUiComponent,
+      providerParamName: binding.providerParamName ?? '',
+      required: binding.required,
+      defaultValue: binding.defaultValue ?? '',
+      constraints: binding.constraints,
+      optionIds: binding.options.map((option) => option.id),
+      catalogOptions: catalogParameter?.options ?? binding.options,
+    }
+  })
 
 export const draftsToPayload = (drafts: ParameterBindingDraft[]): ReplaceModelParameterBinding[] =>
   drafts.map((draft, index) => {
-    const enumValues = draft.enumValues.map((item) => item.trim()).filter(Boolean)
     const constraints = draft.constraints
     const hasConstraints = Boolean(
       constraints &&
@@ -82,7 +91,7 @@ export const draftsToPayload = (drafts: ParameterBindingDraft[]): ReplaceModelPa
       required: draft.required,
       defaultValue: draft.defaultValue.trim() || null,
       constraints: hasConstraints ? constraints : null,
-      enum: enumValues.length > 0 ? enumValues : null,
+      optionIds: draft.optionIds,
       sortOrder: index,
     }
   })
@@ -98,7 +107,8 @@ const parameterToDraft = (parameter: AdminParameter): ParameterBindingDraft => (
   required: false,
   defaultValue: '',
   constraints: null,
-  enumValues: [],
+  optionIds: [],
+  catalogOptions: parameter.options ?? [],
 })
 
 type Props = {
@@ -204,7 +214,7 @@ function SortableBindingCard({
     id: draft.parameterId,
   })
 
-  const showEnum = draft.xUiComponent === 'select'
+  const showOptions = draft.xUiComponent === 'select' || draft.catalogOptions.length > 0
   const showNumericConstraints = draft.type === 'number' || draft.xUiComponent === 'slider'
   const showFileType = draft.xUiComponent === 'uploader'
 
@@ -258,10 +268,11 @@ function SortableBindingCard({
               onCheckedChange={(checked) => onChange({ required: checked })}
             />
           </div>
-          {showEnum ? (
-            <EnumEditor
-              values={draft.enumValues}
-              onChange={(enumValues) => onChange({ enumValues })}
+          {showOptions ? (
+            <VisibleOptionsEditor
+              options={draft.catalogOptions}
+              selectedIds={draft.optionIds}
+              onChange={(optionIds) => onChange({ optionIds })}
             />
           ) : null}
           {showNumericConstraints ? (
@@ -305,46 +316,47 @@ function SortableBindingCard({
   )
 }
 
-function EnumEditor({
-  values,
+function VisibleOptionsEditor({
+  options,
+  selectedIds,
   onChange,
 }: {
-  values: string[]
-  onChange: (values: string[]) => void
+  options: ParameterOptionSummary[]
+  selectedIds: string[]
+  onChange: (optionIds: string[]) => void
 }) {
-  const rows = values.length > 0 ? values : ['']
+  if (options.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        This parameter has no catalog options yet.
+      </p>
+    )
+  }
+
+  const selected = new Set(selectedIds)
 
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs">Enum values</Label>
-      <div className="space-y-2">
-        {rows.map((value, index) => (
-          <div key={index} className="flex gap-2">
-            <Input
-              value={value}
-              placeholder="16:9"
-              onChange={(event) => {
-                const next = [...rows]
-                next[index] = event.target.value
-                onChange(next)
+      <Label className="text-xs">Visible options</Label>
+      <div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto rounded-lg border p-3">
+        {options.map((option) => (
+          <label key={option.id} className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={selected.has(option.id)}
+              onCheckedChange={(checked) => {
+                if (checked === true) {
+                  onChange([...selectedIds, option.id])
+                  return
+                }
+                onChange(selectedIds.filter((id) => id !== option.id))
               }}
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              disabled={rows.length <= 1}
-              onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
-              aria-label="Remove enum value"
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </div>
+            <span>
+              {option.label}
+              <span className="ml-1 font-mono text-xs text-muted-foreground">{option.value}</span>
+            </span>
+          </label>
         ))}
-        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, ''])}>
-          <Plus className="size-4" />
-          Add value
-        </Button>
       </div>
     </div>
   )

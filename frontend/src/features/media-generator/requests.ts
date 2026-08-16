@@ -1,5 +1,6 @@
 import api from '@/lib/axios'
 import { createParser, type EventSourceMessage } from 'eventsource-parser'
+import type { ModelParameterBinding } from '@/features/admin/types'
 import type { MediaType } from './types'
 import { FilePart, ImagePart, Message, MsgTextPart } from '../chat/types'
 
@@ -74,6 +75,13 @@ export type MediaStreamEvent = {
 
 export const listGoogleVoices = async (): Promise<GoogleVoiceDescription[]> => {
   const response = await api.get('/models/voices')
+  return response.data
+}
+
+export const listCatalogModelParameters = async (
+  modelId: string,
+): Promise<ModelParameterBinding[]> => {
+  const response = await api.get(`/models/${encodeURIComponent(modelId)}/parameters`)
   return response.data
 }
 

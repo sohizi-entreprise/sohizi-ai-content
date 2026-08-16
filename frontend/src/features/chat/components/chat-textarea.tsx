@@ -145,6 +145,17 @@ export default function ChatTextarea(props: ChatTextareaProps) {
     }, [editor, onEditorReady])
 
     useEffect(() => {
+        if (!editor) return
+        const placeholderExtension = editor.extensionManager.extensions.find(
+            (extension) => extension.name === 'placeholder',
+        )
+        if (placeholderExtension) {
+            placeholderExtension.options.placeholder = placeholder ?? 'Write your prompt ...'
+            editor.view.dispatch(editor.state.tr)
+        }
+    }, [editor, placeholder])
+
+    useEffect(() => {
         if (editorRef) {
             editorRef.current = editor
         }

@@ -17,6 +17,7 @@ export const mediaGeneratorKeys = {
   assetsRequests: (projectId: string, options?: requests.ListAssetsOptions) => ['media', projectId, 'assets', options],
   aiGeneratedAssets: (projectId: string, options?: requests.ListAssetsOptions) => ['media', projectId, 'ai-assets', options],
   googleVoices: ['media', 'google-voices'] as const,
+  modelParameters: (modelId: string) => ['media', 'models', modelId, 'parameters'] as const,
 }
 
 export const listGoogleVoicesQueryOptions = queryOptions({
@@ -24,6 +25,13 @@ export const listGoogleVoicesQueryOptions = queryOptions({
   queryFn: () => requests.listGoogleVoices(),
   staleTime: Infinity,
 })
+
+export const listCatalogModelParametersQueryOptions = (modelId: string | null) =>
+  queryOptions({
+    queryKey: mediaGeneratorKeys.modelParameters(modelId ?? ''),
+    queryFn: () => requests.listCatalogModelParameters(modelId!),
+    enabled: Boolean(modelId),
+  })
 
 export const listAssetsRequestsQueryOptions = (projectId: string, options?: requests.ListAssetsOptions) =>
   infiniteQueryOptions({

@@ -33,7 +33,7 @@ export function ChatHeader({ projectId, className }: ChatHeaderProps) {
   return (
     <div className={cn('flex items-center justify-between px-2 border-b h-9', className)}>
       <div className="flex items-center gap-2 min-w-0">
-        <SphereLoader isLoading={!!conversation?.isStreaming} size={32} showRings={false} />
+        <SphereLoader isLoading={!!conversation?.isStreaming} size={28} showRings={false} />
         <h2 className="text-xs truncate min-w-0 flex-1">
           {title}
         </h2>

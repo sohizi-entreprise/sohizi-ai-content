@@ -1,24 +1,36 @@
 import { mutationOptions, queryOptions } from '@tanstack/react-query'
 import * as requests from './requests'
 import type {
+  CreateCategoryInput,
   CreateCommandInput,
   CreateContentCategoryInput,
   CreateModelInput,
+  CreateModelVendorBindingInput,
   CreateParameterInput,
+  CreateParameterOptionInput,
   CreateSkillInput,
+  CreateVendorInput,
   ReplaceModelParameterBinding,
   UpdateCommandInput,
   UpdateContentCategoryInput,
   UpdateModelInput,
+  UpdateModelVendorBindingInput,
   UpdateParameterInput,
+  UpdateParameterOptionInput,
   UpdateSkillInput,
+  UpdateVendorInput,
+  UpsertVendorOptionMapInput,
+  UpsertVendorParameterMapInput,
 } from './types'
 
 const keysFactory = {
   models: ['admin', 'models'] as const,
+  model: (id: string) => ['admin', 'models', id] as const,
   categories: ['admin', 'categories'] as const,
   parameters: ['admin', 'parameters'] as const,
+  parameter: (id: string) => ['admin', 'parameters', id] as const,
   modelParameters: (modelId: string) => ['admin', 'models', modelId, 'parameters'] as const,
+  vendors: ['admin', 'vendors'] as const,
   commands: ['admin', 'commands'] as const,
   contentCategories: ['admin', 'content-categories'] as const,
   skills: ['admin', 'skills'] as const,
@@ -32,16 +44,45 @@ export const listAdminModelsQueryOptions = () =>
     queryFn: requests.listAdminModels,
   })
 
+export const getAdminModelQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: keysFactory.model(id),
+    queryFn: () => requests.getAdminModel(id),
+  })
+
 export const listAdminCategoriesQueryOptions = () =>
   queryOptions({
     queryKey: keysFactory.categories,
     queryFn: requests.listAdminCategories,
   })
 
-export const listAdminParametersQueryOptions = () =>
+export const createAdminCategoryMutationOptions = () =>
+  mutationOptions({
+    mutationFn: (input: CreateCategoryInput) => requests.createAdminCategory(input),
+    meta: {
+      invalidateQueries: [keysFactory.categories, keysFactory.models],
+    },
+  })
+
+export const deleteAdminCategoryMutationOptions = () =>
+  mutationOptions({
+    mutationFn: (id: string) => requests.deleteAdminCategory(id),
+    meta: {
+      invalidateQueries: [keysFactory.categories, keysFactory.models],
+    },
+  })
+
+export const listAdminParametersQueryOptions = (enabled = true) =>
   queryOptions({
     queryKey: keysFactory.parameters,
     queryFn: requests.listAdminParameters,
+    enabled,
+  })
+
+export const getAdminParameterQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: keysFactory.parameter(id),
+    queryFn: () => requests.getAdminParameter(id),
   })
 
 export const createAdminParameterMutationOptions = () =>
@@ -69,11 +110,179 @@ export const deleteAdminParameterMutationOptions = () =>
     },
   })
 
-export const listModelParametersQueryOptions = (modelId: string | null) =>
+export const createAdminParameterOptionMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({
+      parameterId,
+      input,
+    }: {
+      parameterId: string
+      input: CreateParameterOptionInput
+    }) => requests.createAdminParameterOption(parameterId, input),
+    meta: {
+      invalidateQueries: [keysFactory.parameters],
+    },
+  })
+
+export const updateAdminParameterOptionMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({
+      parameterId,
+      optionId,
+      input,
+    }: {
+      parameterId: string
+      optionId: string
+      input: UpdateParameterOptionInput
+    }) => requests.updateAdminParameterOption(parameterId, optionId, input),
+    meta: {
+      invalidateQueries: [keysFactory.parameters],
+    },
+  })
+
+export const deleteAdminParameterOptionMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({ parameterId, optionId }: { parameterId: string; optionId: string }) =>
+      requests.deleteAdminParameterOption(parameterId, optionId),
+    meta: {
+      invalidateQueries: [keysFactory.parameters],
+    },
+  })
+
+export const upsertVendorOptionMappingMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({
+      parameterId,
+      optionId,
+      vendorId,
+      input,
+    }: {
+      parameterId: string
+      optionId: string
+      vendorId: string
+      input: UpsertVendorOptionMapInput
+    }) => requests.upsertVendorOptionMapping(parameterId, optionId, vendorId, input),
+    meta: {
+      invalidateQueries: [keysFactory.parameters],
+    },
+  })
+
+export const deleteVendorOptionMappingMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({
+      parameterId,
+      optionId,
+      vendorId,
+    }: {
+      parameterId: string
+      optionId: string
+      vendorId: string
+    }) => requests.deleteVendorOptionMapping(parameterId, optionId, vendorId),
+    meta: {
+      invalidateQueries: [keysFactory.parameters],
+    },
+  })
+
+export const upsertVendorParameterMappingMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({
+      parameterId,
+      vendorId,
+      input,
+    }: {
+      parameterId: string
+      vendorId: string
+      input: UpsertVendorParameterMapInput
+    }) => requests.upsertVendorParameterMapping(parameterId, vendorId, input),
+    meta: {
+      invalidateQueries: [keysFactory.parameters],
+    },
+  })
+
+export const deleteVendorParameterMappingMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({ parameterId, vendorId }: { parameterId: string; vendorId: string }) =>
+      requests.deleteVendorParameterMapping(parameterId, vendorId),
+    meta: {
+      invalidateQueries: [keysFactory.parameters],
+    },
+  })
+
+export const listAdminVendorsQueryOptions = () =>
+  queryOptions({
+    queryKey: keysFactory.vendors,
+    queryFn: requests.listAdminVendors,
+  })
+
+export const createAdminVendorMutationOptions = () =>
+  mutationOptions({
+    mutationFn: (input: CreateVendorInput) => requests.createAdminVendor(input),
+    meta: {
+      invalidateQueries: [keysFactory.vendors],
+    },
+  })
+
+export const updateAdminVendorMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({ id, input }: { id: string; input: UpdateVendorInput }) =>
+      requests.updateAdminVendor(id, input),
+    meta: {
+      invalidateQueries: [keysFactory.vendors],
+    },
+  })
+
+export const deleteAdminVendorMutationOptions = () =>
+  mutationOptions({
+    mutationFn: (id: string) => requests.deleteAdminVendor(id),
+    meta: {
+      invalidateQueries: [keysFactory.vendors],
+    },
+  })
+
+export const createModelVendorBindingMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({
+      modelId,
+      input,
+    }: {
+      modelId: string
+      input: CreateModelVendorBindingInput
+    }) => requests.createModelVendorBinding(modelId, input),
+    meta: {
+      invalidateQueries: [keysFactory.models, keysFactory.vendors],
+    },
+  })
+
+export const updateModelVendorBindingMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({
+      modelId,
+      vendorId,
+      input,
+    }: {
+      modelId: string
+      vendorId: string
+      input: UpdateModelVendorBindingInput
+    }) => requests.updateModelVendorBinding(modelId, vendorId, input),
+    meta: {
+      invalidateQueries: [keysFactory.models, keysFactory.vendors],
+    },
+  })
+
+export const deleteModelVendorBindingMutationOptions = () =>
+  mutationOptions({
+    mutationFn: ({ modelId, vendorId }: { modelId: string; vendorId: string }) =>
+      requests.deleteModelVendorBinding(modelId, vendorId),
+    meta: {
+      invalidateQueries: [keysFactory.models, keysFactory.vendors],
+    },
+  })
+
+export const listModelParametersQueryOptions = (modelId: string | null, enabled = true) =>
   queryOptions({
     queryKey: keysFactory.modelParameters(modelId ?? ''),
     queryFn: () => requests.listModelParameters(modelId!),
-    enabled: Boolean(modelId),
+    enabled: enabled && Boolean(modelId),
   })
 
 export const replaceModelParametersMutationOptions = () =>

@@ -304,7 +304,7 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
   ]))
 
 
-  /** Catalog of parameter kinds. Per-model enums, defaults, and numeric bounds live on the model map. */
+  /** Catalog of parameter kinds. Options live on parameter_options; per-model defaults and bounds live on the model map. */
   export const modelParameters = pgTable('model_parameters', {
     id: uuid('id').defaultRandom().primaryKey(),
     key: varchar('key', { length: 100 }).notNull(),
@@ -315,6 +315,21 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     ...timestamps,
   }, (table) => ([
     uniqueIndex('model_parameters_key_unique').on(table.key),
+  ]))
+
+  export const parameterOptions = pgTable('parameter_options', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    parameterId: uuid('parameter_id')
+      .references(() => modelParameters.id, { onDelete: 'cascade' })
+      .notNull(),
+    label: varchar('label', { length: 100 }).notNull(),
+    value: text('value').notNull(),
+    description: text('description'),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('parameter_options_parameter_id_id_unique').on(table.parameterId, table.id),
+    uniqueIndex('parameter_options_parameter_id_value_unique').on(table.parameterId, table.value),
+    index('parameter_options_value_idx').on(table.value),
   ]))
 
 
@@ -331,13 +346,79 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     sortOrder: integer('sort_order').default(0).notNull(),
     defaultValue: text('default_value'),
     constraints: jsonb('constraints').$type<ModelParameterConstraint>(),
-    enum: jsonb('enum').$type<string[]>(),
     ...timestamps,
   }, (table) => ([
     primaryKey({ columns: [table.modelId, table.parameterId] }),
-
   ]))
 
+  /** Enum values a model accepts for a bound parameter. optionId must belong to that parameter. */
+  export const modelsAndParameterOptions = pgTable('models_and_parameter_options', {
+    modelId: varchar('model_id', { length: 50 }).notNull(),
+    parameterId: uuid('parameter_id').notNull(),
+    optionId: uuid('option_id').notNull(),
+    ...timestamps,
+  }, (table) => ([
+    primaryKey({ columns: [table.modelId, table.parameterId, table.optionId] }),
+    foreignKey({
+      columns: [table.modelId, table.parameterId],
+      foreignColumns: [modelsAndParameters.modelId, modelsAndParameters.parameterId],
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.parameterId, table.optionId],
+      foreignColumns: [parameterOptions.parameterId, parameterOptions.id],
+    }).onDelete('cascade'),
+  ]))
+
+  export const llmVendors = pgTable('llm_vendors', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: varchar('name', { length: 100 }).notNull(),
+    enabled: boolean('enabled').default(true).notNull(),
+    ...timestamps,
+  }, (table) => ([
+    uniqueIndex('llm_vendors_name_unique').on(table.name),
+  ]))
+
+  export const llmVendorsAndModels = pgTable('llm_vendors_and_models', {
+    vendorId: uuid('vendor_id')
+      .references(() => llmVendors.id, { onDelete: 'cascade' })
+      .notNull(),
+    modelId: varchar('model_id', { length: 50 })
+      .references(() => llmModels.id, { onDelete: 'cascade' })
+      .notNull(),
+    apiName: varchar('api_name', { length: 50 }).notNull(),
+    pricing: jsonb('pricing').$type<TokenPricing>(),
+    enabled: boolean('enabled').default(true).notNull(),
+    ...timestamps,
+  }, (table) => ([
+    primaryKey({ columns: [table.vendorId, table.modelId] }),
+  ])) 
+
+  export const llmVendorsAndParameters = pgTable('llm_vendors_and_parameters', {
+    vendorId: uuid('vendor_id')
+      .references(() => llmVendors.id, { onDelete: 'cascade' })
+      .notNull(),
+    parameterId: uuid('parameter_id')
+      .references(() => modelParameters.id, { onDelete: 'cascade' })
+      .notNull(),
+    vendorParamName: varchar('vendor_param_name', { length: 100 }),
+    vendorDefaultValue: text('vendor_default_value'),
+    ...timestamps,
+  }, (table) => ([
+    primaryKey({ columns: [table.vendorId, table.parameterId] }),
+  ]))
+
+  export const llmVendorsAndParameterOptions = pgTable('llm_vendors_and_parameter_options', {
+    vendorId: uuid('vendor_id')
+      .references(() => llmVendors.id, { onDelete: 'cascade' })
+      .notNull(),
+    parameterOptionId: uuid('parameter_option_id')
+      .references(() => parameterOptions.id, { onDelete: 'cascade' })
+      .notNull(),
+    vendorOptionValue: text('vendor_option_value').notNull(),
+    ...timestamps,
+  }, (table) => ([
+    primaryKey({ columns: [table.vendorId, table.parameterOptionId] }),
+  ]))
 
   // ========================= BILLING ==========================
 
@@ -705,7 +786,11 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
   export type ChatMessageRole = (typeof chatMessageRoleEnum.enumValues)[number]
   export type LlmModel = typeof llmModels.$inferSelect
   export type ModelParameter = typeof modelParameters.$inferSelect
+  export type ParameterOption = typeof parameterOptions.$inferSelect
   export type ModelAndParameter = typeof modelsAndParameters.$inferSelect
+  export type ModelAndParameterOption = typeof modelsAndParameterOptions.$inferSelect
+  export type LlmVendor = typeof llmVendors.$inferSelect
+  export type LlmVendorAndModel = typeof llmVendorsAndModels.$inferSelect
   export type Checkpoint = typeof checkpoints.$inferSelect
   export type Asset = typeof assets.$inferSelect
   export type AssetVariant = typeof assetVariants.$inferSelect

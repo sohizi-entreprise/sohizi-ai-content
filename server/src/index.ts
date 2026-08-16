@@ -58,7 +58,14 @@ const app = new Elysia()
                     case "Unauthorized":
                     case "NotFound":
                     case "InternalServerError":
-                      return error
+                      return error instanceof errors.BadRequest ||
+                        error instanceof errors.Conflict ||
+                        error instanceof errors.Forbidden ||
+                        error instanceof errors.Unauthorized ||
+                        error instanceof errors.NotFound ||
+                        error instanceof errors.InternalServerError
+                        ? error.toResponse()
+                        : error
                     case "InsufficientCreditsError":
                       return (error as InsufficientCreditsError).toResponse()
                     case "NameConflictError":

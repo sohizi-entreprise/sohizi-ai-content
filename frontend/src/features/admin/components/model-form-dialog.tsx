@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -12,33 +12,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  createAdminModelMutationOptions,
-  listAdminCategoriesQueryOptions,
-  listAdminParametersQueryOptions,
-  listModelParametersQueryOptions,
-  replaceModelParametersMutationOptions,
-  updateAdminModelMutationOptions,
-} from '../query-mutation'
-import type { AdminModel, CreateModelInput } from '../types'
-import {
-  emptyPricingFormState,
-  formStateToPricing,
-  PricingEditor,
-  pricingToFormState,
-  type PricingFormState,
-} from './pricing-editor'
-import {
-  ModelParametersEditor,
-  bindingsToDrafts,
-  draftsToPayload,
-  type ParameterBindingDraft,
-} from './model-parameters-editor'
+import { createAdminModelMutationOptions } from '../query-mutation'
+import type { AdminCategoryOption, CreateModelInput } from '../types'
 
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  model?: AdminModel | null
+  categories: AdminCategoryOption[]
+  onCreated?: (modelId: string) => void
 }
 
 const emptyForm = {
@@ -50,50 +31,16 @@ const emptyForm = {
   categoryNames: [] as string[],
 }
 
-export function ModelFormDialog({ open, onOpenChange, model }: Props) {
-  const isEdit = Boolean(model)
+export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: Props) {
   const [form, setForm] = useState(emptyForm)
-  const [pricing, setPricing] = useState<PricingFormState>(emptyPricingFormState())
-  const [bindings, setBindings] = useState<ParameterBindingDraft[]>([])
   const [error, setError] = useState<string | null>(null)
-  const hydratedBindingsFor = useRef<string | null>(null)
-
-  const { data: categories = [] } = useQuery(listAdminCategoriesQueryOptions())
-  const { data: catalog = [] } = useQuery(listAdminParametersQueryOptions())
-  const { data: existingBindings } = useQuery(listModelParametersQueryOptions(model?.id ?? null))
   const createMutation = useMutation(createAdminModelMutationOptions())
-  const updateMutation = useMutation(updateAdminModelMutationOptions())
-  const replaceParametersMutation = useMutation(replaceModelParametersMutationOptions())
 
   useEffect(() => {
-    if (!open) {
-      hydratedBindingsFor.current = null
-      return
-    }
-    if (model) {
-      setForm({
-        id: model.id,
-        provider: model.provider,
-        name: model.name,
-        apiName: model.apiName,
-        enabled: model.enabled,
-        categoryNames: model.categories,
-      })
-      setPricing(pricingToFormState(model.pricing))
-    } else {
-      setForm(emptyForm)
-      setPricing(emptyPricingFormState())
-      setBindings([])
-    }
+    if (!open) return
+    setForm(emptyForm)
     setError(null)
-  }, [open, model])
-
-  useEffect(() => {
-    if (!open || !model || !existingBindings) return
-    if (hydratedBindingsFor.current === model.id) return
-    hydratedBindingsFor.current = model.id
-    setBindings(bindingsToDrafts(existingBindings))
-  }, [open, model, existingBindings])
+  }, [open])
 
   const toggleCategory = (name: string, checked: boolean) => {
     setForm((prev) => ({
@@ -108,38 +55,17 @@ export function ModelFormDialog({ open, onOpenChange, model }: Props) {
     event.preventDefault()
     setError(null)
     try {
-      const pricingPayload = formStateToPricing(pricing)
-      const parameterPayload = draftsToPayload(bindings)
-      let modelId = model?.id
-      if (isEdit && model) {
-        await updateMutation.mutateAsync({
-          id: model.id,
-          input: {
-            provider: form.provider,
-            name: form.name,
-            apiName: form.apiName,
-            enabled: form.enabled,
-            categoryNames: form.categoryNames,
-            pricing: pricingPayload,
-          },
-        })
-      } else {
-        const payload: CreateModelInput = {
-          id: form.id,
-          provider: form.provider,
-          name: form.name,
-          apiName: form.apiName,
-          enabled: form.enabled,
-          categoryNames: form.categoryNames,
-          pricing: pricingPayload,
-        }
-        await createMutation.mutateAsync(payload)
-        modelId = form.id
+      const payload: CreateModelInput = {
+        id: form.id,
+        provider: form.provider,
+        name: form.name,
+        apiName: form.apiName,
+        enabled: form.enabled,
+        categoryNames: form.categoryNames,
       }
-      if (modelId) {
-        await replaceParametersMutation.mutateAsync({ modelId, input: parameterPayload })
-      }
+      const created = await createMutation.mutateAsync(payload)
       onOpenChange(false)
+      onCreated?.(created.id)
     } catch (err) {
       const message =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
@@ -148,14 +74,11 @@ export function ModelFormDialog({ open, onOpenChange, model }: Props) {
     }
   }
 
-  const pending =
-    createMutation.isPending || updateMutation.isPending || replaceParametersMutation.isPending
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit model' : 'Add model'}</DialogTitle>
+          <DialogTitle>Add model</DialogTitle>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
@@ -163,7 +86,6 @@ export function ModelFormDialog({ open, onOpenChange, model }: Props) {
             <Input
               id="model-id"
               value={form.id}
-              disabled={isEdit}
               placeholder="openai/gpt-5.1"
               onChange={(event) => setForm((prev) => ({ ...prev, id: event.target.value }))}
               required
@@ -220,15 +142,13 @@ export function ModelFormDialog({ open, onOpenChange, model }: Props) {
               ))}
             </div>
           </div>
-          <PricingEditor value={pricing} onChange={setPricing} />
-          <ModelParametersEditor value={bindings} onChange={setBindings} catalog={catalog} />
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Saving…' : 'Save'}
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Saving…' : 'Create'}
             </Button>
           </DialogFooter>
         </form>

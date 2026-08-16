@@ -1,104 +1,24 @@
-import { useEffect } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { ChevronsUpDown } from 'lucide-react'
+import { MediaModelSelector } from './media-model-selector'
 import { useMediaCatalog } from '../hooks/use-media-catalog'
-import { useMediaGeneratorStore } from '../store/media-generator-store'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CatalogModel } from '@/features/admin/types'
-import { Skeleton } from '@/components/ui/skeleton'
-import { MediaVoiceSelector } from './media-voice-selector'
-import { listGoogleVoicesQueryOptions } from '../query-mutations'
-import { useQuery } from '@tanstack/react-query'
 
+/** @deprecated Settings now live in MediaModelSettings. Kept for typecheck compatibility. */
 export default function SettingsPopover() {
-  const updatePromptSettings = useMediaGeneratorStore((state) => state.updatePromptSettings)
-  const mediaType = useMediaGeneratorStore((state) => state.mediaType)
   const {
     models,
     selectedModelId,
     setSelectedModelId,
     isLoadingModels,
-  } = useMediaCatalog(mediaType)
+    hasCatalog,
+  } = useMediaCatalog()
 
-  const { data: voices = [], isLoading } = useQuery(listGoogleVoicesQueryOptions)
-
-  useEffect(() => {
-    if (selectedModelId && mediaType !== 'audio') {
-      updatePromptSettings(mediaType, 'model', selectedModelId)
-    }
-  }, [selectedModelId, mediaType, updatePromptSettings])
-
-  if (mediaType === 'audio') {
-    return <MediaVoiceSelector voices={voices} isLoading={isLoading} />
-  }
+  if (!hasCatalog) return null
 
   return (
-    <div className="flex items-center gap-2">
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-8 rounded-lg bg-white/12 px-3 text-xs text-white hover:bg-white/16 hover:text-white"
-          >
-            Settings
-            <ChevronsUpDown className="size-3.5" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent
-          className="w-[min(760px,calc(100vw-32px))] max-w-[760px] rounded-xl border-white/8 bg-[#1e2022] p-4 text-white shadow-2xl"
-        >
-          <DialogHeader>
-            <DialogTitle className="text-white">Settings</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <SelectModel
-              models={models}
-              selectedModelId={selectedModelId}
-              setSelectedModelId={setSelectedModelId}
-              isLoadingModels={isLoadingModels}
-            />
-            <div />
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-function SelectModel(props: {
-  models: CatalogModel[]
-  selectedModelId: string | null
-  setSelectedModelId: (modelId: string) => void
-  isLoadingModels: boolean
-}) {
-  const { models, selectedModelId, setSelectedModelId, isLoadingModels } = props
-  if (isLoadingModels) return (
-    <Skeleton className="h-8 w-[180px] rounded-lg" />
-  )
-  return (
-    <Select
-      value={selectedModelId ?? undefined}
-      onValueChange={setSelectedModelId}
-      disabled={isLoadingModels}
-    >
-      <SelectTrigger className="h-8 w-[180px] rounded-lg border-white/10 bg-white/8 text-xs">
-        <SelectValue placeholder={isLoadingModels ? 'Loading…' : 'Select model'} />
-      </SelectTrigger>
-      <SelectContent>
-        {models.map((model) => (
-          <SelectItem key={model.id} value={model.id}>
-            {model.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <MediaModelSelector
+      models={models}
+      selectedModelId={selectedModelId}
+      onSelect={setSelectedModelId}
+      isLoading={isLoadingModels}
+    />
   )
 }

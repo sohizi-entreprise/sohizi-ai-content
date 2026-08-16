@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,20 +19,14 @@ import type { AdminParameter } from '../types'
 import { ParameterFormDialog } from './parameter-form-dialog'
 
 export function ParametersPage() {
+  const navigate = useNavigate()
   const { data: parameters = [], isLoading, error } = useQuery(listAdminParametersQueryOptions())
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<AdminParameter | null>(null)
 
   const deleteMutation = useMutation(deleteAdminParameterMutationOptions())
 
-  const openCreate = () => {
-    setEditing(null)
-    setDialogOpen(true)
-  }
-
-  const openEdit = (parameter: AdminParameter) => {
-    setEditing(parameter)
-    setDialogOpen(true)
+  const openDetail = (parameter: AdminParameter) => {
+    navigate({ to: '/admin/parameters/$parameterId', params: { parameterId: parameter.id } })
   }
 
   const handleDelete = (parameter: AdminParameter) => {
@@ -48,7 +43,7 @@ export function ParametersPage() {
             Define reusable parameter kinds, then bind them to models with defaults and constraints.
           </p>
         </div>
-        <Button onClick={openCreate}>Add parameter</Button>
+        <Button onClick={() => setDialogOpen(true)}>Add parameter</Button>
       </div>
 
       {isLoading ? <p className="text-sm text-muted-foreground">Loading parameters…</p> : null}
@@ -62,12 +57,17 @@ export function ParametersPage() {
               <TableHead>Key</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>UI</TableHead>
+              <TableHead>Options</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {parameters.map((parameter) => (
-              <TableRow key={parameter.id}>
+              <TableRow
+                key={parameter.id}
+                className="cursor-pointer"
+                onClick={() => openDetail(parameter)}
+              >
                 <TableCell className="font-medium">{parameter.label}</TableCell>
                 <TableCell className="font-mono text-xs">{parameter.key}</TableCell>
                 <TableCell>
@@ -76,9 +76,10 @@ export function ParametersPage() {
                 <TableCell className="text-xs text-muted-foreground">
                   {parameter.xUiComponent ?? '—'}
                 </TableCell>
-                <TableCell className="space-x-2 text-right">
-                  <Button size="sm" variant="outline" onClick={() => openEdit(parameter)}>
-                    Edit
+                <TableCell>{parameter.optionCount}</TableCell>
+                <TableCell className="space-x-2 text-right" onClick={(event) => event.stopPropagation()}>
+                  <Button size="sm" variant="outline" onClick={() => openDetail(parameter)}>
+                    Open
                   </Button>
                   <Button
                     size="sm"
@@ -92,7 +93,7 @@ export function ParametersPage() {
             ))}
             {!isLoading && parameters.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                   No parameters yet.
                 </TableCell>
               </TableRow>
@@ -101,7 +102,13 @@ export function ParametersPage() {
         </Table>
       </div>
 
-      <ParameterFormDialog open={dialogOpen} onOpenChange={setDialogOpen} parameter={editing} />
+      <ParameterFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onCreated={(parameterId) =>
+          navigate({ to: '/admin/parameters/$parameterId', params: { parameterId } })
+        }
+      />
     </div>
   )
 }

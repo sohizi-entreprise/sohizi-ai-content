@@ -1,6 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { ParametersPage } from '@/features/admin/components/parameters-page'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/admin/parameters')({
-  component: ParametersPage,
+  component: ParametersLayout,
 })
+
+function ParametersLayout() {
+  return <Outlet />
+}

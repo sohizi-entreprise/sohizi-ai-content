@@ -108,7 +108,7 @@ export function MediaVoiceSelector({voices, isLoading}: {voices: GoogleVoiceDesc
         <Button
           type="button"
           variant="ghost"
-          className="h-8 rounded-lg bg-white/12 px-3 text-xs text-white hover:bg-white/16 hover:text-white"
+          className="h-11 w-full justify-start rounded-xl border bg-background px-3 text-sm hover:bg-accent/40"
         >
           {selectedVoiceData ? (
             <>
@@ -117,7 +117,7 @@ export function MediaVoiceSelector({voices, isLoading}: {voices: GoogleVoiceDesc
               <VoiceSelectorGender value={selectedVoiceData.gender} />
             </>
           ) : (
-            <span className="text-xs">Select voice</span>
+            <span className="text-muted-foreground">Select voice</span>
           )}
         </Button>
       </VoiceSelectorTrigger>

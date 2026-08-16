@@ -6,11 +6,11 @@ export const listLlmModels = async (categories: string[]) => {
 }
 
 export const listModelParameters = async (modelId: string) => {
-  const model = await repo.getModelById(modelId)
-  if (!model) {
+  const result = await repo.listModelParameterBindings(modelId)
+  if (!result.found) {
     throw new NotFound('Model not found')
   }
-  return repo.listModelParameterBindings(model.id)
+  return result.bindings
 }
 
 export const getModelById = repo.getModelById

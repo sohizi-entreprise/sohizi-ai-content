@@ -21,14 +21,22 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as DashboardMainRouteImport } from './routes/dashboard/main'
+import { Route as AdminVendorsRouteImport } from './routes/admin/vendors'
 import { Route as AdminSkillsRouteImport } from './routes/admin/skills'
 import { Route as AdminParametersRouteImport } from './routes/admin/parameters'
 import { Route as AdminModelsRouteImport } from './routes/admin/models'
 import { Route as AdminContentCategoriesRouteImport } from './routes/admin/content-categories'
 import { Route as AdminCommandsRouteImport } from './routes/admin/commands'
+import { Route as AdminParametersIndexRouteImport } from './routes/admin/parameters/index'
+import { Route as AdminModelsIndexRouteImport } from './routes/admin/models/index'
+import { Route as AdminCategoriesIndexRouteImport } from './routes/admin/categories/index'
 import { Route as DashboardProjectsNewRouteImport } from './routes/dashboard/projects/new'
 import { Route as DashboardProjectsProjectIdRouteImport } from './routes/dashboard/projects/$projectId'
 import { Route as DashboardMainProjectsRouteImport } from './routes/dashboard/main/projects'
+import { Route as AdminParametersParameterIdRouteImport } from './routes/admin/parameters/$parameterId'
+import { Route as AdminModelsModelIdRouteImport } from './routes/admin/models/$modelId'
+import { Route as AdminCategoriesModelsRouteImport } from './routes/admin/categories/models'
+import { Route as AdminCategoriesContentRouteImport } from './routes/admin/categories/content'
 import { Route as DashboardProjectsProjectIdGenerateRouteImport } from './routes/dashboard/projects/$projectId/generate'
 import { Route as DashboardProjectsProjectIdEditorRouteImport } from './routes/dashboard/projects/$projectId/editor'
 import { Route as DashboardProjectsProjectIdEditRouteImport } from './routes/dashboard/projects/$projectId/edit'
@@ -102,6 +110,11 @@ const DashboardMainRoute = DashboardMainRouteImport.update({
   path: '/main',
   getParentRoute: () => DashboardRoute,
 } as any)
+const AdminVendorsRoute = AdminVendorsRouteImport.update({
+  id: '/vendors',
+  path: '/vendors',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSkillsRoute = AdminSkillsRouteImport.update({
   id: '/skills',
   path: '/skills',
@@ -127,6 +140,21 @@ const AdminCommandsRoute = AdminCommandsRouteImport.update({
   path: '/commands',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminParametersIndexRoute = AdminParametersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminParametersRoute,
+} as any)
+const AdminModelsIndexRoute = AdminModelsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminModelsRoute,
+} as any)
+const AdminCategoriesIndexRoute = AdminCategoriesIndexRouteImport.update({
+  id: '/categories/',
+  path: '/categories/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const DashboardProjectsNewRoute = DashboardProjectsNewRouteImport.update({
   id: '/projects/new',
   path: '/projects/new',
@@ -142,6 +170,27 @@ const DashboardMainProjectsRoute = DashboardMainProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
   getParentRoute: () => DashboardMainRoute,
+} as any)
+const AdminParametersParameterIdRoute =
+  AdminParametersParameterIdRouteImport.update({
+    id: '/$parameterId',
+    path: '/$parameterId',
+    getParentRoute: () => AdminParametersRoute,
+  } as any)
+const AdminModelsModelIdRoute = AdminModelsModelIdRouteImport.update({
+  id: '/$modelId',
+  path: '/$modelId',
+  getParentRoute: () => AdminModelsRoute,
+} as any)
+const AdminCategoriesModelsRoute = AdminCategoriesModelsRouteImport.update({
+  id: '/categories/models',
+  path: '/categories/models',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCategoriesContentRoute = AdminCategoriesContentRouteImport.update({
+  id: '/categories/content',
+  path: '/categories/content',
+  getParentRoute: () => AdminRoute,
 } as any)
 const DashboardProjectsProjectIdGenerateRoute =
   DashboardProjectsProjectIdGenerateRouteImport.update({
@@ -228,15 +277,23 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/admin/commands': typeof AdminCommandsRoute
   '/admin/content-categories': typeof AdminContentCategoriesRoute
-  '/admin/models': typeof AdminModelsRoute
-  '/admin/parameters': typeof AdminParametersRoute
+  '/admin/models': typeof AdminModelsRouteWithChildren
+  '/admin/parameters': typeof AdminParametersRouteWithChildren
   '/admin/skills': typeof AdminSkillsRoute
+  '/admin/vendors': typeof AdminVendorsRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/admin/categories/content': typeof AdminCategoriesContentRoute
+  '/admin/categories/models': typeof AdminCategoriesModelsRoute
+  '/admin/models/$modelId': typeof AdminModelsModelIdRoute
+  '/admin/parameters/$parameterId': typeof AdminParametersParameterIdRoute
   '/dashboard/main/projects': typeof DashboardMainProjectsRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
+  '/admin/categories': typeof AdminCategoriesIndexRoute
+  '/admin/models/': typeof AdminModelsIndexRoute
+  '/admin/parameters/': typeof AdminParametersIndexRoute
   '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
   '/dashboard/projects/$projectId/editor': typeof DashboardProjectsProjectIdEditorRoute
   '/dashboard/projects/$projectId/generate': typeof DashboardProjectsProjectIdGenerateRoute
@@ -260,15 +317,21 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/admin/commands': typeof AdminCommandsRoute
   '/admin/content-categories': typeof AdminContentCategoriesRoute
-  '/admin/models': typeof AdminModelsRoute
-  '/admin/parameters': typeof AdminParametersRoute
   '/admin/skills': typeof AdminSkillsRoute
+  '/admin/vendors': typeof AdminVendorsRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/admin': typeof AdminIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/admin/categories/content': typeof AdminCategoriesContentRoute
+  '/admin/categories/models': typeof AdminCategoriesModelsRoute
+  '/admin/models/$modelId': typeof AdminModelsModelIdRoute
+  '/admin/parameters/$parameterId': typeof AdminParametersParameterIdRoute
   '/dashboard/main/projects': typeof DashboardMainProjectsRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
+  '/admin/categories': typeof AdminCategoriesIndexRoute
+  '/admin/models': typeof AdminModelsIndexRoute
+  '/admin/parameters': typeof AdminParametersIndexRoute
   '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
   '/dashboard/projects/$projectId/editor': typeof DashboardProjectsProjectIdEditorRoute
   '/dashboard/projects/$projectId/generate': typeof DashboardProjectsProjectIdGenerateRoute
@@ -295,15 +358,23 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/admin/commands': typeof AdminCommandsRoute
   '/admin/content-categories': typeof AdminContentCategoriesRoute
-  '/admin/models': typeof AdminModelsRoute
-  '/admin/parameters': typeof AdminParametersRoute
+  '/admin/models': typeof AdminModelsRouteWithChildren
+  '/admin/parameters': typeof AdminParametersRouteWithChildren
   '/admin/skills': typeof AdminSkillsRoute
+  '/admin/vendors': typeof AdminVendorsRoute
   '/dashboard/main': typeof DashboardMainRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/admin/categories/content': typeof AdminCategoriesContentRoute
+  '/admin/categories/models': typeof AdminCategoriesModelsRoute
+  '/admin/models/$modelId': typeof AdminModelsModelIdRoute
+  '/admin/parameters/$parameterId': typeof AdminParametersParameterIdRoute
   '/dashboard/main/projects': typeof DashboardMainProjectsRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
   '/dashboard/projects/new': typeof DashboardProjectsNewRoute
+  '/admin/categories/': typeof AdminCategoriesIndexRoute
+  '/admin/models/': typeof AdminModelsIndexRoute
+  '/admin/parameters/': typeof AdminParametersIndexRoute
   '/dashboard/projects/$projectId/edit': typeof DashboardProjectsProjectIdEditRouteWithChildren
   '/dashboard/projects/$projectId/editor': typeof DashboardProjectsProjectIdEditorRoute
   '/dashboard/projects/$projectId/generate': typeof DashboardProjectsProjectIdGenerateRoute
@@ -334,12 +405,20 @@ export interface FileRouteTypes {
     | '/admin/models'
     | '/admin/parameters'
     | '/admin/skills'
+    | '/admin/vendors'
     | '/dashboard/main'
     | '/admin/'
     | '/dashboard/'
+    | '/admin/categories/content'
+    | '/admin/categories/models'
+    | '/admin/models/$modelId'
+    | '/admin/parameters/$parameterId'
     | '/dashboard/main/projects'
     | '/dashboard/projects/$projectId'
     | '/dashboard/projects/new'
+    | '/admin/categories'
+    | '/admin/models/'
+    | '/admin/parameters/'
     | '/dashboard/projects/$projectId/edit'
     | '/dashboard/projects/$projectId/editor'
     | '/dashboard/projects/$projectId/generate'
@@ -363,15 +442,21 @@ export interface FileRouteTypes {
     | '/terms'
     | '/admin/commands'
     | '/admin/content-categories'
-    | '/admin/models'
-    | '/admin/parameters'
     | '/admin/skills'
+    | '/admin/vendors'
     | '/dashboard/main'
     | '/admin'
     | '/dashboard'
+    | '/admin/categories/content'
+    | '/admin/categories/models'
+    | '/admin/models/$modelId'
+    | '/admin/parameters/$parameterId'
     | '/dashboard/main/projects'
     | '/dashboard/projects/$projectId'
     | '/dashboard/projects/new'
+    | '/admin/categories'
+    | '/admin/models'
+    | '/admin/parameters'
     | '/dashboard/projects/$projectId/edit'
     | '/dashboard/projects/$projectId/editor'
     | '/dashboard/projects/$projectId/generate'
@@ -400,12 +485,20 @@ export interface FileRouteTypes {
     | '/admin/models'
     | '/admin/parameters'
     | '/admin/skills'
+    | '/admin/vendors'
     | '/dashboard/main'
     | '/admin/'
     | '/dashboard/'
+    | '/admin/categories/content'
+    | '/admin/categories/models'
+    | '/admin/models/$modelId'
+    | '/admin/parameters/$parameterId'
     | '/dashboard/main/projects'
     | '/dashboard/projects/$projectId'
     | '/dashboard/projects/new'
+    | '/admin/categories/'
+    | '/admin/models/'
+    | '/admin/parameters/'
     | '/dashboard/projects/$projectId/edit'
     | '/dashboard/projects/$projectId/editor'
     | '/dashboard/projects/$projectId/generate'
@@ -518,6 +611,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardMainRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/admin/vendors': {
+      id: '/admin/vendors'
+      path: '/vendors'
+      fullPath: '/admin/vendors'
+      preLoaderRoute: typeof AdminVendorsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/skills': {
       id: '/admin/skills'
       path: '/skills'
@@ -553,6 +653,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCommandsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/parameters/': {
+      id: '/admin/parameters/'
+      path: '/'
+      fullPath: '/admin/parameters/'
+      preLoaderRoute: typeof AdminParametersIndexRouteImport
+      parentRoute: typeof AdminParametersRoute
+    }
+    '/admin/models/': {
+      id: '/admin/models/'
+      path: '/'
+      fullPath: '/admin/models/'
+      preLoaderRoute: typeof AdminModelsIndexRouteImport
+      parentRoute: typeof AdminModelsRoute
+    }
+    '/admin/categories/': {
+      id: '/admin/categories/'
+      path: '/categories'
+      fullPath: '/admin/categories'
+      preLoaderRoute: typeof AdminCategoriesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/dashboard/projects/new': {
       id: '/dashboard/projects/new'
       path: '/projects/new'
@@ -573,6 +694,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/main/projects'
       preLoaderRoute: typeof DashboardMainProjectsRouteImport
       parentRoute: typeof DashboardMainRoute
+    }
+    '/admin/parameters/$parameterId': {
+      id: '/admin/parameters/$parameterId'
+      path: '/$parameterId'
+      fullPath: '/admin/parameters/$parameterId'
+      preLoaderRoute: typeof AdminParametersParameterIdRouteImport
+      parentRoute: typeof AdminParametersRoute
+    }
+    '/admin/models/$modelId': {
+      id: '/admin/models/$modelId'
+      path: '/$modelId'
+      fullPath: '/admin/models/$modelId'
+      preLoaderRoute: typeof AdminModelsModelIdRouteImport
+      parentRoute: typeof AdminModelsRoute
+    }
+    '/admin/categories/models': {
+      id: '/admin/categories/models'
+      path: '/categories/models'
+      fullPath: '/admin/categories/models'
+      preLoaderRoute: typeof AdminCategoriesModelsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/categories/content': {
+      id: '/admin/categories/content'
+      path: '/categories/content'
+      fullPath: '/admin/categories/content'
+      preLoaderRoute: typeof AdminCategoriesContentRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/dashboard/projects/$projectId/generate': {
       id: '/dashboard/projects/$projectId/generate'
@@ -661,22 +810,58 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminModelsRouteChildren {
+  AdminModelsModelIdRoute: typeof AdminModelsModelIdRoute
+  AdminModelsIndexRoute: typeof AdminModelsIndexRoute
+}
+
+const AdminModelsRouteChildren: AdminModelsRouteChildren = {
+  AdminModelsModelIdRoute: AdminModelsModelIdRoute,
+  AdminModelsIndexRoute: AdminModelsIndexRoute,
+}
+
+const AdminModelsRouteWithChildren = AdminModelsRoute._addFileChildren(
+  AdminModelsRouteChildren,
+)
+
+interface AdminParametersRouteChildren {
+  AdminParametersParameterIdRoute: typeof AdminParametersParameterIdRoute
+  AdminParametersIndexRoute: typeof AdminParametersIndexRoute
+}
+
+const AdminParametersRouteChildren: AdminParametersRouteChildren = {
+  AdminParametersParameterIdRoute: AdminParametersParameterIdRoute,
+  AdminParametersIndexRoute: AdminParametersIndexRoute,
+}
+
+const AdminParametersRouteWithChildren = AdminParametersRoute._addFileChildren(
+  AdminParametersRouteChildren,
+)
+
 interface AdminRouteChildren {
   AdminCommandsRoute: typeof AdminCommandsRoute
   AdminContentCategoriesRoute: typeof AdminContentCategoriesRoute
-  AdminModelsRoute: typeof AdminModelsRoute
-  AdminParametersRoute: typeof AdminParametersRoute
+  AdminModelsRoute: typeof AdminModelsRouteWithChildren
+  AdminParametersRoute: typeof AdminParametersRouteWithChildren
   AdminSkillsRoute: typeof AdminSkillsRoute
+  AdminVendorsRoute: typeof AdminVendorsRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminCategoriesContentRoute: typeof AdminCategoriesContentRoute
+  AdminCategoriesModelsRoute: typeof AdminCategoriesModelsRoute
+  AdminCategoriesIndexRoute: typeof AdminCategoriesIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminCommandsRoute: AdminCommandsRoute,
   AdminContentCategoriesRoute: AdminContentCategoriesRoute,
-  AdminModelsRoute: AdminModelsRoute,
-  AdminParametersRoute: AdminParametersRoute,
+  AdminModelsRoute: AdminModelsRouteWithChildren,
+  AdminParametersRoute: AdminParametersRouteWithChildren,
   AdminSkillsRoute: AdminSkillsRoute,
+  AdminVendorsRoute: AdminVendorsRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminCategoriesContentRoute: AdminCategoriesContentRoute,
+  AdminCategoriesModelsRoute: AdminCategoriesModelsRoute,
+  AdminCategoriesIndexRoute: AdminCategoriesIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

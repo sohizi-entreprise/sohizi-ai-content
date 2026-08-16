@@ -4,12 +4,21 @@ import * as commandRepo from '../command/repo'
 import * as contentCategoriesRepo from '../content-categories/repo'
 import * as skillsRepo from '../skills/repo'
 import type {
+  createCategorySchema,
   createModelSchema,
+  createModelVendorBindingSchema,
+  createParameterOptionSchema,
   createParameterSchema,
+  createVendorSchema,
   replaceCategoriesSchema,
   replaceModelParametersSchema,
   updateModelSchema,
+  updateModelVendorBindingSchema,
+  updateParameterOptionSchema,
   updateParameterSchema,
+  updateVendorSchema,
+  upsertVendorOptionMapSchema,
+  upsertVendorParameterMapSchema,
 } from '../models/schema'
 import type { createCommandSchema, updateCommandSchema } from '../command/schema'
 import type {
@@ -26,9 +35,18 @@ import type { z } from 'zod'
 type CreateModelInput = z.infer<typeof createModelSchema>
 type UpdateModelInput = z.infer<typeof updateModelSchema>
 type ReplaceCategoriesInput = z.infer<typeof replaceCategoriesSchema>
+type CreateCategoryInput = z.infer<typeof createCategorySchema>
 type CreateParameterInput = z.infer<typeof createParameterSchema>
 type UpdateParameterInput = z.infer<typeof updateParameterSchema>
 type ReplaceModelParametersInput = z.infer<typeof replaceModelParametersSchema>
+type CreateParameterOptionInput = z.infer<typeof createParameterOptionSchema>
+type UpdateParameterOptionInput = z.infer<typeof updateParameterOptionSchema>
+type UpsertVendorOptionMapInput = z.infer<typeof upsertVendorOptionMapSchema>
+type UpsertVendorParameterMapInput = z.infer<typeof upsertVendorParameterMapSchema>
+type CreateVendorInput = z.infer<typeof createVendorSchema>
+type UpdateVendorInput = z.infer<typeof updateVendorSchema>
+type CreateModelVendorBindingInput = z.infer<typeof createModelVendorBindingSchema>
+type UpdateModelVendorBindingInput = z.infer<typeof updateModelVendorBindingSchema>
 type CreateCommandInput = z.infer<typeof createCommandSchema>
 type UpdateCommandInput = z.infer<typeof updateCommandSchema>
 type CreateContentCategoryInput = z.infer<typeof createContentCategorySchema>
@@ -37,9 +55,38 @@ type CreateSkillInput = z.infer<typeof createSkillSchema>
 type UpdateSkillInput = z.infer<typeof updateSkillSchema>
 type ReplaceSkillCategoriesInput = z.infer<typeof replaceSkillCategoriesSchema>
 
-const isUniqueViolation = (error: unknown) =>
-  error instanceof Error &&
-  (error.message.includes('unique') || error.message.includes('duplicate key'))
+const postgresCode = (error: unknown): string | undefined => {
+  let current: unknown = error
+  while (current && typeof current === 'object') {
+    if ('code' in current && typeof current.code === 'string' && /^\d{5}$/.test(current.code)) {
+      return current.code
+    }
+    current = 'cause' in current ? current.cause : undefined
+  }
+  return undefined
+}
+
+const errorChainMessage = (error: unknown) => {
+  const parts: string[] = []
+  let current: unknown = error
+  while (current instanceof Error) {
+    parts.push(current.message)
+    current = current.cause
+  }
+  return parts.join(' ').toLowerCase()
+}
+
+const isUniqueViolation = (error: unknown) => {
+  if (postgresCode(error) === '23505') return true
+  const message = errorChainMessage(error)
+  return message.includes('duplicate key') || message.includes('unique constraint')
+}
+
+const isForeignKeyViolation = (error: unknown) => {
+  if (postgresCode(error) === '23503') return true
+  const message = errorChainMessage(error)
+  return message.includes('foreign key') || message.includes('violates foreign key')
+}
 
 const resolveCategoryIds = async (categoryNames: string[]) => {
   const categories = await modelsRepo.getCategoryIdsByNames(categoryNames)
@@ -51,13 +98,41 @@ const resolveCategoryIds = async (categoryNames: string[]) => {
   return categories.map((category) => category.id)
 }
 
-export const listModels = async () => modelsRepo.listAllModels()
+export const listModels = async () => {
+  const [models, categories] = await Promise.all([
+    modelsRepo.listAllModels(),
+    modelsRepo.listCategoryOptions(),
+  ])
+  return { models, categories }
+}
 
 export const listCategories = async () => modelsRepo.listCategories()
 
+export const createCategory = async (input: CreateCategoryInput) => {
+  try {
+    return await modelsRepo.createCategory({
+      name: input.name,
+      description: input.description,
+    })
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new Conflict('Category with this name already exists')
+    }
+    throw error
+  }
+}
+
+export const deleteCategory = async (id: string) => {
+  const existing = await modelsRepo.getCategoryById(id)
+  if (!existing) {
+    throw new NotFound('Category not found')
+  }
+  await modelsRepo.deleteCategory(id)
+  return { ok: true as const }
+}
+
 export const getModel = async (id: string) => {
-  const models = await modelsRepo.listAllModels()
-  const model = models.find((item) => item.id === id)
+  const model = await modelsRepo.getModelWithRelations(id)
   if (!model) {
     throw new NotFound('Model not found')
   }
@@ -122,7 +197,7 @@ export const replaceModelCategories = async (id: string, input: ReplaceCategorie
 export const listParameters = async () => modelsRepo.listAllParameters()
 
 export const getParameter = async (id: string) => {
-  const parameter = await modelsRepo.getParameterById(id)
+  const parameter = await modelsRepo.getParameterDetail(id)
   if (!parameter) {
     throw new NotFound('Parameter not found')
   }
@@ -131,13 +206,15 @@ export const getParameter = async (id: string) => {
 
 export const createParameter = async (input: CreateParameterInput) => {
   try {
-    return await modelsRepo.createParameter({
+    const created = await modelsRepo.createParameter({
       key: input.key,
       label: input.label,
       type: input.type,
       description: input.description,
       xUiComponent: input.xUiComponent,
+      options: input.options,
     })
+    return getParameter(created.id)
   } catch (error) {
     if (isUniqueViolation(error)) {
       throw new Conflict('Parameter with this key already exists')
@@ -147,13 +224,8 @@ export const createParameter = async (input: CreateParameterInput) => {
 }
 
 export const updateParameter = async (id: string, input: UpdateParameterInput) => {
-  const existing = await modelsRepo.getParameterById(id)
-  if (!existing) {
-    throw new NotFound('Parameter not found')
-  }
-
   if (Object.keys(input).length === 0) {
-    return existing
+    return getParameter(id)
   }
 
   try {
@@ -161,7 +233,7 @@ export const updateParameter = async (id: string, input: UpdateParameterInput) =
     if (!updated) {
       throw new NotFound('Parameter not found')
     }
-    return updated
+    return getParameter(id)
   } catch (error) {
     if (isUniqueViolation(error)) {
       throw new Conflict('Parameter with this key already exists')
@@ -171,20 +243,232 @@ export const updateParameter = async (id: string, input: UpdateParameterInput) =
 }
 
 export const deleteParameter = async (id: string) => {
-  const existing = await modelsRepo.getParameterById(id)
-  if (!existing) {
+  const deleted = await modelsRepo.deleteParameter(id)
+  if (!deleted) {
     throw new NotFound('Parameter not found')
   }
-  await modelsRepo.deleteParameter(id)
   return { ok: true as const }
 }
 
-export const listModelParameters = async (id: string) => {
-  const existing = await modelsRepo.getModelById(id)
-  if (!existing) {
+export const createParameterOption = async (parameterId: string, input: CreateParameterOptionInput) => {
+  const parameter = await modelsRepo.getParameterById(parameterId)
+  if (!parameter) {
+    throw new NotFound('Parameter not found')
+  }
+  try {
+    return await modelsRepo.createParameterOption({
+      parameterId,
+      label: input.label,
+      value: input.value,
+      description: input.description,
+    })
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new Conflict('Option with this value already exists for the parameter')
+    }
+    throw error
+  }
+}
+
+export const updateParameterOption = async (
+  parameterId: string,
+  optionId: string,
+  input: UpdateParameterOptionInput,
+) => {
+  if (Object.keys(input).length === 0) {
+    throw new BadRequest('No fields to update')
+  }
+  try {
+    const updated = await modelsRepo.updateParameterOption(parameterId, optionId, input)
+    if (!updated) {
+      throw new NotFound('Option not found')
+    }
+    return updated
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new Conflict('Option with this value already exists for the parameter')
+    }
+    throw error
+  }
+}
+
+export const deleteParameterOption = async (parameterId: string, optionId: string) => {
+  const deleted = await modelsRepo.deleteParameterOption(parameterId, optionId)
+  if (!deleted) {
+    throw new NotFound('Option not found')
+  }
+  return { ok: true as const }
+}
+
+export const upsertVendorOptionMapping = async (
+  parameterId: string,
+  optionId: string,
+  vendorId: string,
+  input: UpsertVendorOptionMapInput,
+) => {
+  try {
+    const mapping = await modelsRepo.upsertVendorOptionMapping({
+      parameterId,
+      optionId,
+      vendorId,
+      vendorOptionValue: input.vendorOptionValue,
+    })
+    if (!mapping) {
+      throw new NotFound('Option not found')
+    }
+    return {
+      vendorId: mapping.vendor_id,
+      parameterOptionId: mapping.parameter_option_id,
+      vendorOptionValue: mapping.vendor_option_value,
+    }
+  } catch (error) {
+    if (isForeignKeyViolation(error)) {
+      throw new BadRequest('Vendor does not exist')
+    }
+    throw error
+  }
+}
+
+export const deleteVendorOptionMapping = async (
+  parameterId: string,
+  optionId: string,
+  vendorId: string,
+) => {
+  const deleted = await modelsRepo.deleteVendorOptionMapping(parameterId, optionId, vendorId)
+  if (!deleted) {
+    throw new NotFound('Vendor option mapping not found')
+  }
+  return { ok: true as const }
+}
+
+export const upsertVendorParameterMapping = async (
+  parameterId: string,
+  vendorId: string,
+  input: UpsertVendorParameterMapInput,
+) => {
+  const parameter = await modelsRepo.getParameterById(parameterId)
+  if (!parameter) {
+    throw new NotFound('Parameter not found')
+  }
+  try {
+    return await modelsRepo.upsertVendorParameterMapping({
+      parameterId,
+      vendorId,
+      vendorParamName: input.vendorParamName,
+      vendorDefaultValue: input.vendorDefaultValue,
+    })
+  } catch (error) {
+    if (isForeignKeyViolation(error)) {
+      throw new BadRequest('Vendor does not exist')
+    }
+    throw error
+  }
+}
+
+export const deleteVendorParameterMapping = async (parameterId: string, vendorId: string) => {
+  const deleted = await modelsRepo.deleteVendorParameterMapping(parameterId, vendorId)
+  if (!deleted) {
+    throw new NotFound('Vendor parameter mapping not found')
+  }
+  return { ok: true as const }
+}
+
+export const listVendors = async () => modelsRepo.listVendors()
+
+export const createVendor = async (input: CreateVendorInput) => {
+  try {
+    return await modelsRepo.createVendor({
+      name: input.name,
+      enabled: input.enabled,
+    })
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new Conflict('Vendor with this name already exists')
+    }
+    throw error
+  }
+}
+
+export const updateVendor = async (id: string, input: UpdateVendorInput) => {
+  if (Object.keys(input).length === 0) {
+    throw new BadRequest('No fields to update')
+  }
+  try {
+    const updated = await modelsRepo.updateVendor(id, input)
+    if (!updated) {
+      throw new NotFound('Vendor not found')
+    }
+    return updated
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new Conflict('Vendor with this name already exists')
+    }
+    throw error
+  }
+}
+
+export const deleteVendor = async (id: string) => {
+  const deleted = await modelsRepo.deleteVendor(id)
+  if (!deleted) {
+    throw new NotFound('Vendor not found')
+  }
+  return { ok: true as const }
+}
+
+export const createModelVendorBinding = async (modelId: string, input: CreateModelVendorBindingInput) => {
+  const model = await modelsRepo.getModelById(modelId)
+  if (!model) {
     throw new NotFound('Model not found')
   }
-  return modelsRepo.listModelParameterBindings(id)
+  try {
+    await modelsRepo.createModelVendorBinding({
+      modelId,
+      vendorId: input.vendorId,
+      apiName: input.apiName,
+      pricing: input.pricing,
+      enabled: input.enabled,
+    })
+    return getModel(modelId)
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new Conflict('Vendor is already bound to this model')
+    }
+    if (isForeignKeyViolation(error)) {
+      throw new BadRequest('Vendor does not exist')
+    }
+    throw error
+  }
+}
+
+export const updateModelVendorBinding = async (
+  modelId: string,
+  vendorId: string,
+  input: UpdateModelVendorBindingInput,
+) => {
+  if (Object.keys(input).length === 0) {
+    throw new BadRequest('No fields to update')
+  }
+  const updated = await modelsRepo.updateModelVendorBinding(modelId, vendorId, input)
+  if (!updated) {
+    throw new NotFound('Vendor binding not found')
+  }
+  return getModel(modelId)
+}
+
+export const deleteModelVendorBinding = async (modelId: string, vendorId: string) => {
+  const deleted = await modelsRepo.deleteModelVendorBinding(modelId, vendorId)
+  if (!deleted) {
+    throw new NotFound('Vendor binding not found')
+  }
+  return getModel(modelId)
+}
+
+export const listModelParameters = async (id: string) => {
+  const result = await modelsRepo.listModelParameterBindings(id)
+  if (!result.found) {
+    throw new NotFound('Model not found')
+  }
+  return result.bindings
 }
 
 export const replaceModelParameters = async (id: string, input: ReplaceModelParametersInput) => {
@@ -193,15 +477,19 @@ export const replaceModelParameters = async (id: string, input: ReplaceModelPara
     throw new NotFound('Model not found')
   }
   const parameterIds = input.map((binding) => binding.parameterId)
-  if (!(await modelsRepo.parametersExist(parameterIds))) {
-    throw new BadRequest('One or more parameterIds do not exist')
-  }
   const uniqueIds = new Set(parameterIds)
   if (uniqueIds.size !== parameterIds.length) {
     throw new BadRequest('Duplicate parameterIds are not allowed')
   }
-  await modelsRepo.replaceModelParameters(id, input)
-  return modelsRepo.listModelParameterBindings(id)
+  const result = await modelsRepo.replaceModelParameters(id, input)
+  if (result.error === 'missing-parameters') {
+    throw new BadRequest('One or more parameterIds do not exist')
+  }
+  if (result.error === 'invalid-options') {
+    throw new BadRequest('One or more optionIds do not belong to the bound parameter')
+  }
+  const bindings = await modelsRepo.listModelParameterBindings(id)
+  return bindings.bindings
 }
 
 // ======================== Commands ========================
