@@ -1,7 +1,6 @@
-import { LlmModel } from "@/db/schema";
 import { resolveFileByPathOrId } from "../tools/utils";
 import { FileObject } from "@/features/file-system/objects/file";
-import { getModelById } from "@/features/chat/repo";
+import { getModelWithVendorBinding, type ResolvedVendorModel } from "@/features/models/repo";
 import { getSkillByName } from "@/features/file-system/repo";
 
 export type SessionInitData = {
@@ -22,7 +21,7 @@ export class Session {
     public readonly runId: string;
     // We need a cache to make sure that the read and write applies to the correct file content.
     private fileCache: Map<string, FileObject>;
-    private modelsCache: Map<string, LlmModel | null>;
+    private modelsCache: Map<string, ResolvedVendorModel | null>;
     private skillsCache: Map<string, string>;
 
     constructor(data: SessionInitData) {
@@ -59,13 +58,14 @@ export class Session {
         return result.file;
     }
 
-    async resolveModel(modelId: string): Promise<LlmModel | null> {
-        const cachedModel = this.modelsCache.get(modelId);
+    async resolveModel(modelId: string, vendor: string): Promise<ResolvedVendorModel | null> {
+        const cacheKey = `${vendor}:${modelId}`;
+        const cachedModel = this.modelsCache.get(cacheKey);
         if(cachedModel !== undefined){
             return cachedModel;
         }
-        const model = await getModelById(modelId) || null;
-        this.modelsCache.set(modelId, model);
+        const model = await getModelWithVendorBinding(modelId, vendor);
+        this.modelsCache.set(cacheKey, model);
         return model;
     }
 

@@ -3,7 +3,8 @@ import * as repo from './repo'
 import { z } from 'zod';
 import { UserModelMessage, userModelMessageSchema } from 'ai';
 import { assertConversationOwner } from '@/lib/authorize';
-import { Conversation, ConversationAgentRun, LlmModel } from '@/db/schema';
+import { Conversation, ConversationAgentRun } from '@/db/schema';
+import { getModelWithVendorBinding, type ResolvedVendorModel } from '@/features/models/repo';
 import { BadRequest } from '../error';
 import { Session } from '../ai/agent/core/session';
 import { v4 as uuidv4 } from 'uuid';
@@ -79,7 +80,11 @@ export const chatCompletion = async(userId: string, projectId: string, payload: 
 
   const shouldGenerateTitle = conversationId === null;
 
-  const model = await repo.getModelById(modelId);
+  const agentDefinition = getAgentDefinition('main-agent');
+  if(!agentDefinition){
+    throw new Error('Agent definition not found');
+  }
+  const model = await getModelWithVendorBinding(modelId, agentDefinition.vendor);
   if(!model){
     throw new BadRequest('Model not found')
   }
@@ -120,7 +125,7 @@ type RunAgentPayload = {
   userId: string;
   conversationId: string;
   projectId: string;
-  model: LlmModel;
+  model: ResolvedVendorModel;
   runId: string;
   userPrompt: UserModelMessage;
   shouldGenerateTitle: boolean;
@@ -170,6 +175,7 @@ async function runAgent(payload: RunAgentPayload){
         ),
         session,
         model,
+        vendor: agentDefinition.vendor,
         modelConfig: agentDefinition.modelConfig,
         persistence: checkpointPersistence,
         maxContextTokens: agentDefinition.maxContextTokens,

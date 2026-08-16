@@ -19,12 +19,12 @@ export type AdminModel = {
   id: string
   provider: string
   name: string
-  apiName: string
-  pricing: TokenPricing | null
   enabled: boolean
   createdAt: string
   updatedAt: string
   categories: string[]
+  vendorCount?: number
+  hasPricing?: boolean
 }
 
 export type AdminModelDetail = AdminModel & {
@@ -193,8 +193,6 @@ export type CreateModelInput = {
   id: string
   provider: string
   name: string
-  apiName: string
-  pricing?: TokenPricing | null
   enabled?: boolean
   categoryNames: string[]
 }

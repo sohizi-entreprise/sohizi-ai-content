@@ -26,7 +26,6 @@ const emptyForm = {
   id: '',
   provider: '',
   name: '',
-  apiName: '',
   enabled: true,
   categoryNames: [] as string[],
 }
@@ -59,7 +58,6 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
         id: form.id,
         provider: form.provider,
         name: form.name,
-        apiName: form.apiName,
         enabled: form.enabled,
         categoryNames: form.categoryNames,
       }
@@ -91,25 +89,14 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="model-provider">Provider</Label>
-              <Input
-                id="model-provider"
-                value={form.provider}
-                onChange={(event) => setForm((prev) => ({ ...prev, provider: event.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="model-api-name">API name</Label>
-              <Input
-                id="model-api-name"
-                value={form.apiName}
-                onChange={(event) => setForm((prev) => ({ ...prev, apiName: event.target.value }))}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="model-provider">Provider</Label>
+            <Input
+              id="model-provider"
+              value={form.provider}
+              onChange={(event) => setForm((prev) => ({ ...prev, provider: event.target.value }))}
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="model-name">Display name</Label>

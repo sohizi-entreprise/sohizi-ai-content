@@ -65,14 +65,62 @@ export const getModelById = async (id: string) => {
   return result[0]
 }
 
+export type ResolvedVendorModel = {
+  id: string
+  provider: string
+  name: string
+  enabled: boolean
+  vendorName: string
+  apiName: string
+  pricing: TokenPricing | null
+}
+
+export const getModelWithVendorBinding = async (
+  modelId: string,
+  vendorName: string,
+): Promise<ResolvedVendorModel | null> => {
+  const model = await getModelById(modelId)
+  if (!model) {
+    return null
+  }
+
+  const [row] = await db
+    .select({
+      vendorName: llmVendors.name,
+      vendorEnabled: llmVendors.enabled,
+      apiName: llmVendorsAndModels.apiName,
+      pricing: llmVendorsAndModels.pricing,
+      bindingEnabled: llmVendorsAndModels.enabled,
+    })
+    .from(llmVendorsAndModels)
+    .innerJoin(llmVendors, eq(llmVendors.id, llmVendorsAndModels.vendorId))
+    .where(and(
+      eq(llmVendorsAndModels.modelId, modelId),
+      eq(llmVendors.name, vendorName),
+    ))
+    .limit(1)
+
+  if (!row || !row.vendorEnabled || !row.bindingEnabled) {
+    throw new Error(`No enabled ${vendorName} binding for model ${modelId}`)
+  }
+
+  return {
+    id: model.id,
+    provider: model.provider,
+    name: model.name,
+    enabled: model.enabled,
+    vendorName: row.vendorName,
+    apiName: row.apiName,
+    pricing: row.pricing,
+  }
+}
+
 export const getModelWithRelations = async (id: string) => {
   const rows = await db
     .select({
       id: llmModels.id,
       provider: llmModels.provider,
       name: llmModels.name,
-      apiName: llmModels.apiName,
-      pricing: llmModels.pricing,
       enabled: llmModels.enabled,
       createdAt: llmModels.createdAt,
       updatedAt: llmModels.updatedAt,
@@ -127,13 +175,13 @@ export const getModelWithRelations = async (id: string) => {
     id: first.id,
     provider: first.provider,
     name: first.name,
-    apiName: first.apiName,
-    pricing: first.pricing,
     enabled: first.enabled,
     createdAt: first.createdAt,
     updatedAt: first.updatedAt,
     categories,
     vendors,
+    vendorCount: vendors.length,
+    hasPricing: vendors.some((vendor) => vendor.pricing != null),
   }
 }
 
@@ -240,16 +288,17 @@ export const listAllModels = async () => {
       id: llmModels.id,
       provider: llmModels.provider,
       name: llmModels.name,
-      apiName: llmModels.apiName,
-      pricing: llmModels.pricing,
       enabled: llmModels.enabled,
       createdAt: llmModels.createdAt,
       updatedAt: llmModels.updatedAt,
       categoryName: modelCategories.name,
+      vendorId: llmVendorsAndModels.vendorId,
+      vendorPricing: llmVendorsAndModels.pricing,
     })
     .from(llmModels)
     .leftJoin(modelsAndCategories, eq(llmModels.id, modelsAndCategories.modelId))
     .leftJoin(modelCategories, eq(modelsAndCategories.categoryId, modelCategories.id))
+    .leftJoin(llmVendorsAndModels, eq(llmVendorsAndModels.modelId, llmModels.id))
     .orderBy(llmModels.provider, llmModels.name)
 
   const byId = new Map<
@@ -258,37 +307,49 @@ export const listAllModels = async () => {
       id: string
       provider: string
       name: string
-      apiName: string
-      pricing: (typeof rows)[number]['pricing']
       enabled: boolean
       createdAt: Date
       updatedAt: Date
       categories: string[]
+      vendorIds: Set<string>
+      pricedVendorCount: number
     }
   >()
 
   for (const row of rows) {
     const existing = byId.get(row.id)
     if (!existing) {
+      const vendorIds = new Set<string>()
+      if (row.vendorId) vendorIds.add(row.vendorId)
       byId.set(row.id, {
         id: row.id,
         provider: row.provider,
         name: row.name,
-        apiName: row.apiName,
-        pricing: row.pricing,
         enabled: row.enabled,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         categories: row.categoryName ? [row.categoryName] : [],
+        vendorIds,
+        pricedVendorCount: row.vendorId && row.vendorPricing ? 1 : 0,
       })
       continue
     }
     if (row.categoryName && !existing.categories.includes(row.categoryName)) {
       existing.categories.push(row.categoryName)
     }
+    if (row.vendorId && !existing.vendorIds.has(row.vendorId)) {
+      existing.vendorIds.add(row.vendorId)
+      if (row.vendorPricing) {
+        existing.pricedVendorCount += 1
+      }
+    }
   }
 
-  return [...byId.values()]
+  return [...byId.values()].map(({ vendorIds, pricedVendorCount, ...model }) => ({
+    ...model,
+    vendorCount: vendorIds.size,
+    hasPricing: pricedVendorCount > 0,
+  }))
 }
 
 export const listCategoryOptions = async () => {
@@ -359,8 +420,6 @@ export const createModel = async (data: {
   id: string
   provider: string
   name: string
-  apiName: string
-  pricing?: typeof llmModels.$inferInsert.pricing
   enabled?: boolean
 }) => {
   const [created] = await db
@@ -369,8 +428,6 @@ export const createModel = async (data: {
       id: data.id,
       provider: data.provider,
       name: data.name,
-      apiName: data.apiName,
-      pricing: data.pricing ?? null,
       enabled: data.enabled ?? true,
     })
     .returning()
@@ -382,8 +439,6 @@ export const updateModel = async (
   data: Partial<{
     provider: string
     name: string
-    apiName: string
-    pricing: typeof llmModels.$inferInsert.pricing
     enabled: boolean
   }>,
 ) => {

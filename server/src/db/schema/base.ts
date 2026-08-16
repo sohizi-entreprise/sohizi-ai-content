@@ -274,13 +274,9 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     id: varchar('id', { length: 50 }).primaryKey(),
     provider: varchar('provider', { length: 50 }).notNull(),
     name: varchar('name', { length: 50 }).notNull(),
-    apiName: varchar('api_name', { length: 50 }).notNull(),
-    pricing: jsonb('pricing').$type<TokenPricing>(),
     enabled: boolean('enabled').default(true).notNull(),
     ...timestamps,
-  }, (table) => ([
-    uniqueIndex('llm_models_provider_api_name_unique').on(table.provider, table.apiName),
-  ]))
+  })
 
   export const modelCategories = pgTable('model_categories', {
     id: uuid('id').defaultRandom().primaryKey(),

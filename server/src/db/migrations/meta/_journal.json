@@ -204,6 +204,13 @@
       "when": 1786822347412,
       "tag": "0028_vendors_and_parameter_options",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786822347413,
+      "tag": "0029_move_model_pricing_to_vendors",
+      "breakpoints": true
     }
   ]
 }

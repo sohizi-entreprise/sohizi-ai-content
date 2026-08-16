@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { MediaGenerationPersistence } from '../ai/agent/core/persistence';
 import { getAgentDefinition } from '../ai/agent/core/agent-registry';
 import { Agent } from '../ai/agent/core/agent';
-import { getModelById } from '../chat/repo';
+import { getModelWithVendorBinding } from '../models/repo';
 import { BaseStreamData, decrementKey, incrementKey, markStreamActive, readStreamChunks, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
 import { sse } from 'elysia';
 import { ZipArchive } from 'archiver';
@@ -171,7 +171,7 @@ async function runAgent(payload: RunAgentPayload & { runId: string }){
       if(!agentDefinition){
         throw new Error('Agent definition not found');
       }
-      const model = await getModelById(agentDefinition.modelId);
+      const model = await getModelWithVendorBinding(agentDefinition.modelId, agentDefinition.vendor);
       if(!model){
         throw new Error('Model not found');
       }
@@ -180,6 +180,7 @@ async function runAgent(payload: RunAgentPayload & { runId: string }){
           systemPrompt: fullPrompt(agentDefinition.baseSystemPrompt, payload.settings ?? {}),
           session,
           model,
+          vendor: agentDefinition.vendor,
           modelConfig: agentDefinition.modelConfig,
           persistence: persistence,
           maxContextTokens: agentDefinition.maxContextTokens,

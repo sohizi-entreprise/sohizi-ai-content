@@ -1,6 +1,10 @@
-import type { LlmModel } from "@/db/schema";
 import { CREDIT_RATE, TOKEN_OVERHEAD_RATE } from "./constants";
 import { TokenPricing, TextTokenUsage, PricingTier } from "@/type";
+
+type PricedModel = {
+  name: string;
+  pricing: TokenPricing | null;
+};
 
 type BillingUnit = 'text' | 'image' | 'video/second' | 'audio/minute' | 'audio/1k characters' | 'audio/generation';
 
@@ -25,7 +29,7 @@ export const calculateProviderRatePer1M = (
 }
 
 export const rawProviderCost = (
-  model: LlmModel,
+  model: PricedModel,
   unit: BillingUnit,
   usage: TextTokenUsage,
 ) => {
@@ -76,7 +80,7 @@ export const calculateTextProviderCost = (
 }
 
 export const calculateTextCredits = (
-  model: LlmModel,
+  model: PricedModel,
   usage: TextTokenUsage,
   options: {
     overheadRate?: number;

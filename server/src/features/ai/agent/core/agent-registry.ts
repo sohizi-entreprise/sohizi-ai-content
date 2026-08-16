@@ -16,6 +16,7 @@ import { htmlVideoGeneratorPrompt } from "../prompts/html-video-generator";
 import { youtubeAnalyzerTool, videoAnalyzerTool, imageAnalyzerTool } from "../tools/media-analyzer";
 import { generateImageTool } from "../tools/generate-image";
 import { loadSkillTool } from "../tools/load-skill";
+import { DEFAULT_AGENT_VENDOR } from "./vendor";
 
 export const supportedAgents = [
     'media-generator', 
@@ -33,6 +34,7 @@ export type AgentDefinition = {
     baseSystemPrompt: string;
     modelConfig: ModelConfig;
     modelId: string;
+    vendor: string;
     maxContextTokens: number;      // model context window used for consumption % computation
     contextThreshold?: number;     // 0-1, defaults to 0.8 in the ContextManager
     summaryModelId: string;        // dedicated summarizer model
@@ -80,6 +82,7 @@ registerAgent({
         maxOutputTokens: 3000,
     },
     modelId: 'openai/gpt-5.1', // This will be overridden by the model passed to the agent
+    vendor: DEFAULT_AGENT_VENDOR,
     maxContextTokens: 400_000,
     contextThreshold: 0.8,
     summaryModelId: 'openai/gpt-5-nano',
@@ -96,6 +99,7 @@ registerAgent({
         reasoningSummary: 'auto',
     },
     modelId: 'openai/gpt-5.1',
+    vendor: DEFAULT_AGENT_VENDOR,
     maxContextTokens: 400_000,
     contextThreshold: 0.8,
     summaryModelId: 'openai/gpt-5-nano',
@@ -117,6 +121,7 @@ registerAgent({
         maxOutputTokens: 100_000,
     },
     modelId: 'openai/gpt-5.2',
+    vendor: DEFAULT_AGENT_VENDOR,
     maxContextTokens: 400_000,
     contextThreshold: 0.8,
     summaryModelId: 'openai/gpt-5-nano',

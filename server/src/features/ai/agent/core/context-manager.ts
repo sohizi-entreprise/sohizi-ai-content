@@ -11,6 +11,7 @@ export type ContextManagerConfig = {
     maxContextTokens: number;
     session: Session;
     summaryModelId: string;
+    vendor: string;
     threshold?: number;
     pruneMaxLength?: number;
     keepFirst?: number;
@@ -61,12 +62,14 @@ export class ContextManager {
     private readonly keepLast: number;
     private readonly session: Session;
     private readonly summaryModelId: string;
+    private readonly vendor: string;
     private summaryStream: BilledLlmStream | null | undefined;
 
     constructor(config: ContextManagerConfig) {
         this.maxContextTokens = config.maxContextTokens;
         this.session = config.session;
         this.summaryModelId = config.summaryModelId;
+        this.vendor = config.vendor;
         this.threshold = config.threshold ?? DEFAULT_THRESHOLD;
         this.pruneMaxLength = config.pruneMaxLength ?? DEFAULT_PRUNE_MAX_LENGTH;
         this.keepFirst = config.keepFirst ?? DEFAULT_KEEP_FIRST;
@@ -367,7 +370,7 @@ export class ContextManager {
             return this.summaryStream;
         }
 
-        const model = await this.session.resolveModel(this.summaryModelId);
+        const model = await this.session.resolveModel(this.summaryModelId, this.vendor);
         if (!model) {
             this.summaryStream = null;
             return null;

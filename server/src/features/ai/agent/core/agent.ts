@@ -1,6 +1,6 @@
 import { AssistantContent, ModelMessage, ToolModelMessage, UserModelMessage } from "ai";
-import { LlmModel } from "@/db/schema";
 import { createBillableLlmClient, type BillableLlmClient, type BillableLlmInput, type ModelConfig } from "../utils/llm-client";
+import type { ResolvedVendorModel } from "@/features/models/repo";
 import { LlmChunk, OperationChunk, streamEvents, ToolCall, ToolResultComplete } from "../utils/llm-response";
 import { v4 as uuidv4 } from 'uuid';
 import { getTool } from "../tools/tool-registry";
@@ -23,7 +23,8 @@ export type AgentChunk = {
 } & (LlmChunk | ToolResultComplete | OperationChunk)
 
 type AgentConfig = {
-    model: LlmModel;
+    model: ResolvedVendorModel;
+    vendor: string;
     modelConfig: ModelConfig;
     session: Session;
     name: string;
@@ -46,7 +47,7 @@ export class Agent {
     private readonly persistence: Persistence | undefined;
     private readonly agentParams: Pick<AgentConfig, 'name' | 'systemPrompt'>;
     private readonly modelConfig: ModelConfig;
-    private readonly model: LlmModel;
+    private readonly model: ResolvedVendorModel;
     private readonly contextManager: ContextManager;
     private lastInputTokens: number;
 
@@ -68,6 +69,7 @@ export class Agent {
             threshold: config.contextThreshold,
             session: config.session,
             summaryModelId: config.summaryModelId,
+            vendor: config.vendor,
         });
     }
 

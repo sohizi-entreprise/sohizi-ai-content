@@ -14,7 +14,7 @@ import { z } from "zod";
 import { LlmChunk, LlmCompleteChunk, streamEvents } from "./llm-response";
 import { TokenUsage, CompleteReason } from "@/type";
 import type { Billable, BillableContext, BillableResult, BillableStream, Credits } from "@/features/billing/types";
-import type { LlmModel } from "@/db/schema";
+import type { ResolvedVendorModel } from "@/features/models/repo";
 import { calculateTextCredits, loaded_cost_usd, retail_price_usd, credits_to_charge } from "@/features/billing/credits";
 import { TOPUP_TARGET_MARGIN, PAYMENT_FEE_RESERVE, ESTIMATE_OVERBOOKING_FACTOR, TOKEN_OVERHEAD_RATE, CREDIT_RATE } from "@/features/billing/constants";
 
@@ -358,7 +358,7 @@ export type BillableLlmOutput = {
 }
 
 export type BillableLlmConfig = {
-    model: LlmModel;
+    model: ResolvedVendorModel;
     modelConfig: ModelConfig;
     timeoutMs?: number;
     ttlMs?: number;
@@ -381,7 +381,7 @@ export type BillableLlmClient =
 
 export function createBillableLlmClient(config: BillableLlmConfig): BillableLlmClient {
     const { model, modelConfig, timeoutMs = DEFAULT_TIMEOUT_MS, ttlMs } = config;
-    const client = new LlmClient(model.id, modelConfig);
+    const client = new LlmClient(model.apiName, modelConfig);
 
     const creditsFromUsage = (usage: TokenUsage): Credits => {
         if (usage.cost > 0) {

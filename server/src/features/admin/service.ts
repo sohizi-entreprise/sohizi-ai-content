@@ -150,8 +150,6 @@ export const createModel = async (input: CreateModelInput) => {
     id: input.id,
     provider: input.provider,
     name: input.name,
-    apiName: input.apiName,
-    pricing: input.pricing ?? null,
     enabled: input.enabled,
   })
   await modelsRepo.replaceModelCategories(created.id, categoryIds)

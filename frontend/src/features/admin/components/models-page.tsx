@@ -145,7 +145,7 @@ export function ModelsPage() {
               <TableHead>ID</TableHead>
               <TableHead>Provider</TableHead>
               <TableHead>Categories</TableHead>
-              <TableHead>Pricing</TableHead>
+              <TableHead>Vendors</TableHead>
               <TableHead>Enabled</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -170,7 +170,9 @@ export function ModelsPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {model.pricing ? 'Configured' : '—'}
+                  {(model.vendorCount ?? 0) > 0
+                    ? `${model.vendorCount} · ${model.hasPricing ? 'Priced' : 'No pricing'}`
+                    : '—'}
                 </TableCell>
                 <TableCell onClick={(event) => event.stopPropagation()}>
                   <Switch

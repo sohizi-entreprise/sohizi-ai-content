@@ -27,7 +27,7 @@ export const assignTaskTool = buildBaseTool({
                 return failure(`Invalid sub-agent name provided. Supported are ${supportedAgents.join(', ')}`)
             }
     
-            const model = await session.resolveModel(agentDefinition.modelId);
+            const model = await session.resolveModel(agentDefinition.modelId, agentDefinition.vendor);
             if(!model){
                 return failure(`Model not found. The sub-agent ${subAgent} is unvailable right now. Either assign a different sub-agent if possible or return to the user if this is a blocker.`)
             }
@@ -37,6 +37,7 @@ export const assignTaskTool = buildBaseTool({
                 name: agentDefinition.name,
                 systemPrompt: agentDefinition.baseSystemPrompt,
                 model,
+                vendor: agentDefinition.vendor,
                 modelConfig: agentDefinition.modelConfig,
                 session,
                 maxContextTokens: agentDefinition.maxContextTokens,

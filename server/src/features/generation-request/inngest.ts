@@ -3,11 +3,11 @@ import { inngest } from '@/lib/inngest/client';
 import { ChatCompletionRequest, MediaGenerationRequest } from './schema';
 import { updateGenerationRequest } from './repo';
 import { generateTitle } from '../ai/agent/utils/generate-title';
-import { Checkpoint, Conversation, LlmModel } from '@/db/schema';
+import { getModelWithVendorBinding } from '@/features/models/repo';
 import { Agent } from '../ai/agent/core/agent';
 import { Session } from '../ai/agent/core/session';
 import { CheckpointPersistence, MediaGenerationPersistence } from '../ai/agent/core/persistence';
-import { createConversationWithCheckpoint, getCheckpoint, getConversationById, getModelById } from '../chat/repo';
+import { createConversationWithCheckpoint, getCheckpoint, getConversationById } from '../chat/repo';
 import { generateSystemPrompt } from '../ai/agent/core/sys-prompt';
 import { listTools } from '../ai/agent/tools/tool-registry';
 import { UserModelMessage } from 'ai';
@@ -65,7 +65,7 @@ export const handleMediaGenerationFunc = inngest.createFunction(
             if(!agentDefinition){
                 throw new NonRetriableError('Agent definition not found');
             }
-            const resolved = await getModelById(agentDefinition.modelId);
+            const resolved = await getModelWithVendorBinding(agentDefinition.modelId, agentDefinition.vendor);
             if (!resolved) {
                 throw new NonRetriableError(`Model not found: ${agentDefinition.modelId}`);
             }
@@ -90,7 +90,8 @@ export const handleMediaGenerationFunc = inngest.createFunction(
                 name: agentDefinition.name,
                 systemPrompt: agentDefinition.baseSystemPrompt,
                 session,
-                model: model as unknown as LlmModel,
+                model,
+                vendor: agentDefinition.vendor,
                 modelConfig: agentDefinition.modelConfig,
                 persistence: new MediaGenerationPersistence(requestId),
                 maxContextTokens: agentDefinition.maxContextTokens,

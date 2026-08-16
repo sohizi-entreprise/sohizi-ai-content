@@ -35,8 +35,6 @@ export const createModelSchema = z.object({
   id: z.string().min(1).max(50),
   provider: z.string().min(1).max(50),
   name: z.string().min(1).max(50),
-  apiName: z.string().min(1).max(50),
-  pricing: tokenPricingSchema.nullable().optional(),
   enabled: z.boolean().optional(),
   categoryNames: z.array(z.string().min(1)).default([]),
 })
@@ -44,8 +42,6 @@ export const createModelSchema = z.object({
 export const updateModelSchema = z.object({
   provider: z.string().min(1).max(50).optional(),
   name: z.string().min(1).max(50).optional(),
-  apiName: z.string().min(1).max(50).optional(),
-  pricing: tokenPricingSchema.nullable().optional(),
   enabled: z.boolean().optional(),
   categoryNames: z.array(z.string().min(1)).optional(),
 })

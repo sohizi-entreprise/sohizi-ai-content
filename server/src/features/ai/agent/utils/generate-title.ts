@@ -1,6 +1,7 @@
 import { ModelMessage } from "ai";
 import { createBillableLlmClient } from "./llm-client";
-import { getModelById } from "@/features/chat/repo";
+import { getModelWithVendorBinding } from "@/features/models/repo";
+import { DEFAULT_AGENT_VENDOR } from "../core/vendor";
 import { billingService, withBilling } from "@/features/billing";
 import { estimateInputTokens } from "./estimate-token";
 import { v4 as uuidv4 } from 'uuid';
@@ -20,7 +21,7 @@ export async function generateTitle(request: GenerateTitleRequest): Promise<Gene
     const { message, modelId, organizationId, abortSignal } = request;
     let title = derivedTitle(message);
     try {
-        const model = await getModelById(modelId);
+        const model = await getModelWithVendorBinding(modelId, DEFAULT_AGENT_VENDOR);
         if (!model) {
             throw new Error('Model not found');
         }

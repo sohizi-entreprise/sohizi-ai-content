@@ -52,21 +52,21 @@ type Props = {
   modelId: string
 }
 
+const EMPTY_LIST: never[] = []
+
 export function ModelDetailPage({ modelId }: Props) {
   const { data: model, isLoading, error } = useQuery(getAdminModelQueryOptions(modelId))
-  const { data: categories = [] } = useQuery(listAdminCategoriesQueryOptions())
-  const { data: catalog = [] } = useQuery(listAdminParametersQueryOptions())
+  const { data: categories = EMPTY_LIST } = useQuery(listAdminCategoriesQueryOptions())
+  const { data: catalog = EMPTY_LIST } = useQuery(listAdminParametersQueryOptions())
   const { data: existingBindings } = useQuery(listModelParametersQueryOptions(modelId))
-  const { data: vendors = [] } = useQuery(listAdminVendorsQueryOptions())
+  const { data: vendors = EMPTY_LIST } = useQuery(listAdminVendorsQueryOptions())
 
   const [form, setForm] = useState({
     provider: '',
     name: '',
-    apiName: '',
     enabled: true,
     categoryNames: [] as string[],
   })
-  const [pricing, setPricing] = useState<PricingFormState>(emptyPricingFormState())
   const [bindings, setBindings] = useState<ParameterBindingDraft[]>([])
   const [saveError, setSaveError] = useState<string | null>(null)
   const hydratedBindingsFor = useRef<string | null>(null)
@@ -79,24 +79,26 @@ export function ModelDetailPage({ modelId }: Props) {
     setForm({
       provider: model.provider,
       name: model.name,
-      apiName: model.apiName,
       enabled: model.enabled,
       categoryNames: model.categories,
     })
-    setPricing(pricingToFormState(model.pricing))
   }, [model])
 
   useEffect(() => {
     if (!model || !existingBindings) return
     if (hydratedBindingsFor.current === model.id) {
-      setBindings((prev) =>
-        prev.map((draft) => {
+      setBindings((prev) => {
+        let changed = false
+        const next = prev.map((draft) => {
           const catalogParameter = catalog.find((item) => item.id === draft.parameterId)
-          return catalogParameter
-            ? { ...draft, catalogOptions: catalogParameter.options }
-            : draft
-        }),
-      )
+          if (!catalogParameter || draft.catalogOptions === catalogParameter.options) {
+            return draft
+          }
+          changed = true
+          return { ...draft, catalogOptions: catalogParameter.options }
+        })
+        return changed ? next : prev
+      })
       return
     }
     hydratedBindingsFor.current = model.id
@@ -121,10 +123,8 @@ export function ModelDetailPage({ modelId }: Props) {
         input: {
           provider: form.provider,
           name: form.name,
-          apiName: form.apiName,
           enabled: form.enabled,
           categoryNames: form.categoryNames,
-          pricing: formStateToPricing(pricing),
         },
       })
       await replaceParametersMutation.mutateAsync({
@@ -161,25 +161,14 @@ export function ModelDetailPage({ modelId }: Props) {
       <form className="space-y-6" onSubmit={handleSave}>
         <section className="space-y-4 rounded-xl border p-4">
           <h2 className="text-sm font-medium">Details</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="model-provider">Provider</Label>
-              <Input
-                id="model-provider"
-                value={form.provider}
-                onChange={(event) => setForm((prev) => ({ ...prev, provider: event.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="model-api-name">API name</Label>
-              <Input
-                id="model-api-name"
-                value={form.apiName}
-                onChange={(event) => setForm((prev) => ({ ...prev, apiName: event.target.value }))}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="model-provider">Provider</Label>
+            <Input
+              id="model-provider"
+              value={form.provider}
+              onChange={(event) => setForm((prev) => ({ ...prev, provider: event.target.value }))}
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="model-name">Display name</Label>
@@ -212,7 +201,6 @@ export function ModelDetailPage({ modelId }: Props) {
               ))}
             </div>
           </div>
-          <PricingEditor value={pricing} onChange={setPricing} />
         </section>
 
         <section className="space-y-4 rounded-xl border p-4">
