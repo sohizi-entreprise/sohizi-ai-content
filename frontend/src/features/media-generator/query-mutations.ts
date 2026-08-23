@@ -1,6 +1,6 @@
 import { mutationOptions, infiniteQueryOptions, keepPreviousData, queryOptions, type InfiniteData, useQueryClient } from "@tanstack/react-query";
 import * as requests from './requests';
-import { MediaAsset } from "./requests";
+import { AiGeneratedMediaRequest, AiGeneratedRequestAsset, MediaAsset } from "./requests";
 import { useCallback } from "react";
 
 type AssetRequestsInfiniteData = InfiniteData<
@@ -9,13 +9,14 @@ type AssetRequestsInfiniteData = InfiniteData<
 >
 
 type AiGeneratedAssetsInfiniteData = InfiniteData<
-  requests.CursorPaginationResult<requests.MediaAsset>,
+  requests.CursorPaginationResult<AiGeneratedMediaRequest>,
   string | undefined
 >
 
 export const mediaGeneratorKeys = {
   assetsRequests: (projectId: string, options?: requests.ListAssetsOptions) => ['media', projectId, 'assets', options],
   aiGeneratedAssets: (projectId: string, options?: requests.ListAssetsOptions) => ['media', projectId, 'ai-assets', options],
+  uploadedAssets: (projectId: string, options?: requests.ListAssetsOptions) => ['media', projectId, 'uploaded-assets', options],
   googleVoices: ['media', 'google-voices'] as const,
   modelParameters: (modelId: string) => ['media', 'models', modelId, 'parameters'] as const,
 }
@@ -55,6 +56,16 @@ export const listAiGeneratedAssetsQueryOptions = (projectId: string, options?: r
     select: (data) => data.pages.flatMap(page => page.data),
 })
 
+export const listUploadedAssetsQueryOptions = (projectId: string, options?: requests.ListAssetsOptions) =>
+  infiniteQueryOptions({
+    queryKey: mediaGeneratorKeys.uploadedAssets(projectId, options),
+    queryFn: ({ pageParam }) => requests.listUploadedAssets(projectId, { ...options, cursor: pageParam }),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined as string | undefined,
+    placeholderData: keepPreviousData,
+    select: (data) => data.pages.flatMap((page) => page.data),
+  })
+
 export const startGenerationMutationOptions = (projectId: string) =>
   mutationOptions({
     mutationFn: (data: requests.AssetRequest) => requests.startGeneration(projectId, data),
@@ -62,6 +73,10 @@ export const startGenerationMutationOptions = (projectId: string) =>
       context.client.setQueriesData<AssetRequestsInfiniteData>(
         { queryKey: mediaGeneratorKeys.assetsRequests(projectId) },
         (old) => appendAssetRequest(old, data),
+      )
+      context.client.setQueriesData<AiGeneratedAssetsInfiniteData>(
+        { queryKey: ['media', projectId, 'ai-assets'] },
+        (old) => prependAiGeneratedRequest(old, toAiGeneratedMediaRequest(data)),
       )
     },
    
@@ -72,7 +87,7 @@ export const cancelGenerationMutationOptions = (projectId: string, requestId: st
   mutationOptions({
     mutationFn: () => requests.cancelGeneration(projectId, requestId),
     meta: {
-      invalidateQueries: [mediaGeneratorKeys.assetsRequests(projectId), mediaGeneratorKeys.aiGeneratedAssets(projectId)],
+      invalidateQueries: [mediaGeneratorKeys.assetsRequests(projectId), ['media', projectId, 'ai-assets']],
     },
 })
 
@@ -80,7 +95,15 @@ export const deleteAssetMutationOptions = (projectId: string, assetId: string) =
   mutationOptions({
     mutationFn: () => requests.deleteAsset(projectId, assetId),
     meta: {
-      invalidateQueries: [mediaGeneratorKeys.aiGeneratedAssets(projectId)],
+      invalidateQueries: [['media', projectId, 'ai-assets']],
+    },
+  })
+
+export const deleteGenerationRequestMutationOptions = (projectId: string, requestId: string) =>
+  mutationOptions({
+    mutationFn: () => requests.deleteGenerationRequest(projectId, requestId),
+    meta: {
+      invalidateQueries: [['media', projectId, 'ai-assets']],
     },
   })
 
@@ -88,7 +111,7 @@ export const moveAssetToFolderMutationOptions = (projectId: string, assetId: str
   mutationOptions({
     mutationFn: (folderId: string) => requests.moveAssetToFolder(projectId, assetId, folderId),
     meta: {
-      invalidateQueries: [mediaGeneratorKeys.aiGeneratedAssets(projectId)],
+      invalidateQueries: [['media', projectId, 'ai-assets']],
     },
   })
 
@@ -98,7 +121,7 @@ export const updateHtmlAssetValuesMutationOptions = (projectId: string, assetId:
       requests.updateHtmlAssetValues(projectId, assetId, values),
     onSuccess: (updatedAsset, _variables, _onMutateResult, context) => {
       context.client.setQueriesData<AiGeneratedAssetsInfiniteData>(
-        { queryKey: mediaGeneratorKeys.aiGeneratedAssets(projectId) },
+        { queryKey: ['media', projectId, 'ai-assets'] },
         (old) => patchAiGeneratedAsset(old, updatedAsset),
       )
       context.client.setQueriesData<AssetRequestsInfiniteData>(
@@ -113,7 +136,7 @@ export const bulkMoveAssetsToFolderMutationOptions = (projectId: string) =>
     mutationFn: ({ assetIds, folderId }: { assetIds: string[]; folderId: string }) =>
       requests.bulkMoveAssetsToFolder(projectId, assetIds, folderId),
     meta: {
-      invalidateQueries: [mediaGeneratorKeys.aiGeneratedAssets(projectId)],
+      invalidateQueries: [['media', projectId, 'ai-assets']],
     },
   })
 
@@ -121,7 +144,7 @@ export const bulkDeleteAssetsMutationOptions = (projectId: string) =>
   mutationOptions({
     mutationFn: (assetIds: string[]) => requests.bulkDeleteAssets(projectId, assetIds),
     meta: {
-      invalidateQueries: [mediaGeneratorKeys.aiGeneratedAssets(projectId)],
+      invalidateQueries: [['media', projectId, 'ai-assets']],
     },
   })
 
@@ -133,17 +156,53 @@ export const downloadAssetsZipMutationOptions = (projectId: string) =>
 export const useUpdateAssetsList = (projectId: string) => {
   const queryClient = useQueryClient()
 
-  return useCallback ((assets: MediaAsset[]) => {
+  return useCallback((assets: MediaAsset[], requestId?: string) => {
     queryClient.setQueriesData<AiGeneratedAssetsInfiniteData>(
-      { queryKey: mediaGeneratorKeys.aiGeneratedAssets(projectId) },
-      (old) => appendAiGeneratedAssets(old, assets),
+      { queryKey: ['media', projectId, 'ai-assets'] },
+      (old) => appendAssetsToAiGeneratedRequests(old, assets, requestId),
     )
-
-    // queryClient.setQueriesData<AssetRequestsInfiniteData>(
-    //   { queryKey: mediaGeneratorKeys.assetsRequests(projectId) },
-    //   (old) => updateAssetRequestAssets(old, requestId, assets),
-    // )
   }, [projectId, queryClient])
+}
+
+export const usePatchAiGeneratedRequest = (projectId: string) => {
+  const queryClient = useQueryClient()
+
+  return useCallback((requestId: string, patch: Partial<AiGeneratedMediaRequest>) => {
+    queryClient.setQueriesData<AiGeneratedAssetsInfiniteData>(
+      { queryKey: ['media', projectId, 'ai-assets'] },
+      (old) => patchAiGeneratedRequest(old, requestId, patch),
+    )
+  }, [projectId, queryClient])
+}
+
+function toAiGeneratedMediaRequest(run: requests.MediaGenerationRun): AiGeneratedMediaRequest {
+  return {
+    id: run.id,
+    projectId: run.projectId,
+    status: run.status,
+    request: run.request,
+    error: run.error,
+    createdAt: run.createdAt,
+    updatedAt: run.updatedAt,
+    assets: [],
+  }
+}
+
+function toRequestAsset(asset: MediaAsset): AiGeneratedRequestAsset {
+  return {
+    id: asset.id,
+    name: asset.name,
+    url: asset.url,
+    type: asset.type,
+    metadata: asset.metadata,
+    storageKey: asset.storageKey,
+  }
+}
+
+function getAssetRequestId(asset: MediaAsset, fallbackRequestId?: string) {
+  if (fallbackRequestId) return fallbackRequestId
+  const streamedRequestId = (asset as MediaAsset & { generationRequestId?: string }).generationRequestId
+  return streamedRequestId ?? asset.generationRequest?.id ?? null
 }
 
 function patchAiGeneratedAsset(
@@ -152,12 +211,35 @@ function patchAiGeneratedAsset(
 ): AiGeneratedAssetsInfiniteData | undefined {
   if (!current) return current
 
+  const nextAsset = toRequestAsset(updatedAsset)
+
   return {
     ...current,
     pages: current.pages.map((page) => ({
       ...page,
-      data: page.data.map((asset) =>
-        asset.id === updatedAsset.id ? { ...asset, ...updatedAsset } : asset,
+      data: page.data.map((request) => ({
+        ...request,
+        assets: request.assets.map((asset) =>
+          asset.id === updatedAsset.id ? { ...asset, ...nextAsset } : asset,
+        ),
+      })),
+    })),
+  }
+}
+
+function patchAiGeneratedRequest(
+  current: AiGeneratedAssetsInfiniteData | undefined,
+  requestId: string,
+  patch: Partial<AiGeneratedMediaRequest>,
+): AiGeneratedAssetsInfiniteData | undefined {
+  if (!current) return current
+
+  return {
+    ...current,
+    pages: current.pages.map((page) => ({
+      ...page,
+      data: page.data.map((request) =>
+        request.id === requestId ? { ...request, ...patch } : request,
       ),
     })),
   }
@@ -176,23 +258,63 @@ function patchAssetInRequests(
       data: page.data.map((request) => ({
         ...request,
         assets: (request.assets ?? []).map((asset) =>
-          asset.id === updatedAsset.id ? { ...asset, ...updatedAsset } : asset,
+          asset.assetId === updatedAsset.id
+            ? { ...asset, url: updatedAsset.url, name: updatedAsset.name, type: updatedAsset.type }
+            : asset,
         ),
       })),
     })),
   }
 }
 
-function appendAiGeneratedAssets(
+function appendAssetsToAiGeneratedRequests(
   current: AiGeneratedAssetsInfiniteData | undefined,
   assets: MediaAsset[],
-): AiGeneratedAssetsInfiniteData {
-  const aiGeneratedAssets = assets.filter((asset) => asset.source === 'ai-generated')
+  requestId?: string,
+): AiGeneratedAssetsInfiniteData | undefined {
+  if (!current || assets.length === 0) return current
 
+  const assetsByRequestId = new Map<string, AiGeneratedRequestAsset[]>()
+  for (const asset of assets) {
+    const parentRequestId = getAssetRequestId(asset, requestId)
+    if (!parentRequestId) continue
+    const currentAssets = assetsByRequestId.get(parentRequestId) ?? []
+    currentAssets.push(toRequestAsset(asset))
+    assetsByRequestId.set(parentRequestId, currentAssets)
+  }
+
+  if (assetsByRequestId.size === 0) return current
+
+  return {
+    ...current,
+    pages: current.pages.map((page) => ({
+      ...page,
+      data: page.data.map((request) => {
+        const incoming = assetsByRequestId.get(request.id)
+        if (!incoming) return request
+        return { ...request, assets: mergeRequestAssets(request.assets, incoming) }
+      }),
+    })),
+  }
+}
+
+function mergeRequestAssets(
+  current: AiGeneratedRequestAsset[],
+  incoming: AiGeneratedRequestAsset[],
+): AiGeneratedRequestAsset[] {
+  const existingIds = new Set(current.map((asset) => asset.id))
+  const newAssets = incoming.filter((asset) => !existingIds.has(asset.id))
+  return newAssets.length > 0 ? [...current, ...newAssets] : current
+}
+
+function prependAiGeneratedRequest(
+  current: AiGeneratedAssetsInfiniteData | undefined,
+  request: AiGeneratedMediaRequest,
+): AiGeneratedAssetsInfiniteData {
   if (!current) {
     return {
       pages: [{
-        data: aiGeneratedAssets,
+        data: [request],
         nextCursor: null,
         hasMore: false,
       }],
@@ -200,58 +322,37 @@ function appendAiGeneratedAssets(
     }
   }
 
-  if (aiGeneratedAssets.length === 0) return current
+  let didReplace = false
+  const pages = current.pages.map((page) => ({
+    ...page,
+    data: page.data.map((item) => {
+      if (item.id !== request.id) return item
+      didReplace = true
+      return { ...item, ...request, assets: item.assets.length > 0 ? item.assets : request.assets }
+    }),
+  }))
 
-  const existingAssetIds = new Set(current.pages.flatMap((page) => page.data.map((asset) => asset.id)))
-  const newAssets = aiGeneratedAssets.filter((asset) => !existingAssetIds.has(asset.id))
+  if (didReplace) {
+    return { ...current, pages }
+  }
 
-  if (newAssets.length === 0) return current
-
-  const firstPage = current.pages[0]
+  const [firstPage, ...restPages] = pages
   if (!firstPage) {
     return {
       ...current,
       pages: [{
-        data: newAssets,
+        data: [request],
         nextCursor: null,
         hasMore: false,
       }],
     }
   }
 
-  const remainingPages = current.pages.slice(1)
   return {
     ...current,
-    pages: [{ ...firstPage, data: [...newAssets, ...firstPage.data] }, ...remainingPages],
+    pages: [{ ...firstPage, data: [request, ...firstPage.data] }, ...restPages],
   }
 }
-
-// function updateAssetRequestAssets(
-//   current: AssetRequestsInfiniteData | undefined,
-//   requestId: string,
-//   assets: MediaAsset[],
-// ): AssetRequestsInfiniteData | undefined {
-//   if (!current) return current
-
-//   return {
-//     ...current,
-//     pages: current.pages.map((page) => ({
-//       ...page,
-//       data: page.data.map((request) => (
-//         request.id === requestId
-//           ? { ...request, assets: mergeAssets(request.assets, assets) }
-//           : request
-//       )),
-//     })),
-//   }
-// }
-
-// function mergeAssets(current: MediaAsset[], next: MediaAsset[]): MediaAsset[] {
-//   const currentAssetIds = new Set(current.map((asset) => asset.id))
-//   const newAssets = next.filter((asset) => !currentAssetIds.has(asset.id))
-
-//   return newAssets.length > 0 ? [...current, ...newAssets] : current
-// }
 
 function appendAssetRequest(
   current: AssetRequestsInfiniteData | undefined,

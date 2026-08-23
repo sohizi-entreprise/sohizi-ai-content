@@ -24,21 +24,4 @@ export const chatCompletionRequestSchema = z.object({
     conversationId: z.uuid('Invalid conversation id').nullable(),
 })
 
-export const mediaGenerationRequestSchema = z.object({
-    type: z.literal('media-generation'),
-    prompt: userMsgSchema,
-    settings: z.record(z.string(), z.string()).optional(),
-})
-
-export const captionGenerationRequestSchema = z.object({
-    type: z.literal('caption-generation'),
-    data: z.object({
-        url: z.url().min(1, 'Media url is required'),
-        urlType: z.enum(['audio', 'video']),
-        compositionId: z.uuid('Invalid composition id').nullable(),
-    }),
-})
-
 export type ChatCompletionRequest = z.infer<typeof chatCompletionRequestSchema>;
-export type MediaGenerationRequest = z.infer<typeof mediaGenerationRequestSchema>;
-export type CaptionGenerationRequest = z.infer<typeof captionGenerationRequestSchema>;

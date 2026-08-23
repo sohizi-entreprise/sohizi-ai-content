@@ -13,13 +13,21 @@ const ADDITION_DIFF_TOKEN_REGEX = /^\{\+([\s\S]+?)\+\}/
 const DELETION_DIFF_TOKEN_REGEX = /^\[-([\s\S]+?)-\]/
 
 // Whole-line (block) wrappers — inner markdown is parsed with the block lexer.
-const ADDITION_DIFF_BLOCK_TOKEN_REGEX = /^\{\+([\s\S]*?)\+\}(?:\n|$)/
-const DELETION_DIFF_BLOCK_TOKEN_REGEX = /^\[-([\s\S]*?)-\](?:\n|$)/
+// The inner group cannot skip past an earlier closer; `{+**+}word{+**+}` must
+// fail here so each pair is handled by the inline tokenizer.
+const ADDITION_DIFF_BLOCK_TOKEN_REGEX = /^\{\+((?:(?!\+})[\s\S])*?)\+\}(?:\n|$)/
+const DELETION_DIFF_BLOCK_TOKEN_REGEX = /^\[-((?:(?!-\])[\s\S])*?)-\](?:\n|$)/
 
 const DIFF_BLOCK_START_REGEX = /^(?:\[-|\{\+)/
 
-/** `#`, `-`, `>`, etc. → block wrapper; plain prose starting with a letter/digit → inline mark. */
-const DIFF_BLOCK_INNER_START_REGEX = /^[\p{L}\p{N}]/u
+/**
+ * Structural markdown that should use a block diff wrapper.
+ * Emphasis (`*`, `**`, `_`) is inline — treating it as a block lets
+ * `{+**+}word{+**+}` backtrack onto the last closer and parse as
+ * bold wrapping leftover `+}word{+`.
+ */
+const DIFF_BLOCK_INNER_START_REGEX =
+  /^(?:#{1,6}\s|(?:[-+*]|\d+\.)\s|>|\s*(?:```|~~~)|<|\||(?:-{3,}|\*{3,}|_{3,})\s*$)/
 
 function blockDiffStart(src: string) {
   return DIFF_BLOCK_START_REGEX.test(src) ? 0 : -1
@@ -28,7 +36,8 @@ function blockDiffStart(src: string) {
 function shouldParseDiffAsBlock(inner: string) {
   const trimmed = inner.trimStart()
   if (!trimmed) return false
-  return !DIFF_BLOCK_INNER_START_REGEX.test(trimmed)
+  if (trimmed.includes('\n')) return true
+  return DIFF_BLOCK_INNER_START_REGEX.test(trimmed)
 }
 
 function tokenizeBlockDiff(

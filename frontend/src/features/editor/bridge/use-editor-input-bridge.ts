@@ -1,6 +1,7 @@
 import { Editor } from '@tiptap/core'
 import { z } from 'zod'
 import { create } from 'zustand'
+import type { AttachedSelection } from '@/features/chat/types'
 
 type EditorInputState = {
     input: HTMLTextAreaElement | HTMLInputElement | null
@@ -39,7 +40,7 @@ export const useEditorInputBridge = create<EditorInputState & EditorInputActions
 
     switch (command.type) {
       case 'insertMention': {
-        const { displayName, fileId, format, lines, snippet } = command.mention
+        const { displayName, fileId, format, lines, selection } = command.mention
         chatEditor
           .chain()
           .focus()
@@ -51,7 +52,7 @@ export const useEditorInputBridge = create<EditorInputState & EditorInputActions
               label: displayName,
               format,
               lines: lines ?? null,
-              snippet: snippet ?? null,
+              selection: selection ?? null,
             },
           })
           .insertContent(' ')
@@ -67,6 +68,16 @@ export const useEditorInputBridge = create<EditorInputState & EditorInputActions
   }
 }))
 
+const attachedSelectionSchema = z.object({
+    file: z.string(),
+    startLine: z.number(),
+    endLine: z.number(),
+    selectedText: z.string(),
+    textBefore: z.string().optional(),
+    textAfter: z.string().optional(),
+    isEntireFile: z.boolean(),
+}) satisfies z.ZodType<AttachedSelection>
+
 const insertMentionCommand = z.object({
     type: z.literal('insertMention'),
     mention: z.object({
@@ -74,7 +85,7 @@ const insertMentionCommand = z.object({
         fileId: z.string(),
         format: z.string(),
         lines: z.string().optional(),
-        snippet: z.string().optional(),
+        selection: attachedSelectionSchema.optional(),
     }),
 })
 

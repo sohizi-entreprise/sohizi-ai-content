@@ -43,6 +43,8 @@ export const assignTaskTool = buildBaseTool({
                 maxContextTokens: agentDefinition.maxContextTokens,
                 contextThreshold: agentDefinition.contextThreshold,
                 summaryModelId: agentDefinition.summaryModelId,
+                evaluatorModelId: agentDefinition.evaluatorModelId,
+                evaluatorModelConfig: agentDefinition.evaluatorModelConfig,
             });
     
             const msg = {

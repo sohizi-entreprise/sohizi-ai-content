@@ -10,6 +10,7 @@ import * as repo from './repo'
 import * as storage from './storage'
 import { takeHtmlCompositionHandoff } from './html-composition'
 import { decrementKey, removeStreamActive, writeStreamData } from '../generation-request/stream-handler'
+import { appendRequestAssets } from '../generation-request/repo'
 import type { AssetMetadata, CompositionVariable } from '@/type'
 
 type HtmlVideoEventData = {
@@ -34,7 +35,7 @@ type UploadedHtmlComposition = {
     size: number
 }
 
-async function commitRequest(requestId: string, status: 'finished' | 'error') {
+async function commitRequest(requestId: string, status: 'completed' | 'failed') {
     const res = await decrementKey(requestId)
     if (res === 0) {
         await repo.updateAssetRequest(requestId, { status })
@@ -50,7 +51,7 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
         onFailure: async ({ event }) => {
             const data = event.data.event.data as HtmlVideoEventData
             if (data.requestId) {
-                await commitRequest(data.requestId, 'error')
+                await commitRequest(data.requestId, 'failed')
             }
         },
     },
@@ -99,6 +100,8 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
                 maxContextTokens: agentDefinition.maxContextTokens,
                 contextThreshold: agentDefinition.contextThreshold,
                 summaryModelId: agentDefinition.summaryModelId,
+                evaluatorModelId: agentDefinition.evaluatorModelId,
+                evaluatorModelConfig: agentDefinition.evaluatorModelConfig,
             })
 
             const userPrompt: UserModelMessage = {
@@ -182,7 +185,13 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
             })
 
             await writeStreamData(requestId, { runId: requestId, event: 'asset', data: asset })
-            await commitRequest(requestId, 'finished')
+            await appendRequestAssets(requestId, [{
+                assetId: asset.id,
+                type: 'html',
+                url: asset.url,
+                name: asset.name,
+            }])
+            await commitRequest(requestId, 'completed')
             return asset
         })
 

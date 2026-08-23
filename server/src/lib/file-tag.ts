@@ -2,9 +2,10 @@
  * Universal file tagging syntax used across editors and chat:
  *
  *   @[Display Name](file:FILE_ID?format=FORMAT)
- *   @[Display Name](file:FILE_ID?format=FORMAT&lines=L2-L5&snippet=…)
+ *   @[Display Name](file:FILE_ID?format=FORMAT&lines=L2-L5)
  *
- * `lines` and `snippet` are optional (chat citations).
+ * `lines` is optional (chat citations). `snippet` is legacy and still parsed
+ * from older messages, but new citations do not include it.
  */
 
 export type FileTagParams = {

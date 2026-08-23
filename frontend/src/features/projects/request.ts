@@ -145,6 +145,28 @@ export const listProjectAssets = async (
   return response.data
 }
 
+export type FolderMediaFile = {
+  id: string
+  name: string
+  url: string
+  type: 'image' | 'video' | 'audio'
+}
+
+export const listFolderMedia = async (
+  projectId: string,
+  folderId: string,
+  options?: { format?: 'image' | 'video' | 'audio'; limit?: number; signal?: AbortSignal },
+): Promise<FolderMediaFile[]> => {
+  const response = await api.get(`/projects/${projectId}/files/${folderId}/media`, {
+    params: {
+      format: options?.format,
+      limit: options?.limit,
+    },
+    signal: options?.signal,
+  })
+  return response.data
+}
+
 export const createFileNode = async (projectId: string, data: {
   name: string
   directory: boolean

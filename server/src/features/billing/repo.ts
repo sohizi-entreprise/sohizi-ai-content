@@ -89,6 +89,7 @@ export async function reserve(input: {
   estimatedCredits: Credits
   ttlMs: number
   idempotencyKey: string
+  id?: string
   metadata?: Record<string, unknown>
 }): Promise<ReserveRow> {
   if (input.estimatedCredits < 0n) throw new Error('estimatedCredits must be >= 0')
@@ -103,6 +104,7 @@ export async function reserve(input: {
     const inserted = await tx
       .insert(billingReservations)
       .values({
+        ...(input.id ? { id: input.id } : {}),
         idempotencyKey: input.idempotencyKey,
         organizationId: input.organizationId,
         userId: input.userId ?? null,

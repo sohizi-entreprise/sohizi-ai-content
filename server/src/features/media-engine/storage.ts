@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { S3Client } from 'bun';
 import { createHash, createHmac } from 'node:crypto';
 import { parseBuffer } from 'music-metadata';
+import type { AssetType } from '@/type';
 
 const S3_SIGNED_URL_EXPIRY_SECONDS = 10 * 60;
 const S3_SIGNING_SERVICE = 's3';
@@ -52,12 +53,90 @@ function getS3Client(): S3Client {
     return s3Client;
 }
 
-function getAssetFolder(contentType: string) {
+type AssetFolder = 'images' | 'videos' | 'audios' | 'documents' | 'htmls';
+
+const EXTENSION_TO_FOLDER: Record<string, AssetFolder> = {
+    png: 'images',
+    jpg: 'images',
+    jpeg: 'images',
+    webp: 'images',
+    gif: 'images',
+    bmp: 'images',
+    svg: 'images',
+    avif: 'images',
+    mp4: 'videos',
+    webm: 'videos',
+    mov: 'videos',
+    m4v: 'videos',
+    avi: 'videos',
+    mkv: 'videos',
+    mp3: 'audios',
+    wav: 'audios',
+    ogg: 'audios',
+    m4a: 'audios',
+    aac: 'audios',
+    flac: 'audios',
+    weba: 'audios',
+    html: 'htmls',
+    htm: 'htmls',
+};
+
+const FOLDER_TO_ASSET_TYPE: Record<AssetFolder, AssetType> = {
+    images: 'image',
+    videos: 'video',
+    audios: 'audio',
+    documents: 'document',
+    htmls: 'html',
+};
+
+const FOLDER_DEFAULT_EXT: Record<AssetFolder, string> = {
+    images: 'png',
+    videos: 'mp4',
+    audios: 'mp3',
+    documents: 'bin',
+    htmls: 'html',
+};
+
+export function getAssetFolder(contentType: string): AssetFolder {
     if (contentType.startsWith('image/')) return 'images';
     if (contentType.startsWith('video/')) return 'videos';
     if (contentType.startsWith('audio/')) return 'audios';
     if (contentType === 'text/html' || contentType.startsWith('text/html')) return 'htmls';
     return 'documents';
+}
+
+function folderFromUrl(sourceUrl: string): AssetFolder | null {
+    if (sourceUrl.startsWith('data:')) {
+        const match = /^data:([^;]+)/.exec(sourceUrl);
+        return match ? getAssetFolder(match[1]) : null;
+    }
+    try {
+        const pathname = new URL(sourceUrl).pathname;
+        const ext = pathname.split('.').pop()?.toLowerCase();
+        if (!ext) return null;
+        return EXTENSION_TO_FOLDER[ext] ?? null;
+    } catch {
+        return null;
+    }
+}
+
+function resolveAssetFolder(contentType: string, sourceUrl: string): AssetFolder {
+    const fromType = getAssetFolder(contentType);
+    if (fromType !== 'documents') return fromType;
+    return folderFromUrl(sourceUrl) ?? fromType;
+}
+
+function fileNameFromSource(sourceUrl: string, folder: AssetFolder): string {
+    if (sourceUrl.startsWith('data:')) {
+        return `${FOLDER_TO_ASSET_TYPE[folder]}-${uuidv4().slice(0, 8)}.${FOLDER_DEFAULT_EXT[folder]}`;
+    }
+    try {
+        const name = decodeURIComponent(new URL(sourceUrl).pathname.split('/').pop() ?? '');
+        if (name) return name;
+    } catch {
+        // fall through to generated name
+    }
+    return `${FOLDER_TO_ASSET_TYPE[folder]}-${uuidv4().slice(0, 8)}.${FOLDER_DEFAULT_EXT[folder]}`;
 }
 
 export function getMaxUploadSizeInBytes(contentType: string): number {
@@ -264,6 +343,39 @@ export async function uploadFromUrl(
     const contentType = blob.type || 'application/octet-stream';
 
     return uploadFromBuffer(buffer, destinationPath, contentType);
+}
+
+export async function uploadGeneratedMedia(sourceUrl: string): Promise<{
+    url: string;
+    storageKey: string;
+    size: number;
+    type: AssetType;
+}> {
+    if (sourceUrl.startsWith('data:')) {
+        const match = /^data:([^;]+);base64,(.+)$/.exec(sourceUrl);
+        if (!match) {
+            throw new Error('Invalid data URL for media upload');
+        }
+        const contentType = match[1] || 'application/octet-stream';
+        const buffer = Buffer.from(match[2], 'base64');
+        const folder = resolveAssetFolder(contentType, sourceUrl);
+        const destPath = buildStoragePath(folder, fileNameFromSource(sourceUrl, folder));
+        const uploaded = await uploadFromBuffer(buffer, destPath, contentType);
+        return { ...uploaded, type: FOLDER_TO_ASSET_TYPE[folder] };
+    }
+
+    const response = await fetch(sourceUrl);
+    if (!response.ok) {
+        throw new Error(`Failed to download from ${sourceUrl}: ${response.statusText}`);
+    }
+
+    const blob = await response.blob();
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    const contentType = blob.type || 'application/octet-stream';
+    const folder = resolveAssetFolder(contentType, sourceUrl);
+    const destPath = buildStoragePath(folder, fileNameFromSource(sourceUrl, folder));
+    const uploaded = await uploadFromBuffer(buffer, destPath, contentType);
+    return { ...uploaded, type: FOLDER_TO_ASSET_TYPE[folder] };
 }
 
 export async function uploadFromBuffer(

@@ -1,25 +1,31 @@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { AUDIO_SUBTYPES, VIDEO_SUBTYPES } from '../constants'
+import { AUDIO_SUBTYPES, IMAGE_SUBTYPES, VIDEO_SUBTYPES } from '../constants'
 import { useMediaGeneratorStore } from '../store/media-generator-store'
-import type { AudioSubtype, VideoSubtype } from '../types'
+import type { GenerationSubtype } from '../types'
+
+const SUBTYPE_OPTIONS = {
+  image: IMAGE_SUBTYPES,
+  video: VIDEO_SUBTYPES,
+  audio: AUDIO_SUBTYPES,
+} as const
 
 export function MediaSubtypeTabs() {
   const generationType = useMediaGeneratorStore((state) => state.generationType)
   const generationSubtype = useMediaGeneratorStore((state) => state.generationSubtype)
   const setGenerationSubtype = useMediaGeneratorStore((state) => state.setGenerationSubtype)
 
-  if (generationType !== 'video' && generationType !== 'audio') {
+  if (generationType !== 'image' && generationType !== 'video' && generationType !== 'audio') {
     return null
   }
 
-  const options = generationType === 'video' ? VIDEO_SUBTYPES : AUDIO_SUBTYPES
+  const options = SUBTYPE_OPTIONS[generationType]
 
   return (
     <Tabs
       value={generationSubtype ?? options[0].value}
       onValueChange={(value) =>
-        setGenerationSubtype(value as VideoSubtype | AudioSubtype)
+        setGenerationSubtype(value as GenerationSubtype)
       }
     >
       <TabsList className="h-9 w-full rounded-xl bg-black/30 p-1">

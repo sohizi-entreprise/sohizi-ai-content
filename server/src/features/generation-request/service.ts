@@ -1,12 +1,18 @@
 import { sse } from "elysia";
 import { getConversationById, getModelById } from "../chat/repo";
 import { BadRequest, NotFound } from "../error";
-import { ChatCompletionRequest, MediaGenerationRequest } from "./schema";
+import { ChatCompletionRequest } from "./schema";
 import { broadcastCancellation } from "./abort-manager";
 import { getProjectById } from "../project/repo";
 import { inngest } from "@/lib/inngest/client";
-import { BaseContextEventData } from "./inngest";
 import { getGenerationRequestById, updateGenerationRequest, createGenerationRequest, getGenerationRequestsByIds, getPendingRequests } from "./repo";
+
+type BaseContextEventData = {
+    requestId: string;
+    projectId: string;
+    organizationId: string;
+    userId: string;
+}
 
 
 export async function handleChatCompletionRequest(request: ChatCompletionRequest, userId: string, projectId: string) {
@@ -44,38 +50,6 @@ export async function handleChatCompletionRequest(request: ChatCompletionRequest
 
     await inngest.send({
         name: 'stream/chat.completion',
-        data: {
-            request,
-            context,
-        },
-    });
-
-    return { requestId: genRequest.id, requestType: request.type };
-}
-
-
-export async function handleMediaGenerationRequest(request: MediaGenerationRequest, userId: string, projectId: string) {
-    const project = await getProjectById(projectId);
-    if (!project) {
-        throw new BadRequest('Project not found');
-    }
-
-    const genRequest = await createGenerationRequest({
-        projectId,
-        userId,
-        type: request.type,
-        request,
-    });
-
-    const context: BaseContextEventData = {
-        requestId: genRequest.id,
-        projectId,
-        organizationId: project.organizationId,
-        userId,
-    }
-
-    await inngest.send({
-        name: 'stream/media.generation',
         data: {
             request,
             context,

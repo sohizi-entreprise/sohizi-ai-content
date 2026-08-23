@@ -282,6 +282,22 @@ export const listFilesByFormat = async(
     );
 }
 
+export const listFolderMedia = async(
+    projectId: string,
+    folderId: string,
+    options?: { format?: FileFormat; limit?: number },
+) => {
+    await validateProject(projectId);
+    const folder = await fileSystemRepo.getFileNodeById(projectId, folderId);
+    if (!folder) {
+        throw new NotFound('Folder not found');
+    }
+    if (!folder.directory) {
+        throw new BadRequest('Required a folder to list media from');
+    }
+    return fileSystemRepo.listFolderMedia(projectId, folderId, options);
+}
+
 export const listAssetsFolder = async(
     request: {
         projectId: string;

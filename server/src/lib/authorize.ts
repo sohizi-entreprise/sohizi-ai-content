@@ -23,7 +23,7 @@ export async function assertOrgMember(userId: string, organizationId: string) {
 
 export async function assertProjectAccess(userId: string, projectId: string) {
   const project = await db
-    .select({ organizationId: projects.organizationId })
+    .select({ organizationId: projects.organizationId, projectId: projects.id })
     .from(projects)
     .where(eq(projects.id, projectId))
     .limit(1)
@@ -33,6 +33,7 @@ export async function assertProjectAccess(userId: string, projectId: string) {
   }
 
   await assertOrgMember(userId, project[0].organizationId)
+  return project[0]
 }
 
 export async function assertConversationOwner(userId: string, conversationId: string) {

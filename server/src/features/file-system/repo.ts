@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { fileNodeContentChunks, fileNodeContents, fileNodes, pendingFileOperations, skills, videoCompositions, type FileNode } from "@/db/schema";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { assets, fileNodeContentChunks, fileNodeContents, fileNodes, pendingFileOperations, skills, videoCompositions, type FileNode } from "@/db/schema";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { DatabaseError } from "pg";
 import { FileCreationRequest, FileNodeInsertPosition, UpdateFileContentRequest, UpdateFileRequest, UpdateSkillRequest } from "./payload";
 import { FileFormat } from "./constants";
@@ -244,6 +244,51 @@ export const listFileNodesUnderFolder = async (
     `);
 
     return result.rows as AssetFolderFileNode[];
+}
+
+export type FolderMediaFile = {
+    id: string;
+    name: string;
+    url: string;
+    type: (typeof MEDIA_ASSET_FORMATS)[number];
+}
+
+export const listFolderMedia = async (
+    projectId: string,
+    folderId: string,
+    options?: { format?: FileFormat; limit?: number },
+): Promise<FolderMediaFile[]> => {
+    const limit = options?.limit ?? 100;
+    const formats = options?.format
+        ? [options.format]
+        : [...MEDIA_ASSET_FORMATS];
+
+    const rows = await db
+        .select({
+            id: fileNodes.id,
+            name: fileNodes.name,
+            url: assets.url,
+            type: fileNodes.format,
+        })
+        .from(fileNodes)
+        .innerJoin(assets, and(
+            eq(assets.fileNodeId, fileNodes.id),
+            eq(assets.projectId, projectId),
+        ))
+        .where(and(
+            eq(fileNodes.projectId, projectId),
+            eq(fileNodes.parentId, folderId),
+            eq(fileNodes.directory, false),
+            inArray(fileNodes.format, formats),
+        ))
+        .orderBy(asc(fileNodes.position))
+        .limit(limit);
+
+    return rows.filter((row): row is FolderMediaFile =>
+        Boolean(row.url) &&
+        row.type !== null &&
+        MEDIA_ASSET_FORMATS.includes(row.type as FolderMediaFile['type']),
+    );
 }
 
 export const getFileNodeDepthById = async(projectId: string, id: string) => {

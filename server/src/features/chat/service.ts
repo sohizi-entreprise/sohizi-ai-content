@@ -18,7 +18,8 @@ import { getProjectById } from '../project/repo';
 import { sse } from 'elysia';
 import { listSkills } from '../file-system/repo';
 import * as commandService from '../command/service';
-import { buildInvokedCommandsPrompt, extractCommandNames } from '../command/resolve';
+import { buildInvokedCommandsPrompt, extractCommandNames } from '../command/resolve'
+import { buildEditorContextPrompt, editorContextSchema, type EditorContext } from './editor-context';
 
 export const listConversations = async (projectId: string, userId: string, options?: CursorPaginationOptions) => {
   const conversations = await repo.listConversations(projectId, userId, options);
@@ -46,7 +47,7 @@ export const completionSchema = z.object({
   conversationId: z.uuid('Invalid conversation id').nullable(),
   modelId: z.string('Invalid model id'),
   userPrompt: userModelMessageSchema,
-  editorContext: z.record(z.string(), z.any()).optional(),
+  editorContext: editorContextSchema.optional(),
 })
 
 export const cancelRun = async (runId: string) => {
@@ -76,7 +77,7 @@ export async function* getStreams(runId: string) {
 type CompletionPayload = z.infer<typeof completionSchema>;
 
 export const chatCompletion = async(userId: string, projectId: string, payload: CompletionPayload) => {
-  const { conversationId, modelId, userPrompt } = payload;
+  const { conversationId, modelId, userPrompt, editorContext } = payload;
 
   const shouldGenerateTitle = conversationId === null;
 
@@ -114,6 +115,7 @@ export const chatCompletion = async(userId: string, projectId: string, payload: 
     model,
     runId: result.run.id,
     userPrompt,
+    editorContext,
     shouldGenerateTitle,
   })
 
@@ -128,11 +130,12 @@ type RunAgentPayload = {
   model: ResolvedVendorModel;
   runId: string;
   userPrompt: UserModelMessage;
+  editorContext?: EditorContext;
   shouldGenerateTitle: boolean;
 }
 
 async function runAgent(payload: RunAgentPayload){
-  const { userId, conversationId, projectId, model, runId, userPrompt, shouldGenerateTitle } = payload;
+  const { userId, conversationId, projectId, model, runId, userPrompt, editorContext, shouldGenerateTitle } = payload;
   const { controller, cleanup } = await createCancellableController(runId);
   
   try {
@@ -172,6 +175,7 @@ async function runAgent(payload: RunAgentPayload){
           projectSkills,
           agentDefinition.subAgents,
           invokedCommands,
+          editorContext,
         ),
         session,
         model,
@@ -181,6 +185,8 @@ async function runAgent(payload: RunAgentPayload){
         maxContextTokens: agentDefinition.maxContextTokens,
         contextThreshold: agentDefinition.contextThreshold,
         summaryModelId: agentDefinition.summaryModelId,
+        evaluatorModelId: agentDefinition.evaluatorModelId,
+        evaluatorModelConfig: agentDefinition.evaluatorModelConfig,
     })
 
     const chunks = agent.runLoop(
@@ -237,6 +243,7 @@ function enrichSystemPrompt(
   projectSkills: {name: string, description: string, instructions: string}[],
   subAgents: string[],
   invokedCommands: Array<{ name: string; action: string }> = [],
+  editorContext?: EditorContext,
 ){
   let finalPrompt = systemPrompt;
   const skillPrompts = projectSkills
@@ -274,7 +281,11 @@ ${subAgentPrompts}
     finalPrompt += `\n\n${invokedCommandsPrompt}`
   }
 
-          
+  const editorContextPrompt = buildEditorContextPrompt(editorContext)
+  if (editorContextPrompt.length > 0) {
+    finalPrompt += `\n\n${editorContextPrompt}`
+  }
+
   return finalPrompt.trim();
 }
 

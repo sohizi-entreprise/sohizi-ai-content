@@ -131,111 +131,22 @@ export const submitMediaJobsTool = buildBaseTool({
             return success('The user will be notified that the request cannot be processed at the moment.');
         }
 
-        for (const job of input.jobs){
+        for (const job of input.jobs) {
+            if (job.type !== 'html-video') continue;
+
             await incrementKey(session.runId);
-            switch(job.type){
-                case 'image':
-                    await inngest.send({
-                        name: 'media/generate.image',
-                        data: {
-                            requestId: session.runId,
-                            projectId: session.projectId,
-                            organizationId: session.organizationId,
-                            userId: session.userId,
-                            prompt: job.prompt,
-                            model: job.model,
-                            aspectRatio: job.aspectRatio,
-                            referenceImages: job.referenceImages,
-                            numVariations: job.numVariations,
-                        },
-                    });
-                    break;
-                case 'video':
-                    await inngest.send({
-                        name: 'media/generate.video',
-                        data: {
-                            requestId: session.runId,
-                            projectId: session.projectId,
-                            organizationId: session.organizationId,
-                            userId: session.userId,
-                            prompt: job.prompt,
-                            model: job.model,
-                            duration: job.duration,
-                            aspectRatio: job.aspectRatio,
-                            referenceImage: job.referenceImage,
-                        },
-                    });
-                    break;
-                case 'music':
-                    await inngest.send({
-                        name: 'media/generate.audio',
-                        data: {
-                            requestId: session.runId,
-                            projectId: session.projectId,
-                            organizationId: session.organizationId,
-                            userId: session.userId,
-                            payload: {
-                                type: 'generate-music',
-                                params: {
-                                    prompt: job.instructions,
-                                },
-                            },
-                        },
-                    });
-                    break;
-                case 'text-to-speech':
-                    await inngest.send({
-                        name: 'media/generate.audio',
-                        data: {
-                            requestId: session.runId,
-                            projectId: session.projectId,
-                            organizationId: session.organizationId,
-                            userId: session.userId,
-                            payload: {
-                                type: 'text-to-speech',
-                                params: {
-                                    text: job.text,
-                                    voice: job.voice,
-                                    instructions: job.instructions,
-                                },
-                            },
-                        },
-                    });
-                    break;
-                case 'dialogue':
-                    await inngest.send({
-                        name: 'media/generate.audio',
-                        data: {
-                            requestId: session.runId,
-                            projectId: session.projectId,
-                            organizationId: session.organizationId,
-                            userId: session.userId,
-                            payload: {
-                                type: 'dialogue',
-                                params: {
-                                    script: job.script,
-                                    speakers: job.speakers,
-                                    instructions: job.instructions,
-                                },
-                            },
-                        },
-                    });
-                    break;
-                case 'html-video':
-                    await inngest.send({
-                        name: 'media/generate.html-video',
-                        data: {
-                            requestId: session.runId,
-                            projectId: session.projectId,
-                            organizationId: session.organizationId,
-                            userId: session.userId,
-                            instructions: job.instructions,
-                        },
-                    });
-                    break;
-            }
+            await inngest.send({
+                name: 'media/generate.html-video',
+                data: {
+                    requestId: session.runId,
+                    projectId: session.projectId,
+                    organizationId: session.organizationId,
+                    userId: session.userId,
+                    instructions: job.instructions,
+                },
+            });
         }
-        
+
         return success('The generation has kicked off.');
     },
 });

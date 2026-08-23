@@ -6,11 +6,10 @@ import {
 } from "@/components/ui/hover-card"
 import { buildOptimizeddImageUrl, imageUrlTransforms } from "@/utils/transform-url";
 import { Code2, Copy, Eye, PlusCircle } from "lucide-react";
-import { MediaAsset, MediaGenerationRun } from "../requests";
+import { GenerationRequestAsset, MediaGenerationRun } from "../requests";
 import { Message } from "@/features/chat";
 import { MediaType } from "../types";
 import { SphereLoader} from "@/components/ui/loaders";
-import MediaLoader from "./media-loader";
 import { useEffect, useState } from "react";
 import { useMediaGeneratorStore } from "../store/media-generator-store";
 import { useBufferChunks } from "@/features/chat/hooks/use-buffer-chunks";
@@ -19,6 +18,7 @@ import { toast } from "sonner";
 import { cn, timeFromNow } from "@/lib/utils";
 import AudioPlayer from "./audio-player";
 import { IconAlertTriangle } from "@tabler/icons-react";
+import { extractLastMessageContent } from "../lib/agent-progress";
 
 type GenerationType = MediaType
 
@@ -45,7 +45,7 @@ export default function MediaChatCard(props: Props) {
   const appendActiveGenerationRequest = useMediaGeneratorStore(state => state.appendActiveGenerationRequest);
   const removeActiveGenerationRequest = useMediaGeneratorStore(state => state.removeActiveGenerationRequest);
 
-  const isRunning = run.status === 'pending' || run.status === 'running';
+  const isRunning = run.status === 'pending' || run.status === 'processing';
 
   useEffect(()=>{
     if(isRunning){
@@ -64,7 +64,7 @@ export default function MediaChatCard(props: Props) {
           {timeFromNow(run.createdAt)}
         </span>
       </div>
-        <RenderUserMessage messages={run.messages} />
+        <RenderUserMessage request={run.request} />
 
         {/* Generation */}
         <div className="">
@@ -73,7 +73,7 @@ export default function MediaChatCard(props: Props) {
               <RenderAssistantMessage run={run}/>
             ) : (
               <div className="flex flex-col gap-2">
-                <AssistantMessage messages={run.messages} isLoading={false}/>
+                <AssistantMessage messages={asHistoryMessages(run.history)} isLoading={false}/>
                 <div className="grid grid-cols-5 gap-1 border p-2 rounded-xl">
                   <RenderAssets assets={run.assets} status={run.status} />
                 </div>
@@ -86,8 +86,8 @@ export default function MediaChatCard(props: Props) {
   )
 }
 
-const RenderUserMessage = ({messages}: {messages: Message[]}) => {
-  const userMsg = extractUserMessage(messages);
+const RenderUserMessage = ({request}: {request: MediaGenerationRun['request']}) => {
+  const userMsg = extractUserMessage(request);
   const handleCopy = () => {
     navigator.clipboard.writeText(userMsg.text);
     toast.success('Copied to clipboard');
@@ -121,10 +121,10 @@ const RenderAssistantMessage = ({run}: {run: MediaGenerationRun;}) => {
   const removeActiveGenerationRequest = useMediaGeneratorStore(state => state.removeActiveGenerationRequest);
   const updateAssetsList = useUpdateAssetsList(run.projectId);
 
-  const isRunning = runStatus === 'pending' || runStatus === 'running';
+  const isRunning = runStatus === 'pending' || runStatus === 'processing';
 
-  const onFinish = (status: MediaGenerationRun['status']) => {
-    setRunStatus(status === 'error' ? 'error' : 'finished')
+  const onFinish = (status: 'pending' | 'running' | 'finished' | 'error') => {
+    setRunStatus(status === 'error' ? 'failed' : 'completed')
     removeActiveGenerationRequest(run.id)
   }
 
@@ -144,7 +144,7 @@ const RenderAssistantMessage = ({run}: {run: MediaGenerationRun;}) => {
     <div className="space-y-2">
       <AssistantMessage messages={messages} isLoading={isRunning} className="flex-1" />
       <div className="grid grid-cols-5 gap-1 border p-2 rounded-xl">
-        <RenderAssets assets={assets} status={runStatus} />
+        <RenderAssets assets={assets.map(toRequestAsset)} status={runStatus} />
       </div>
     </div>
   )
@@ -175,16 +175,16 @@ function AssistantMessage({messages, isLoading, className}: {messages: Message[]
 
 
 
-const RenderAssets = ({assets, status}: {assets: MediaAsset[]; status: MediaGenerationRun['status']}) => {
+const RenderAssets = ({assets, status}: {assets: GenerationRequestAsset[]; status: MediaGenerationRun['status']}) => {
   
   const isEmpty = assets.length === 0;
-  const isLoadingState = status === 'pending' || status === 'running';
+  const isLoadingState = status === 'pending' || status === 'processing';
 
   if(isLoadingState && isEmpty){
-    return <MediaLoader className="aspect-3/4" />
+    return <div className="aspect-3/4 bg-background rounded-md animate-pulse" />
   }
 
-  if(status === 'error'){
+  if(status === 'failed' || status === 'aborted'){
     return (
       <div className="flex items-center justify-center bg-background rounded-md p-2 aspect-3/4">
         <span className="text-xs tracking-wide text-destructive">An error occured</span>
@@ -204,7 +204,7 @@ const RenderAssets = ({assets, status}: {assets: MediaAsset[]; status: MediaGene
     <>
     {
       assets.map((asset) => (
-        <GenerationCard key={asset.url} url={asset.url} type={asset.type}/>
+        <GenerationCard key={asset.assetId} url={asset.url} type={asset.type}/>
       ))
     }
     {isLoadingState && <div className="aspect-3/4 bg-background rounded-md animate-pulse" />}
@@ -320,37 +320,33 @@ const RenderViewPrompt = ({input}: {input: {jobs: Record<string, string>[]; stat
 }
 
 
-function extractUserMessage(messages: Message[]) {
-  let userMsg: UserMessage = {
-    text: '',
-    attachments: [],
-  } 
-
-  for (const message of messages) {
-    if(message.role === 'user'){
-      for (const part of message.content) {
-        switch (part.type) {
-          case 'text':
-            userMsg.text = part.text;
-            break;
-          case 'image':
-            userMsg.attachments.push({
-              type: 'image',
-              url: part.image as unknown as string
-            })
-            break
-          case 'file':
-            userMsg.attachments.push({
-              type: getMediaType(part.mediaType),
-              url: part.data as unknown as string
-            })
-            break
-        }
-      }
-    }
+function extractUserMessage(request: MediaGenerationRun['request'] | null | undefined) {
+  if (!request) {
+    return { text: '', attachments: [] } satisfies UserMessage
   }
 
-  return userMsg;
+  const referencedFiles = Array.isArray(request.context?.referencedFiles)
+    ? request.context.referencedFiles as Array<{ type?: string; url?: string; mediaType?: string }>
+    : []
+
+  return {
+    text: request.prompt ?? '',
+    attachments: referencedFiles.flatMap((file) => {
+      if (!file.url) return []
+      return [{
+        type: getMediaType(file.mediaType ?? file.type ?? ''),
+        url: file.url,
+      }]
+    }),
+  } satisfies UserMessage
+}
+
+function asHistoryMessages(history: unknown[] | null): Message[] {
+  return (history ?? []) as Message[]
+}
+
+function toRequestAsset(asset: { id: string; type: MediaType; url: string; name: string }): GenerationRequestAsset {
+  return { assetId: asset.id, type: asset.type, url: asset.url, name: asset.name }
 }
 
 type SubmitMediaJobsInput = {
@@ -358,54 +354,6 @@ type SubmitMediaJobsInput = {
   status: 'done' | 'blocked'
   message: string
 }
-
-function extractLastMessageContent(messages: Message[], isLoading = false) {
-  let submitMediaJobsMessage: string | undefined
-  let textContent: string | undefined
-  let hasStreamingReasoning = false
-  let streamingToolName: string | undefined
-
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index]
-    if (message.role !== 'assistant') continue
-
-    for (const part of message.content) {
-      switch (part.type) {
-        case 'text':
-          if (part.text) textContent = part.text
-          break
-        case 'reasoning':
-          if (part.isStreaming) hasStreamingReasoning = true
-          break
-        case 'tool-call': {
-          if (part.toolName === 'submitMediaJobs') {
-            const input = part.input as Partial<SubmitMediaJobsInput>
-            if (typeof input.message === 'string' && input.message.trim()) {
-              submitMediaJobsMessage = input.message
-            }
-          }
-          if (part.isStreaming) {
-            streamingToolName = part.toolName
-          }
-          break
-        }
-      }
-    }
-
-    break
-  }
-
-  if (submitMediaJobsMessage) return submitMediaJobsMessage
-  if (textContent) return textContent
-  if (hasStreamingReasoning) return 'Thinking ...'
-  if (streamingToolName) {
-    return streamingToolName === 'submitMediaJobs'
-      ? 'Preparing media jobs...'
-      : `Calling tool ${streamingToolName}...`
-  }
-  return isLoading ? 'Processing ...' : ''
-}
-
 
 function getDisplayUrls(attachment: Attachment) {
 

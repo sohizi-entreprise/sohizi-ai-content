@@ -2,9 +2,8 @@ import { Checkpoint } from "@/db/schema";
 import { AgentState, CompleteReason, GenerationRequestStatus } from "@/type";
 import * as repo from '@/features/chat/repo';
 import { ModelMessage, ToolModelMessage } from "ai";
-import { updateGenerationRequest } from "@/features/generation-request/repo";
+import { appendRequestHistory } from "@/features/generation-request/repo";
 import { v4 as uuidv4 } from 'uuid';
-import { updateAssetRequest } from "@/features/media-engine/repo";
 
 
 export abstract class Persistence {
@@ -82,19 +81,12 @@ export class MediaGenerationPersistence extends Persistence {
     }
 
     async persist(_runtimeState: AgentState){
-        const toolResults: ToolModelMessage[] = [];
-        for(const message of this.messages){
-            if(message.role === 'tool'){
-                toolResults.push(message);
-            }
-        }
 
         const allMsgs = this.messages.filter((message) => message.role !== 'system' );
         const messages = allMsgs.map((message) => ({...message, id: uuidv4()}));
+        if(messages.length === 0) return;
         try {
-            await updateAssetRequest(this.requestId, {
-                messages,
-            });
+            await appendRequestHistory(this.requestId, messages);
         } catch (error) {
             console.error('Failed to persist session state', error);
         }

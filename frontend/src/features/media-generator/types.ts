@@ -2,6 +2,50 @@ import { ReactNode } from "react"
 
 export type MediaType = 'image' | 'video' | 'audio' | 'html'
 
+export type MediaRunMode = 'agent' | 'direct'
+
+export type MediaAssetGenerationRequest = {
+  id: string
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'aborted'
+  request: Record<string, unknown> | null
+  error: string | null
+}
+
+export type MediaAsset = {
+  id: string
+  projectId: string
+  name: string
+  type: MediaType
+  url: string
+  storageKey: string
+  source: 'user-uploaded' | 'ai-generated'
+  fileNodeId: string | null
+  metadata: Record<string, unknown> | null
+  createdAt: string
+  updatedAt: string
+  generationRequest: MediaAssetGenerationRequest | null
+}
+
+export type AiGeneratedRequestAsset = {
+  id: string
+  name: string
+  url: string
+  type: MediaType
+  metadata: Record<string, unknown> | null
+  storageKey: string
+}
+
+export type AiGeneratedMediaRequest = {
+  id: string
+  projectId: string
+  status: MediaAssetGenerationRequest['status']
+  request: Record<string, unknown> | null
+  error: string | null
+  createdAt: string
+  updatedAt: string
+  assets: AiGeneratedRequestAsset[]
+}
+
 export type GenerationType =
   | 'image'
   | 'video'
@@ -10,9 +54,10 @@ export type GenerationType =
   | 'motion-transfer'
   | 'clone-voice'
 
+export type ImageSubtype = 'from-text' | 'from-image'
 export type VideoSubtype = 'create' | 'edit' | 'extend'
 export type AudioSubtype = 'tts' | 'music' | 'dialogue'
-export type GenerationSubtype = VideoSubtype | AudioSubtype
+export type GenerationSubtype = ImageSubtype | VideoSubtype | AudioSubtype
 
 /** @deprecated Use GenerationType */
 export type ComposerMediaType = GenerationType

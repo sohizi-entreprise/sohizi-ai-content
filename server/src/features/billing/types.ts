@@ -76,6 +76,8 @@ export interface ReserveInput {
   estimatedCredits: Credits
   ttlMs: number
   idempotencyKey: string
+  /** When set, used as the reservation primary key instead of a generated UUID. */
+  id?: string
   metadata?: Record<string, unknown>
 }
 

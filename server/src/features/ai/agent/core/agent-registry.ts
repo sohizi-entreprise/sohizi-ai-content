@@ -38,6 +38,8 @@ export type AgentDefinition = {
     maxContextTokens: number;      // model context window used for consumption % computation
     contextThreshold?: number;     // 0-1, defaults to 0.8 in the ContextManager
     summaryModelId: string;        // dedicated summarizer model
+    evaluatorModelId: string;      // dedicated stop-condition evaluator model
+    evaluatorModelConfig?: Pick<ModelConfig, 'reasoningEffort'>;
     subAgents: AgentName[];
 }
 
@@ -86,6 +88,7 @@ registerAgent({
     maxContextTokens: 400_000,
     contextThreshold: 0.8,
     summaryModelId: 'openai/gpt-5-nano',
+    evaluatorModelId: 'openai/gpt-5-nano',
     subAgents: ['media-generator'],
 });
 
@@ -94,15 +97,23 @@ registerAgent({
     description: 'Generate media based on the prompt.',
     baseSystemPrompt: mediaGeneratorPrompt,
     modelConfig: {
-        tools: getSchemas([submitMediaJobsTool, manageTodoListTool, exploreFileTool, searchFileTool]),
+        tools: getSchemas([
+            manageTodoListTool, 
+            exploreFileTool, 
+            searchFileTool,
+            youtubeAnalyzerTool,
+            videoAnalyzerTool,
+            imageAnalyzerTool,
+        ]),
         reasoningEffort: 'low',
         reasoningSummary: 'auto',
     },
-    modelId: 'openai/gpt-5.1',
+    modelId: 'openai/gpt-5.2',
     vendor: DEFAULT_AGENT_VENDOR,
     maxContextTokens: 400_000,
     contextThreshold: 0.8,
     summaryModelId: 'openai/gpt-5-nano',
+    evaluatorModelId: 'openai/gpt-5-nano',
     subAgents: [],
 });
 
@@ -125,5 +136,6 @@ registerAgent({
     maxContextTokens: 400_000,
     contextThreshold: 0.8,
     summaryModelId: 'openai/gpt-5-nano',
+    evaluatorModelId: 'openai/gpt-5-nano',
     subAgents: [],
 });

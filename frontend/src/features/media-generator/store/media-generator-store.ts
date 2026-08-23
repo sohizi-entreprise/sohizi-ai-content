@@ -1,8 +1,9 @@
 import { create } from 'zustand'
-import type { GenerationSubtype, GenerationType } from '../types'
+import type { GenerationSubtype, GenerationType, MediaRunMode } from '../types'
 import { getDefaultSubtype } from '../constants'
 import { AttachedFile } from '@/components/widgets/file-attachments'
 import { Editor } from '@tiptap/core'
+import { parseStoredRequest } from '../lib/request-state'
 
 type ActiveGenerationRequest = {
   requestId: string
@@ -24,6 +25,7 @@ type StoreState = {
   attachments: Array<AttachedFile>
   chatInput: Editor | null
   viewRequestInput: {jobs: Record<string, string>[]; status: 'done' | 'blocked' | 'unknown'} | null
+  runMode: MediaRunMode
 }
 
 type StoreActions = {
@@ -42,12 +44,14 @@ type StoreActions = {
   setChatInput: (chatInput: Editor | null) => void
   clearChatInput: () => void
   setViewRequestInput: (input: StoreState['viewRequestInput']) => void
+  setRunMode: (runMode: MediaRunMode) => void
+  applyRequestState: (request: Record<string, unknown> | null) => void
 }
 
 const initialState: StoreState = {
   activeGenerationRequests: [],
   generationType: 'image',
-  generationSubtype: null,
+  generationSubtype: getDefaultSubtype('image'),
   selectedModelId: null,
   parameterValues: {},
   prompt: '',
@@ -57,6 +61,7 @@ const initialState: StoreState = {
   attachments: [],
   chatInput: null,
   viewRequestInput: null,
+  runMode: 'direct',
 }
 
 
@@ -77,6 +82,7 @@ export const useMediaGeneratorStore = create<StoreState & StoreActions>(
         generationSubtype,
         selectedModelId: null,
         parameterValues: {},
+        attachments: [],
       }),
     setSelectedModelId: (selectedModelId) =>
       set({
@@ -116,5 +122,30 @@ export const useMediaGeneratorStore = create<StoreState & StoreActions>(
       return {prompt: ''}
     }),
     setViewRequestInput: (input) => set({ viewRequestInput: input }),
+    setRunMode: (runMode) => set({ runMode }),
+    applyRequestState: (request) => set((state) => {
+      const parsed = parseStoredRequest(request)
+      if (!parsed) return {}
+
+      if (state.chatInput) {
+        state.chatInput.commands.setContent(parsed.prompt, { emitUpdate: false })
+      }
+
+      return {
+        generationType: parsed.generationType,
+        generationSubtype: parsed.generationSubtype,
+        selectedModelId: parsed.selectedModelId,
+        parameterValues: parsed.parameterValues,
+        prompt: parsed.prompt,
+        attachments: parsed.attachments,
+        runMode: parsed.runMode,
+        promptSettings: parsed.voice
+          ? {
+              ...state.promptSettings,
+              audio: { ...state.promptSettings.audio, voice: parsed.voice },
+            }
+          : state.promptSettings,
+      }
+    }),
   }),
 )

@@ -1,6 +1,8 @@
 export { MediaGenerator } from './components/media-generator'
 export { useMediaGeneratorStore } from './store/media-generator-store'
 export type {
+  AiGeneratedMediaRequest,
+  AiGeneratedRequestAsset,
   AudioGenerationSettings,
   AudioSubtype,
   ComposerMediaType,
@@ -8,7 +10,11 @@ export type {
   GenerationType,
   HtmlAssetMetadata,
   ImageGenerationSettings,
+  ImageSubtype,
+  MediaAsset,
+  MediaAssetGenerationRequest,
   MediaFilter,
+  MediaRunMode,
   MediaType,
   MediaVariant,
   VideoGenerationSettings,

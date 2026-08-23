@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ModelMessage } from "ai";
+import { ModelMessage, UserModelMessage } from "ai";
 import { LlmChunk, streamEvents } from "../utils/llm-response";
 import { BillableLlmInput } from "../utils/llm-client";
 import { TokenUsage } from "@/type";
@@ -30,15 +30,34 @@ The agent operates in a tool-calling loop. Sometimes it emits text WITHOUT calli
 
 ## Critical rule: when in doubt, set isDone to true. A false positive (stopping too early) is far less harmful than a false negative (infinite loop).`;
 
-const DEFAULT_EVALUATOR_OUTPUT_TOKENS = 256;
+export const DEFAULT_EVALUATOR_OUTPUT_TOKENS = 256;
 
 type EvaluatorInput = {
     lastAssistantText: string;
-    messages: ModelMessage[];
+    userMessage: UserModelMessage;
 };
 
+function extractUserText(message: UserModelMessage): string {
+    const content = message.content;
+    if (typeof content === 'string') {
+        return content;
+    }
+    if (!Array.isArray(content)) {
+        return JSON.stringify(content);
+    }
+    return content
+        .map((part) => {
+            if (part.type === 'text') {
+                return part.text;
+            }
+            return JSON.stringify(part);
+        })
+        .join('\n');
+}
+
 export function buildEvaluatorInput(input: EvaluatorInput): BillableLlmInput {
-    const { lastAssistantText, messages } = input;
+    const { lastAssistantText, userMessage } = input;
+    const userText = extractUserText(userMessage);
 
     const evaluatorMessages: ModelMessage[] = [
         { role: 'system', content: EVALUATOR_SYSTEM_PROMPT },
@@ -47,7 +66,7 @@ export function buildEvaluatorInput(input: EvaluatorInput): BillableLlmInput {
             content: [
                 {
                     type: 'text',
-                    text: `Here is the agent's last message (no tool calls were made in this step):\n\n"${lastAssistantText}"\n\nDetermine if this is a final response or an intermediate message.`,
+                    text: `Original user request:\n\n"${userText}"\n---\nHere is the agent's last message (no tool calls were made in this step):\n\n"${lastAssistantText}"\n---\nDetermine if this is a final response or an intermediate message.`,
                 },
             ],
         },

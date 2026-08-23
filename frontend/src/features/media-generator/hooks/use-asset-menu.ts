@@ -16,7 +16,7 @@ export const useAssetMenu = (projectId: string, asset: MediaAsset) => {
   const { mutateAsync: moveMutate } = useMutation(
     moveAssetToFolderMutationOptions(projectId, asset.id),
   )
-  const addAttachment = useMediaGeneratorStore((state) => state.addAttachment)
+  const applyRequestState = useMediaGeneratorStore((state) => state.applyRequestState)
 
   const onDelete = useCallback(() => {
     const ok = confirm('Are you sure you want to delete this asset?')
@@ -36,14 +36,9 @@ export const useAssetMenu = (projectId: string, asset: MediaAsset) => {
     [moveMutate],
   )
 
-  const onEdit = useCallback(() => {
-    addAttachment({
-      id: asset.id,
-      status: 'uploaded',
-      type: asset.type,
-      url: asset.url,
-    })
-  }, [asset, addAttachment])
+  const onReuseSettings = useCallback(() => {
+    applyRequestState(asset.generationRequest?.request ?? null)
+  }, [asset.generationRequest?.request, applyRequestState])
 
   const onDownload = useCallback(async () => {
     try {
@@ -63,7 +58,7 @@ export const useAssetMenu = (projectId: string, asset: MediaAsset) => {
   return {
     onDelete,
     onMoveToFolder,
-    onEdit,
+    onReuseSettings,
     onDownload,
   }
 }

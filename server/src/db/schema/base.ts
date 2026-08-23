@@ -685,19 +685,6 @@ export const conversationAgentRuns = pgTable('conversation_agent_runs', {
 ]))
 
 
-export const assetsAgentRuns = pgTable('assets_agent_runs', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
-  status: varchar('status', { length: 50 }).notNull().default('pending').$type<AgentRunStatus>(),
-  messages: jsonb('messages').$type<AgentRunMessage[]>(),
-  metadata: jsonb('metadata').$type<{settings: Record<string, unknown>}>(),
-  error: text('error'),
-  ...timestamps,
-}, (table) => ([
-  index('assets_agent_runs_project_id_status_idx').on(table.projectId, table.status),
-]))
-
-
   // ========================= ASSETS ==========================
 
   export const assets = pgTable('assets', {
@@ -711,7 +698,7 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
     storageKey: text('storage_key').notNull(),
     source: varchar('source', { length: 50 }).notNull().$type<AssetSource>(),
     generationRequestId: uuid('generation_request_id')
-      .references(() => assetsAgentRuns.id, { onDelete: 'set null' }), // for AI generated assets
+      .references(() => generationRequests.id, { onDelete: 'set null' }),
     fileNodeId: uuid('file_node_id')
       .references(() => fileNodes.id, { onDelete: 'cascade' }),
     metadata: jsonb('metadata').$type<AssetMetadata>(),
@@ -730,14 +717,10 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
     index('assets_generation_request_id_idx').on(table.generationRequestId)
   ]))
 
-  export const assetsAgentRunsRelations = relations(assetsAgentRuns, ({ many }) => ({
-    assets: many(assets),
-  }))
-
   export const assetsRelations = relations(assets, ({ one }) => ({
-    generationRequest: one(assetsAgentRuns, {
+    generationRequest: one(generationRequests, {
       fields: [assets.generationRequestId],
-      references: [assetsAgentRuns.id],
+      references: [generationRequests.id],
     }),
   }))
 
@@ -804,5 +787,4 @@ export const assetsAgentRuns = pgTable('assets_agent_runs', {
   export type PendingFileOperation = typeof pendingFileOperations.$inferSelect
   export type Skill = typeof skills.$inferSelect
   export type ConversationAgentRun = typeof conversationAgentRuns.$inferSelect
-  export type AssetsAgentRun = typeof assetsAgentRuns.$inferSelect
   export type Command = typeof commands.$inferSelect

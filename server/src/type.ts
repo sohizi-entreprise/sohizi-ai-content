@@ -6,7 +6,7 @@ export type GenerationRequestType = 'image' | 'video' | 'audio' | 'chat-completi
 
 export type GenerationRequestAsset = {
     assetId: string;
-    type: 'image' | 'video' | 'audio';
+    type: 'image' | 'video' | 'audio' | 'html';
     url: string;
     name: string;
 };

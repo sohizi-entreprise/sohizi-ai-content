@@ -6,6 +6,7 @@ import { useEditorInputBridge } from '../../bridge/use-editor-input-bridge'
 import TextEditorToolbar from '../content/text-editor-toolbar'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { buildAttachedSelection } from '@/features/chat/lib/editor-context'
 
 const BUBBLE_MENU_PLUGIN_KEY = 'textEditorBubbleMenu'
 
@@ -51,19 +52,13 @@ export default function TextEditorBubbleMenu({
 
   const handleAddContext = () => {
     const { from, to } = editor.state.selection
-    const selectedText = editor.state.doc.textBetween(from, to, ' ')
-
-    const textBeforeSelection = editor.state.doc.textBetween(0, from, '\n')
-    const startLine = textBeforeSelection.split('\n').length
-    const textThroughSelection = editor.state.doc.textBetween(0, to, '\n')
-    const endLine = textThroughSelection.split('\n').length
+    const selection = buildAttachedSelection({ editor, file, from, to })
+    if (!selection) return
 
     const lines =
-      startLine === endLine ? `L${startLine}` : `L${startLine}-L${endLine}`
-    const snippet =
-      selectedText.length > 24
-        ? selectedText.slice(0, 24) + '...'
-        : selectedText
+      selection.startLine === selection.endLine
+        ? `L${selection.startLine}`
+        : `L${selection.startLine}-L${selection.endLine}`
 
     isSuppressedRef.current = true
     runCommand({
@@ -73,7 +68,7 @@ export default function TextEditorBubbleMenu({
         fileId: file.id,
         format: file.format,
         lines,
-        snippet,
+        selection,
       },
     })
 

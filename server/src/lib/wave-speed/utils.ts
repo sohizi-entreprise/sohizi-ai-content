@@ -31,7 +31,7 @@ const buildHeader = (apiKey: string, authOnly: boolean = false): HeadersInit => 
   }
 }
 
-class WaveSpeedError extends Error {
+export class WaveSpeedError extends Error {
     code: number;
     errorCode: ErrorCode;
     constructor(code: number, message: string, errorCode: ErrorCode) {

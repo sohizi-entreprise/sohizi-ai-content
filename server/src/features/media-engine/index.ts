@@ -68,11 +68,22 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
             type: z.enum(['image', 'video', 'audio', 'html']).optional(),
         }),
     })
-    .post('/assets', async ({ params, user, body }) => {
+    .get('/uploaded-assets', async ({ params, user, query }) => {
         await assertProjectAccess(user.id, params.projectId)
+        return mediaService.listUploadedAssets(params.projectId, query);
+    }, {
+        query: z.object({
+            cursor: z.string().optional(),
+            limit: z.number().optional(),
+            type: z.enum(['image', 'video', 'audio']).optional(),
+        }),
+    })
+    .post('/assets', async ({ params, user, body }) => {
+        const {organizationId} = await assertProjectAccess(user.id, params.projectId)
         return mediaService.generateAsset({
             projectId: params.projectId,
             userId: user.id,
+            organizationId,
             ...body,
         });
     }, {
@@ -112,6 +123,10 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
     .delete('/requests/:requestId', async ({ params, user }) => {
         await assertProjectAccess(user.id, params.projectId)
         return mediaService.cancelGeneration(params.requestId);
+    })
+    .delete('/ai-requests/:requestId', async ({ params, user }) => {
+        await assertProjectAccess(user.id, params.projectId)
+        return mediaService.deleteGenerationRequest(params.projectId, params.requestId);
     })
     .guard({
         params: z.object({

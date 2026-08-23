@@ -1,8 +1,9 @@
 import api from '@/lib/axios'
 import { createParser, type EventSourceMessage } from 'eventsource-parser'
 import type { ModelParameterBinding } from '@/features/admin/types'
-import type { MediaType } from './types'
-import { FilePart, ImagePart, Message, MsgTextPart } from '../chat/types'
+import type { AiGeneratedMediaRequest, MediaAsset, MediaRunMode, MediaType } from './types'
+
+export type { AiGeneratedMediaRequest, AiGeneratedRequestAsset, MediaAsset, MediaAssetGenerationRequest } from './types'
 
 export type CursorPaginationOptions = {
   cursor?: string
@@ -16,35 +17,29 @@ export type CursorPaginationResult<T> = {
 }
 
 export type AssetRequest = {
-  userPrompt: {
-    role: 'user'
-    content: (MsgTextPart | ImagePart | FilePart)[]
-  }
-  settings?: Record<string, unknown>
+  model: string
+  prompt: string
+  settings: Record<string, unknown>
+  context: Record<string, unknown>
+  runMode: MediaRunMode
 }
 
-export type MediaAsset = {
-  id: string
-  projectId: string
-  name: string
+export type GenerationRequestAsset = {
+  assetId: string
   type: MediaType
   url: string
-  storageKey: string
-  source: 'user-uploaded' | 'ai-generated'
-  generationRequestId: string | null
-  fileNodeId: string | null
-  metadata: Record<string, unknown> | null
-  createdAt: string
-  updatedAt: string
+  name: string
 }
 
 export type MediaGenerationRun = {
   id: string
   projectId: string
-  status: 'pending' | 'running' | 'finished' | 'error'
-  assets: MediaAsset[]
-  messages: Array<Message>
-  metadata: { settings: Record<string, unknown> } | null
+  userId: string
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'aborted'
+  type: 'media-generation'
+  request: AssetRequest
+  history: unknown[] | null
+  assets: GenerationRequestAsset[]
   error: string | null
   createdAt: string
   updatedAt: string
@@ -96,8 +91,30 @@ export const listAssetsRequests = async (
 export const listAiGeneratedAssets = async (
   projectId: string,
   options?: ListAssetsOptions,
-): Promise<CursorPaginationResult<MediaAsset>> => {
+): Promise<CursorPaginationResult<AiGeneratedMediaRequest>> => {
   const response = await api.get(`/media/${projectId}/ai-assets`, { params: options })
+  return response.data
+}
+
+export type UploadedAsset = {
+  id: string
+  projectId: string
+  name: string
+  type: MediaType
+  url: string
+  storageKey: string
+  source: 'user-uploaded'
+  fileNodeId: string | null
+  metadata: Record<string, unknown> | null
+  createdAt: string
+  updatedAt: string
+}
+
+export const listUploadedAssets = async (
+  projectId: string,
+  options?: ListAssetsOptions,
+): Promise<CursorPaginationResult<UploadedAsset>> => {
+  const response = await api.get(`/media/${projectId}/uploaded-assets`, { params: options })
   return response.data
 }
 
@@ -122,6 +139,14 @@ export const deleteAsset = async (
   assetId: string,
 ): Promise<{ ok: boolean }> => {
   const response = await api.delete(`/media/${projectId}/assets/${assetId}`)
+  return response.data
+}
+
+export const deleteGenerationRequest = async (
+  projectId: string,
+  requestId: string,
+): Promise<{ ok: boolean }> => {
+  const response = await api.delete(`/media/${projectId}/ai-requests/${requestId}`)
   return response.data
 }
 

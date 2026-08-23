@@ -81,6 +81,11 @@ const FileMentionExtension = Mention.extend<FileMentionOptions>({
         renderHTML: (attrs) =>
           attrs.snippet ? { 'data-snippet': attrs.snippet } : {},
       },
+      selection: {
+        default: null,
+        parseHTML: () => null,
+        renderHTML: () => ({}),
+      },
     }
   },
 
@@ -110,7 +115,6 @@ const FileMentionExtension = Mention.extend<FileMentionOptions>({
       fileId: node.attrs?.id ?? '',
       format: node.attrs?.format ?? '',
       lines: node.attrs?.lines,
-      snippet: node.attrs?.snippet,
     })
   },
 

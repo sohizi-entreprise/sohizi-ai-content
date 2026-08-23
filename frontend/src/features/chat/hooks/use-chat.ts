@@ -5,6 +5,8 @@ import { useMutation } from '@tanstack/react-query'
 import { submitChatCompletionMutationOptions } from '../query-mutation'
 import { AttachedFile } from '@/components/widgets/file-attachments'
 import { cleanMediaType } from '@/utils/clean-mediaType'
+import { useEditorInputBridge } from '@/features/editor/bridge/use-editor-input-bridge'
+import { buildEditorContext } from '../lib/editor-context'
 
 export const useSendMessage = (projectId: string) => {
   const clearInput = useChatStore((state) => state.clearInput)
@@ -31,6 +33,7 @@ export const useSendMessage = (projectId: string) => {
         content: [{ type: 'text', text: userPrompt }, ...buildFilesPayload(attachedFiles)],
       },
       conversationId,
+      editorContext: buildEditorContext(useEditorInputBridge.getState().chatEditor),
       isNew: conversation?.isNew ?? true,
     }
 

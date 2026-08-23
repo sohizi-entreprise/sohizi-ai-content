@@ -13,7 +13,6 @@ const chatCitationExample = formatFileTag({
   fileId: "5p9477a5-3634-44ec-b47d-fa2e63bd74c4",
   format: "markdown",
   lines: "L2-L5",
-  snippet: "a sample text ...",
 });
 
 export const fileSystemPrompt = `
@@ -69,7 +68,7 @@ You can combine operators for highly targeted searches.
 Universal file tag (documents, skills, and chat):
 @[Display Name](file:FILE_ID?format=FORMAT)
 
-Optional chat-citation query params: \`lines\` (e.g. L2-L5) and \`snippet\` (truncated selection text).
+Optional chat-citation query param: \`lines\` (e.g. L2-L5). The full selected text is provided separately in \`<attached_selections>\` — do not treat the compact file tag as the complete citation.
 
 example (file mention): ${fileTagExample}
 example (chat citation): ${chatCitationExample}

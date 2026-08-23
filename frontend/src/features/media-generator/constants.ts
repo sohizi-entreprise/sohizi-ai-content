@@ -11,6 +11,7 @@ import type {
   AudioSubtype,
   GenerationSubtype,
   GenerationType,
+  ImageSubtype,
   VideoSubtype,
 } from './types'
 
@@ -30,6 +31,11 @@ export const GENERATION_TYPES: Array<{
   { value: 'clone-voice', label: 'Clone voice', icon: Mic },
 ]
 
+export const IMAGE_SUBTYPES: Array<{ value: ImageSubtype; label: string }> = [
+  { value: 'from-text', label: 'From text' },
+  { value: 'from-image', label: 'From image' },
+]
+
 export const VIDEO_SUBTYPES: Array<{ value: VideoSubtype; label: string }> = [
   { value: 'create', label: 'Create' },
   { value: 'edit', label: 'Edit' },
@@ -43,6 +49,7 @@ export const AUDIO_SUBTYPES: Array<{ value: AudioSubtype; label: string }> = [
 ]
 
 export function getDefaultSubtype(type: GenerationType): GenerationSubtype | null {
+  if (type === 'image') return 'from-text'
   if (type === 'video') return 'create'
   if (type === 'audio') return 'tts'
   return null
@@ -90,6 +97,9 @@ export function getPromptPlaceholder(
   if (type === 'video') {
     return 'Describe the video you want to generate...'
   }
+  if (type === 'image' && subtype === 'from-image') {
+    return 'Describe how you want to transform the image...'
+  }
   return 'Describe the image you want to generate...'
 }
 
@@ -99,7 +109,7 @@ export function getCatalogCategories(
 ): string[] {
   switch (type) {
     case 'image':
-      return ['text-to-image', 'image-to-image']
+      return subtype === 'from-image' ? ['image-to-image'] : ['text-to-image']
     case 'video':
       return subtype === 'create'
         ? ['text-to-video']
@@ -140,6 +150,7 @@ export function supportsReferenceAttachments(
 ): boolean {
   if (type === 'clone-voice') return false
   if (type === 'audio' && subtype !== 'dialogue') return false
+  if (type === 'image' && subtype !== 'from-image') return false
   return true
 }
 

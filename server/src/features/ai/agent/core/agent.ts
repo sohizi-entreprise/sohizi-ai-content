@@ -11,7 +11,6 @@ import { billingService, withBillingStream } from "@/features/billing";
 import { AgentStateManager } from "./state-manager";
 import { Persistence } from "./persistence";
 import { estimateInputTokens } from "../utils/estimate-token";
-import { buildEvaluatorInput, drainStreamForComplete, parseEvaluatorResponse, StopEvaluation } from "./stop-evaluator";
 import { ContextManager } from "./context-manager";
 
 
@@ -33,6 +32,8 @@ type AgentConfig = {
     maxContextTokens: number;
     contextThreshold?: number;
     summaryModelId: string;
+    evaluatorModelId: string;
+    evaluatorModelConfig?: Pick<ModelConfig, 'reasoningEffort'>;
 }
 
 type BilledLlmStream = ReturnType<typeof withBillingStream<BillableLlmInput, LlmChunk>>;
@@ -50,6 +51,7 @@ export class Agent {
     private readonly model: ResolvedVendorModel;
     private readonly contextManager: ContextManager;
     private lastInputTokens: number;
+    private userMessage: UserModelMessage | null;
 
     constructor(config: AgentConfig) {
         this.name = config.name;
@@ -64,11 +66,14 @@ export class Agent {
         this.modelConfig = config.modelConfig;
         this.model = config.model;
         this.lastInputTokens = 0;
+        this.userMessage = null;
         this.contextManager = new ContextManager({
             maxContextTokens: config.maxContextTokens,
             threshold: config.contextThreshold,
             session: config.session,
             summaryModelId: config.summaryModelId,
+            evaluatorModelId: config.evaluatorModelId,
+            evaluatorModelConfig: config.evaluatorModelConfig,
             vendor: config.vendor,
         });
     }
@@ -78,6 +83,7 @@ export class Agent {
             const billableLlmClient = await this.buildBillableLlmClient();
             const billedLlmStream = withBillingStream(billableLlmClient, billingService);
 
+            this.userMessage = ursMsg;
             this.initializeState(this.agentParams.systemPrompt);
             this.registerMessage(ursMsg);
 
@@ -193,8 +199,14 @@ export class Agent {
                 yield* this.runToolCalls(tool_calls, abortSignal);
             }
 
-            if (tool_calls.length === 0 && !stepError && !this.stateManager.isExitStatus) {
-                const evaluation = await this.evaluateStopCondition(callClient, abortSignal, text);
+            if (tool_calls.length === 0 && !stepError && !this.stateManager.isExitStatus && this.userMessage) {
+                const evaluation = await this.contextManager.evaluateStop(
+                    this.stateManager,
+                    this.userMessage,
+                    text,
+                    abortSignal,
+                    this.ensureRunId(),
+                );
                 if (evaluation.isDone) {
                     this.stateManager.finishRun();
                 } else {
@@ -214,40 +226,6 @@ export class Agent {
             if(stepError && tool_calls.length > 0 && !toolCallsStarted){
                 this.appendToolCallErrors(tool_calls, `Tool call was not executed because the step failed: ${stepError}`);
             }
-        }
-    }
-
-    private async evaluateStopCondition(
-        callClient: BilledLlmStream,
-        abortSignal: AbortSignal,
-        lastAssistantText: string,
-    ): Promise<StopEvaluation> {
-        try {
-            const evaluatorInput = buildEvaluatorInput({
-                lastAssistantText,
-                messages: this.stateManager.getState().messages,
-            });
-
-            const billedStream = callClient(evaluatorInput, {
-                organizationId: this.session.organizationId,
-                userId: this.session.userId,
-                signal: abortSignal,
-                metadata: {
-                    sessionId: this.session.id,
-                    conversationId: this.session.conversationId,
-                    runId: this.ensureRunId(),
-                },
-            });
-
-            const result = await drainStreamForComplete(billedStream);
-            if (!result) {
-                return { isDone: true, instruction: '' };
-            }
-
-            this.stateManager.incrementUsage(result.usage);
-            return parseEvaluatorResponse(result.text);
-        } catch {
-            return { isDone: true, instruction: '' };
         }
     }
 

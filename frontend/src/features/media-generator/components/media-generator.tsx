@@ -1,9 +1,8 @@
 import { Download, Folder, ImagePlus, Sparkles, Trash2, X } from 'lucide-react'
 import { useParams } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
-import { useMediaGeneratorStore } from '../store/media-generator-store'
-import { MediaCard } from './media-card'
 import type { MediaFilter } from '../types'
+import MediaCardRenderer from './media-card-renderer'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
@@ -20,7 +19,6 @@ import {
   downloadAssetsZipMutationOptions,
   listAiGeneratedAssetsQueryOptions,
 } from '../query-mutations'
-import MediaLoader from './media-loader'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { searchFilesByName } from '@/features/projects/request'
@@ -98,15 +96,14 @@ export function MediaGenerator() {
 
 function RenderAssets({projectId, filter}: {projectId: string; filter: MediaFilter}){
   const listOptions = filter === 'all' ? undefined : { type: filter }
-  const {data: assets, isLoading} = useInfiniteQuery(listAiGeneratedAssetsQueryOptions(projectId, listOptions))
-  const activeGenerationRequests = useMediaGeneratorStore((state) => state.activeGenerationRequests)
+  const {data: requests, isLoading} = useInfiniteQuery(listAiGeneratedAssetsQueryOptions(projectId, listOptions))
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
 
   useEffect(() => {
-    if (!assets) return
-    const currentAssetIds = new Set(assets.map((asset) => asset.id))
+    if (!requests) return
+    const currentAssetIds = new Set(requests.flatMap((request) => request.assets.map((asset) => asset.id)))
     setSelectedAssetIds((current) => current.filter((assetId) => currentAssetIds.has(assetId)))
-  }, [assets])
+  }, [requests])
 
   if(isLoading){
     return (
@@ -114,7 +111,7 @@ function RenderAssets({projectId, filter}: {projectId: string; filter: MediaFilt
     )
   }
 
-  if(!assets || assets.length === 0){
+  if(!requests || requests.length === 0){
     return <EmptyMediaState />
   }
 
@@ -133,15 +130,12 @@ function RenderAssets({projectId, filter}: {projectId: string; filter: MediaFilt
 
     <div className="py-8">
       <div className="grid gap-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-        {activeGenerationRequests.map((request) => (
-            <MediaLoader key={request.requestId} />
-        ))}
-        {assets.map((asset) => (
-          <MediaCard
-            key={asset.id}
-            item={asset}
+        {requests.map((request) => (
+          <MediaCardRenderer
+            key={request.id}
+            item={request}
             projectId={projectId}
-            selected={selectedAssetIds.includes(asset.id)}
+            selectedAssetIds={selectedAssetIds}
             onSelectedChange={onSelectedChange}
           />
         ))}

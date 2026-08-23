@@ -1,5 +1,6 @@
 import type { NodeRendererProps } from 'react-arborist'
 import type { FileNode as BackendFileNode } from '../projects/type'
+import type { AiGeneratedMediaRequest } from '@/features/media-generator/types'
 
 export interface FileTreeNode extends BackendFileNode {
   children?: Array<FileTreeNode>
@@ -49,18 +50,9 @@ export type AssetContent = {
 
 export type AssetType = 'document' | 'video' | 'audio' | 'image'
 
-export type AiGeneratedAsset = {
-  id: string
-  name: string
-  url: string
-  type: AssetType
-  createdAt: string
-  storageKey: string
-}
-
 export type AiGeneratedAssetsContent = {
   type: 'ai-generated-assets'
-  data: Array<AiGeneratedAsset>
+  data: Array<AiGeneratedMediaRequest>
   nextCursor: string | null
   hasMore: boolean
 }

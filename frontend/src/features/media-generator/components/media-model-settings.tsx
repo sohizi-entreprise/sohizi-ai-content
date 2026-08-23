@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { ModelParameterBinding } from '@/features/admin/types'
 import { Input } from '@/components/ui/input'
@@ -13,20 +13,26 @@ import {
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import FileAttachment, { type AttachedFile } from '@/components/widgets/file-attachments'
 import { MediaVoiceSelector } from './media-voice-selector'
+import { AssetPickerField } from './asset-picker-dialog'
 import { listGoogleVoicesQueryOptions } from '../query-mutations'
 import { useMediaCatalog } from '../hooks/use-media-catalog'
-import { useModelParameters } from '../hooks/use-model-parameters'
 import { showsVoiceSelector } from '../constants'
 import { useMediaGeneratorStore } from '../store/media-generator-store'
 import { MediaModelSelector } from './media-model-selector'
+import { cn } from '@/lib/utils'
 
 type MediaModelSettingsProps = {
   projectId: string
+  errors: Record<string, string>
+  isLoadingParameters: boolean
+  parameters: ModelParameterBinding[]
+  resetErrors: () => void
 }
 
-export function MediaModelSettings({ projectId }: MediaModelSettingsProps) {
+export function MediaModelSettings(props: MediaModelSettingsProps) {
+  const { projectId, errors, isLoadingParameters, parameters, resetErrors } = props
+
   const generationType = useMediaGeneratorStore((state) => state.generationType)
   const generationSubtype = useMediaGeneratorStore((state) => state.generationSubtype)
   const parameterValues = useMediaGeneratorStore((state) => state.parameterValues)
@@ -38,9 +44,17 @@ export function MediaModelSettings({ projectId }: MediaModelSettingsProps) {
     isLoadingModels,
     hasCatalog,
   } = useMediaCatalog()
-  const { parameters, isLoadingParameters } = useModelParameters()
   const { data: voices = [], isLoading: isLoadingVoices } = useQuery(listGoogleVoicesQueryOptions)
   const showVoice = showsVoiceSelector(generationType, generationSubtype)
+
+  const handleParameterChange = (key: string, value: string) => {
+    updateParameterValue(key, value)
+    resetErrors()
+  }
+
+  useEffect(() => {
+    resetErrors()
+  }, [selectedModelId])
 
   return (
     <div className="space-y-5">
@@ -86,11 +100,12 @@ export function MediaModelSettings({ projectId }: MediaModelSettingsProps) {
             </p>
             {parameters.map((parameter) => (
               <ParameterField
+                error={errors[parameter.key]}
                 key={parameter.parameterId}
                 projectId={projectId}
                 parameter={parameter}
                 value={parameterValues[parameter.key] ?? parameter.defaultValue ?? ''}
-                onChange={(value) => updateParameterValue(parameter.key, value)}
+                onChange={(value) => handleParameterChange(parameter.key, value)}
               />
             ))}
           </div>
@@ -117,25 +132,40 @@ function SettingsField({
   )
 }
 
+function ParameterLabel({ parameter, error }: { parameter: ModelParameterBinding, error?: string }) {
+  return (
+    <Label className={cn("text-xs text-muted-foreground", error && "text-destructive")}>
+      {parameter.label}
+      {parameter.required ? (
+        <span className="ml-0.5 text-destructive" aria-hidden="true">
+          *
+        </span>
+      ) : null}
+    </Label>
+  )
+}
+
 function ParameterField({
   projectId,
   parameter,
   value,
   onChange,
+  error,
 }: {
   projectId: string
   parameter: ModelParameterBinding
   value: string
   onChange: (value: string) => void
+  error: string | undefined
 }) {
   const component = parameter.xUiComponent
 
   if (component === 'select' && parameter.options.length > 0) {
     return (
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">{parameter.label}</Label>
-        <Select value={value || undefined} onValueChange={onChange}>
-          <SelectTrigger className="h-11 w-full rounded-xl">
+        <ParameterLabel parameter={parameter} error={error} />
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger className="h-11 w-full rounded-xl dark:bg-background dark:hover:bg-accent/40">
             <SelectValue placeholder={`Select ${parameter.label.toLowerCase()}`} />
           </SelectTrigger>
           <SelectContent>
@@ -161,7 +191,7 @@ function ParameterField({
       return (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label className="text-xs text-muted-foreground">{parameter.label}</Label>
+            <ParameterLabel parameter={parameter} error={error} />
             <span className="text-xs text-muted-foreground">{safeValue}</span>
           </div>
           <Slider
@@ -177,7 +207,7 @@ function ParameterField({
 
     return (
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">{parameter.label}</Label>
+        <ParameterLabel parameter={parameter} error={error} />
         <Input
           type="number"
           min={min}
@@ -194,11 +224,12 @@ function ParameterField({
   if (component === 'uploader') {
     return (
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">{parameter.label}</Label>
-        <ParameterUploader
+        <ParameterLabel parameter={parameter} error={error} />
+        <AssetPickerField
           projectId={projectId}
-          fileType={parameter.constraints?.fileType}
-          onUploaded={(url) => onChange(url)}
+          parameter={parameter}
+          value={value}
+          onChange={onChange}
         />
         {parameter.description ? (
           <p className="text-xs text-muted-foreground">{parameter.description}</p>
@@ -210,7 +241,7 @@ function ParameterField({
   if (parameter.type === 'boolean') {
     return (
       <div className="flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5">
-        <Label className="text-xs text-muted-foreground">{parameter.label}</Label>
+        <ParameterLabel parameter={parameter} error={error} />
         <Switch
           checked={value === 'true'}
           onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
@@ -221,7 +252,7 @@ function ParameterField({
 
   return (
     <div className="space-y-2">
-      <Label className="text-xs text-muted-foreground">{parameter.label}</Label>
+      <ParameterLabel parameter={parameter} error={error} />
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -232,53 +263,3 @@ function ParameterField({
   )
 }
 
-function ParameterUploader({
-  projectId,
-  fileType,
-  onUploaded,
-}: {
-  projectId: string
-  fileType?: 'image' | 'video' | 'audio'
-  onUploaded: (url: string) => void
-}) {
-  const [attachments, setAttachments] = useState<AttachedFile[]>([])
-  const accept =
-    fileType === 'video' ? 'video/*' : fileType === 'audio' ? 'audio/*' : 'image/*'
-
-  const addAttachment = (attachment: AttachedFile) => {
-    setAttachments((current) => {
-      const index = current.findIndex((item) => item.id === attachment.id)
-      if (index >= 0) {
-        return current.map((item) => (item.id === attachment.id ? attachment : item))
-      }
-      return [attachment]
-    })
-    if (attachment.status === 'uploaded') {
-      onUploaded(attachment.url)
-    }
-  }
-
-  const removeAttachment = (id: string) => {
-    setAttachments((current) => current.filter((item) => item.id !== id))
-    onUploaded('')
-  }
-
-  return (
-    <div className="flex min-h-20 items-center rounded-xl border border-dashed px-3">
-      <FileAttachment
-        projectId={projectId}
-        attachments={attachments}
-        onAdd={addAttachment}
-        onRemove={removeAttachment}
-        maxAttachments={1}
-        itemSize={48}
-        accept={accept}
-      />
-      {attachments.length === 0 ? (
-        <p className="ml-3 text-xs text-muted-foreground">
-          Drag & drop or click to upload
-        </p>
-      ) : null}
-    </div>
-  )
-}

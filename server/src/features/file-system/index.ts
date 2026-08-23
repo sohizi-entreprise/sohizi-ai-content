@@ -109,6 +109,21 @@ export const fileSystemRoutes = new Elysia({ prefix: '/projects/:projectId/files
   .guard({
     params: paramsSchema
   })
+  .get('/:id/media', ({params, query}) => {
+    return fileService.listFolderMedia(params.projectId, params.id, {
+      format: query.format,
+      limit: query.limit,
+    })
+  }, {
+    query: z.object({
+      format: z.enum([
+        fileFormat.IMAGE,
+        fileFormat.VIDEO,
+        fileFormat.AUDIO,
+      ]).optional(),
+      limit: z.coerce.number().int().positive().optional(),
+    }),
+  })
   .get('/:id', ({params})=>{
     return fileService.getFileContent(params.projectId, params.id)
   })

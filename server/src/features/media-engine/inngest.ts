@@ -2,93 +2,72 @@ import { NonRetriableError } from 'inngest';
 import { inngest } from '@/lib/inngest/client';
 import * as repo from './repo';
 import * as storage from './storage';
-import { type ImageSizePreset } from '@/constants/media';
 import { v4 as uuidv4 } from 'uuid';
 import { Asset } from '@/db/schema';
 import { billingService } from '@/features/billing';
-import {
-    createBillableMultiModalClient,
-    MultiModalClient,
-    type BillableMultiModalInput,
-    videoActualCredits,
-} from '@/features/ai/agent/utils/multi-llm-client';
 import { isMediaError } from './errors';
 import { decrementKey, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
+import { appendRequestAssets } from '../generation-request/repo';
+import type { GenerationRequestAsset } from '@/type';
+import { WAVE_SPEED_VENDOR } from '@/features/ai/agent/core/vendor';
+import { createProvider } from './providers/factory';
+import { extractOutputUrls } from './providers/utils';
+import type { SubmitPayload } from './providers/type';
+import {
+    AUDIO_OVERHEAD_RATE,
+    IMAGE_OVERHEAD_RATE,
+    VIDEO_OVERHEAD_RATE,
+} from '@/features/billing/constants';
+import {
+    providerCostToActualCredits,
+    providerCostToCredits,
+} from './generators/cost-utils';
+import { createCancellableController } from '../generation-request/abort-manager';
+import { Session } from '../ai/agent/core/session';
+import { MediaGenerationPersistence } from '../ai/agent/core/persistence';
+import { getAgentDefinition } from '../ai/agent/core/agent-registry';
+import { getModelWithVendorBinding } from '../models/repo';
+import { Agent } from '../ai/agent/core/agent';
+import { UserModelMessage } from 'ai';
+import { getModelSchema } from './repo';
 
-type ImageEventData = {
-    requestId: string;
-    projectId: string;
-    organizationId: string;
-    userId: string;
-    prompt: string;
-    model: string;
-    aspectRatio: ImageSizePreset;
-    referenceImages?: string[];
-    numVariations: number;
-};
-
-type DialogueSpeaker = {
-    name: string;
-    voice: string;
-};
-
-type AudioEventPayload =
-    | {
-          type: 'text-to-speech';
-          params: {
-              text: string;
-              voice?: string;
-              instructions?: string;
-              model?: string;
-          };
-      }
-    | {
-          type: 'dialogue';
-          params: {
-              script: string;
-              speakers: DialogueSpeaker[];
-              instructions?: string;
-              model?: string;
-          };
-      }
-    | {
-          type: 'generate-music';
-          params: {
-              prompt: string;
-              model?: string;
-          };
-      };
-
-type AudioEventData = {
-    requestId: string;
-    projectId: string;
-    organizationId: string;
-    userId: string;
-    payload: AudioEventPayload;
-};
-
-type VideoEventData = {
-    requestId: string;
-    projectId: string;
-    organizationId: string;
-    userId: string;
-    prompt: string;
-    model: string;
-    duration: number;
-    aspectRatio: '16:9' | '9:16' | '1:1';
-    referenceImage?: string;
-};
-
-const MAX_VIDEO_POLL_ATTEMPTS = 60;
+const MAX_MEDIA_POLL_ATTEMPTS = 60;
 const VIDEO_POLL_INTERVAL = '10s';
+const MEDIA_POLL_INTERVAL = '5s';
 const SYNC_RESERVATION_TTL_MS = 30 * 60 * 1000;
 const VIDEO_RESERVATION_TTL_MS = 60 * 60 * 1000;
 
-const multimodal = createBillableMultiModalClient({
-    timeoutMs: 15 * 60 * 1000,
-    ttlMs: VIDEO_RESERVATION_TTL_MS,
-});
-const videoClient = new MultiModalClient();
+type ProviderMediaType = 'image' | 'video' | 'audio';
+
+type ProviderMediaEventData = {
+    requestId: string;
+    projectId: string;
+    organizationId: string;
+    userId: string;
+    model: string;
+    payload: SubmitPayload;
+    mediaType: ProviderMediaType;
+    runMode: 'agent' | 'direct';
+    _reservationId: string;
+};
+
+function mediaOverheadRate(mediaType: ProviderMediaType): number {
+    if (mediaType === 'video') return VIDEO_OVERHEAD_RATE;
+    if (mediaType === 'audio') return AUDIO_OVERHEAD_RATE;
+    return IMAGE_OVERHEAD_RATE;
+}
+
+function mediaReservationTtlMs(mediaType: ProviderMediaType): number {
+    return mediaType === 'video' ? VIDEO_RESERVATION_TTL_MS : SYNC_RESERVATION_TTL_MS;
+}
+
+function mediaPollInterval(mediaType: ProviderMediaType) {
+    return mediaType === 'video' ? VIDEO_POLL_INTERVAL : MEDIA_POLL_INTERVAL;
+}
+
+function isTerminalFailureStatus(status: string): boolean {
+    return status === 'error' || status === 'failed' || status === 'cancelled' || status === 'timeout';
+}
 
 function shouldRetry(error: unknown): boolean {
     if (isMediaError(error)) {
@@ -117,7 +96,14 @@ async function safeRefund(reservationId: string | undefined | null, reason: stri
     }
 }
 
-async function commitRequest(requestId: string, status: 'finished' | 'error') {
+function toRequestAsset(asset: Asset): GenerationRequestAsset | null {
+    if (asset.type === 'image' || asset.type === 'video' || asset.type === 'audio' || asset.type === 'html') {
+        return { assetId: asset.id, type: asset.type, url: asset.url, name: asset.name };
+    }
+    return null;
+}
+
+async function commitRequest(requestId: string, status: 'completed' | 'failed') {
     const res = await decrementKey(requestId);
     if (res === 0) {
         await repo.updateAssetRequest(requestId, { status });
@@ -125,189 +111,162 @@ async function commitRequest(requestId: string, status: 'finished' | 'error') {
     }
 }
 
-async function uploadImageSource(
-    sourceUrl: string,
-    destinationPath: string,
-): Promise<{ url: string; storageKey: string; size: number }> {
-    if (sourceUrl.startsWith('data:')) {
-        const match = /^data:([^;]+);base64,(.+)$/.exec(sourceUrl);
-        if (!match) {
-            throw new Error('Invalid data URL for image upload');
-        }
-        const contentType = match[1] || 'image/png';
-        const buffer = Buffer.from(match[2], 'base64');
-        return storage.uploadFromBuffer(buffer, destinationPath, contentType);
-    }
-    return storage.uploadFromUrl(sourceUrl, destinationPath);
-}
+// ─── Provider Media Generation ───────────────────────────────────────
 
-function buildDialogueInputText(script: string, speakers: DialogueSpeaker[]): string {
-    const trimmed = script.trim();
-    if (/^TTS the following/i.test(trimmed)) {
-        return trimmed;
-    }
-    const names = speakers.map((s) => s.name.trim()).join(' and ');
-    return `TTS the following conversation between ${names}:\n${trimmed}`;
-}
-
-function toAudioBillableInput(payload: AudioEventPayload): BillableMultiModalInput {
-    switch (payload.type) {
-        case 'text-to-speech':
-            return {
-                kind: 'tts',
-                text: payload.params.text,
-                model: payload.params.model,
-                options: {
-                    voice: payload.params.voice ?? 'Kore',
-                    instructions: payload.params.instructions,
-                },
-            };
-        case 'dialogue': {
-            const speakers = payload.params.speakers.map((s) => ({
-                name: s.name.trim(),
-                voice: s.voice,
-            }));
-            return {
-                kind: 'tts',
-                text: buildDialogueInputText(payload.params.script, speakers),
-                model: payload.params.model,
-                options: {
-                    // OpenRouter still requires a top-level voice; use the first speaker.
-                    voice: speakers[0]?.voice ?? 'Kore',
-                    instructions: payload.params.instructions,
-                    speakers,
-                },
-            };
-        }
-        case 'generate-music':
-            return {
-                kind: 'music',
-                prompt: payload.params.prompt,
-                model: payload.params.model,
-            };
-    }
-}
-
-// ─── Image Generation ────────────────────────────────────────────────
-
-export const handleImageGeneration = inngest.createFunction(
+export const handleMediaGeneration = inngest.createFunction(
     {
-        id: 'media-generate-image',
+        id: 'media-generate',
         retries: 0,
-        triggers: [{ event: 'media/generate.image' }],
+        triggers: [{ event: 'media/generate' }],
         onFailure: async ({ event }) => {
-            const data = event.data.event.data as ImageEventData & { _reservationId?: string };
-            const reservationId = data._reservationId;
-            // Refund is best-effort: reservation id is not on the event today
-            // (already refunded in the function catch). Keep for safety if added later.
-            if (reservationId) {
-                await safeRefund(reservationId, 'image-generation-failed');
-            }
+            const data = event.data.event.data as ProviderMediaEventData;
+            await safeRefund(data._reservationId, 'media-generation-failed');
             if (data.requestId) {
-                await commitRequest(data.requestId, 'error');
+                await commitRequest(data.requestId, 'failed');
             }
         },
     },
     async ({ event, step }) => {
-        const data = event.data as ImageEventData;
-        const {
-            requestId,
-            projectId,
-            organizationId,
-            userId,
-            prompt,
-            model,
-            aspectRatio,
-            referenceImages,
-            numVariations,
-        } = data;
+        const data = event.data as ProviderMediaEventData;
+        const { requestId, projectId, organizationId, userId, model, payload, mediaType } = data;
+        const overheadRate = mediaOverheadRate(mediaType);
+        const reservationTtlMs = mediaReservationTtlMs(mediaType);
+        const pollInterval = mediaPollInterval(mediaType);
 
-        const billableInput: BillableMultiModalInput = {
-            kind: 'image',
-            model,
-            prompt,
-            aspectRatio,
-            n: numVariations,
-            referenceUrls: referenceImages,
-        };
-
-        const reservation = await step.run('reserve-credits', async () => {
-            const estimatedCredits = await multimodal.estimateCost(billableInput);
-            const idempotencyKey = multimodal.idempotencyKey(billableInput, {
-                organizationId,
-                userId,
-                metadata: { runId: requestId },
-            });
-            const res = await billingService.reserve({
-                organizationId,
-                userId,
-                operation: 'media:image',
-                estimatedCredits,
-                ttlMs: SYNC_RESERVATION_TTL_MS,
-                idempotencyKey,
-                metadata: { requestId, projectId, kind: 'image' },
-            });
-            return { id: res.id, estimatedCredits: estimatedCredits.toString() };
+        const requestPayload = await step.run('run-agent', async () => {
+            if(data.runMode === 'agent'){
+                const output = await runAgent({
+                    userId,
+                    projectId,
+                    requestId,
+                    organizationId,
+                    requestPayload: payload,
+                    requestModelId: model,
+                });
+                if(output.ok){
+                    return output.request as SubmitPayload;
+                }else{
+                    console.error(output.error);
+                    throw new Error(output.error);
+                }
+            }else{
+                return payload;
+            }
         });
 
-        let result;
+        const reservation = await step.run('reserve-credits', async () => {
+            try {
+                const provider = createProvider(WAVE_SPEED_VENDOR);
+                const estimate = await provider.estimateRequestPrice(model, requestPayload);
+                if (!estimate.ok) {
+                    throw new Error(estimate.error);
+                }
+                const estimatedCredits = providerCostToCredits(estimate.priceUSD, { overheadRate });
+                const res = await billingService.reserve({
+                    organizationId,
+                    userId,
+                    operation: `media:${mediaType}`,
+                    estimatedCredits,
+                    ttlMs: reservationTtlMs,
+                    id: data._reservationId,
+                    idempotencyKey: `media:${requestId}:${model}`,
+                    metadata: { requestId, projectId, kind: mediaType, model },
+                });
+                return {
+                    id: res.id,
+                    estimatedCredits: estimatedCredits.toString(),
+                    priceUSD: estimate.priceUSD,
+                };
+            } catch (error) {
+                wrapNonRetryable(error);
+            }
+        });
+
+        let submission;
         try {
-            result = await step.run('generate-image', async () => {
+            submission = await step.run('submit-job', async () => {
                 try {
-                    const billCtx = {
-                        organizationId,
-                        userId,
-                        signal: new AbortController().signal,
-                        reservationId: reservation.id,
-                    };
-                    const billable = await multimodal.execute(billableInput, billCtx);
-                    if (billable.output.kind !== 'image') {
-                        throw new Error('Unexpected multimodal output kind for image');
-                    }
-                    return {
-                        urls: billable.output.urls,
-                        providerCostUsd: billable.output.costUsd,
-                        actualCredits: billable.actualCredits.toString(),
-                    };
+                    const provider = createProvider(WAVE_SPEED_VENDOR);
+                    return await provider.submitRequest(model, requestPayload);
                 } catch (error) {
                     wrapNonRetryable(error);
                 }
             });
         } catch (error) {
-            await step.run('refund-on-error', () => safeRefund(reservation.id, 'image-execute-error'));
+            await step.run('refund-on-submit-error', () => safeRefund(reservation.id, 'media-submit-error'));
             throw error;
         }
+
+        let resultData: unknown = null;
+
+        for (let attempt = 0; attempt < MAX_MEDIA_POLL_ATTEMPTS; attempt++) {
+            await step.sleep(`wait-for-media-${attempt}`, pollInterval);
+
+            await step.run(`renew-reservation-${attempt}`, async () => {
+                const current = await billingService.getReservation(reservation.id);
+                if (!current || current.status !== 'reserved') return;
+                const remainingMs = current.expiresAt.getTime() - Date.now();
+                if (remainingMs > reservationTtlMs * 0.2) return;
+                await billingService.extend(reservation.id, reservationTtlMs);
+            });
+
+            const pollResult = await step.run(`poll-media-${attempt}`, async () => {
+                try {
+                    const provider = createProvider(WAVE_SPEED_VENDOR);
+                    return await provider.getRequestData(submission.requestId);
+                } catch (error) {
+                    wrapNonRetryable(error);
+                }
+            });
+
+            if (pollResult.status === 'completed') {
+                resultData = 'data' in pollResult ? pollResult.data : null;
+                break;
+            }
+
+            if (isTerminalFailureStatus(String(pollResult.status))) {
+                await step.run('refund-on-provider-failure', () =>
+                    safeRefund(reservation.id, 'media-provider-failed'),
+                );
+                await step.run('mark-error-on-provider-failure', () => commitRequest(requestId, 'failed'));
+                return { requestId, status: 'failed' as const };
+            }
+        }
+
+        const outputUrls = extractOutputUrls(resultData);
+        if (outputUrls.length === 0) {
+            await step.run('refund-on-timeout-or-empty', () =>
+                safeRefund(reservation.id, resultData ? 'media-no-valid-urls' : 'media-poll-timeout'),
+            );
+            await step.run('mark-error-on-timeout-or-empty', () => commitRequest(requestId, 'failed'));
+            return { requestId, status: 'failed' as const };
+        }
+
+        const uploads = await step.run('upload-to-r2', async () => {
+            const uploaded = [];
+            for (const sourceUrl of outputUrls) {
+                uploaded.push(await storage.uploadGeneratedMedia(sourceUrl));
+            }
+            return uploaded;
+        });
 
         await step.run('settle-credits', () =>
             billingService.settle({
                 reservationId: reservation.id,
-                actualCredits: BigInt(result.actualCredits),
-                metadata: { requestId, providerCostUsd: result.providerCostUsd },
+                actualCredits: providerCostToActualCredits(reservation.priceUSD, { overheadRate }),
+                metadata: { requestId, providerCostUsd: reservation.priceUSD },
             }),
         );
-
-        const uploads = await step.run('upload-to-gcs', async () => {
-            const uploaded = [];
-            for (let i = 0; i < result.urls.length; i++) {
-                const imgName = result.urls[i].startsWith('data:')
-                    ? `image-${uuidv4().slice(0, 8)}.png`
-                    : (result.urls[i].split('/').pop() ?? `image-${uuidv4().slice(0, 8)}.png`);
-                const destPath = storage.buildStoragePath('images', imgName);
-                const upload = await uploadImageSource(result.urls[i], destPath);
-                uploaded.push(upload);
-            }
-            return uploaded;
-        });
 
         const assets = await step.run('save-assets', async () => {
             const newAssets: Asset[] = [];
             for (const upload of uploads) {
                 const fileMetadata = await storage.getFileMetadata(upload.storageKey);
-                const assetName = upload.storageKey.split('/').pop() ?? `image-${uuidv4().slice(0, 8)}.png`;
+                const assetName = upload.storageKey.split('/').pop() ?? `${upload.type}-${uuidv4().slice(0, 8)}`;
                 const asset = await repo.createAsset({
                     projectId,
                     name: assetName,
-                    type: 'image',
+                    type: upload.type,
                     url: upload.url,
                     source: 'ai-generated',
                     generationRequestId: requestId,
@@ -318,7 +277,14 @@ export const handleImageGeneration = inngest.createFunction(
                 newAssets.push(asset);
             }
 
-            await commitRequest(requestId, 'finished');
+            const requestAssets = newAssets
+                .map(toRequestAsset)
+                .filter((asset): asset is GenerationRequestAsset => asset !== null);
+            if (requestAssets.length > 0) {
+                await appendRequestAssets(requestId, requestAssets);
+            }
+
+            await commitRequest(requestId, 'completed');
             return newAssets;
         });
 
@@ -326,268 +292,148 @@ export const handleImageGeneration = inngest.createFunction(
     },
 );
 
-// ─── Audio Generation ────────────────────────────────────────────────
 
-export const handleAudioGeneration = inngest.createFunction(
-    {
-        id: 'media-generate-audio',
-        retries: 0,
-        triggers: [{ event: 'media/generate.audio' }],
-        onFailure: async ({ event }) => {
-            const data = event.data.event.data as AudioEventData & { _reservationId?: string };
-            const reservationId = data._reservationId;
-            if (reservationId) {
-                await safeRefund(reservationId, 'audio-generation-failed');
-            }
-            if (data.requestId) {
-                await commitRequest(data.requestId, 'error');
-            }
-        },
-    },
-    async ({ event, step }) => {
-        const data = event.data as AudioEventData;
-        const { requestId, projectId, organizationId, userId, payload } = data;
-        const billableInput = toAudioBillableInput(payload);
-        const operation =
-            billableInput.kind === 'music' ? 'media:music' : 'media:tts';
+// This function is used when we are in agent mode
+type AgentPayload = {
+    userId: string;
+    projectId: string;
+    organizationId: string;
+    requestId: string;
+    requestPayload: SubmitPayload;
+    requestModelId: string;
+}
 
-        const reservation = await step.run('reserve-credits', async () => {
-            const estimatedCredits = await multimodal.estimateCost(billableInput);
-            const idempotencyKey = multimodal.idempotencyKey(billableInput, {
-                organizationId,
-                metadata: { runId: requestId },
-            });
-            const res = await billingService.reserve({
-                organizationId,
-                userId,
-                operation,
-                estimatedCredits,
-                ttlMs: SYNC_RESERVATION_TTL_MS,
-                idempotencyKey,
-                metadata: { requestId, projectId, kind: 'audio', type: payload.type },
-            });
-            return { id: res.id, estimatedCredits: estimatedCredits.toString() };
-        });
+type AgentResponse = {
+    ok: true;
+    request: Record<string, unknown>;
+} | {
+    ok: false;
+    error: string;
+}
 
-        let result;
-        try {
-            result = await step.run('generate-and-upload-audio', async () => {
-                try {
-                    const billCtx = {
-                        organizationId,
-                        userId,
-                        signal: new AbortController().signal,
-                        reservationId: reservation.id,
-                    };
-                    const billable = await multimodal.execute(billableInput, billCtx);
-                    if (billable.output.kind !== 'tts' && billable.output.kind !== 'music') {
-                        throw new Error('Unexpected multimodal output kind for audio');
-                    }
-                    const buffer = Buffer.from(billable.output.audio);
-                    const ext = billable.output.kind === 'tts' ? 'wav' : 'mp3';
-                    const contentType = billable.output.kind === 'tts' ? 'audio/wav' : 'audio/mpeg';
-                    const fileName = `audio-${uuidv4().slice(0, 8)}.${ext}`;
-                    const destPath = storage.buildStoragePath('audios', fileName);
-                    const uploaded = await storage.uploadFromBuffer(buffer, destPath, contentType);
-                    return {
-                        upload: uploaded,
-                        actualCredits: billable.actualCredits.toString(),
-                    };
-                } catch (error) {
-                    wrapNonRetryable(error);
-                }
-            });
-        } catch (error) {
-            await step.run('refund-on-error', () => safeRefund(reservation.id, 'audio-execute-error'));
-            throw error;
+
+async function runAgent(payload: AgentPayload){
+    const { userId, projectId, requestId, organizationId, requestPayload, requestModelId } = payload;
+    const { controller, cleanup } = await createCancellableController(requestId);
+
+    let response: AgentResponse = {
+        ok: false,
+        error: 'Unknown error occurred',
+    };
+    
+    try {
+      const session = new Session({
+          sessionId: uuidv4(),
+          userId,
+          organizationId,
+          projectId,
+          runId: requestId,
+      })
+      const persistence = new MediaGenerationPersistence(requestId);
+  
+      const agentDefinition = getAgentDefinition('media-generator');
+      if(!agentDefinition){
+        throw new Error('Agent definition not found');
+      }
+
+      const [model, modelSchema] = await Promise.all([
+        getModelWithVendorBinding(agentDefinition.modelId, agentDefinition.vendor),
+        getModelSchema(requestModelId),
+      ]);
+
+      if(!model){
+        throw new Error('Model not found');
+      }
+      const agent = new Agent({
+          name: agentDefinition.name,
+          systemPrompt: fullPrompt(agentDefinition.baseSystemPrompt, requestPayload, modelSchema),
+          session,
+          model,
+          vendor: agentDefinition.vendor,
+          modelConfig: agentDefinition.modelConfig,
+          persistence: persistence,
+          maxContextTokens: agentDefinition.maxContextTokens,
+          contextThreshold: agentDefinition.contextThreshold,
+          summaryModelId: agentDefinition.summaryModelId,
+          evaluatorModelId: agentDefinition.evaluatorModelId,
+          evaluatorModelConfig: agentDefinition.evaluatorModelConfig,
+      })
+  
+      const chunks = agent.runLoop(
+          buildUserPrompt(requestPayload),
+          controller.signal,
+          250,
+      )
+
+      let finalText = '';
+  
+      for await (const chunk of chunks) {
+        if ((chunk.type === 'text_delta' || chunk.type === 'complete') && chunk.text) {
+            finalText = chunk.text;
         }
+        await writeStreamData(requestId, {runId: requestId, event:'chunk', chunk});
+      }
 
-        await step.run('settle-credits', () =>
-            billingService.settle({
-                reservationId: reservation.id,
-                actualCredits: BigInt(result.actualCredits),
-                metadata: { requestId },
-            }),
-        );
+      const jsonResult = parseAgentPayload(finalText);
+      response = {
+        ok: true,
+        request: jsonResult,
+      }
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Completion failed';
+      console.error(error);
+      response = {
+        ok: false,
+        error: errorMessage,
+      };
+    } finally {
+      await cleanup();
+    }
 
-        const asset = await step.run('save-asset', async () => {
-            const fileMetadata = await storage.getFileMetadata(result.upload.storageKey);
-            const asset = await repo.createAsset({
-                projectId,
-                name: result.upload.storageKey.split('/').pop() ?? `audio-${uuidv4().slice(0, 8)}.wav`,
-                type: 'audio',
-                url: result.upload.url,
-                source: 'ai-generated',
-                generationRequestId: requestId,
-                metadata: fileMetadata,
-                storageKey: result.upload.storageKey,
-            });
-            await writeStreamData(requestId, { runId: requestId, event: 'asset', data: asset });
-            await commitRequest(requestId, 'finished');
-            return asset;
-        });
+    return response;
+  }
 
-        return { requestId, asset, reservationId: reservation.id };
-    },
-);
 
-// ─── Video Generation ────────────────────────────────────────────────
+function parseAgentPayload(text: string): Record<string, unknown> {
+    const trimmed = text.trim();
+    if (!trimmed) {
+        throw new Error('Agent finished without a JSON payload');
+    }
 
-export const handleVideoGeneration = inngest.createFunction(
-    {
-        id: 'media-generate-video',
-        retries: 0,
-        triggers: [{ event: 'media/generate.video' }],
-        onFailure: async ({ event }) => {
-            const data = event.data.event.data as VideoEventData & { _reservationId?: string };
-            const requestId = data.requestId;
-            const reservationId = data._reservationId;
-            if (reservationId) {
-                await safeRefund(reservationId, 'video-generation-failed');
-            }
-            if (requestId) {
-                await commitRequest(requestId, 'error');
-            }
-        },
-    },
-    async ({ event, step }) => {
-        const data = event.data as VideoEventData;
-        const {
-            requestId,
-            projectId,
-            organizationId,
-            userId,
-            prompt,
-            model,
-            duration,
-            aspectRatio,
-            referenceImage,
-        } = data;
+    const unfenced = trimmed
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim();
 
-        const billableInput: BillableMultiModalInput = {
-            kind: 'video',
-            model,
-            prompt,
-            duration,
-            aspectRatio,
-            referenceUrl: referenceImage,
-        };
-
-        const reservation = await step.run('reserve-credits', async () => {
-            const estimatedCredits = await multimodal.estimateCost(billableInput);
-            const idempotencyKey = multimodal.idempotencyKey(billableInput, {
-                organizationId,
-                userId,
-                metadata: { runId: requestId },
-            });
-            const res = await billingService.reserve({
-                organizationId,
-                userId,
-                operation: 'media:video',
-                estimatedCredits,
-                ttlMs: VIDEO_RESERVATION_TTL_MS,
-                idempotencyKey,
-                metadata: { requestId, projectId, kind: 'video' },
-            });
-            return { id: res.id, estimatedCredits: estimatedCredits.toString() };
-        });
-
-        let submission;
-        try {
-            submission = await step.run('submit-video', async () => {
-                try {
-                    const handle = await videoClient.submitVideoGeneration({
-                        model,
-                        prompt,
-                        duration,
-                        aspectRatio,
-                        referenceUrl: referenceImage,
-                        idempotencyKey: `${organizationId}:${requestId}`,
-                    });
-                    return {
-                        id: handle.id,
-                        estimatedProviderCostUsd: handle.costEstimate.cost ?? 0,
-                    };
-                } catch (error) {
-                    wrapNonRetryable(error);
-                }
-            });
-        } catch (error) {
-            await step.run('refund-on-submit-error', () => safeRefund(reservation.id, 'video-submit-error'));
-            throw error;
+    try {
+        return JSON.parse(unfenced) as Record<string, unknown>;
+    } catch {
+        const start = unfenced.indexOf('{');
+        const end = unfenced.lastIndexOf('}');
+        if (start !== -1 && end > start) {
+            return JSON.parse(unfenced.slice(start, end + 1)) as Record<string, unknown>;
         }
+        throw new Error('Agent output was not valid JSON');
+    }
+}
 
-        let videoUrl = '';
-        let providerCostUsd = submission.estimatedProviderCostUsd;
+function buildUserPrompt(payload: SubmitPayload): UserModelMessage {
+    const prompt = payload.prompt as string;
 
-        for (let attempt = 0; attempt < MAX_VIDEO_POLL_ATTEMPTS; attempt++) {
-            await step.sleep(`wait-for-video-${attempt}`, VIDEO_POLL_INTERVAL);
+    return { role: 'user', content: [{ type: 'text', text: prompt }] };
+}
 
-            await step.run(`renew-reservation-${attempt}`, async () => {
-                const current = await billingService.getReservation(reservation.id);
-                if (!current || current.status !== 'reserved') return;
-                const remainingMs = current.expiresAt.getTime() - Date.now();
-                if (remainingMs > VIDEO_RESERVATION_TTL_MS * 0.2) return;
-                await billingService.extend(reservation.id, VIDEO_RESERVATION_TTL_MS);
-            });
+function fullPrompt(basePrompt: string, request: Record<string, unknown>, modelSchema: Record<string, unknown>[]){
+    return `
+${basePrompt}
 
-            const pollResult = await step.run(`poll-video-${attempt}`, async () => {
-                try {
-                    return await videoClient.pollVideoGeneration(submission.id);
-                } catch (error) {
-                    wrapNonRetryable(error);
-                }
-            });
+<generation_request>
+${JSON.stringify(request)}
+</generation_request>
 
-            if (pollResult.status === 'completed') {
-                videoUrl = pollResult.url;
-                if (typeof pollResult.cost?.cost === 'number' && pollResult.cost.cost > 0) {
-                    providerCostUsd = pollResult.cost.cost;
-                }
-                break;
-            }
-
-            if (pollResult.status === 'failed') {
-                await step.run('refund-on-provider-failure', () => safeRefund(reservation.id, 'video-provider-failed'));
-                return { requestId, status: 'failed' };
-            }
-        }
-
-        if (!videoUrl) {
-            await step.run('refund-on-timeout', () => safeRefund(reservation.id, 'video-poll-timeout'));
-            return { requestId, status: 'failed' };
-        }
-
-        await step.run('settle-credits', () =>
-            billingService.settle({
-                reservationId: reservation.id,
-                actualCredits: videoActualCredits(providerCostUsd),
-                metadata: { requestId, providerCostUsd },
-            }),
-        );
-
-        const upload = await step.run('upload-to-gcs', async () => {
-            const destPath = storage.buildStoragePath('videos', `video-${submission.id}.mp4`);
-            return storage.uploadFromUrl(videoUrl, destPath);
-        });
-
-        const asset = await step.run('save-asset', async () => {
-            const fileMetadata = await storage.getFileMetadata(upload.storageKey);
-            const asset = await repo.createAsset({
-                projectId,
-                name: upload.storageKey.split('/').pop() ?? `video-${uuidv4().slice(0, 8)}.mp4`,
-                type: 'video',
-                url: upload.url,
-                source: 'ai-generated',
-                generationRequestId: requestId,
-                metadata: fileMetadata,
-                storageKey: upload.storageKey,
-            });
-            await writeStreamData(requestId, { runId: requestId, event: 'asset', data: asset });
-            await commitRequest(requestId, 'finished');
-            return asset;
-        });
-
-        return { requestId, asset, reservationId: reservation.id };
-    },
-);
+<parameter_schema>
+${JSON.stringify(modelSchema)}
+</parameter_schema>
+`.trim();
+}

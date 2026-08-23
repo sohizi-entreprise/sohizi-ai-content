@@ -1,10 +1,9 @@
 import { db } from "@/db";
-import { assets, assetVariants, fileNodes, assetsAgentRuns } from "@/db/schema";
-import type { AssetType, AssetSource, AssetStatus, AssetVariantType, AssetMetadata, CursorPaginationOptions, CursorPaginationResult, AgentRunStatus, AgentRunMessage } from "@/type";
-import { UserModelMessage } from "ai";
-import { and, eq, desc, lt, isNull, max, inArray } from "drizzle-orm";
-import { v4 as uuidv4 } from 'uuid';
+import { assets, assetVariants, fileNodes, generationRequests, llmVendorsAndParameters, modelParameters, llmVendors, parameterOptions, llmVendorsAndParameterOptions, modelsAndParameterOptions, modelsAndParameters, llmVendorsAndModels } from "@/db/schema";
+import type { AssetType, AssetSource, AssetStatus, AssetVariantType, AssetMetadata, CursorPaginationOptions, CursorPaginationResult, GenerationRequestStatus } from "@/type";
+import { and, eq, desc, lt, isNull, max, inArray, or, sql } from "drizzle-orm";
 import { ORDER_GAP } from "../file-system/repo";
+import { createGenerationRequest, deleteGenerationRequest, updateGenerationRequest } from "../generation-request/repo";
 
 
 type CreateAssetPayload = {
@@ -60,6 +59,36 @@ export const getAssetsByProject = async (
     const pageSize = Math.max(limit, 1);
 
     const conditions = [eq(assets.projectId, projectId)];
+    if (type) conditions.push(eq(assets.type, type));
+    if (cursor) conditions.push(lt(assets.createdAt, new Date(cursor)));
+
+    const rows = await db
+        .select()
+        .from(assets)
+        .where(and(...conditions))
+        .orderBy(desc(assets.createdAt))
+        .limit(pageSize + 1);
+
+    const hasMore = rows.length > pageSize;
+    const data = rows.slice(0, pageSize);
+    const nextCursor = hasMore && data.length > 0
+        ? data[data.length - 1].createdAt.toISOString()
+        : null;
+
+    return { data, nextCursor, hasMore };
+}
+
+export const listUploadedAssets = async (
+    projectId: string,
+    options?: { type?: AssetType; cursor?: string; limit?: number },
+): Promise<CursorPaginationResult<typeof assets.$inferSelect>> => {
+    const { type, cursor, limit = 20 } = options ?? {};
+    const pageSize = Math.max(limit, 1);
+
+    const conditions = [
+        eq(assets.projectId, projectId),
+        eq(assets.source, 'user-uploaded'),
+    ];
     if (type) conditions.push(eq(assets.type, type));
     if (cursor) conditions.push(lt(assets.createdAt, new Date(cursor)));
 
@@ -174,62 +203,101 @@ export const getAssetByFileNodeId = async (projectId: string, fileNodeId: string
     return result[0];
 }
 
-type AiGeneratedAsset = {
+type AiGeneratedRequestAsset = {
     id: string;
-    projectId: string;
     name: string;
     url: string;
     type: AssetType;
-    source: AssetSource;
-    generationRequestId: string | null;
-    fileNodeId: string | null;
     metadata: AssetMetadata | null;
+    storageKey: string;
+}
+
+type AiGeneratedMediaRequest = {
+    id: string;
+    projectId: string;
+    status: GenerationRequestStatus;
+    request: Record<string, unknown> | null;
+    error: string | null;
     createdAt: Date;
     updatedAt: Date;
-    storageKey: string;
+    assets: AiGeneratedRequestAsset[];
 }
 
 type ListAiGeneratedAssetsOptions = CursorPaginationOptions & {
     type?: AssetType;
 }
 
+const OPEN_GENERATION_STATUSES: GenerationRequestStatus[] = ['pending', 'processing', 'failed', 'aborted'];
+
 export const listAiGeneratedAssets = async (
     projectId: string,
     options: ListAiGeneratedAssetsOptions = {},
-): Promise<CursorPaginationResult<AiGeneratedAsset>> => {
+): Promise<CursorPaginationResult<AiGeneratedMediaRequest>> => {
     const { cursor, limit = 50, type } = options;
     const pageSize = Math.max(limit, 1);
 
     const conditions = [
-        eq(assets.projectId, projectId),
-        eq(assets.source, 'ai-generated' as AssetSource),
+        eq(generationRequests.projectId, projectId),
+        eq(generationRequests.type, 'media-generation'),
+    ];
+    if (cursor) conditions.push(lt(generationRequests.createdAt, new Date(cursor)));
+
+    const joinConditions = [
+        eq(assets.generationRequestId, generationRequests.id),
         isNull(assets.fileNodeId),
     ];
-    if (type) conditions.push(eq(assets.type, type));
-    if (cursor) conditions.push(lt(assets.createdAt, new Date(cursor)));
+    if (type) joinConditions.push(eq(assets.type, type));
+
+    const hasAssets = sql`count(${assets.id}) > 0`;
+    const openStatuses = inArray(generationRequests.status, OPEN_GENERATION_STATUSES);
+    const havingClause = type
+        ? or(
+            hasAssets,
+            and(
+                openStatuses,
+                sql`${generationRequests.request}->'context'->>'mediaType' = ${type}`,
+            ),
+        )
+        : or(hasAssets, openStatuses);
 
     const rows = await db
         .select({
-            id: assets.id,
-            projectId: assets.projectId,
-            name: assets.name,
-            url: assets.url,
-            type: assets.type,
-            source: assets.source,
-            generationRequestId: assets.generationRequestId,
-            fileNodeId: assets.fileNodeId,
-            metadata: assets.metadata,
-            createdAt: assets.createdAt,
-            updatedAt: assets.updatedAt,
-            storageKey: assets.storageKey,
+            id: generationRequests.id,
+            projectId: generationRequests.projectId,
+            status: generationRequests.status,
+            request: generationRequests.request,
+            error: generationRequests.error,
+            createdAt: generationRequests.createdAt,
+            updatedAt: generationRequests.updatedAt,
+            assets: sql<AiGeneratedRequestAsset[]>`
+                coalesce(
+                    jsonb_agg(
+                        jsonb_build_object(
+                            'id', ${assets.id},
+                            'name', ${assets.name},
+                            'url', ${assets.url},
+                            'type', ${assets.type},
+                            'metadata', ${assets.metadata},
+                            'storageKey', ${assets.storageKey}
+                        )
+                    ) FILTER (WHERE ${assets.id} IS NOT NULL),
+                    '[]'::jsonb
+                )
+            `,
         })
-        .from(assets)
+        .from(generationRequests)
+        .leftJoin(assets, and(...joinConditions))
         .where(and(...conditions))
-        .orderBy(desc(assets.createdAt))
+        .groupBy(generationRequests.id)
+        .having(havingClause)
+        .orderBy(desc(generationRequests.createdAt))
         .limit(pageSize + 1);
 
     const hasMore = rows.length > pageSize;
-    const data = rows.slice(0, pageSize);
+    const data = rows.slice(0, pageSize).map((row) => ({
+        ...row,
+        assets: Array.isArray(row.assets) ? row.assets : [],
+    }));
     const nextCursor = hasMore && data.length > 0
         ? data[data.length - 1].createdAt.toISOString()
         : null;
@@ -238,42 +306,41 @@ export const listAiGeneratedAssets = async (
 }
 
 
-export const createAssetRequest = async (projectId: string, userPrompt: UserModelMessage, settings?: Record<string, unknown>) => {
-    const result = await db.insert(assetsAgentRuns).values({
+export const createAssetRequest = async (
+    projectId: string,
+    userId: string,
+    requestPayload: Record<string, unknown>,
+) => {
+    const result = await createGenerationRequest({
         projectId,
-        status: 'pending',
-        messages: [{...userPrompt, id: uuidv4()}],
-        metadata: {settings: settings ?? {}},
-    }).returning();
+        userId,
+        type: 'media-generation',
+        request: requestPayload,
+    });
 
-    return { ...result[0], assets: [] };
+    return { ...result, assets: result.assets ?? [] };
 }
 
 type UpdateAssetRequestPayload = {
-    status?: AgentRunStatus;
-    messages?: AgentRunMessage[];
-    metadata?: {settings: Record<string, unknown>};
+    status?: GenerationRequestStatus;
+    history?: Record<string, unknown>[];
     error?: string;
+    request?: Record<string, unknown>;
 }
 
 export const updateAssetRequest = async (runId: string, data: UpdateAssetRequestPayload) => {
-    const result = await db.update(assetsAgentRuns)
-    .set(data)
-    .where(eq(assetsAgentRuns.id, runId))
-    .returning();
+    return updateGenerationRequest(runId, data);
+}
 
-    return result[0];
+export const deleteAssetRequest = async (projectId: string, requestId: string) => {
+    return deleteGenerationRequest(projectId, requestId);
 }
 
 const DEFAULT_MESSAGES_PAGE_SIZE = 20;
 const MAX_MESSAGES_PAGE_SIZE = 50;
 
-type AssetRequestRunWithAssets = typeof assetsAgentRuns.$inferSelect & {
-    assets: typeof assets.$inferSelect[];
-}
-
 type ListAssetRequestAssetsResult = {
-    data: AssetRequestRunWithAssets[];
+    data: Array<typeof generationRequests.$inferSelect>;
     nextCursor: string | null;
     hasMore: boolean;
 }
@@ -284,26 +351,30 @@ export const listAssetRequestAssets = async (
   ): Promise<ListAssetRequestAssetsResult> => {
     const limit = Math.min(options?.limit ?? DEFAULT_MESSAGES_PAGE_SIZE, MAX_MESSAGES_PAGE_SIZE);
     const cursor = options?.cursor;
-  
-    const rows = await db.query.assetsAgentRuns.findMany({
-      where: cursor
-        ? and(
-            eq(assetsAgentRuns.projectId, projectId),
-            lt(assetsAgentRuns.createdAt, new Date(cursor))
-          )
-        : eq(assetsAgentRuns.projectId, projectId),
-      orderBy: desc(assetsAgentRuns.createdAt),
-      limit: limit + 1,
-      with: {
-        assets: true,
-      },
-    });
-  
+
+    const conditions = [
+        eq(generationRequests.projectId, projectId),
+        eq(generationRequests.type, 'media-generation'),
+    ];
+    if (cursor) {
+        conditions.push(lt(generationRequests.createdAt, new Date(cursor)));
+    }
+
+    const rows = await db
+        .select()
+        .from(generationRequests)
+        .where(and(...conditions))
+        .orderBy(desc(generationRequests.createdAt))
+        .limit(limit + 1);
+
     const hasMore = rows.length > limit;
-    const page = rows.slice(0, limit).reverse();
+    const page = rows.slice(0, limit).reverse().map((row) => ({
+        ...row,
+        assets: row.assets ?? [],
+    }));
     const nextCursor =
       hasMore && page.length > 0 ? String(page[0].createdAt.toISOString()) : null;
-  
+
     return { data: page, nextCursor, hasMore };
   }
 
@@ -509,4 +580,121 @@ export const attachAssetsToFileNodes = async ({projectId, assetIds, folderId}: A
 
         return { assets: orderedAssets, fileNodes: insertedFileNodes };
     });
+}
+
+
+export const getVendorParamsMapping = async (vendor: string, modelId: string, params: string[]) => {
+    if (params.length === 0) {
+        return [];
+    }
+
+    return db.select({
+        parameter: modelParameters.key,
+        vendorParameter: llmVendorsAndParameters.vendorParamName,
+        optionValue: parameterOptions.value,
+        vendorOption: llmVendorsAndParameterOptions.vendorOptionValue,
+    })
+    .from(modelsAndParameters)
+    .innerJoin(modelParameters, eq(modelParameters.id, modelsAndParameters.parameterId))
+    .innerJoin(llmVendors, eq(llmVendors.name, vendor))
+    .innerJoin(
+        llmVendorsAndParameters,
+        and(
+            eq(llmVendorsAndParameters.vendorId, llmVendors.id),
+            eq(llmVendorsAndParameters.parameterId, modelsAndParameters.parameterId),
+        ),
+    )
+    .leftJoin(
+        modelsAndParameterOptions,
+        and(
+            eq(modelsAndParameterOptions.modelId, modelsAndParameters.modelId),
+            eq(modelsAndParameterOptions.parameterId, modelsAndParameters.parameterId),
+        ),
+    )
+    .leftJoin(
+        parameterOptions,
+        and(
+            eq(parameterOptions.id, modelsAndParameterOptions.optionId),
+            eq(parameterOptions.parameterId, modelsAndParameterOptions.parameterId),
+        ),
+    )
+    .leftJoin(
+        llmVendorsAndParameterOptions,
+        and(
+            eq(llmVendorsAndParameterOptions.parameterOptionId, parameterOptions.id),
+            eq(llmVendorsAndParameterOptions.vendorId, llmVendors.id),
+        ),
+    )
+    .where(and(
+        eq(modelsAndParameters.modelId, modelId),
+        inArray(modelParameters.key, params),
+    ));
+}
+
+export const getVendorModelApiName = async (vendor: string, modelId: string) => {
+    const result = await db.select({
+        vendor: llmVendors.name,
+        apiName: llmVendorsAndModels.apiName,
+    })
+    .from(llmVendorsAndModels)
+    .innerJoin(llmVendors, eq(llmVendorsAndModels.vendorId, llmVendors.id))
+    .where(and(eq(llmVendors.name, vendor), eq(llmVendorsAndModels.modelId, modelId)));
+    return result[0];
+}
+
+export const getModelSchema = async (modelId: string) => {
+    const rows = await db.select({
+        key: modelParameters.key,
+        type: modelParameters.type,
+        description: modelParameters.description,
+        constraints: modelsAndParameters.constraints,
+        required: modelsAndParameters.required,
+        optionValue: parameterOptions.value,
+    })
+    .from(modelsAndParameters)
+    .innerJoin(modelParameters, eq(modelParameters.id, modelsAndParameters.parameterId))
+    .leftJoin(
+        modelsAndParameterOptions,
+        and(
+            eq(modelsAndParameterOptions.modelId, modelsAndParameters.modelId),
+            eq(modelsAndParameterOptions.parameterId, modelsAndParameters.parameterId),
+        ),
+    )
+    .leftJoin(
+        parameterOptions,
+        and(
+            eq(parameterOptions.id, modelsAndParameterOptions.optionId),
+            eq(parameterOptions.parameterId, modelsAndParameterOptions.parameterId),
+        ),
+    )
+    .where(eq(modelsAndParameters.modelId, modelId));
+
+    const byKey = new Map<string, {
+        key: string
+        type: (typeof rows)[number]['type']
+        description: string | null
+        constraints: (typeof rows)[number]['constraints']
+        required: boolean
+        options: string[]
+    }>()
+
+    for (const row of rows) {
+        let parameter = byKey.get(row.key)
+        if (!parameter) {
+            parameter = {
+                key: row.key,
+                type: row.type,
+                description: row.description,
+                constraints: row.constraints,
+                required: row.required,
+                options: [],
+            }
+            byKey.set(row.key, parameter)
+        }
+        if (row.optionValue != null) {
+            parameter.options.push(row.optionValue)
+        }
+    }
+
+    return [...byKey.values()]
 }

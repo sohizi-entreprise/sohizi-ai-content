@@ -13,6 +13,11 @@ const keysFactory = {
         projectId: string,
         params: { name?: string; format?: string },
     ) => ['project', projectId, 'assets-folder', params],
+    folderMedia: (
+        projectId: string,
+        folderId: string,
+        format?: string,
+    ) => ['project', projectId, 'folder-media', folderId, format],
     projectOptions: () => ['projectOptions'],
     templates: () => ['templates'],
     publicTemplates: () => ['templates', 'public'],
@@ -112,6 +117,23 @@ export const listProjectAssetsQueryOptions = (
                 limit: options?.limit,
                 signal,
             }),
+        staleTime: 1000 * 60 * 1,
+    })
+
+export const listFolderMediaQueryOptions = (
+    projectId: string,
+    folderId: string | null,
+    options?: { format?: 'image' | 'video' | 'audio'; limit?: number },
+) =>
+    queryOptions({
+        queryKey: keysFactory.folderMedia(projectId, folderId ?? '', options?.format),
+        queryFn: ({ signal }) =>
+            requests.listFolderMedia(projectId, folderId!, {
+                format: options?.format,
+                limit: options?.limit,
+                signal,
+            }),
+        enabled: Boolean(folderId),
         staleTime: 1000 * 60 * 1,
     })
 

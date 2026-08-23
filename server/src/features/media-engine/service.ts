@@ -6,7 +6,7 @@ import { getProjectById } from '../project/repo';
 import z from 'zod';
 import { getFileNodeById, listDirectoryFiles, ORDER_GAP } from '../file-system/repo';
 import { AssetType, CursorPaginationOptions } from '@/type';
-import { userModelMessageSchema } from 'ai';
+import type { UserModelMessage } from 'ai';
 import { broadcastCancellation, createCancellableController } from '../generation-request/abort-manager';
 import { Session } from '../ai/agent/core/session';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,6 +18,8 @@ import { BaseStreamData, decrementKey, incrementKey, markStreamActive, readStrea
 import { sse } from 'elysia';
 import { ZipArchive } from 'archiver';
 import { PassThrough, Readable } from 'node:stream';
+import { inngest } from '@/lib/inngest/client';
+import type { SubmitPayload } from './providers/type';
 
 
 export async function getUploadUrl(projectId: string, data: GetUploadUrlInput) {
@@ -123,95 +125,96 @@ export async function uploadSuccess(projectId: string, data: z.infer<typeof uplo
 }
 
 export const assetRequestSchema = z.object({
-    userPrompt: userModelMessageSchema,
-    settings: z.record(z.string(), z.any()).optional(),
+    model: z.string(),
+    prompt: z.string().default(''),
+    settings: z.record(z.string(), z.any()),
+    context: z.record(z.string(), z.any()),
+    runMode: z.enum(['agent', 'direct']).default('direct'),
 })
 
 export type RunAgentPayload = {
     userId: string;
     projectId: string;
+    organizationId: string;
 } & z.infer<typeof assetRequestSchema>;
 
 export const generateAsset = async (payload: RunAgentPayload) => {
-    const run = await repo.createAssetRequest(payload.projectId, payload.userPrompt, payload.settings);
+    const requestPayload = {
+        model: payload.model,
+        prompt: payload.prompt,
+        settings: payload.settings,
+        context: payload.context,
+        runMode: payload.runMode,
+    };
+    const run = await repo.createAssetRequest(payload.projectId, payload.userId, requestPayload);
     await markStreamActive(run.id);
     await incrementKey(run.id);
 
-    runAgent({...payload, runId: run.id});
+    runAiGeneration({...payload, runId: run.id});
     return run;
 }
 
 export const cancelGeneration = async (requestId: string) => {
     await broadcastCancellation(requestId);
-    await repo.updateAssetRequest(requestId, { status: 'finished' });
+    await repo.updateAssetRequest(requestId, { status: 'aborted' });
     await removeStreamActive(requestId);
     // Cancel any running inngest job
     return {ok: true, error: null};
 }
 
-async function runAgent(payload: RunAgentPayload & { runId: string }){
-    const { userId, projectId, runId, userPrompt } = payload;
-    const { controller, cleanup } = await createCancellableController(runId);
-    
-    try {
-      await repo.updateAssetRequest(runId, { status: 'running' })
-
-      const project = await getProjectById(projectId);
-      
-      const session = new Session({
-          sessionId: uuidv4(),
-          userId,
-          organizationId: project.organizationId,
-          projectId: project.id,
-          runId,
-      })
-      const persistence = new MediaGenerationPersistence(runId);
-  
-      const agentDefinition = getAgentDefinition('media-generator');
-      if(!agentDefinition){
-        throw new Error('Agent definition not found');
-      }
-      const model = await getModelWithVendorBinding(agentDefinition.modelId, agentDefinition.vendor);
-      if(!model){
-        throw new Error('Model not found');
-      }
-      const agent = new Agent({
-          name: agentDefinition.name,
-          systemPrompt: fullPrompt(agentDefinition.baseSystemPrompt, payload.settings ?? {}),
-          session,
-          model,
-          vendor: agentDefinition.vendor,
-          modelConfig: agentDefinition.modelConfig,
-          persistence: persistence,
-          maxContextTokens: agentDefinition.maxContextTokens,
-          contextThreshold: agentDefinition.contextThreshold,
-          summaryModelId: agentDefinition.summaryModelId,
-      })
-  
-      const chunks = agent.runLoop(
-          userPrompt,
-          controller.signal,
-          250,
-      )
-  
-      for await (const chunk of chunks) {
-        await writeStreamData(runId, {runId, event:'chunk', chunk});
-      }
-  
-      await repo.updateAssetRequest(runId, { status: 'finished' });
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Completion failed';
-      console.error(error);
-      await repo.updateAssetRequest(runId, { status: 'error', error: errorMessage });
-    } finally {
-      const remaining = await decrementKey(runId);
-      if (remaining === 0) {
-        await removeStreamActive(runId);
-      }
-      await cleanup();
+export const deleteGenerationRequest = async (projectId: string, requestId: string) => {
+    const deleted = await repo.deleteAssetRequest(projectId, requestId);
+    if (!deleted) {
+        throw new NotFound('Generation request not found');
     }
-  }
+    return { ok: true };
+}
+
+async function runAiGeneration(payload: RunAgentPayload & { runId: string }){
+    const { runId, 
+            organizationId, 
+            projectId,
+            userId,
+           } = payload;
+    const request = {
+        model: payload.model,
+        prompt: payload.prompt,
+        settings: payload.settings,
+        context: payload.context,
+        runMode: payload.runMode,
+    }
+    try{
+        await repo.updateAssetRequest(runId, { status: 'processing', request })
+
+        const jobPayload = {
+            ...request.settings,
+            ...(request.prompt ? { prompt: request.prompt } : {}),
+        }
+
+        await inngest.send({
+            name: 'media/generate',
+            data: {
+                requestId: runId,
+                projectId: projectId,
+                organizationId: organizationId,
+                userId: userId,
+                model: payload.model,
+                payload: jobPayload,
+                mediaType: toProviderMediaType(payload.context),
+                runMode: payload.runMode,
+                _reservationId: uuidv4(),
+            },
+        });
+
+    } catch (error) {
+        console.error(error);
+        await repo.updateAssetRequest(runId, { status: 'failed', error: error instanceof Error ? error.message : 'Completion failed' });
+        const remaining = await decrementKey(runId);
+        if (remaining === 0) {
+            await removeStreamActive(runId);
+        }
+    }
+}
 
 
 
@@ -221,6 +224,13 @@ export const listAssets = async(projectId: string, options?: CursorPaginationOpt
 
 export const listAiGeneratedAssets = async(projectId: string, options?: CursorPaginationOptions & { type?: AssetType }) => {
     return await repo.listAiGeneratedAssets(projectId, options);
+}
+
+export const listUploadedAssets = async(
+    projectId: string,
+    options?: CursorPaginationOptions & { type?: AssetType },
+) => {
+    return await repo.listUploadedAssets(projectId, options);
 }
 
 export async function* getRequestStreams(requestId: string) {
@@ -378,13 +388,10 @@ function buildZipEntryName(fileName: string, usedNames: Map<string, number>) {
     return `${sanitizedName.slice(0, extensionIndex)}-${currentCount + 1}${sanitizedName.slice(extensionIndex)}`;
 }
 
-function fullPrompt(basePrompt: string, settings: Record<string, unknown>){
-    return `
-${basePrompt}
 
-<media_generation_context>
-The following JSON contains the active settings selected by the user.
-${JSON.stringify(settings)}
-</media_generation_context>
-    `.trim();
+function toProviderMediaType(context: Record<string, unknown>): 'image' | 'video' | 'audio' {
+    const mediaType = context.mediaType ?? context.generationType;
+    if (mediaType === 'video') return 'video';
+    if (mediaType === 'audio' || mediaType === 'music' || mediaType === 'dialogue') return 'audio';
+    return 'image';
 }

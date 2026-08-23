@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Download, Edit, FilePlus2, Folder, MoreVertical, Trash2, X } from 'lucide-react'
+import { Download, Eye, FilePlus2, Folder, RotateCcw, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { MediaAsset } from '../requests'
 import { buildOptimizeddImageUrl } from '@/utils/transform-url'
@@ -29,6 +23,8 @@ import { searchFilesByName } from '@/features/projects/request'
 import AudioPlayer from './audio-player'
 import { RenderHtml } from './html-asset-preview'
 import { Checkbox } from '@/components/ui/checkbox'
+import { MediaCardMenu } from './media-card-menu'
+import { RequestSettingsDialog } from './request-settings-dialog'
 
 type MediaCardProps = {
   item: MediaAsset
@@ -62,7 +58,7 @@ export function MediaCard({
         />
       </div>
       <RouteMediaAsset item={item} />
-      <CardMenu asset={item} projectId={projectId} className='absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300'/>
+      <CardMenu asset={item} projectId={projectId} className='absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 transition-opacity duration-300'/>
     </div>
   )
 }
@@ -139,10 +135,11 @@ function CardMenu({
   projectId: string
 }) {
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   const [folderQuery, setFolderQuery] = useState('')
   const [debouncedFolderQuery, setDebouncedFolderQuery] = useState('')
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
-  const { onDelete, onEdit, onDownload, onMoveToFolder } = useAssetMenu(projectId, asset)
+  const { onDelete, onReuseSettings, onDownload, onMoveToFolder } = useAssetMenu(projectId, asset)
   const trimmedFolderQuery = folderQuery.trim()
   const trimmedDebouncedFolderQuery = debouncedFolderQuery.trim()
 
@@ -194,65 +191,45 @@ function CardMenu({
     {
       label: 'Move to folder',
       icon: FilePlus2,
-      onClick: openMoveDialog
+      onClick: openMoveDialog,
     },
     {
-      label: 'Edit',
-      icon: Edit,
-      onClick: onEdit
+      label: 'Reuse settings',
+      icon: RotateCcw,
+      onClick: onReuseSettings,
     },
     {
-      label: ' Download',
+      label: 'View settings',
+      icon: Eye,
+      onClick: () => setSettingsDialogOpen(true),
+    },
+    {
+      label: 'Download',
       icon: Download,
-      onClick: async() => {
+      onClick: async () => {
         const { ok } = await onDownload()
-        if(!ok){
+        if (!ok) {
           toast.error('Failed to download asset')
         }
-      }
+      },
     },
     {
       label: 'Delete',
       icon: Trash2,
-      onClick:  onDelete
+      onClick: onDelete,
     },
   ]
 
-
-
-
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className={cn(
-              'rounded-full bg-black/50 text-white backdrop-blur hover:bg-black/70 hover:text-white',
-              className,
-            )}
-            aria-label="Media actions"
-          >
-            <MoreVertical className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          className="border-white/10 bg-black/90 text-white backdrop-blur-xl"
-        >
-          {
-            options.map((option) => (
-              <DropdownMenuItem key={option.label} onClick={option.onClick}>
-                <option.icon className="size-4" />
-                {option.label}
-              </DropdownMenuItem>
-            ))
-          }
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <MediaCardMenu className={className} options={options} />
+      <RequestSettingsDialog
+        open={settingsDialogOpen}
+        onOpenChange={setSettingsDialogOpen}
+        request={asset.generationRequest?.request ?? null}
+      />
       <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
-        <DialogContent>
+        <DialogContent onCloseAutoFocus={(event) => event.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Move to folder</DialogTitle>
             <DialogDescription>

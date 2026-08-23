@@ -43,11 +43,6 @@ export type ChatCompletionResponse = {
   requestType: 'chat-completion'
 }
 
-export type MediaGenerationResponse = {
-  requestId: string
-  requestType: 'media-generation'
-}
-
 export const submitChatCompletion = async (
   projectId: string,
   data: Record<string, unknown>,
@@ -56,14 +51,6 @@ export const submitChatCompletion = async (
     `/generations/chat-completion/${projectId}`,
     data,
   )
-  return response.data
-}
-
-export const submitMediaGeneration = async (
-  projectId: string,
-  data: Record<string, unknown>,
-): Promise<MediaGenerationResponse> => {
-  const response = await api.post(`/generations/media/${projectId}`, data)
   return response.data
 }
 

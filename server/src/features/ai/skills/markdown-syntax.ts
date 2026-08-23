@@ -28,11 +28,13 @@ One syntax everywhere (documents, skills, and chat):
 @[Display Name](file:FILE_ID?format=FORMAT)
 \`\`\`
 
-Optional chat-citation query params (read-only for you in user messages — do **not** write these into file content):
+Optional chat-citation query param (read-only for you in user messages — do **not** write this into file content):
 
 \`\`\`
-@[Display Name](file:FILE_ID?format=FORMAT&lines=L2-L5&snippet=truncated+text)
+@[Display Name](file:FILE_ID?format=FORMAT&lines=L2-L5)
 \`\`\`
+
+The full selected text is provided separately in \`<attached_selections>\`. Do not treat the compact file tag as the complete citation.
 
 ---
 
@@ -48,7 +50,7 @@ Rules:
 - \`Display Name\` — the file's display name (no path, no extension)
 - \`FILE_ID\` — the real file node UUID from explore/search tools (never invent IDs)
 - \`FORMAT\` — one of: \`markdown\`, \`json\`, \`skill\`, \`image\`, \`video\`, \`audio\`, \`document\`, \`html\`, \`video-editor\`, \`ai-generated\`
-- \`lines\` / \`snippet\` — optional; only appear in chat citations, never invent them in documents
+- \`lines\` — optional; only appear in chat citations, never invent them in documents
 - Inline only — place inside a paragraph or heading, not on its own as a fake block
 - Leave a trailing space after the mention when continuing text
 
@@ -258,7 +260,7 @@ File mentions inside aligned HTML stay in the document form:
 
 1. Emit raw markdown/HTML as file content — do not wrap the whole document in a \`\`\`markdown fence unless the user asks for an example.
 2. Never invent file IDs; resolve them with tools first, then emit \`@[…](file:…?format=…)\`.
-3. Never write \`lines\` / \`snippet\` query params into document content — those are chat-citation only.
+3. Never write \`lines\` query params into document content — those are chat-citation only.
 4. Never write diff markers (\`{+…+}\`, \`[-…-]\`) into content — the system adds those.
 5. Prefer image-layout blocks for placed imagery; use \`:::youtube {src="…"} :::\` for video embeds in markdown files.
 6. Keep headings at h1–h3 only.

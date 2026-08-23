@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
 import * as service from './service'
-import { chatCompletionRequestSchema, mediaGenerationRequestSchema } from './schema'
+import { chatCompletionRequestSchema } from './schema'
 import { assertProjectAccess } from '@/lib/authorize'
 import { authMiddleware } from '@/lib/auth-middleware'
 
@@ -11,13 +11,6 @@ export const generationRequestRoutes = new Elysia({ prefix: '/generations' })
         return service.handleChatCompletionRequest(body, user.id, params.projectId)
     }, {
         body: chatCompletionRequestSchema,
-        params: t.Object({ projectId: t.String({ format: 'uuid' }) }),
-    })
-    .post('/media/:projectId', async ({ params, body, user }) => {
-        await assertProjectAccess(user.id, params.projectId)
-        return service.handleMediaGenerationRequest(body, user.id, params.projectId)
-    }, {
-        body: mediaGenerationRequestSchema,
         params: t.Object({ projectId: t.String({ format: 'uuid' }) }),
     })
     .post('/cancel/:projectId/:requestId', async ({ params, user }) => {

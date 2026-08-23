@@ -17,7 +17,7 @@ export const createGenerationRequest = async (payload: CreateGenerationRequestPa
 
 export const updateGenerationRequest = async (
     id: string,
-    data: { status: GenerationRequestStatus; error?: string; history?: Record<string, unknown>[] },
+    data: { status?: GenerationRequestStatus; error?: string; history?: Record<string, unknown>[]; request?: Record<string, unknown> },
 ) => {
     const result = await db
         .update(generationRequests)
@@ -35,6 +35,18 @@ export const appendRequestAssets = async (
         .update(generationRequests)
         .set({
             assets: sql`coalesce(${generationRequests.assets}, '[]'::jsonb) || ${JSON.stringify(newAssets)}::jsonb`,
+        })
+        .where(eq(generationRequests.id, requestId));
+}
+
+export const appendRequestHistory = async (
+    requestId: string,
+    newHistory: Record<string, unknown>[],
+) => {
+    await db
+        .update(generationRequests)
+        .set({
+            history: sql`coalesce(${generationRequests.history}, '[]'::jsonb) || ${JSON.stringify(newHistory)}::jsonb`,
         })
         .where(eq(generationRequests.id, requestId));
 }
@@ -66,6 +78,14 @@ export const getPendingRequests = async (projectId: string, userId: string) => {
             ),
         )
         .orderBy(desc(generationRequests.createdAt));
+}
+
+export const deleteGenerationRequest = async (projectId: string, requestId: string) => {
+    const result = await db
+        .delete(generationRequests)
+        .where(and(eq(generationRequests.id, requestId), eq(generationRequests.projectId, projectId)))
+        .returning({ id: generationRequests.id });
+    return result[0] ?? null;
 }
 
 export const getGenerationRequestsByIds = async (projectId: string, requestIds: string[]) => {

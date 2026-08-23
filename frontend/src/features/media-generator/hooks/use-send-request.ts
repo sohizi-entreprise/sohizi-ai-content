@@ -1,10 +1,11 @@
 import { useMutation } from "@tanstack/react-query"
+import type { ModelParameterBinding } from "@/features/admin/types"
 import { startGenerationMutationOptions } from "../query-mutations"
 import { AssetRequest } from "../requests"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
-import { ImagePart, MsgTextPart, FilePart } from "@/features/chat/types"
 import { cleanMediaType } from "@/utils/clean-mediaType"
 import { getAgentMediaType, showsVoiceSelector } from "../constants"
+import { coerceParameterSettings } from "../lib/parameter-assets"
 
 
 export const useSendRequest = (projectId: string) => {
@@ -17,46 +18,37 @@ export const useSendRequest = (projectId: string) => {
   const generationSubtype = useMediaGeneratorStore((state) => state.generationSubtype)
   const selectedModelId = useMediaGeneratorStore((state) => state.selectedModelId)
   const parameterValues = useMediaGeneratorStore((state) => state.parameterValues)
+  const runMode = useMediaGeneratorStore((state) => state.runMode)
   const clearChatInput = useMediaGeneratorStore((state) => state.clearChatInput)
 
   const appendActiveGenerationRequest = useMediaGeneratorStore((state) => state.appendActiveGenerationRequest)
 
   const uploadedAttachments = attachments.filter((attachment) => attachment.status === 'uploaded')
 
-  const content: (MsgTextPart | ImagePart | FilePart)[] = [
-    {
-      type: 'text',
-      text: prompt,
-    },
-    ...uploadedAttachments.map((attachment) => ({
-      type: 'file' as const,
-      data: new URL(attachment.url),
+  const context = {
+    model: selectedModelId,
+    mediaType: getAgentMediaType(generationType, generationSubtype),
+    generationType,
+    subtype: generationSubtype,
+    referencedFiles: uploadedAttachments.map((attachment) => ({
+      type: attachment.type,
+      url: attachment.url,
       mediaType: cleanMediaType(attachment.type, attachment.url),
     })),
-  ]
-
-  const payload: AssetRequest= {
-    userPrompt: {
-        role: 'user',
-        content
-    },
-    settings: {
-        mediaType: getAgentMediaType(generationType, generationSubtype),
-        generationType,
-        subtype: generationSubtype,
-        model: selectedModelId,
-        referencedFiles: uploadedAttachments.map((attachment) => ({
-          type: attachment.type,
-          url: attachment.url,
-        })),
-        ...(showsVoiceSelector(generationType, generationSubtype)
+    ...(showsVoiceSelector(generationType, generationSubtype)
           ? { voice: promptSettings.audio.voice }
           : {}),
-        ...parameterValues,
-    }
   }
 
-  const sendRequest = async () => {
+  const sendRequest = async (parameters: ModelParameterBinding[] = []) => {
+    const payload: AssetRequest = {
+      model: selectedModelId ?? '',
+      prompt,
+      settings: coerceParameterSettings(parameterValues, parameters),
+      context,
+      runMode,
+    }
+
     handleSendRequest(payload, {
         onSuccess: (data) => {
             appendActiveGenerationRequest({requestId: data.id})
@@ -66,7 +58,6 @@ export const useSendRequest = (projectId: string) => {
             console.error(error)
         }
     })
-    
   }
 
   const disableButton = !prompt || isPending

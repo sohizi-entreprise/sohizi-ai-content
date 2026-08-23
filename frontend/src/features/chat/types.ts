@@ -289,6 +289,22 @@ export type ProjectInfo = {
 // TO BE KEPT
 // ============================================================================
 
+export type AttachedSelection = {
+  file: string
+  startLine: number
+  endLine: number
+  selectedText: string
+  textBefore?: string
+  textAfter?: string
+  isEntireFile: boolean
+}
+
+export type EditorContext = {
+  focusedTab: string | null
+  openTabs: string[]
+  selections: AttachedSelection[]
+}
+
 export type ChatCompletionRequest = {
   modelId: string;
   userPrompt: {
@@ -296,7 +312,7 @@ export type ChatCompletionRequest = {
     content: (ImagePart | FilePart | MsgTextPart)[];
   };
   conversationId: string | null;
-  editorContext?: Record<string, unknown>;
+  editorContext?: EditorContext;
   isNew: boolean;
 }
 
