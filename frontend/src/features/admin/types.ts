@@ -1,17 +1,17 @@
-export type TokenPricing = {
-  currency: 'USD'
+export type ModelBasePricing = {
   unit: 'per_1m_tokens'
-  basis?: 'request_tokens' | 'billable_tokens'
-  input: Array<{ up_to: number | null; rate: number }>
-  output: Array<{ up_to: number | null; rate: number }>
-  cached_input?: Array<{ up_to: number | null; rate: number }>
+  input: number
+  output: number
+  cached_input?: number
+} | {
+  unit: 'per_inference'
+  rate: number
 }
 
 export type AdminModelVendor = {
   vendorId: string
   name: string
   apiName: string
-  pricing: TokenPricing | null
   enabled: boolean
 }
 
@@ -19,7 +19,9 @@ export type AdminModel = {
   id: string
   provider: string
   name: string
+  description: string | null
   enabled: boolean
+  pricing?: ModelBasePricing | null
   createdAt: string
   updatedAt: string
   categories: string[]
@@ -72,6 +74,7 @@ export type ParameterOptionSummary = {
   label: string
   value: string
   description: string | null
+  priceMultiplier?: number | null
 }
 
 export type OptionVendorMapping = {
@@ -137,7 +140,6 @@ export type ModelParameterBinding = {
   type: ModelParameterDataType
   description: string | null
   xUiComponent: ModelParameterUIComponent | null
-  providerParamName: string | null
   required: boolean
   sortOrder: number
   defaultValue: string | null
@@ -147,11 +149,10 @@ export type ModelParameterBinding = {
 
 export type ReplaceModelParameterBinding = {
   parameterId: string
-  providerParamName?: string | null
   required?: boolean
   defaultValue?: string | null
   constraints?: ModelParameterConstraint | null
-  optionIds?: string[]
+  options?: Array<{ optionId: string; priceMultiplier?: number | null }>
   sortOrder?: number
 }
 
@@ -174,7 +175,6 @@ export type UpdateVendorInput = Partial<CreateVendorInput>
 export type CreateModelVendorBindingInput = {
   vendorId: string
   apiName: string
-  pricing?: TokenPricing | null
   enabled?: boolean
 }
 
@@ -193,7 +193,9 @@ export type CreateModelInput = {
   id: string
   provider: string
   name: string
+  description?: string | null
   enabled?: boolean
+  pricing?: ModelBasePricing | null
   categoryNames: string[]
 }
 

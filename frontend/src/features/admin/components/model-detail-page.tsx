@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -41,7 +42,6 @@ import {
   type ParameterBindingDraft,
 } from './model-parameters-editor'
 import {
-  emptyPricingFormState,
   formStateToPricing,
   PricingEditor,
   pricingToFormState,
@@ -61,31 +61,71 @@ export function ModelDetailPage({ modelId }: Props) {
   const { data: existingBindings } = useQuery(listModelParametersQueryOptions(modelId))
   const { data: vendors = EMPTY_LIST } = useQuery(listAdminVendorsQueryOptions())
 
+  if (isLoading) {
+    return <p className="text-sm text-muted-foreground">Loading model…</p>
+  }
+  if (error || !model) {
+    return <p className="text-sm text-destructive">Failed to load model</p>
+  }
+
+  return (
+    <ModelDetailForm
+      key={model.id}
+      model={model}
+      categories={categories}
+      catalog={catalog}
+      existingBindings={existingBindings}
+      vendors={vendors}
+    />
+  )
+}
+
+function ModelDetailForm({
+  model,
+  categories,
+  catalog,
+  existingBindings,
+  vendors,
+}: {
+  model: {
+    id: string
+    provider: string
+    name: string
+    description: string | null
+    enabled: boolean
+    pricing?: Parameters<typeof pricingToFormState>[0]
+    categories: string[]
+    vendors: Array<{
+      vendorId: string
+      name: string
+      apiName: string
+      enabled: boolean
+    }>
+  }
+  categories: Array<{ id: string; name: string }>
+  catalog: Parameters<typeof bindingsToDrafts>[1]
+  existingBindings: Parameters<typeof bindingsToDrafts>[0] | undefined
+  vendors: Array<{ id: string; name: string }>
+}) {
   const [form, setForm] = useState({
-    provider: '',
-    name: '',
-    enabled: true,
-    categoryNames: [] as string[],
+    provider: model.provider,
+    name: model.name,
+    description: model.description ?? '',
+    enabled: model.enabled,
+    categoryNames: model.categories,
   })
-  const [bindings, setBindings] = useState<ParameterBindingDraft[]>([])
+  const [pricing, setPricing] = useState<PricingFormState>(() => pricingToFormState(model.pricing))
+  const [bindings, setBindings] = useState<ParameterBindingDraft[]>(() =>
+    existingBindings ? bindingsToDrafts(existingBindings, catalog) : [],
+  )
   const [saveError, setSaveError] = useState<string | null>(null)
-  const hydratedBindingsFor = useRef<string | null>(null)
+  const hydratedBindingsFor = useRef<string | null>(existingBindings ? model.id : null)
 
   const updateMutation = useMutation(updateAdminModelMutationOptions())
   const replaceParametersMutation = useMutation(replaceModelParametersMutationOptions())
 
   useEffect(() => {
-    if (!model) return
-    setForm({
-      provider: model.provider,
-      name: model.name,
-      enabled: model.enabled,
-      categoryNames: model.categories,
-    })
-  }, [model])
-
-  useEffect(() => {
-    if (!model || !existingBindings) return
+    if (!existingBindings) return
     if (hydratedBindingsFor.current === model.id) {
       setBindings((prev) => {
         let changed = false
@@ -103,7 +143,7 @@ export function ModelDetailPage({ modelId }: Props) {
     }
     hydratedBindingsFor.current = model.id
     setBindings(bindingsToDrafts(existingBindings, catalog))
-  }, [model, existingBindings, catalog])
+  }, [model.id, existingBindings, catalog])
 
   const toggleCategory = (name: string, checked: boolean) => {
     setForm((prev) => ({
@@ -118,18 +158,21 @@ export function ModelDetailPage({ modelId }: Props) {
     event.preventDefault()
     setSaveError(null)
     try {
+      const parameterPayload = draftsToPayload(bindings)
       await updateMutation.mutateAsync({
-        id: modelId,
+        id: model.id,
         input: {
           provider: form.provider,
           name: form.name,
+          description: form.description.trim() || null,
           enabled: form.enabled,
           categoryNames: form.categoryNames,
+          pricing: formStateToPricing(pricing),
         },
       })
       await replaceParametersMutation.mutateAsync({
-        modelId,
-        input: draftsToPayload(bindings),
+        modelId: model.id,
+        input: parameterPayload,
       })
     } catch (err) {
       const message =
@@ -137,13 +180,6 @@ export function ModelDetailPage({ modelId }: Props) {
         (err instanceof Error ? err.message : 'Failed to save model')
       setSaveError(message)
     }
-  }
-
-  if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading model…</p>
-  }
-  if (error || !model) {
-    return <p className="text-sm text-destructive">Failed to load model</p>
   }
 
   const pending = updateMutation.isPending || replaceParametersMutation.isPending
@@ -179,6 +215,18 @@ export function ModelDetailPage({ modelId }: Props) {
               required
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="model-description">Description</Label>
+            <Textarea
+              id="model-description"
+              value={form.description}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, description: event.target.value }))
+              }
+              rows={3}
+              placeholder="Optional summary of what this model is for."
+            />
+          </div>
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">
             <Label htmlFor="model-enabled">Enabled</Label>
             <Switch
@@ -204,6 +252,14 @@ export function ModelDetailPage({ modelId }: Props) {
         </section>
 
         <section className="space-y-4 rounded-xl border p-4">
+          <h2 className="text-sm font-medium">Pricing</h2>
+          <p className="text-sm text-muted-foreground">
+            Listed rates for this model. Option multipliers on parameters below adjust this base rate.
+          </p>
+          <PricingEditor value={pricing} onChange={setPricing} />
+        </section>
+
+        <section className="space-y-4 rounded-xl border p-4">
           <ModelParametersEditor value={bindings} onChange={setBindings} catalog={catalog} />
         </section>
 
@@ -214,7 +270,7 @@ export function ModelDetailPage({ modelId }: Props) {
       </form>
 
       <ModelVendorsSection
-        modelId={modelId}
+        modelId={model.id}
         boundVendors={model.vendors}
         vendors={vendors}
       />
@@ -232,7 +288,6 @@ function ModelVendorsSection({
     vendorId: string
     name: string
     apiName: string
-    pricing: Parameters<typeof pricingToFormState>[0]
     enabled: boolean
   }>
   vendors: Array<{ id: string; name: string }>
@@ -242,7 +297,6 @@ function ModelVendorsSection({
   )
   const [vendorId, setVendorId] = useState('')
   const [apiName, setApiName] = useState('')
-  const [pricing, setPricing] = useState<PricingFormState>(emptyPricingFormState())
   const [error, setError] = useState<string | null>(null)
 
   const createMutation = useMutation(createModelVendorBindingMutationOptions())
@@ -258,13 +312,11 @@ function ModelVendorsSection({
         input: {
           vendorId,
           apiName: apiName.trim(),
-          pricing: formStateToPricing(pricing),
           enabled: true,
         },
       })
       setVendorId('')
       setApiName('')
-      setPricing(emptyPricingFormState())
     } catch (err) {
       const message =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
@@ -278,7 +330,7 @@ function ModelVendorsSection({
       <div>
         <h2 className="text-lg font-medium">Vendors</h2>
         <p className="text-sm text-muted-foreground">
-          Bind vendors that provide this model. Each binding has its own API name, pricing, and enabled state.
+          Bind vendors that provide this model. Each binding has its own API name and enabled state.
         </p>
       </div>
 
@@ -288,7 +340,6 @@ function ModelVendorsSection({
             <TableRow>
               <TableHead>Vendor</TableHead>
               <TableHead>API name</TableHead>
-              <TableHead>Pricing</TableHead>
               <TableHead>Enabled</TableHead>
               <TableHead className="w-16" />
             </TableRow>
@@ -309,7 +360,7 @@ function ModelVendorsSection({
             ))}
             {boundVendors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
+                <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
                   No vendors bound to this model.
                 </TableCell>
               </TableRow>
@@ -350,7 +401,6 @@ function ModelVendorsSection({
             />
           </div>
         </div>
-        <PricingEditor value={pricing} onChange={setPricing} />
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <Button type="submit" disabled={!vendorId || createMutation.isPending}>
           {createMutation.isPending ? 'Attaching…' : 'Attach vendor'}
@@ -369,55 +419,30 @@ function VendorBindingRow({
     vendorId: string
     name: string
     apiName: string
-    pricing: Parameters<typeof pricingToFormState>[0]
     enabled: boolean
   }
-  onUpdate: (input: { apiName?: string; pricing?: ReturnType<typeof formStateToPricing>; enabled?: boolean }) => void
+  onUpdate: (input: { apiName?: string; enabled?: boolean }) => void
   onDelete: () => void
 }) {
   const [apiName, setApiName] = useState(binding.apiName)
-  const [pricing, setPricing] = useState<PricingFormState>(pricingToFormState(binding.pricing))
-  const [openPricing, setOpenPricing] = useState(false)
 
   useEffect(() => {
     setApiName(binding.apiName)
-    setPricing(pricingToFormState(binding.pricing))
   }, [binding])
 
   return (
     <TableRow>
       <TableCell className="align-top font-medium">{binding.name}</TableCell>
       <TableCell className="align-top">
-        <div className="space-y-2">
-          <Input
-            value={apiName}
-            onChange={(event) => setApiName(event.target.value)}
-            onBlur={() => {
-              if (apiName.trim() && apiName.trim() !== binding.apiName) {
-                onUpdate({ apiName: apiName.trim() })
-              }
-            }}
-          />
-          <Button type="button" variant="ghost" size="sm" onClick={() => setOpenPricing((open) => !open)}>
-            {openPricing ? 'Hide pricing' : binding.pricing ? 'Edit pricing' : 'Add pricing'}
-          </Button>
-          {openPricing ? (
-            <div className="space-y-2">
-              <PricingEditor value={pricing} onChange={setPricing} />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => onUpdate({ pricing: formStateToPricing(pricing) })}
-              >
-                Save pricing
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      </TableCell>
-      <TableCell className="align-top text-xs text-muted-foreground">
-        {binding.pricing ? 'Configured' : '—'}
+        <Input
+          value={apiName}
+          onChange={(event) => setApiName(event.target.value)}
+          onBlur={() => {
+            if (apiName.trim() && apiName.trim() !== binding.apiName) {
+              onUpdate({ apiName: apiName.trim() })
+            }
+          }}
+        />
       </TableCell>
       <TableCell className="align-top">
         <Switch

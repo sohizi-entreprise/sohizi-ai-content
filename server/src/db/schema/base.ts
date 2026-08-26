@@ -15,6 +15,7 @@ import {
     bigint,
     serial,
     primaryKey,
+    numeric,
   } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import { user, organization } from './auth'
@@ -34,7 +35,6 @@ import {
   ProseDocument,
   TemplateAndSkillStatus,
   TemplateAndSkillVisibility,
-  TokenPricing,
   VideoClipProperties,
   VideoTrackType,
   FilePendingOperation,
@@ -45,6 +45,7 @@ import {
   ModelParameterConstraint,
   ModelParameterDataType,
   ModelParameterUIComponent,
+  ModelBasePricing,
 } from '@/type';
 import { FileFormat } from '@/features/file-system/constants';
 
@@ -268,13 +269,15 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
   }))
 
   // ========================= MODELS ==========================
-
+ 
   // Model tables
   export const llmModels = pgTable('llm_models', {
     id: varchar('id', { length: 50 }).primaryKey(),
     provider: varchar('provider', { length: 50 }).notNull(),
     name: varchar('name', { length: 50 }).notNull(),
+    description: text('description'),
     enabled: boolean('enabled').default(true).notNull(),
+    pricing: jsonb('pricing').$type<ModelBasePricing>(),
     ...timestamps,
   })
 
@@ -337,7 +340,6 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     parameterId: uuid('parameter_id')
       .references(() => modelParameters.id, { onDelete: 'cascade' })
       .notNull(),
-    providerParamName: varchar('provider_param_name', { length: 100 }),
     required: boolean('required').default(false).notNull(),
     sortOrder: integer('sort_order').default(0).notNull(),
     defaultValue: text('default_value'),
@@ -352,6 +354,7 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
     modelId: varchar('model_id', { length: 50 }).notNull(),
     parameterId: uuid('parameter_id').notNull(),
     optionId: uuid('option_id').notNull(),
+    priceMultiplier: numeric('price_multiplier', { precision: 10, scale: 4, mode: 'number' }),
     ...timestamps,
   }, (table) => ([
     primaryKey({ columns: [table.modelId, table.parameterId, table.optionId] }),
@@ -382,7 +385,6 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
       .references(() => llmModels.id, { onDelete: 'cascade' })
       .notNull(),
     apiName: varchar('api_name', { length: 50 }).notNull(),
-    pricing: jsonb('pricing').$type<TokenPricing>(),
     enabled: boolean('enabled').default(true).notNull(),
     ...timestamps,
   }, (table) => ([

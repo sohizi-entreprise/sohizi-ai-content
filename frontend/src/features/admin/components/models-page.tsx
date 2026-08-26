@@ -26,6 +26,7 @@ import {
 } from '../query-mutation'
 import type { AdminModel } from '../types'
 import { ModelFormDialog } from './model-form-dialog'
+import { formatModelPricingLabel } from './pricing-editor'
 
 const ALL_VALUE = '__all__'
 
@@ -170,9 +171,7 @@ export function ModelsPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {(model.vendorCount ?? 0) > 0
-                    ? `${model.vendorCount} · ${model.hasPricing ? 'Priced' : 'No pricing'}`
-                    : '—'}
+                  {`${model.vendorCount ?? 0} vendor${(model.vendorCount ?? 0) === 1 ? '' : 's'} · ${formatModelPricingLabel(model.pricing)}`}
                 </TableCell>
                 <TableCell onClick={(event) => event.stopPropagation()}>
                   <Switch

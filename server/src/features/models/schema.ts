@@ -1,18 +1,17 @@
 import { z } from 'zod'
 
-export const pricingTierSchema = z.object({
-  up_to: z.number().nullable(),
-  rate: z.number(),
-})
-
-export const tokenPricingSchema = z.object({
-  currency: z.literal('USD'),
-  unit: z.literal('per_1m_tokens'),
-  basis: z.enum(['request_tokens', 'billable_tokens']).optional(),
-  input: z.array(pricingTierSchema),
-  output: z.array(pricingTierSchema),
-  cached_input: z.array(pricingTierSchema).optional(),
-})
+export const modelBasePricingSchema = z.discriminatedUnion('unit', [
+  z.object({
+    unit: z.literal('per_1m_tokens'),
+    input: z.number().min(0),
+    output: z.number().min(0),
+    cached_input: z.number().min(0).optional(),
+  }),
+  z.object({
+    unit: z.literal('per_inference'),
+    rate: z.number().min(0),
+  }),
+])
 
 export const modelParameterTypeSchema = z.enum([
   'string',
@@ -35,14 +34,18 @@ export const createModelSchema = z.object({
   id: z.string().min(1).max(50),
   provider: z.string().min(1).max(50),
   name: z.string().min(1).max(50),
+  description: z.string().trim().max(1000).nullable().optional(),
   enabled: z.boolean().optional(),
+  pricing: modelBasePricingSchema.nullable().optional(),
   categoryNames: z.array(z.string().min(1)).default([]),
 })
 
 export const updateModelSchema = z.object({
   provider: z.string().min(1).max(50).optional(),
   name: z.string().min(1).max(50).optional(),
+  description: z.string().trim().max(1000).nullable().optional(),
   enabled: z.boolean().optional(),
+  pricing: modelBasePricingSchema.nullable().optional(),
   categoryNames: z.array(z.string().min(1)).optional(),
 })
 
@@ -113,23 +116,23 @@ export const updateVendorSchema = z.object({
 export const createModelVendorBindingSchema = z.object({
   vendorId: z.uuid(),
   apiName: z.string().min(1).max(50),
-  pricing: tokenPricingSchema.nullable().optional(),
   enabled: z.boolean().optional(),
 })
 
 export const updateModelVendorBindingSchema = z.object({
   apiName: z.string().min(1).max(50).optional(),
-  pricing: tokenPricingSchema.nullable().optional(),
   enabled: z.boolean().optional(),
 })
 
 export const modelParameterBindingSchema = z.object({
   parameterId: z.uuid(),
-  providerParamName: z.string().max(100).nullable().optional(),
   required: z.boolean().optional(),
   defaultValue: z.string().nullable().optional(),
   constraints: modelParameterConstraintSchema.nullable().optional(),
-  optionIds: z.array(z.uuid()).optional(),
+  options: z.array(z.object({
+    optionId: z.uuid(),
+    priceMultiplier: z.number().min(0).nullable().optional(),
+  })).optional(),
   sortOrder: z.number().int().optional(),
 })
 

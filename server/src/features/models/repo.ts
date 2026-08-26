@@ -13,13 +13,22 @@ import {
   parameterOptions,
 } from '@/db/schema'
 import { and, count, eq, inArray, sql } from 'drizzle-orm'
-import type { ModelParameterConstraint, TokenPricing } from '@/type'
+import type { ModelBasePricing, ModelParameterConstraint } from '@/type'
+
+const isCompleteListing = (pricing: ModelBasePricing | null | undefined) => {
+  if (!pricing) return false
+  if (pricing.unit === 'per_1m_tokens') {
+    return Number.isFinite(pricing.input) && Number.isFinite(pricing.output)
+  }
+  return pricing.unit === 'per_inference' && Number.isFinite(pricing.rate)
+}
 
 type ParameterOptionRow = {
   id: string
   label: string
   value: string
   description: string | null
+  priceMultiplier?: number | null
 }
 
 type OptionVendorMappingRow = {
@@ -72,7 +81,7 @@ export type ResolvedVendorModel = {
   enabled: boolean
   vendorName: string
   apiName: string
-  pricing: TokenPricing | null
+  pricing: ModelBasePricing | null
 }
 
 export const getModelWithVendorBinding = async (
@@ -89,7 +98,6 @@ export const getModelWithVendorBinding = async (
       vendorName: llmVendors.name,
       vendorEnabled: llmVendors.enabled,
       apiName: llmVendorsAndModels.apiName,
-      pricing: llmVendorsAndModels.pricing,
       bindingEnabled: llmVendorsAndModels.enabled,
     })
     .from(llmVendorsAndModels)
@@ -111,7 +119,7 @@ export const getModelWithVendorBinding = async (
     enabled: model.enabled,
     vendorName: row.vendorName,
     apiName: row.apiName,
-    pricing: row.pricing,
+    pricing: model.pricing,
   }
 }
 
@@ -121,14 +129,15 @@ export const getModelWithRelations = async (id: string) => {
       id: llmModels.id,
       provider: llmModels.provider,
       name: llmModels.name,
+      description: llmModels.description,
       enabled: llmModels.enabled,
+      pricing: llmModels.pricing,
       createdAt: llmModels.createdAt,
       updatedAt: llmModels.updatedAt,
       categoryName: modelCategories.name,
       vendorId: llmVendors.id,
       vendorName: llmVendors.name,
       vendorApiName: llmVendorsAndModels.apiName,
-      vendorPricing: llmVendorsAndModels.pricing,
       vendorEnabled: llmVendorsAndModels.enabled,
     })
     .from(llmModels)
@@ -148,7 +157,6 @@ export const getModelWithRelations = async (id: string) => {
     vendorId: string
     name: string
     apiName: string
-    pricing: (typeof rows)[number]['vendorPricing']
     enabled: boolean
   }> = []
   const seenCategories = new Set<string>()
@@ -165,7 +173,6 @@ export const getModelWithRelations = async (id: string) => {
         vendorId: row.vendorId,
         name: row.vendorName!,
         apiName: row.vendorApiName!,
-        pricing: row.vendorPricing,
         enabled: row.vendorEnabled!,
       })
     }
@@ -175,13 +182,15 @@ export const getModelWithRelations = async (id: string) => {
     id: first.id,
     provider: first.provider,
     name: first.name,
+    description: first.description,
     enabled: first.enabled,
+    pricing: first.pricing,
     createdAt: first.createdAt,
     updatedAt: first.updatedAt,
     categories,
     vendors,
     vendorCount: vendors.length,
-    hasPricing: vendors.some((vendor) => vendor.pricing != null),
+    hasPricing: isCompleteListing(first.pricing),
   }
 }
 
@@ -195,7 +204,6 @@ export const listModelParameterBindings = async (modelId: string) => {
       type: modelParameters.type,
       description: modelParameters.description,
       xUiComponent: modelParameters.xUiComponent,
-      providerParamName: modelsAndParameters.providerParamName,
       required: modelsAndParameters.required,
       sortOrder: modelsAndParameters.sortOrder,
       defaultValue: modelsAndParameters.defaultValue,
@@ -204,6 +212,7 @@ export const listModelParameterBindings = async (modelId: string) => {
       optionLabel: parameterOptions.label,
       optionValue: parameterOptions.value,
       optionDescription: parameterOptions.description,
+      optionPriceMultiplier: modelsAndParameterOptions.priceMultiplier,
     })
     .from(llmModels)
     .leftJoin(modelsAndParameters, eq(modelsAndParameters.modelId, llmModels.id))
@@ -238,7 +247,6 @@ export const listModelParameterBindings = async (modelId: string) => {
       type: (typeof rows)[number]['type']
       description: string | null
       xUiComponent: (typeof rows)[number]['xUiComponent']
-      providerParamName: string | null
       required: boolean
       sortOrder: number
       defaultValue: string | null
@@ -260,7 +268,6 @@ export const listModelParameterBindings = async (modelId: string) => {
         type: row.type!,
         description: row.description,
         xUiComponent: row.xUiComponent,
-        providerParamName: row.providerParamName,
         required: row.required,
         sortOrder: row.sortOrder,
         defaultValue: row.defaultValue,
@@ -275,6 +282,7 @@ export const listModelParameterBindings = async (modelId: string) => {
         label: row.optionLabel!,
         value: row.optionValue!,
         description: row.optionDescription,
+        priceMultiplier: row.optionPriceMultiplier,
       })
     }
   }
@@ -288,12 +296,13 @@ export const listAllModels = async () => {
       id: llmModels.id,
       provider: llmModels.provider,
       name: llmModels.name,
+      description: llmModels.description,
       enabled: llmModels.enabled,
+      pricing: llmModels.pricing,
       createdAt: llmModels.createdAt,
       updatedAt: llmModels.updatedAt,
       categoryName: modelCategories.name,
       vendorId: llmVendorsAndModels.vendorId,
-      vendorPricing: llmVendorsAndModels.pricing,
     })
     .from(llmModels)
     .leftJoin(modelsAndCategories, eq(llmModels.id, modelsAndCategories.modelId))
@@ -307,12 +316,13 @@ export const listAllModels = async () => {
       id: string
       provider: string
       name: string
+      description: string | null
       enabled: boolean
+      pricing: ModelBasePricing | null
       createdAt: Date
       updatedAt: Date
       categories: string[]
       vendorIds: Set<string>
-      pricedVendorCount: number
     }
   >()
 
@@ -325,12 +335,13 @@ export const listAllModels = async () => {
         id: row.id,
         provider: row.provider,
         name: row.name,
+        description: row.description,
         enabled: row.enabled,
+        pricing: row.pricing,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         categories: row.categoryName ? [row.categoryName] : [],
         vendorIds,
-        pricedVendorCount: row.vendorId && row.vendorPricing ? 1 : 0,
       })
       continue
     }
@@ -339,16 +350,13 @@ export const listAllModels = async () => {
     }
     if (row.vendorId && !existing.vendorIds.has(row.vendorId)) {
       existing.vendorIds.add(row.vendorId)
-      if (row.vendorPricing) {
-        existing.pricedVendorCount += 1
-      }
     }
   }
 
-  return [...byId.values()].map(({ vendorIds, pricedVendorCount, ...model }) => ({
+  return [...byId.values()].map(({ vendorIds, ...model }) => ({
     ...model,
     vendorCount: vendorIds.size,
-    hasPricing: pricedVendorCount > 0,
+    hasPricing: isCompleteListing(model.pricing),
   }))
 }
 
@@ -420,7 +428,9 @@ export const createModel = async (data: {
   id: string
   provider: string
   name: string
+  description?: string | null
   enabled?: boolean
+  pricing?: ModelBasePricing | null
 }) => {
   const [created] = await db
     .insert(llmModels)
@@ -428,7 +438,9 @@ export const createModel = async (data: {
       id: data.id,
       provider: data.provider,
       name: data.name,
+      description: data.description,
       enabled: data.enabled ?? true,
+      pricing: data.pricing ?? null,
     })
     .returning()
   return created
@@ -439,7 +451,9 @@ export const updateModel = async (
   data: Partial<{
     provider: string
     name: string
+    description: string | null
     enabled: boolean
+    pricing: ModelBasePricing | null
   }>,
 ) => {
   const [updated] = await db
@@ -781,18 +795,17 @@ export const replaceModelParameters = async (
   modelId: string,
   bindings: Array<{
     parameterId: string
-    providerParamName?: string | null
     required?: boolean
     defaultValue?: string | null
     constraints?: ModelParameterConstraint | null
-    optionIds?: string[]
+    options?: Array<{ optionId: string; priceMultiplier?: number | null }>
     sortOrder?: number
   }>,
 ) => {
   return db.transaction(async (tx) => {
     const parameterIds = [...new Set(bindings.map((binding) => binding.parameterId))]
     const optionIds = [
-      ...new Set(bindings.flatMap((binding) => binding.optionIds ?? [])),
+      ...new Set(bindings.flatMap((binding) => (binding.options ?? []).map((option) => option.optionId))),
     ]
 
     if (parameterIds.length > 0) {
@@ -822,7 +835,7 @@ export const replaceModelParameters = async (
           .map((row) => `${row.parameterId}:${row.optionId}`),
       )
       const requestedPairs = bindings.flatMap((binding) =>
-        (binding.optionIds ?? []).map((optionId) => `${binding.parameterId}:${optionId}`),
+        (binding.options ?? []).map((option) => `${binding.parameterId}:${option.optionId}`),
       )
       if (requestedPairs.some((pair) => !foundPairs.has(pair))) {
         return { error: 'invalid-options' as const }
@@ -838,7 +851,6 @@ export const replaceModelParameters = async (
       bindings.map((binding, index) => ({
         modelId,
         parameterId: binding.parameterId,
-        providerParamName: binding.providerParamName ?? null,
         required: binding.required ?? false,
         defaultValue: binding.defaultValue ?? null,
         constraints: binding.constraints ?? null,
@@ -847,10 +859,11 @@ export const replaceModelParameters = async (
     )
 
     const optionRows = bindings.flatMap((binding) =>
-      (binding.optionIds ?? []).map((optionId) => ({
+      (binding.options ?? []).map((option) => ({
         modelId,
         parameterId: binding.parameterId,
-        optionId,
+        optionId: option.optionId,
+        priceMultiplier: option.priceMultiplier ?? null,
       })),
     )
     if (optionRows.length > 0) {
@@ -917,7 +930,6 @@ export const createModelVendorBinding = async (data: {
   modelId: string
   vendorId: string
   apiName: string
-  pricing?: TokenPricing | null
   enabled?: boolean
 }) => {
   const [created] = await db
@@ -926,7 +938,6 @@ export const createModelVendorBinding = async (data: {
       modelId: data.modelId,
       vendorId: data.vendorId,
       apiName: data.apiName,
-      pricing: data.pricing ?? null,
       enabled: data.enabled ?? true,
     })
     .returning()
@@ -938,7 +949,6 @@ export const updateModelVendorBinding = async (
   vendorId: string,
   data: Partial<{
     apiName: string
-    pricing: TokenPricing | null
     enabled: boolean
   }>,
 ) => {

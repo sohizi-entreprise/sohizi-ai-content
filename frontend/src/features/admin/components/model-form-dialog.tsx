@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { createAdminModelMutationOptions } from '../query-mutation'
@@ -26,6 +27,7 @@ const emptyForm = {
   id: '',
   provider: '',
   name: '',
+  description: '',
   enabled: true,
   categoryNames: [] as string[],
 }
@@ -58,6 +60,7 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
         id: form.id,
         provider: form.provider,
         name: form.name,
+        description: form.description.trim() || null,
         enabled: form.enabled,
         categoryNames: form.categoryNames,
       }
@@ -105,6 +108,18 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="model-description">Description</Label>
+            <Textarea
+              id="model-description"
+              value={form.description}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, description: event.target.value }))
+              }
+              rows={3}
+              placeholder="Optional summary of what this model is for."
             />
           </div>
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">

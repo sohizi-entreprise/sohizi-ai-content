@@ -150,7 +150,9 @@ export const createModel = async (input: CreateModelInput) => {
     id: input.id,
     provider: input.provider,
     name: input.name,
+    description: input.description,
     enabled: input.enabled,
+    pricing: input.pricing,
   })
   await modelsRepo.replaceModelCategories(created.id, categoryIds)
   return getModel(created.id)
@@ -423,7 +425,6 @@ export const createModelVendorBinding = async (modelId: string, input: CreateMod
       modelId,
       vendorId: input.vendorId,
       apiName: input.apiName,
-      pricing: input.pricing,
       enabled: input.enabled,
     })
     return getModel(modelId)
@@ -484,7 +485,7 @@ export const replaceModelParameters = async (id: string, input: ReplaceModelPara
     throw new BadRequest('One or more parameterIds do not exist')
   }
   if (result.error === 'invalid-options') {
-    throw new BadRequest('One or more optionIds do not belong to the bound parameter')
+    throw new BadRequest('One or more options do not belong to the bound parameter')
   }
   const bindings = await modelsRepo.listModelParameterBindings(id)
   return bindings.bindings

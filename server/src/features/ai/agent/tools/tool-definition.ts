@@ -26,11 +26,18 @@ type LlmConfig<T extends z.ZodSchema> = {
     buildInput: (data: z.infer<T>) => ModelMessage[];
 }
 
+type ToolExecutionOptions = {
+    session: Session;
+    state: AgentStateManager;
+    abortSignal: AbortSignal;
+    artifacts: Map<string, unknown>;
+}
+
 interface BaseToolDefinition<T extends z.ZodSchema> {
     name: string;
     description: string;
     inputSchema: T;
-    execute: (input: z.infer<T>, options: {session: Session, state: AgentStateManager, abortSignal: AbortSignal}) => Promise<ToolResult> | AsyncGenerator<AgenticToolResult, void, unknown>;
+    execute: (input: z.infer<T>, options: ToolExecutionOptions) => Promise<ToolResult> | AsyncGenerator<AgenticToolResult, void, unknown>;
 }
 
 export class BaseTool<T extends z.ZodSchema>{
@@ -47,11 +54,11 @@ export class BaseTool<T extends z.ZodSchema>{
         }
     }
 
-    async* execute(toolCall: ToolCall, session: Session, state: AgentStateManager, abortSignal: AbortSignal): AsyncGenerator<ToolResultComplete | AgentChunk | OperationChunk, void, unknown>{
+    async* execute(toolCall: ToolCall, options: ToolExecutionOptions): AsyncGenerator<ToolResultComplete | AgentChunk | OperationChunk, void, unknown>{
         try {
             const args = this.validateInput(toolCall.input as z.infer<T>);
             const isGenerator = this.params.execute.constructor.name === "AsyncGeneratorFunction";
-            const result = await this.params.execute(args, {session, state, abortSignal});
+            const result = await this.params.execute(args, options);
             if(isGenerator){
                 for await (const chunk of result as AsyncGenerator<AgenticToolResult, void, unknown>){
                     if(chunk.type === streamEvents.toolResultComplete){
@@ -129,7 +136,8 @@ export class LlmTool<T extends z.ZodSchema> extends BaseTool<T>{
         super({...rest, execute: async function*(){}});
         this.config = config;
     }
-    async* execute(toolCall: ToolCall, session: Session, _state: AgentStateManager, abortSignal: AbortSignal): AsyncGenerator<ToolResultComplete, void, unknown>{
+    async* execute(toolCall: ToolCall, options: ToolExecutionOptions): AsyncGenerator<ToolResultComplete, void, unknown>{
+        const {session, abortSignal} = options;
         const result: ToolResultComplete = {
             type: streamEvents.toolResultComplete,
             toolName: toolCall.toolName,

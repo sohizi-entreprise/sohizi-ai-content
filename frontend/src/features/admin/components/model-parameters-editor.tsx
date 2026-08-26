@@ -45,11 +45,11 @@ export type ParameterBindingDraft = {
   type: AdminParameter['type']
   description: string | null
   xUiComponent: AdminParameter['xUiComponent']
-  providerParamName: string
   required: boolean
   defaultValue: string
   constraints: ModelParameterConstraint | null
   optionIds: string[]
+  optionMultipliers: Record<string, string>
   catalogOptions: ParameterOptionSummary[]
 }
 
@@ -66,11 +66,16 @@ export const bindingsToDrafts = (
       type: binding.type,
       description: binding.description,
       xUiComponent: binding.xUiComponent,
-      providerParamName: binding.providerParamName ?? '',
       required: binding.required,
       defaultValue: binding.defaultValue ?? '',
       constraints: binding.constraints,
       optionIds: binding.options.map((option) => option.id),
+      optionMultipliers: Object.fromEntries(
+        binding.options.map((option) => [
+          option.id,
+          option.priceMultiplier == null ? '' : String(option.priceMultiplier),
+        ]),
+      ),
       catalogOptions: catalogParameter?.options ?? binding.options,
     }
   })
@@ -87,11 +92,21 @@ export const draftsToPayload = (drafts: ParameterBindingDraft[]): ReplaceModelPa
     )
     return {
       parameterId: draft.parameterId,
-      providerParamName: draft.providerParamName.trim() || null,
       required: draft.required,
       defaultValue: draft.defaultValue.trim() || null,
       constraints: hasConstraints ? constraints : null,
-      optionIds: draft.optionIds,
+      options: draft.optionIds.map((optionId) => {
+        const raw = draft.optionMultipliers[optionId]?.trim() ?? ''
+        let priceMultiplier: number | null = null
+        if (raw !== '') {
+          const parsed = Number(raw)
+          if (!Number.isFinite(parsed) || parsed < 0) {
+            throw new Error(`Invalid price multiplier for ${draft.label}`)
+          }
+          priceMultiplier = parsed
+        }
+        return { optionId, priceMultiplier }
+      }),
       sortOrder: index,
     }
   })
@@ -103,11 +118,11 @@ const parameterToDraft = (parameter: AdminParameter): ParameterBindingDraft => (
   type: parameter.type,
   description: parameter.description,
   xUiComponent: parameter.xUiComponent,
-  providerParamName: '',
   required: false,
   defaultValue: '',
   constraints: null,
   optionIds: [],
+  optionMultipliers: {},
   catalogOptions: parameter.options ?? [],
 })
 
@@ -244,22 +259,12 @@ function SortableBindingCard({
               <Trash2 className="size-4" />
             </Button>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Provider param name</Label>
-              <Input
-                value={draft.providerParamName}
-                placeholder={draft.key}
-                onChange={(event) => onChange({ providerParamName: event.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Default value</Label>
-              <Input
-                value={draft.defaultValue}
-                onChange={(event) => onChange({ defaultValue: event.target.value })}
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Default value</Label>
+            <Input
+              value={draft.defaultValue}
+              onChange={(event) => onChange({ defaultValue: event.target.value })}
+            />
           </div>
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">
             <Label className="text-xs">Required</Label>
@@ -272,7 +277,8 @@ function SortableBindingCard({
             <VisibleOptionsEditor
               options={draft.catalogOptions}
               selectedIds={draft.optionIds}
-              onChange={(optionIds) => onChange({ optionIds })}
+              multipliers={draft.optionMultipliers}
+              onChange={(optionIds, optionMultipliers) => onChange({ optionIds, optionMultipliers })}
             />
           ) : null}
           {showNumericConstraints ? (
@@ -319,11 +325,13 @@ function SortableBindingCard({
 function VisibleOptionsEditor({
   options,
   selectedIds,
+  multipliers,
   onChange,
 }: {
   options: ParameterOptionSummary[]
   selectedIds: string[]
-  onChange: (optionIds: string[]) => void
+  multipliers: Record<string, string>
+  onChange: (optionIds: string[], optionMultipliers: Record<string, string>) => void
 }) {
   if (options.length === 0) {
     return (
@@ -335,28 +343,57 @@ function VisibleOptionsEditor({
 
   const selected = new Set(selectedIds)
 
+  const toggle = (optionId: string, checked: boolean) => {
+    if (checked) {
+      onChange([...selectedIds, optionId], {
+        ...multipliers,
+        [optionId]: multipliers[optionId] ?? '',
+      })
+      return
+    }
+    const nextMultipliers = { ...multipliers }
+    delete nextMultipliers[optionId]
+    onChange(selectedIds.filter((id) => id !== optionId), nextMultipliers)
+  }
+
   return (
     <div className="space-y-1.5">
       <Label className="text-xs">Visible options</Label>
-      <div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto rounded-lg border p-3">
-        {options.map((option) => (
-          <label key={option.id} className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={selected.has(option.id)}
-              onCheckedChange={(checked) => {
-                if (checked === true) {
-                  onChange([...selectedIds, option.id])
-                  return
-                }
-                onChange(selectedIds.filter((id) => id !== option.id))
-              }}
-            />
-            <span>
-              {option.label}
-              <span className="ml-1 font-mono text-xs text-muted-foreground">{option.value}</span>
-            </span>
-          </label>
-        ))}
+      <div className="space-y-2 rounded-lg border p-3">
+        {options.map((option) => {
+          const isSelected = selected.has(option.id)
+          return (
+            <div key={option.id} className="flex items-center gap-2">
+              <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={(checked) => toggle(option.id, checked === true)}
+                />
+                <span className="min-w-0 truncate">
+                  {option.label}
+                  <span className="ml-1 font-mono text-xs text-muted-foreground">{option.value}</span>
+                </span>
+              </label>
+              {isSelected ? (
+                <Input
+                  className="h-8 w-20"
+                  type="number"
+                  min={0}
+                  step="any"
+                  placeholder="1×"
+                  value={multipliers[option.id] ?? ''}
+                  onChange={(event) =>
+                    onChange(selectedIds, {
+                      ...multipliers,
+                      [option.id]: event.target.value,
+                    })
+                  }
+                  aria-label={`Price multiplier for ${option.label}`}
+                />
+              ) : null}
+            </div>
+          )
+        })}
       </div>
     </div>
   )

@@ -34,18 +34,14 @@ export type ModelRecommendedUsage = 'lead-agent' | 'summary-agent'
 
 export type MsgContent = UserContent | AssistantContent | ToolContent
 
-export type PricingTier = {
-  up_to: number | null;
-  rate: number;
-}
-
-export type TokenPricing = {
-  currency: "USD";
+export type ModelBasePricing = {
   unit: "per_1m_tokens";
-  basis?: "request_tokens" | "billable_tokens";
-  input: PricingTier[];
-  output: PricingTier[];
-  cached_input?: PricingTier[];
+  input: number;
+  output: number;
+  cached_input?: number;
+} | {
+  unit: "per_inference";
+  rate: number;
 }
 
 export type TextTokenUsage = {

@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { assets, assetVariants, fileNodes, generationRequests, llmVendorsAndParameters, modelParameters, llmVendors, parameterOptions, llmVendorsAndParameterOptions, modelsAndParameterOptions, modelsAndParameters, llmVendorsAndModels } from "@/db/schema";
+import { assets, assetVariants, fileNodes, generationRequests, llmVendorsAndParameters, modelParameters, llmVendors, parameterOptions, llmVendorsAndParameterOptions, modelsAndParameterOptions, modelsAndParameters, llmVendorsAndModels, llmModels, modelsAndCategories, modelCategories } from "@/db/schema";
 import type { AssetType, AssetSource, AssetStatus, AssetVariantType, AssetMetadata, CursorPaginationOptions, CursorPaginationResult, GenerationRequestStatus } from "@/type";
 import { and, eq, desc, lt, isNull, max, inArray, or, sql } from "drizzle-orm";
 import { ORDER_GAP } from "../file-system/repo";
@@ -697,4 +697,18 @@ export const getModelSchema = async (modelId: string) => {
     }
 
     return [...byKey.values()]
+}
+
+
+export const listGenerationModels = async (type: string) => {
+    const result = await db.select({
+        id: llmModels.id,
+        
+    })
+    .from(llmModels)
+    .innerJoin(modelsAndCategories, eq(modelsAndCategories.modelId, llmModels.id))
+    .innerJoin(modelCategories, eq(modelCategories.id, modelsAndCategories.categoryId))
+    .where(and(eq(modelCategories.name, type), eq(llmModels.enabled, true)));
+
+    return result;
 }

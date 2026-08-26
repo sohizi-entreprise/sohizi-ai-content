@@ -1,9 +1,9 @@
 import { CREDIT_RATE, TOKEN_OVERHEAD_RATE } from "./constants";
-import { TokenPricing, TextTokenUsage, PricingTier } from "@/type";
+import { ModelBasePricing, TextTokenUsage } from "@/type";
 
 type PricedModel = {
   name: string;
-  pricing: TokenPricing | null;
+  pricing: ModelBasePricing | null;
 };
 
 type BillingUnit = 'text' | 'image' | 'video/second' | 'audio/minute' | 'audio/1k characters' | 'audio/generation';
@@ -14,36 +14,49 @@ export const calculateCreditCost = (retailPriceUsd: number, creditRate = CREDIT_
   return Math.ceil(retailPriceUsd / creditRate);
 }
 
-export const calculateProviderRatePer1M = (
-  pricing: TokenPricing,
-  direction: keyof Pick<TokenPricing, "input" | "output" | "cached_input">,
-  basisTokens: number,
-) => {
-  const tiers = pricing[direction];
+export const productOfMultipliers = (multipliers: Array<number | null | undefined>) => {
+  return multipliers.reduce<number>((product, value) => product * (value ?? 1), 1);
+}
 
-  if (!tiers || tiers.length === 0) {
-    return 0;
+export const applyPriceMultiplier = (
+  pricing: ModelBasePricing,
+  multiplier: number,
+): ModelBasePricing => {
+  if (multiplier === 1) {
+    return pricing;
   }
 
-  return getTierRate(tiers, basisTokens);
+  if (pricing.unit === "per_1m_tokens") {
+    return {
+      unit: "per_1m_tokens",
+      input: pricing.input * multiplier,
+      output: pricing.output * multiplier,
+      ...(pricing.cached_input != null
+        ? { cached_input: pricing.cached_input * multiplier }
+        : {}),
+    };
+  }
+
+  return { unit: "per_inference", rate: pricing.rate * multiplier };
 }
 
 export const rawProviderCost = (
   model: PricedModel,
   unit: BillingUnit,
   usage: TextTokenUsage,
+  priceMultiplier = 1,
 ) => {
   if (unit !== 'text') {
     throw new Error(`Unsupported billing unit: ${unit}`);
   }
 
-  const pricing = model.pricing as TokenPricing | null;
+  const pricing = model.pricing;
 
   if (!pricing) {
     throw new Error(`Model ${model.name} does not have pricing configured`);
   }
 
-  return calculateTextProviderCost(pricing, usage);
+  return calculateTextProviderCost(pricing, usage, priceMultiplier);
 }
 
 export const loaded_cost_usd = (raw_provider_cost_usd: number, overhead_rate: number) => {
@@ -59,23 +72,27 @@ export const credits_to_charge = (retail_price_usd: number, credit_rate: number)
 }
 
 export const calculateTextProviderCost = (
-  pricing: TokenPricing,
+  pricing: ModelBasePricing,
   usage: TextTokenUsage,
+  priceMultiplier = 1,
 ) => {
+  if (pricing.unit !== "per_1m_tokens") {
+    throw new Error(`Unsupported pricing unit for text billing: ${pricing.unit}`);
+  }
+
+  const effective = applyPriceMultiplier(pricing, priceMultiplier);
+  if (effective.unit !== "per_1m_tokens") {
+    throw new Error(`Unsupported pricing unit for text billing: ${effective.unit}`);
+  }
+
   const cachedInputTokens = usage.cachedInputTokens ?? 0;
   const uncachedInputTokens = Math.max(usage.inputTokens - cachedInputTokens, 0);
-  const basisTokens = getPricingBasisTokens(pricing, usage);
-
-  const inputRate = calculateProviderRatePer1M(pricing, "input", basisTokens);
-  const outputRate = calculateProviderRatePer1M(pricing, "output", basisTokens);
-  const cachedInputRate = pricing.cached_input
-    ? calculateProviderRatePer1M(pricing, "cached_input", basisTokens)
-    : inputRate;
+  const cachedInputRate = effective.cached_input ?? effective.input;
 
   return (
-    (uncachedInputTokens / TOKENS_PER_PRICING_UNIT) * inputRate +
+    (uncachedInputTokens / TOKENS_PER_PRICING_UNIT) * effective.input +
     (cachedInputTokens / TOKENS_PER_PRICING_UNIT) * cachedInputRate +
-    (usage.outputTokens / TOKENS_PER_PRICING_UNIT) * outputRate
+    (usage.outputTokens / TOKENS_PER_PRICING_UNIT) * effective.output
   );
 }
 
@@ -87,9 +104,10 @@ export const calculateTextCredits = (
     targetMargin: number;
     paymentFeeReserve: number;
     creditRate?: number;
+    priceMultiplier?: number;
   },
 ) => {
-  const rawCostUsd = rawProviderCost(model, 'text', usage);
+  const rawCostUsd = rawProviderCost(model, 'text', usage, options.priceMultiplier ?? 1);
   const loadedCostUsd = loaded_cost_usd(
     rawCostUsd,
     options.overheadRate ?? TOKEN_OVERHEAD_RATE,
@@ -101,27 +119,4 @@ export const calculateTextCredits = (
   );
 
   return credits_to_charge(retailPriceUsd, options.creditRate ?? CREDIT_RATE);
-}
-
-const getTierRate = (tiers: PricingTier[], basisTokens: number) => {
-  const tier = tiers.find((item) => item.up_to === null || basisTokens <= item.up_to);
-
-  if (!tier) {
-    throw new Error(`No pricing tier found for ${basisTokens} tokens`);
-  }
-
-  return tier.rate;
-}
-
-const getPricingBasisTokens = (pricing: TokenPricing, usage: TextTokenUsage) => {
-  switch (pricing.basis ?? "request_tokens") {
-    case "request_tokens":
-      return usage.inputTokens + usage.outputTokens;
-    case "billable_tokens":
-      return (
-        Math.max(usage.inputTokens - (usage.cachedInputTokens ?? 0), 0) +
-        (usage.cachedInputTokens ?? 0) +
-        usage.outputTokens
-      );
-  }
 }

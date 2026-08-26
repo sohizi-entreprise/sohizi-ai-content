@@ -52,6 +52,7 @@ export class Agent {
     private readonly contextManager: ContextManager;
     private lastInputTokens: number;
     private userMessage: UserModelMessage | null;
+    private artifacts: Map<string, unknown>;
 
     constructor(config: AgentConfig) {
         this.name = config.name;
@@ -76,6 +77,7 @@ export class Agent {
             evaluatorModelConfig: config.evaluatorModelConfig,
             vendor: config.vendor,
         });
+        this.artifacts = new Map();
     }
 
     async* runLoop(ursMsg: UserModelMessage, abortSignal: AbortSignal, maxSteps: number = 25): AsyncGenerator<AgentChunk, void, unknown> {
@@ -278,7 +280,7 @@ export class Agent {
                 continue;
             }
             validToolCalls.push(tool_call);
-            generators.push(tool.execute(tool_call, this.session, this.stateManager, abortSignal));
+            generators.push(tool.execute(tool_call, {session: this.session, state: this.stateManager, abortSignal, artifacts: this.artifacts}));
         }
 
         if(invalidTools.length > 0){

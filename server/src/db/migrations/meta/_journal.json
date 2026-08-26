@@ -218,6 +218,20 @@
       "when": 1787062123520,
       "tag": "0030_drop_assets_agent_runs",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1787310000000,
+      "tag": "0031_llm_models_description",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787750000000,
+      "tag": "0032_model_level_pricing",
+      "breakpoints": true
     }
   ]
 }
