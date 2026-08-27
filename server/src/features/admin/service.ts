@@ -1,4 +1,5 @@
 import { BadRequest, Conflict, NotFound } from '@/features/error'
+import { isRegisteredMediaVendor, listRegisteredMediaVendors } from '@/features/media-engine/providers/factory'
 import * as modelsRepo from '../models/repo'
 import * as commandRepo from '../command/repo'
 import * as contentCategoriesRepo from '../content-categories/repo'
@@ -375,11 +376,19 @@ export const deleteVendorParameterMapping = async (parameterId: string, vendorId
 
 export const listVendors = async () => modelsRepo.listVendors()
 
+export const listMediaVendorSlugs = async () => ({ slugs: listRegisteredMediaVendors() })
+
 export const createVendor = async (input: CreateVendorInput) => {
+  if ((input.kind ?? 'llm') === 'media' && !isRegisteredMediaVendor(input.name)) {
+    throw new BadRequest(`Unknown media vendor slug: ${input.name}`)
+  }
   try {
     return await modelsRepo.createVendor({
       name: input.name,
+      kind: input.kind,
       enabled: input.enabled,
+      rateLimit: input.rateLimit,
+      circuitConfig: input.circuitConfig,
     })
   } catch (error) {
     if (isUniqueViolation(error)) {
@@ -392,6 +401,14 @@ export const createVendor = async (input: CreateVendorInput) => {
 export const updateVendor = async (id: string, input: UpdateVendorInput) => {
   if (Object.keys(input).length === 0) {
     throw new BadRequest('No fields to update')
+  }
+  if (input.kind === 'media' || input.name) {
+    const existing = await modelsRepo.listVendors().then((rows) => rows.find((row) => row.id === id))
+    const name = input.name ?? existing?.name
+    const kind = input.kind ?? existing?.kind
+    if (kind === 'media' && name && !isRegisteredMediaVendor(name)) {
+      throw new BadRequest(`Unknown media vendor slug: ${name}`)
+    }
   }
   try {
     const updated = await modelsRepo.updateVendor(id, input)
@@ -426,6 +443,7 @@ export const createModelVendorBinding = async (modelId: string, input: CreateMod
       vendorId: input.vendorId,
       apiName: input.apiName,
       enabled: input.enabled,
+      priority: input.priority,
     })
     return getModel(modelId)
   } catch (error) {

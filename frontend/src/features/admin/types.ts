@@ -13,6 +13,7 @@ export type AdminModelVendor = {
   name: string
   apiName: string
   enabled: boolean
+  priority: number
 }
 
 export type AdminModel = {
@@ -156,10 +157,26 @@ export type ReplaceModelParameterBinding = {
   sortOrder?: number
 }
 
+export type VendorKind = 'media' | 'llm'
+
+export type VendorRateLimit = {
+  rpm: number
+  burst?: number
+  maxConcurrency: number
+}
+
+export type VendorCircuitConfig = {
+  cooldownMs: number
+  probeTtlMs: number
+}
+
 export type AdminVendor = {
   id: string
   name: string
+  kind: VendorKind
   enabled: boolean
+  rateLimit: VendorRateLimit
+  circuitConfig: VendorCircuitConfig | null
   createdAt: string
   updatedAt: string
   modelCount: number
@@ -167,7 +184,10 @@ export type AdminVendor = {
 
 export type CreateVendorInput = {
   name: string
+  kind?: VendorKind
   enabled?: boolean
+  rateLimit?: VendorRateLimit
+  circuitConfig?: VendorCircuitConfig | null
 }
 
 export type UpdateVendorInput = Partial<CreateVendorInput>
@@ -176,6 +196,7 @@ export type CreateModelVendorBindingInput = {
   vendorId: string
   apiName: string
   enabled?: boolean
+  priority?: number
 }
 
 export type UpdateModelVendorBindingInput = Partial<Omit<CreateModelVendorBindingInput, 'vendorId'>>

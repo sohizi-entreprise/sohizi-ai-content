@@ -174,6 +174,11 @@ export const listAdminVendors = async (): Promise<AdminVendor[]> => {
   return response.data
 }
 
+export const listMediaVendorSlugs = async (): Promise<{ slugs: string[] }> => {
+  const response = await api.get('/admin/media-vendor-slugs')
+  return response.data
+}
+
 export const createAdminVendor = async (input: CreateVendorInput): Promise<AdminVendor> => {
   const response = await api.post('/admin/vendors', input)
   return response.data

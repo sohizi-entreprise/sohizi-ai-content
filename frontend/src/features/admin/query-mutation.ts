@@ -31,6 +31,7 @@ const keysFactory = {
   parameter: (id: string) => ['admin', 'parameters', id] as const,
   modelParameters: (modelId: string) => ['admin', 'models', modelId, 'parameters'] as const,
   vendors: ['admin', 'vendors'] as const,
+  mediaVendorSlugs: ['admin', 'media-vendor-slugs'] as const,
   commands: ['admin', 'commands'] as const,
   contentCategories: ['admin', 'content-categories'] as const,
   skills: ['admin', 'skills'] as const,
@@ -212,6 +213,12 @@ export const listAdminVendorsQueryOptions = () =>
   queryOptions({
     queryKey: keysFactory.vendors,
     queryFn: requests.listAdminVendors,
+  })
+
+export const listMediaVendorSlugsQueryOptions = () =>
+  queryOptions({
+    queryKey: keysFactory.mediaVendorSlugs,
+    queryFn: requests.listMediaVendorSlugs,
   })
 
 export const createAdminVendorMutationOptions = () =>

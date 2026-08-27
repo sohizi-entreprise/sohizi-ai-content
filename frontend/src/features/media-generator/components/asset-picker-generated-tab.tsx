@@ -2,11 +2,17 @@ import { useMemo } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { listAiGeneratedAssetsQueryOptions } from '../query-mutations'
 import { AssetPickerGrid } from './asset-picker-grid'
-import type { PickerAsset, PickerAssetType } from '../lib/parameter-assets'
+import {
+  describeFileTypes,
+  isPickerAssetType,
+  queryTypeForFileTypes,
+  type PickerAsset,
+  type PickerAssetType,
+} from '../lib/parameter-assets'
 
 type AssetPickerGeneratedTabProps = {
   projectId: string
-  fileType: PickerAssetType
+  fileTypes: PickerAssetType[]
   selectedUrls: string[]
   onSelect: (asset: PickerAsset) => void
   maxItems: number
@@ -15,32 +21,35 @@ type AssetPickerGeneratedTabProps = {
 
 export function AssetPickerGeneratedTab({
   projectId,
-  fileType,
+  fileTypes,
   selectedUrls,
   onSelect,
   maxItems,
   allowMultiple,
 }: AssetPickerGeneratedTabProps) {
+  const queryType = queryTypeForFileTypes(fileTypes)
   const {
     data: requests = [],
     isLoading,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useInfiniteQuery(listAiGeneratedAssetsQueryOptions(projectId, { type: fileType }))
+  } = useInfiniteQuery(listAiGeneratedAssetsQueryOptions(projectId, queryType ? { type: queryType } : undefined))
 
   const items = useMemo<PickerAsset[]>(() => {
+    const allowed = new Set(fileTypes)
     return requests.flatMap((request) =>
-      request.assets
-        .filter((asset) => asset.url && asset.type === fileType)
-        .map((asset) => ({
+      request.assets.flatMap((asset) => {
+        if (!asset.url || !isPickerAssetType(asset.type) || !allowed.has(asset.type)) return []
+        return [{
           id: asset.id,
           name: asset.name,
           url: asset.url,
-          type: fileType,
-        })),
+          type: asset.type,
+        }]
+      }),
     )
-  }, [fileType, requests])
+  }, [fileTypes, requests])
 
   return (
     <AssetPickerGrid
@@ -50,7 +59,7 @@ export function AssetPickerGeneratedTab({
       maxItems={maxItems}
       allowMultiple={allowMultiple}
       isLoading={isLoading}
-      emptyLabel={`No generated ${fileType} files yet`}
+      emptyLabel={`No generated ${describeFileTypes(fileTypes)} files yet`}
       hasNextPage={hasNextPage}
       isFetchingNextPage={isFetchingNextPage}
       onLoadMore={() => {

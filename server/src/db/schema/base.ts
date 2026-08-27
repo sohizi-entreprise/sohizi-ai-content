@@ -46,6 +46,9 @@ import {
   ModelParameterDataType,
   ModelParameterUIComponent,
   ModelBasePricing,
+  VendorCircuitConfig,
+  VendorKind,
+  VendorRateLimit,
 } from '@/type';
 import { FileFormat } from '@/features/file-system/constants';
 
@@ -371,7 +374,10 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
   export const llmVendors = pgTable('llm_vendors', {
     id: uuid('id').defaultRandom().primaryKey(),
     name: varchar('name', { length: 100 }).notNull(),
+    kind: varchar('kind', { length: 20 }).$type<VendorKind>().default('llm').notNull(),
     enabled: boolean('enabled').default(true).notNull(),
+    rateLimit: jsonb('rate_limit').$type<VendorRateLimit>().notNull(),
+    circuitConfig: jsonb('circuit_config').$type<VendorCircuitConfig>(),
     ...timestamps,
   }, (table) => ([
     uniqueIndex('llm_vendors_name_unique').on(table.name),
@@ -386,6 +392,7 @@ export const fileNodeRelationships = pgTable('file_node_relationships', {
       .notNull(),
     apiName: varchar('api_name', { length: 50 }).notNull(),
     enabled: boolean('enabled').default(true).notNull(),
+    priority: integer('priority').default(100).notNull(),
     ...timestamps,
   }, (table) => ([
     primaryKey({ columns: [table.vendorId, table.modelId] }),

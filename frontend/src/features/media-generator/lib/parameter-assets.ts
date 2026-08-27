@@ -9,8 +9,35 @@ export type PickerAsset = {
   type: PickerAssetType
 }
 
+export function isPickerAssetType(value: unknown): value is PickerAssetType {
+  return value === 'image' || value === 'video' || value === 'audio'
+}
+
 export function getUploaderFileType(parameter: ModelParameterBinding): PickerAssetType {
   return parameter.constraints?.fileType ?? 'image'
+}
+
+export function getUploaderFileTypes(parameter: ModelParameterBinding): PickerAssetType[] {
+  return [getUploaderFileType(parameter)]
+}
+
+export function queryTypeForFileTypes(fileTypes: PickerAssetType[]): PickerAssetType | undefined {
+  return fileTypes.length === 1 ? fileTypes[0] : undefined
+}
+
+export function acceptForFileTypes(fileTypes: PickerAssetType[]): string {
+  const mime: Record<PickerAssetType, string> = {
+    image: 'image/*',
+    video: 'video/*',
+    audio: 'audio/*',
+  }
+  return fileTypes.map((type) => mime[type]).join(',')
+}
+
+export function describeFileTypes(fileTypes: PickerAssetType[]): string {
+  if (fileTypes.length === 1) return fileTypes[0]
+  if (fileTypes.length === 2) return `${fileTypes[0]} or ${fileTypes[1]}`
+  return `${fileTypes.slice(0, -1).join(', ')}, or ${fileTypes[fileTypes.length - 1]}`
 }
 
 export function isArrayParameter(parameter: ModelParameterBinding) {

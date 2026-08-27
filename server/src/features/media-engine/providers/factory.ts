@@ -1,47 +1,57 @@
-import { WAVE_SPEED_VENDOR } from '@/features/ai/agent/core/vendor';
 import { MediaConfigurationError } from '../errors';
 import type { MediaEngineProvider } from './type';
 import { WaveSpeedProvider } from './wave-speed';
 
-export type MediaProviderName = typeof WAVE_SPEED_VENDOR;
+export const WAVESPEED_VENDOR = 'wavespeed';
 
 type MediaProviderConstructor = new (apiKey: string) => MediaEngineProvider;
 
-const PROVIDER_CLASSES = {
-    [WAVE_SPEED_VENDOR]: WaveSpeedProvider,
-} satisfies Record<MediaProviderName, MediaProviderConstructor>;
+const PROVIDER_CLASSES: Record<string, MediaProviderConstructor> = {
+    [WAVESPEED_VENDOR]: WaveSpeedProvider,
+};
 
-function isMediaProviderName(name: string): name is MediaProviderName {
+const API_KEY_ENV: Record<string, string> = {
+    [WAVESPEED_VENDOR]: 'WAVESPEED_API_KEY',
+};
+
+function apiKeyEnvName(vendorName: string): string {
+    return API_KEY_ENV[vendorName] ?? `${vendorName.toUpperCase().replace(/-/g, '_')}_API_KEY`;
+}
+
+export function listRegisteredMediaVendors(): string[] {
+    return Object.keys(PROVIDER_CLASSES);
+}
+
+export function isRegisteredMediaVendor(name: string): boolean {
     return name in PROVIDER_CLASSES;
 }
 
-function resolveProvider(name: string): {
-    name: MediaProviderName;
-    ProviderClass: MediaProviderConstructor;
-} {
-    if (!isMediaProviderName(name)) {
-        throw new MediaConfigurationError(`Unknown media provider: ${name}`);
-    }
-    return { name, ProviderClass: PROVIDER_CLASSES[name] };
+export function hasProviderApiKey(name: string): boolean {
+    return Boolean(process.env[apiKeyEnvName(name)]);
 }
 
-function getProviderApiKey(name: MediaProviderName): string {
-    switch (name) {
-        case WAVE_SPEED_VENDOR: {
-            const apiKey = process.env.WAVESPEED_API_KEY;
-            if (!apiKey) {
-                throw new MediaConfigurationError('WAVESPEED_API_KEY is not set');
-            }
-            return apiKey;
-        }
-    }
+export function registerMediaProvider(name: string, ProviderClass: MediaProviderConstructor): void {
+    PROVIDER_CLASSES[name] = ProviderClass;
 }
 
-export function getProviderClass(name: string): MediaProviderConstructor {
-    return resolveProvider(name).ProviderClass;
+export function unregisterMediaProvider(name: string): void {
+    delete PROVIDER_CLASSES[name];
 }
+
+function getProviderApiKey(name: string): string {
+    const apiKey = process.env[apiKeyEnvName(name)];
+    if (!apiKey) {
+        throw new MediaConfigurationError(`${apiKeyEnvName(name)} is not set`);
+    }
+    return apiKey;
+}
+
+export type MediaProviderFactory = (name: string) => MediaEngineProvider;
 
 export function createProvider(name: string): MediaEngineProvider {
-    const { name: providerName, ProviderClass } = resolveProvider(name);
-    return new ProviderClass(getProviderApiKey(providerName));
+    const ProviderClass = PROVIDER_CLASSES[name];
+    if (!ProviderClass) {
+        throw new MediaConfigurationError(`Unknown media provider: ${name}`);
+    }
+    return new ProviderClass(getProviderApiKey(name));
 }

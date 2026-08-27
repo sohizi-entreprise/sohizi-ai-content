@@ -160,3 +160,7 @@ export function showsVoiceSelector(
 ): boolean {
   return type === 'audio' && (subtype === 'tts' || subtype === 'dialogue')
 }
+
+export function showsAgentMode(type: GenerationType): boolean {
+  return type === 'image' || type === 'video'
+}

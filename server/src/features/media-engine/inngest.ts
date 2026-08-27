@@ -9,7 +9,6 @@ import { isMediaError } from './errors';
 import { decrementKey, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
 import { appendRequestAssets } from '../generation-request/repo';
 import type { GenerationRequestAsset } from '@/type';
-import { WAVE_SPEED_VENDOR } from '@/features/ai/agent/core/vendor';
 import { createProvider } from './providers/factory';
 import { extractOutputUrls } from './providers/utils';
 import type { SubmitPayload } from './providers/type';
@@ -30,6 +29,14 @@ import { getModelWithVendorBinding } from '../models/repo';
 import { Agent } from '../ai/agent/core/agent';
 import { UserModelMessage } from 'ai';
 import { getModelSchema } from './repo';
+import {
+    limiter,
+    pollWithSticky,
+    resolveAndAcquire,
+    submitWithFailover,
+    type StickyDecision,
+} from '@/features/routing';
+import { MediaRateLimitError, MediaServiceUnavailableError } from './errors';
 
 const MAX_MEDIA_POLL_ATTEMPTS = 60;
 const VIDEO_POLL_INTERVAL = '10s';
@@ -122,6 +129,7 @@ export const handleMediaGeneration = inngest.createFunction(
             const data = event.data.event.data as ProviderMediaEventData;
             await safeRefund(data._reservationId, 'media-generation-failed');
             if (data.requestId) {
+                await limiter.releaseByRequestId(data.requestId, { outcome: 'none' });
                 await commitRequest(data.requestId, 'failed');
             }
         },
@@ -154,10 +162,25 @@ export const handleMediaGeneration = inngest.createFunction(
             }
         });
 
+        const decision = await step.run('resolve-route', async () => {
+            try {
+                return await resolveAndAcquire({
+                    modelId: model,
+                    requestId,
+                    payload: requestPayload,
+                    leaseTtlMs: reservationTtlMs,
+                });
+            } catch (error) {
+                wrapNonRetryable(error);
+            }
+        });
+
+        let sticky: StickyDecision | undefined;
+        try {
         const reservation = await step.run('reserve-credits', async () => {
             try {
-                const provider = createProvider(WAVE_SPEED_VENDOR);
-                const estimate = await provider.estimateRequestPrice(model, requestPayload);
+                const provider = createProvider(decision.vendorName);
+                const estimate = await provider.estimateRequestPrice(decision.apiName, decision.mappedPayload);
                 if (!estimate.ok) {
                     throw new Error(estimate.error);
                 }
@@ -169,8 +192,8 @@ export const handleMediaGeneration = inngest.createFunction(
                     estimatedCredits,
                     ttlMs: reservationTtlMs,
                     id: data._reservationId,
-                    idempotencyKey: `media:${requestId}:${model}`,
-                    metadata: { requestId, projectId, kind: mediaType, model },
+                    idempotencyKey: `media:${requestId}:${model}:${decision.vendorName}`,
+                    metadata: { requestId, projectId, kind: mediaType, model, vendor: decision.vendorName },
                 });
                 return {
                     id: res.id,
@@ -182,113 +205,158 @@ export const handleMediaGeneration = inngest.createFunction(
             }
         });
 
-        let submission;
         try {
-            submission = await step.run('submit-job', async () => {
-                try {
-                    const provider = createProvider(WAVE_SPEED_VENDOR);
-                    return await provider.submitRequest(model, requestPayload);
-                } catch (error) {
-                    wrapNonRetryable(error);
-                }
-            });
-        } catch (error) {
-            await step.run('refund-on-submit-error', () => safeRefund(reservation.id, 'media-submit-error'));
-            throw error;
-        }
-
-        let resultData: unknown = null;
-
-        for (let attempt = 0; attempt < MAX_MEDIA_POLL_ATTEMPTS; attempt++) {
-            await step.sleep(`wait-for-media-${attempt}`, pollInterval);
-
-            await step.run(`renew-reservation-${attempt}`, async () => {
-                const current = await billingService.getReservation(reservation.id);
-                if (!current || current.status !== 'reserved') return;
-                const remainingMs = current.expiresAt.getTime() - Date.now();
-                if (remainingMs > reservationTtlMs * 0.2) return;
-                await billingService.extend(reservation.id, reservationTtlMs);
-            });
-
-            const pollResult = await step.run(`poll-media-${attempt}`, async () => {
-                try {
-                    const provider = createProvider(WAVE_SPEED_VENDOR);
-                    return await provider.getRequestData(submission.requestId);
-                } catch (error) {
-                    wrapNonRetryable(error);
-                }
-            });
-
-            if (pollResult.status === 'completed') {
-                resultData = 'data' in pollResult ? pollResult.data : null;
-                break;
+            sticky = await step.run('submit-job', async () => {
+                    try {
+                        const provider = createProvider(decision.vendorName);
+                        const submitted = await provider.submitRequest(decision.apiName, decision.mappedPayload);
+                        await limiter.release(decision.vendorName, requestId, {
+                            outcome: 'submit_ok',
+                            cooldownMs: decision.cooldownMs,
+                        });
+                        const result: StickyDecision = {
+                            ...decision,
+                            providerRequestId: submitted.requestId,
+                        };
+                        await repo.patchRequestRouting(requestId, {
+                            vendorName: result.vendorName,
+                            apiName: result.apiName,
+                            providerRequestId: result.providerRequestId,
+                        });
+                        return result;
+                    } catch (error) {
+                        if (error instanceof MediaRateLimitError || error instanceof MediaServiceUnavailableError) {
+                            await limiter.release(decision.vendorName, requestId, {
+                                outcome: 'failure',
+                                retryAfterMs: error instanceof MediaRateLimitError ? error.retryAfterMs : undefined,
+                                cooldownMs: decision.cooldownMs,
+                            });
+                            const result = await submitWithFailover({
+                                modelId: model,
+                                requestId,
+                                payload: requestPayload,
+                                leaseTtlMs: reservationTtlMs,
+                                exclude: [decision.vendorName],
+                            });
+                            await repo.patchRequestRouting(requestId, {
+                                vendorName: result.vendorName,
+                                apiName: result.apiName,
+                                providerRequestId: result.providerRequestId,
+                            });
+                            return result;
+                        }
+                        await limiter.release(decision.vendorName, requestId, {
+                            outcome: 'none',
+                            cooldownMs: decision.cooldownMs,
+                        });
+                        wrapNonRetryable(error);
+                    }
+                });
+            } catch (error) {
+                await step.run('refund-on-submit-error', () => safeRefund(reservation.id, 'media-submit-error'));
+                throw error;
             }
 
-            if (isTerminalFailureStatus(String(pollResult.status))) {
-                await step.run('refund-on-provider-failure', () =>
-                    safeRefund(reservation.id, 'media-provider-failed'),
+            let resultData: unknown = null;
+
+            for (let attempt = 0; attempt < MAX_MEDIA_POLL_ATTEMPTS; attempt++) {
+                await step.sleep(`wait-for-media-${attempt}`, pollInterval);
+
+                await step.run(`renew-reservation-${attempt}`, async () => {
+                    const current = await billingService.getReservation(reservation.id);
+                    if (!current || current.status !== 'reserved') return;
+                    const remainingMs = current.expiresAt.getTime() - Date.now();
+                    if (remainingMs > reservationTtlMs * 0.2) return;
+                    await billingService.extend(reservation.id, reservationTtlMs);
+                });
+
+                const pollResult = await step.run(`poll-media-${attempt}`, async () => {
+                    try {
+                        return await pollWithSticky(sticky!);
+                    } catch (error) {
+                        wrapNonRetryable(error);
+                    }
+                });
+
+                if (pollResult.status === 'completed') {
+                    resultData = 'data' in pollResult ? pollResult.data : null;
+                    break;
+                }
+
+                if (isTerminalFailureStatus(String(pollResult.status))) {
+                    await step.run('refund-on-provider-failure', () =>
+                        safeRefund(reservation.id, 'media-provider-failed'),
+                    );
+                    await step.run('mark-error-on-provider-failure', () => commitRequest(requestId, 'failed'));
+                    return { requestId, status: 'failed' as const };
+                }
+            }
+
+            const outputUrls = extractOutputUrls(resultData);
+            if (outputUrls.length === 0) {
+                await step.run('refund-on-timeout-or-empty', () =>
+                    safeRefund(reservation.id, resultData ? 'media-no-valid-urls' : 'media-poll-timeout'),
                 );
-                await step.run('mark-error-on-provider-failure', () => commitRequest(requestId, 'failed'));
+                await step.run('mark-error-on-timeout-or-empty', () => commitRequest(requestId, 'failed'));
                 return { requestId, status: 'failed' as const };
             }
-        }
 
-        const outputUrls = extractOutputUrls(resultData);
-        if (outputUrls.length === 0) {
-            await step.run('refund-on-timeout-or-empty', () =>
-                safeRefund(reservation.id, resultData ? 'media-no-valid-urls' : 'media-poll-timeout'),
+            const uploads = await step.run('upload-to-r2', async () => {
+                const uploaded = [];
+                for (const sourceUrl of outputUrls) {
+                    uploaded.push(await storage.uploadGeneratedMedia(sourceUrl));
+                }
+                return uploaded;
+            });
+
+            await step.run('settle-credits', () =>
+                billingService.settle({
+                    reservationId: reservation.id,
+                    actualCredits: providerCostToActualCredits(reservation.priceUSD, { overheadRate }),
+                    metadata: { requestId, providerCostUsd: reservation.priceUSD, vendor: sticky?.vendorName },
+                }),
             );
-            await step.run('mark-error-on-timeout-or-empty', () => commitRequest(requestId, 'failed'));
-            return { requestId, status: 'failed' as const };
+
+            const assets = await step.run('save-assets', async () => {
+                const newAssets: Asset[] = [];
+                for (const upload of uploads) {
+                    const fileMetadata = await storage.getFileMetadata(upload.storageKey);
+                    const assetName = upload.storageKey.split('/').pop() ?? `${upload.type}-${uuidv4().slice(0, 8)}`;
+                    const asset = await repo.createAsset({
+                        projectId,
+                        name: assetName,
+                        type: upload.type,
+                        url: upload.url,
+                        source: 'ai-generated',
+                        generationRequestId: requestId,
+                        metadata: fileMetadata,
+                        storageKey: upload.storageKey,
+                    });
+                    await writeStreamData(requestId, { runId: requestId, event: 'asset', data: asset });
+                    newAssets.push(asset);
+                }
+
+                const requestAssets = newAssets
+                    .map(toRequestAsset)
+                    .filter((asset): asset is GenerationRequestAsset => asset !== null);
+                if (requestAssets.length > 0) {
+                    await appendRequestAssets(requestId, requestAssets);
+                }
+
+                await commitRequest(requestId, 'completed');
+                return newAssets;
+            });
+
+            return { requestId, assets, reservationId: reservation.id };
+        } finally {
+            await step.run('release-slot', async () => {
+                if (sticky) {
+                    await limiter.release(sticky.vendorName, requestId, { outcome: 'none' });
+                    return;
+                }
+                await limiter.releaseByRequestId(requestId, { outcome: 'none' });
+            });
         }
-
-        const uploads = await step.run('upload-to-r2', async () => {
-            const uploaded = [];
-            for (const sourceUrl of outputUrls) {
-                uploaded.push(await storage.uploadGeneratedMedia(sourceUrl));
-            }
-            return uploaded;
-        });
-
-        await step.run('settle-credits', () =>
-            billingService.settle({
-                reservationId: reservation.id,
-                actualCredits: providerCostToActualCredits(reservation.priceUSD, { overheadRate }),
-                metadata: { requestId, providerCostUsd: reservation.priceUSD },
-            }),
-        );
-
-        const assets = await step.run('save-assets', async () => {
-            const newAssets: Asset[] = [];
-            for (const upload of uploads) {
-                const fileMetadata = await storage.getFileMetadata(upload.storageKey);
-                const assetName = upload.storageKey.split('/').pop() ?? `${upload.type}-${uuidv4().slice(0, 8)}`;
-                const asset = await repo.createAsset({
-                    projectId,
-                    name: assetName,
-                    type: upload.type,
-                    url: upload.url,
-                    source: 'ai-generated',
-                    generationRequestId: requestId,
-                    metadata: fileMetadata,
-                    storageKey: upload.storageKey,
-                });
-                await writeStreamData(requestId, { runId: requestId, event: 'asset', data: asset });
-                newAssets.push(asset);
-            }
-
-            const requestAssets = newAssets
-                .map(toRequestAsset)
-                .filter((asset): asset is GenerationRequestAsset => asset !== null);
-            if (requestAssets.length > 0) {
-                await appendRequestAssets(requestId, requestAssets);
-            }
-
-            await commitRequest(requestId, 'completed');
-            return newAssets;
-        });
-
-        return { requestId, assets, reservationId: reservation.id };
     },
 );
 

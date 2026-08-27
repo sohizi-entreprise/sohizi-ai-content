@@ -332,6 +332,18 @@ export const updateAssetRequest = async (runId: string, data: UpdateAssetRequest
     return updateGenerationRequest(runId, data);
 }
 
+export const patchRequestRouting = async (
+    requestId: string,
+    routing: { vendorName: string; apiName: string; providerRequestId: string },
+) => {
+    await db
+        .update(generationRequests)
+        .set({
+            request: sql`coalesce(${generationRequests.request}, '{}'::jsonb) || ${JSON.stringify({ routing })}::jsonb`,
+        })
+        .where(eq(generationRequests.id, requestId));
+}
+
 export const deleteAssetRequest = async (projectId: string, requestId: string) => {
     return deleteGenerationRequest(projectId, requestId);
 }

@@ -100,6 +100,7 @@ function ModelDetailForm({
       name: string
       apiName: string
       enabled: boolean
+      priority: number
     }>
   }
   categories: Array<{ id: string; name: string }>
@@ -289,6 +290,7 @@ function ModelVendorsSection({
     name: string
     apiName: string
     enabled: boolean
+    priority: number
   }>
   vendors: Array<{ id: string; name: string }>
 }) {
@@ -297,6 +299,7 @@ function ModelVendorsSection({
   )
   const [vendorId, setVendorId] = useState('')
   const [apiName, setApiName] = useState('')
+  const [priority, setPriority] = useState('100')
   const [error, setError] = useState<string | null>(null)
 
   const createMutation = useMutation(createModelVendorBindingMutationOptions())
@@ -313,10 +316,12 @@ function ModelVendorsSection({
           vendorId,
           apiName: apiName.trim(),
           enabled: true,
+          priority: Number(priority) || 100,
         },
       })
       setVendorId('')
       setApiName('')
+      setPriority('100')
     } catch (err) {
       const message =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
@@ -330,7 +335,7 @@ function ModelVendorsSection({
       <div>
         <h2 className="text-lg font-medium">Vendors</h2>
         <p className="text-sm text-muted-foreground">
-          Bind vendors that provide this model. Each binding has its own API name and enabled state.
+          Bind vendors that provide this model. Each binding has its own API name, enabled state, and priority (lower is preferred).
         </p>
       </div>
 
@@ -340,6 +345,7 @@ function ModelVendorsSection({
             <TableRow>
               <TableHead>Vendor</TableHead>
               <TableHead>API name</TableHead>
+              <TableHead>Priority</TableHead>
               <TableHead>Enabled</TableHead>
               <TableHead className="w-16" />
             </TableRow>
@@ -360,7 +366,7 @@ function ModelVendorsSection({
             ))}
             {boundVendors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
                   No vendors bound to this model.
                 </TableCell>
               </TableRow>
@@ -371,7 +377,7 @@ function ModelVendorsSection({
 
       <form className="space-y-3 rounded-xl border p-4" onSubmit={attach}>
         <h3 className="text-sm font-medium">Attach vendor</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="space-y-2">
             <Label>Vendor</Label>
             <Select
@@ -400,6 +406,15 @@ function ModelVendorsSection({
               required
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="vendor-priority">Priority</Label>
+            <Input
+              id="vendor-priority"
+              type="number"
+              value={priority}
+              onChange={(event) => setPriority(event.target.value)}
+            />
+          </div>
         </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <Button type="submit" disabled={!vendorId || createMutation.isPending}>
@@ -420,14 +435,17 @@ function VendorBindingRow({
     name: string
     apiName: string
     enabled: boolean
+    priority: number
   }
-  onUpdate: (input: { apiName?: string; enabled?: boolean }) => void
+  onUpdate: (input: { apiName?: string; enabled?: boolean; priority?: number }) => void
   onDelete: () => void
 }) {
   const [apiName, setApiName] = useState(binding.apiName)
+  const [priority, setPriority] = useState(String(binding.priority))
 
   useEffect(() => {
     setApiName(binding.apiName)
+    setPriority(String(binding.priority))
   }, [binding])
 
   return (
@@ -440,6 +458,19 @@ function VendorBindingRow({
           onBlur={() => {
             if (apiName.trim() && apiName.trim() !== binding.apiName) {
               onUpdate({ apiName: apiName.trim() })
+            }
+          }}
+        />
+      </TableCell>
+      <TableCell className="align-top">
+        <Input
+          type="number"
+          value={priority}
+          onChange={(event) => setPriority(event.target.value)}
+          onBlur={() => {
+            const next = Number(priority)
+            if (Number.isFinite(next) && next !== binding.priority) {
+              onUpdate({ priority: next })
             }
           }}
         />

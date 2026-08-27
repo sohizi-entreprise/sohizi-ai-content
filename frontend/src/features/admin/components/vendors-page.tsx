@@ -67,6 +67,7 @@ export function VendorsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Kind</TableHead>
               <TableHead>Models</TableHead>
               <TableHead>Enabled</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -76,6 +77,7 @@ export function VendorsPage() {
             {vendors.map((vendor) => (
               <TableRow key={vendor.id}>
                 <TableCell className="font-medium">{vendor.name}</TableCell>
+                <TableCell>{vendor.kind}</TableCell>
                 <TableCell>{vendor.modelCount}</TableCell>
                 <TableCell>
                   <Switch
@@ -97,7 +99,7 @@ export function VendorsPage() {
             ))}
             {!isLoading && vendors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                   No vendors yet.
                 </TableCell>
               </TableRow>

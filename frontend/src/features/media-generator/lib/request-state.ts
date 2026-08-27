@@ -5,7 +5,10 @@ import {
   getDefaultSubtype,
   IMAGE_SUBTYPES,
   VIDEO_SUBTYPES,
+  showsAgentMode,
 } from '../constants'
+import { defaultAgentParameterValues, serializeAgentReferences } from './agent-settings'
+import { isPickerAssetType } from './parameter-assets'
 import type { GenerationSubtype, GenerationType, MediaRunMode } from '../types'
 
 export type ParsedRequestState = {
@@ -94,14 +97,31 @@ export function parseStoredRequest(
       ? context.model
       : null
 
+  const attachments = parseAttachments(context.referencedFiles)
+  const runMode: MediaRunMode = request.runMode === 'agent' ? 'agent' : 'direct'
+  let parameterValues = parseSettings(request.settings)
+
+  if (runMode === 'agent' && showsAgentMode(generationType)) {
+    parameterValues = defaultAgentParameterValues({
+      ...parameterValues,
+      references: serializeAgentReferences(
+        attachments.flatMap((attachment) =>
+          attachment.status === 'uploaded' && isPickerAssetType(attachment.type)
+            ? [{ url: attachment.url, type: attachment.type }]
+            : [],
+        ),
+      ),
+    })
+  }
+
   return {
     generationType,
     generationSubtype,
     selectedModelId: model,
-    parameterValues: parseSettings(request.settings),
+    parameterValues,
     prompt: typeof request.prompt === 'string' ? request.prompt : '',
-    attachments: parseAttachments(context.referencedFiles),
-    runMode: request.runMode === 'agent' ? 'agent' : 'direct',
+    attachments,
+    runMode,
     voice: typeof context.voice === 'string' ? context.voice : undefined,
   }
 }

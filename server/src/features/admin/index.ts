@@ -78,6 +78,7 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     params: z.object({ id: z.string().min(1), vendorId: z.uuid() }),
   })
   .get('/vendors', () => adminService.listVendors())
+  .get('/media-vendor-slugs', () => adminService.listMediaVendorSlugs())
   .post('/vendors', ({ body }) => adminService.createVendor(body), {
     body: createVendorSchema,
   })

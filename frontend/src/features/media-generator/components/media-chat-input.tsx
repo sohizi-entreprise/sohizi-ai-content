@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import ChatTextarea from '@/features/chat/components/chat-textarea'
-import { getPromptPlaceholder } from '../constants'
+import { getPromptPlaceholder, showsAgentMode } from '../constants'
 
 export type MediaChatInputProps = {
   projectId: string
@@ -58,16 +58,18 @@ export function MediaChatInput({
           />
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-1 py-2">
-          <Label htmlFor="media-run-mode" className="text-xs text-muted-foreground">
-            Agent
-          </Label>
-          <Switch
-            id="media-run-mode"
-            checked={runMode === 'agent'}
-            onCheckedChange={(checked) => setRunMode(checked ? 'agent' : 'direct')}
-          />
-        </div>
+        {showsAgentMode(generationType) ? (
+          <div className="flex items-center justify-between gap-3 px-1 py-2">
+            <Label htmlFor="media-run-mode" className="text-xs text-muted-foreground">
+              Agent mode
+            </Label>
+            <Switch
+              id="media-run-mode"
+              checked={runMode === 'agent'}
+              onCheckedChange={(checked) => setRunMode(checked ? 'agent' : 'direct')}
+            />
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-2 py-2">
           <Button

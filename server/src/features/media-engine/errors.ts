@@ -22,12 +22,12 @@ export class MediaRateLimitError extends MediaError {
     readonly isRetriable = true;
     readonly code = 'RATE_LIMIT';
 
-    constructor(message: string, cause?: Error) {
+    constructor(message: string, cause?: Error, public readonly retryAfterMs?: number) {
         super(message || 'Rate limit exceeded. Please retry later.', cause);
     }
 
-    static fromResponse(status: number, statusText: string, cause?: Error): MediaRateLimitError {
-        return new MediaRateLimitError(`Rate limit exceeded (${status}): ${statusText}`, cause);
+    static fromResponse(status: number, statusText: string, cause?: Error, retryAfterMs?: number): MediaRateLimitError {
+        return new MediaRateLimitError(`Rate limit exceeded (${status}): ${statusText}`, cause, retryAfterMs);
     }
 }
 

@@ -4,8 +4,9 @@ import { startGenerationMutationOptions } from "../query-mutations"
 import { AssetRequest } from "../requests"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
 import { cleanMediaType } from "@/utils/clean-mediaType"
-import { getAgentMediaType, showsVoiceSelector } from "../constants"
+import { getAgentMediaType, showsAgentMode, showsVoiceSelector } from "../constants"
 import { coerceParameterSettings } from "../lib/parameter-assets"
+import { agentSettingsFromValues, parseAgentReferences } from "../lib/agent-settings"
 
 
 export const useSendRequest = (projectId: string) => {
@@ -24,17 +25,25 @@ export const useSendRequest = (projectId: string) => {
   const appendActiveGenerationRequest = useMediaGeneratorStore((state) => state.appendActiveGenerationRequest)
 
   const uploadedAttachments = attachments.filter((attachment) => attachment.status === 'uploaded')
+  const isAgentMode = runMode === 'agent' && showsAgentMode(generationType)
+  const referencedFiles = isAgentMode
+    ? parseAgentReferences(parameterValues.references).map((ref) => ({
+        type: ref.type,
+        url: ref.url,
+        mediaType: cleanMediaType(ref.type, ref.url),
+      }))
+    : uploadedAttachments.map((attachment) => ({
+        type: attachment.type,
+        url: attachment.url,
+        mediaType: cleanMediaType(attachment.type, attachment.url),
+      }))
 
   const context = {
     model: selectedModelId,
     mediaType: getAgentMediaType(generationType, generationSubtype),
     generationType,
     subtype: generationSubtype,
-    referencedFiles: uploadedAttachments.map((attachment) => ({
-      type: attachment.type,
-      url: attachment.url,
-      mediaType: cleanMediaType(attachment.type, attachment.url),
-    })),
+    referencedFiles,
     ...(showsVoiceSelector(generationType, generationSubtype)
           ? { voice: promptSettings.audio.voice }
           : {}),
@@ -44,7 +53,9 @@ export const useSendRequest = (projectId: string) => {
     const payload: AssetRequest = {
       model: selectedModelId ?? '',
       prompt,
-      settings: coerceParameterSettings(parameterValues, parameters),
+      settings: isAgentMode
+        ? agentSettingsFromValues(parameterValues)
+        : coerceParameterSettings(parameterValues, parameters),
       context,
       runMode,
     }

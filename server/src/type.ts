@@ -44,6 +44,30 @@ export type ModelBasePricing = {
   rate: number;
 }
 
+export type VendorKind = 'media' | 'llm'
+
+export type VendorRateLimit = {
+  rpm: number
+  burst?: number
+  maxConcurrency: number
+}
+
+export type VendorCircuitConfig = {
+  cooldownMs: number
+  probeTtlMs: number
+}
+
+export const DEFAULT_VENDOR_RATE_LIMIT: VendorRateLimit = {
+  rpm: 60,
+  burst: 60,
+  maxConcurrency: 10,
+}
+
+export const DEFAULT_VENDOR_CIRCUIT_CONFIG: VendorCircuitConfig = {
+  cooldownMs: 15_000,
+  probeTtlMs: 30_000,
+}
+
 export type TextTokenUsage = {
   inputTokens: number;
   outputTokens: number;

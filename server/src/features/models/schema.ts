@@ -103,25 +103,53 @@ export const upsertVendorParameterMapSchema = z.object({
   vendorDefaultValue: z.string().nullable().optional(),
 })
 
+export const vendorNameSlugSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Name must be a lowercase kebab-case slug')
+
+export const vendorKindSchema = z.enum(['media', 'llm'])
+
+export const vendorRateLimitSchema = z.object({
+  rpm: z.number().int().min(1),
+  burst: z.number().int().min(1).optional(),
+  maxConcurrency: z.number().int().min(1),
+})
+
+export const vendorCircuitConfigSchema = z.object({
+  cooldownMs: z.number().int().min(0),
+  probeTtlMs: z.number().int().min(1),
+})
+
 export const createVendorSchema = z.object({
-  name: z.string().trim().min(1).max(100),
+  name: vendorNameSlugSchema,
+  kind: vendorKindSchema.optional(),
   enabled: z.boolean().optional(),
+  rateLimit: vendorRateLimitSchema.optional(),
+  circuitConfig: vendorCircuitConfigSchema.nullable().optional(),
 })
 
 export const updateVendorSchema = z.object({
-  name: z.string().trim().min(1).max(100).optional(),
+  name: vendorNameSlugSchema.optional(),
+  kind: vendorKindSchema.optional(),
   enabled: z.boolean().optional(),
+  rateLimit: vendorRateLimitSchema.optional(),
+  circuitConfig: vendorCircuitConfigSchema.nullable().optional(),
 })
 
 export const createModelVendorBindingSchema = z.object({
   vendorId: z.uuid(),
   apiName: z.string().min(1).max(50),
   enabled: z.boolean().optional(),
+  priority: z.number().int().optional(),
 })
 
 export const updateModelVendorBindingSchema = z.object({
   apiName: z.string().min(1).max(50).optional(),
   enabled: z.boolean().optional(),
+  priority: z.number().int().optional(),
 })
 
 export const modelParameterBindingSchema = z.object({

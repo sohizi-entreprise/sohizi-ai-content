@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import type { GenerationSubtype, GenerationType, MediaRunMode } from '../types'
-import { getDefaultSubtype } from '../constants'
+import { getDefaultSubtype, showsAgentMode } from '../constants'
 import { AttachedFile } from '@/components/widgets/file-attachments'
 import { Editor } from '@tiptap/core'
 import { parseStoredRequest } from '../lib/request-state'
+import { defaultAgentParameterValues } from '../lib/agent-settings'
 
 type ActiveGenerationRequest = {
   requestId: string
@@ -70,25 +71,31 @@ export const useMediaGeneratorStore = create<StoreState & StoreActions>(
     ...initialState,
     setPrompt: (data) => set({ prompt: data }),
     setGenerationType: (generationType) =>
-      set({
-        generationType,
-        generationSubtype: getDefaultSubtype(generationType),
-        selectedModelId: null,
-        parameterValues: {},
-        attachments: [],
+      set((state) => {
+        const keepAgentMode = showsAgentMode(generationType) && state.runMode === 'agent'
+        return {
+          generationType,
+          generationSubtype: getDefaultSubtype(generationType),
+          selectedModelId: null,
+          parameterValues: keepAgentMode ? defaultAgentParameterValues() : {},
+          attachments: [],
+          runMode: keepAgentMode ? 'agent' : 'direct',
+        }
       }),
     setGenerationSubtype: (generationSubtype) =>
-      set({
+      set((state) => ({
         generationSubtype,
         selectedModelId: null,
-        parameterValues: {},
+        parameterValues: state.runMode === 'agent'
+          ? defaultAgentParameterValues(state.parameterValues)
+          : {},
         attachments: [],
-      }),
+      })),
     setSelectedModelId: (selectedModelId) =>
-      set({
+      set((state) => ({
         selectedModelId,
-        parameterValues: {},
-      }),
+        parameterValues: state.runMode === 'agent' ? state.parameterValues : {},
+      })),
     setParameterValues: (parameterValues) => set({ parameterValues }),
     updateParameterValue: (key, value) =>
       set((state) => ({
@@ -122,7 +129,16 @@ export const useMediaGeneratorStore = create<StoreState & StoreActions>(
       return {prompt: ''}
     }),
     setViewRequestInput: (input) => set({ viewRequestInput: input }),
-    setRunMode: (runMode) => set({ runMode }),
+    setRunMode: (runMode) => set((state) => {
+      if (runMode === state.runMode) return {}
+      if (runMode === 'agent') {
+        return {
+          runMode,
+          parameterValues: defaultAgentParameterValues(state.parameterValues),
+        }
+      }
+      return { runMode, parameterValues: {} }
+    }),
     applyRequestState: (request) => set((state) => {
       const parsed = parseStoredRequest(request)
       if (!parsed) return {}

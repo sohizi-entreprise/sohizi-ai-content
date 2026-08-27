@@ -6,11 +6,17 @@ import { cn } from '@/lib/utils'
 import { searchFilesByName } from '@/features/projects/request'
 import { listFolderMediaQueryOptions } from '@/features/projects/query-mutation'
 import { AssetPickerGrid } from './asset-picker-grid'
-import type { PickerAsset, PickerAssetType } from '../lib/parameter-assets'
+import {
+  describeFileTypes,
+  isPickerAssetType,
+  queryTypeForFileTypes,
+  type PickerAsset,
+  type PickerAssetType,
+} from '../lib/parameter-assets'
 
 type AssetPickerFolderTabProps = {
   projectId: string
-  fileType: PickerAssetType
+  fileTypes: PickerAssetType[]
   selectedUrls: string[]
   onSelect: (asset: PickerAsset) => void
   maxItems: number
@@ -19,7 +25,7 @@ type AssetPickerFolderTabProps = {
 
 export function AssetPickerFolderTab({
   projectId,
-  fileType,
+  fileTypes,
   selectedUrls,
   onSelect,
   maxItems,
@@ -52,16 +58,21 @@ export function AssetPickerFolderTab({
   const folderOptions = useMemo(() => searchedFiles ?? [], [searchedFiles])
   const selectedFolder = folderOptions.find((folder) => folder.id === selectedFolderId)
 
+  const queryType = queryTypeForFileTypes(fileTypes)
   const { data: folderFiles = [], isLoading: isLoadingFolderFiles } = useQuery(
-    listFolderMediaQueryOptions(projectId, selectedFolderId, { format: fileType }),
+    listFolderMediaQueryOptions(projectId, selectedFolderId, queryType ? { format: queryType } : undefined),
   )
 
-  const items: PickerAsset[] = folderFiles.map((file) => ({
-    id: file.id,
-    name: file.name,
-    url: file.url,
-    type: file.type,
-  }))
+  const allowed = new Set(fileTypes)
+  const items: PickerAsset[] = folderFiles.flatMap((file) => {
+    if (!isPickerAssetType(file.type) || !allowed.has(file.type) || !file.url) return []
+    return [{
+      id: file.id,
+      name: file.name,
+      url: file.url,
+      type: file.type,
+    }]
+  })
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -117,7 +128,7 @@ export function AssetPickerFolderTab({
             maxItems={maxItems}
             allowMultiple={allowMultiple}
             isLoading={isLoadingFolderFiles}
-            emptyLabel={`No ${fileType} files in this folder`}
+            emptyLabel={`No ${describeFileTypes(fileTypes)} files in this folder`}
           />
         </>
       )}

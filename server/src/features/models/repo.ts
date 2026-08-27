@@ -13,7 +13,13 @@ import {
   parameterOptions,
 } from '@/db/schema'
 import { and, count, eq, inArray, sql } from 'drizzle-orm'
-import type { ModelBasePricing, ModelParameterConstraint } from '@/type'
+import type {
+  ModelBasePricing,
+  ModelParameterConstraint,
+  VendorCircuitConfig,
+  VendorRateLimit,
+} from '@/type'
+import { DEFAULT_VENDOR_RATE_LIMIT } from '@/type'
 
 const isCompleteListing = (pricing: ModelBasePricing | null | undefined) => {
   if (!pricing) return false
@@ -139,6 +145,7 @@ export const getModelWithRelations = async (id: string) => {
       vendorName: llmVendors.name,
       vendorApiName: llmVendorsAndModels.apiName,
       vendorEnabled: llmVendorsAndModels.enabled,
+      vendorPriority: llmVendorsAndModels.priority,
     })
     .from(llmModels)
     .leftJoin(modelsAndCategories, eq(llmModels.id, modelsAndCategories.modelId))
@@ -158,6 +165,7 @@ export const getModelWithRelations = async (id: string) => {
     name: string
     apiName: string
     enabled: boolean
+    priority: number
   }> = []
   const seenCategories = new Set<string>()
   const seenVendors = new Set<string>()
@@ -174,6 +182,7 @@ export const getModelWithRelations = async (id: string) => {
         name: row.vendorName!,
         apiName: row.vendorApiName!,
         enabled: row.vendorEnabled!,
+        priority: row.vendorPriority ?? 100,
       })
     }
   }
@@ -879,7 +888,10 @@ export const listVendors = async () => {
     .select({
       id: llmVendors.id,
       name: llmVendors.name,
+      kind: llmVendors.kind,
       enabled: llmVendors.enabled,
+      rateLimit: llmVendors.rateLimit,
+      circuitConfig: llmVendors.circuitConfig,
       createdAt: llmVendors.createdAt,
       updatedAt: llmVendors.updatedAt,
       modelCount: count(llmVendorsAndModels.modelId),
@@ -895,12 +907,21 @@ export const listVendors = async () => {
   }))
 }
 
-export const createVendor = async (data: { name: string; enabled?: boolean }) => {
+export const createVendor = async (data: {
+  name: string
+  kind?: 'media' | 'llm'
+  enabled?: boolean
+  rateLimit?: VendorRateLimit
+  circuitConfig?: VendorCircuitConfig | null
+}) => {
   const [created] = await db
     .insert(llmVendors)
     .values({
       name: data.name,
+      kind: data.kind ?? 'llm',
       enabled: data.enabled ?? true,
+      rateLimit: data.rateLimit ?? DEFAULT_VENDOR_RATE_LIMIT,
+      circuitConfig: data.circuitConfig ?? null,
     })
     .returning()
   return { ...created, modelCount: 0 }
@@ -908,7 +929,13 @@ export const createVendor = async (data: { name: string; enabled?: boolean }) =>
 
 export const updateVendor = async (
   id: string,
-  data: Partial<{ name: string; enabled: boolean }>,
+  data: Partial<{
+    name: string
+    kind: 'media' | 'llm'
+    enabled: boolean
+    rateLimit: VendorRateLimit
+    circuitConfig: VendorCircuitConfig | null
+  }>,
 ) => {
   const [updated] = await db
     .update(llmVendors)
@@ -931,6 +958,7 @@ export const createModelVendorBinding = async (data: {
   vendorId: string
   apiName: string
   enabled?: boolean
+  priority?: number
 }) => {
   const [created] = await db
     .insert(llmVendorsAndModels)
@@ -939,6 +967,7 @@ export const createModelVendorBinding = async (data: {
       vendorId: data.vendorId,
       apiName: data.apiName,
       enabled: data.enabled ?? true,
+      priority: data.priority ?? 100,
     })
     .returning()
   return created
@@ -950,6 +979,7 @@ export const updateModelVendorBinding = async (
   data: Partial<{
     apiName: string
     enabled: boolean
+    priority: number
   }>,
 ) => {
   const [updated] = await db

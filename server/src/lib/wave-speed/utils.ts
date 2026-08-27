@@ -131,6 +131,7 @@ async function requestJson(url: string, options: RequestInit = {}) {
             throw new WaveSpeedError(429, 'Too Many Requests', 'TOO_MANY_REQUESTS');
         }
         if(status === 500) {
+            console.error('WaveSpeed API Error:', error);
             throw new WaveSpeedError(500, 'Internal Server Error', 'INTERNAL_SERVER_ERROR');
         }
         throw new WaveSpeedError(status, error, 'UNKNOWN');

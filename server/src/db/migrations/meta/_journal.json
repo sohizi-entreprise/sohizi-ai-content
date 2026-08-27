@@ -232,6 +232,13 @@
       "when": 1787750000000,
       "tag": "0032_model_level_pricing",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1787760000000,
+      "tag": "0033_vendor_routing",
+      "breakpoints": true
     }
   ]
 }

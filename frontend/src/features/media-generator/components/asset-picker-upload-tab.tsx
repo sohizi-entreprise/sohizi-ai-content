@@ -6,11 +6,18 @@ import { Button } from '@/components/ui/button'
 import { useSaveFileBucket } from '@/hooks/use-save-file-bucket'
 import { listUploadedAssetsQueryOptions } from '../query-mutations'
 import { AssetPickerGrid } from './asset-picker-grid'
-import type { PickerAsset, PickerAssetType } from '../lib/parameter-assets'
+import {
+  acceptForFileTypes,
+  describeFileTypes,
+  isPickerAssetType,
+  queryTypeForFileTypes,
+  type PickerAsset,
+  type PickerAssetType,
+} from '../lib/parameter-assets'
 
 type AssetPickerUploadTabProps = {
   projectId: string
-  fileType: PickerAssetType
+  fileTypes: PickerAssetType[]
   selectedUrls: string[]
   onSelect: (asset: PickerAsset) => void
   maxItems: number
@@ -19,7 +26,7 @@ type AssetPickerUploadTabProps = {
 
 export function AssetPickerUploadTab({
   projectId,
-  fileType,
+  fileTypes,
   selectedUrls,
   onSelect,
   maxItems,
@@ -28,8 +35,8 @@ export function AssetPickerUploadTab({
   const inputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
   const { saveFile, isUploading } = useSaveFileBucket()
-  const accept =
-    fileType === 'video' ? 'video/*' : fileType === 'audio' ? 'audio/*' : 'image/*'
+  const accept = acceptForFileTypes(fileTypes)
+  const queryType = queryTypeForFileTypes(fileTypes)
 
   const {
     data: uploadedAssets = [],
@@ -37,16 +44,18 @@ export function AssetPickerUploadTab({
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useInfiniteQuery(listUploadedAssetsQueryOptions(projectId, { type: fileType }))
+  } = useInfiniteQuery(listUploadedAssetsQueryOptions(projectId, queryType ? { type: queryType } : undefined))
 
-  const items: PickerAsset[] = uploadedAssets
-    .filter((asset) => asset.type === fileType)
-    .map((asset) => ({
+  const allowed = new Set(fileTypes)
+  const items: PickerAsset[] = uploadedAssets.flatMap((asset) => {
+    if (!isPickerAssetType(asset.type) || !allowed.has(asset.type)) return []
+    return [{
       id: asset.id,
       name: asset.name,
       url: asset.url,
-      type: fileType,
-    }))
+      type: asset.type,
+    }]
+  })
 
   const handleFiles = (fileList: FileList | null) => {
     const file = fileList?.[0]
@@ -58,14 +67,16 @@ export function AssetPickerUploadTab({
           queryKey: ['media', projectId, 'uploaded-assets'],
         })
         const uploadedType = result.asset.type
-        if (uploadedType === 'image' || uploadedType === 'video' || uploadedType === 'audio') {
+        if (isPickerAssetType(uploadedType) && allowed.has(uploadedType)) {
           onSelect({
             id: result.asset.id,
             name: result.asset.name,
             url: result.asset.url,
             type: uploadedType,
           })
+          return
         }
+        toast.error(`Only ${describeFileTypes(fileTypes)} files are allowed`)
       },
       onError: (error) => {
         toast.error(error.message)
@@ -104,7 +115,7 @@ export function AssetPickerUploadTab({
         maxItems={maxItems}
         allowMultiple={allowMultiple}
         isLoading={isLoading}
-        emptyLabel={`No uploaded ${fileType} files yet`}
+        emptyLabel={`No uploaded ${describeFileTypes(fileTypes)} files yet`}
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
         onLoadMore={() => {

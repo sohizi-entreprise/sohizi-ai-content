@@ -1,8 +1,5 @@
 import { CancelResponse, EstimateRequestPriceResponse, GetRequestDataResponse, MediaEngineProvider, SubmitResponse, SubmitPayload } from "./type";
 import { waveSpeedFuncs } from "@/lib/wave-speed";
-import { WAVE_SPEED_VENDOR } from "@/features/ai/agent/core/vendor";
-import { mapVendorPayload } from "./utils";
-import { getVendorModelApiName } from "../repo";
 
 function toRequestData(outputs: unknown): Array<string | Record<string, string>> {
     if (Array.isArray(outputs)) {
@@ -15,25 +12,15 @@ function toRequestData(outputs: unknown): Array<string | Record<string, string>>
     return [];
 }
 
-
 export class WaveSpeedProvider implements MediaEngineProvider {
+    constructor(private readonly apiKey: string) {}
 
-    private modelApiName: string | null = null;
-    private payload: SubmitPayload | null = null;
-
-    constructor(private readonly apiKey: string) {
-        this.apiKey = apiKey;
-        this.modelApiName = null;
-        this.payload = null;
-    }
-
-    async submitRequest(model: string, payload: SubmitPayload): Promise<SubmitResponse> {
-        const [modelApiName, mappedPayload] = await Promise.all([this.getModelApiName(model), this.getPayload(model, payload)]);
-        const response = await waveSpeedFuncs.submitJob(this.apiKey, modelApiName, mappedPayload);
+    async submitRequest(apiName: string, payload: SubmitPayload): Promise<SubmitResponse> {
+        const response = await waveSpeedFuncs.submitJob(this.apiKey, apiName, payload);
         return {
             requestId: response.jobId,
             status: response.status,
-        }
+        };
     }
 
     async getRequestData(requestId: string): Promise<GetRequestDataResponse> {
@@ -59,35 +46,14 @@ export class WaveSpeedProvider implements MediaEngineProvider {
         return {
             requestId: requestId,
             ok: response > 0,
-        }
+        };
     }
 
-    async estimateRequestPrice(model: string, payload: SubmitPayload): Promise<EstimateRequestPriceResponse> {
-        const [modelApiName, mappedPayload] = await Promise.all([this.getModelApiName(model), this.getPayload(model, payload)]);
-        const response = await waveSpeedFuncs.getInferencePrice(this.apiKey, modelApiName, mappedPayload);
+    async estimateRequestPrice(apiName: string, payload: SubmitPayload): Promise<EstimateRequestPriceResponse> {
+        const response = await waveSpeedFuncs.getInferencePrice(this.apiKey, apiName, payload);
         return {
             ok: true,
             priceUSD: response.price,
-        }
-
+        };
     }
-
-    async getModelApiName(model: string): Promise<string> {
-        if(this.modelApiName){
-            return this.modelApiName;
-        }
-        const result = await getVendorModelApiName(WAVE_SPEED_VENDOR, model);
-        this.modelApiName = result.apiName;
-        return this.modelApiName;
-    }
-
-    async getPayload(model: string, initialPayload: SubmitPayload): Promise<SubmitPayload> {
-        if(this.payload){
-            return this.payload;
-        }
-        const result = await mapVendorPayload(WAVE_SPEED_VENDOR, model, initialPayload);
-        this.payload = result;
-        return this.payload;
-    }
-
 }
