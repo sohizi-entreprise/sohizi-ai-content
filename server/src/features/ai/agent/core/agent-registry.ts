@@ -3,7 +3,7 @@ import { mediaGeneratorPrompt } from "../prompts/media-generator";
 import { editFileTool } from "../tools/file-edit";
 import { exploreFileTool } from "../tools/file-explore";
 import { searchFileTool } from "../tools/file-search";
-import { submitMediaJobsTool } from "../tools/submit-media-jobs";
+import { listModelsTool, getModelSchemaTool, cancelRequestTool, submitRequestTool } from "../tools/submit-media-jobs";
 import { submitHtmlCompositionTool } from "../tools/submit-html-composition";
 import { manageTodoListTool } from "../tools/tasks-manage";
 import { timelineEditTool } from "../tools/timeline-edit";
@@ -104,6 +104,10 @@ registerAgent({
             youtubeAnalyzerTool,
             videoAnalyzerTool,
             imageAnalyzerTool,
+            listModelsTool,
+            getModelSchemaTool,
+            cancelRequestTool,
+            submitRequestTool,
         ]),
         reasoningEffort: 'low',
         reasoningSummary: 'auto',

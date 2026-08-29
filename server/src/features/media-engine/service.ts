@@ -200,6 +200,7 @@ async function runAiGeneration(payload: RunAgentPayload & { runId: string }){
                 userId: userId,
                 model: payload.model,
                 payload: jobPayload,
+                referenceFiles: payload.context.referenceFiles || [],
                 mediaType: toProviderMediaType(payload.context),
                 runMode: payload.runMode,
                 _reservationId: uuidv4(),

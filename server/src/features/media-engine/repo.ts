@@ -715,7 +715,8 @@ export const getModelSchema = async (modelId: string) => {
 export const listGenerationModels = async (type: string) => {
     const result = await db.select({
         id: llmModels.id,
-        
+        description: llmModels.description,
+        pricing: llmModels.pricing,
     })
     .from(llmModels)
     .innerJoin(modelsAndCategories, eq(modelsAndCategories.modelId, llmModels.id))

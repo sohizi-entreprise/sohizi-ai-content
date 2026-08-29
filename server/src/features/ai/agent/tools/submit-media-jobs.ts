@@ -1,152 +1,230 @@
 import { z } from "zod";
 import { buildBaseTool } from "./tool-definition";
-import { success } from "./utils";
-import { mediaConstants } from '@/constants';
-import { incrementKey } from "@/features/generation-request/stream-handler";
-import { inngest } from "@/lib/inngest/client";
+import { failure, success } from "./utils";
+import { getModelSchema, listGenerationModels } from "@/features/media-engine/repo";
 
-const models = {
-    image: [
-        'flux.2-max',
-        'gpt-image-2',
-        'gpt-image-1.5',
-        'gemini-3.1-flash-image-preview',
-        'gemini-3-pro-image-preview',
-        'seedream-4.5',
-        'seedream-5-lite'
-    ],
-    video: [
-        'wan-2.6',
-        'kling-v3',
-        'seedance-2.0'
-    ],
-    videoToVideo: [
-        'seedance-2.0'
-    ],
-}
 
-const ttsVoices = z.enum(mediaConstants.googleTtsVoices);
-const imageModels = z.enum(models.image);
-const videoModels = z.enum(models.video);
-const videoAspectRatios = ['16:9', '9:16', '1:1'] as const;
+type ModelSchema = Awaited<ReturnType<typeof getModelSchema>>
 
-const imageJobSchema = z.object({
-    type: z.literal('image'),
-    prompt: z.string().min(1).describe('The prompt to generate the image'),
-    model: imageModels.describe('The model to use. Default to Flux or gemini-3.1-flash-image-preview as they are faster and cheaper.'),
-    aspectRatio: z.enum(mediaConstants.imageSizePresets).default('auto').describe('The aspect ratio of the image'),
-    referenceImages: z.array(z.url()).max(5).optional().describe('Optional reference images. Maximum 5.'),
-    numVariations: z.number().int().min(1).max(4).default(1).describe('Number of variations to generate. Maximum 4.'),
+
+const modelCapabilities = [
+    'text-to-image', 
+    'image-to-image', 
+    'text-to-video', 
+    'video-to-video'
+] as const;
+
+const listModelsSchema = z.object({
+    type: z.enum(modelCapabilities).describe('The type of media generation request'),
 });
 
-const videoJobSchema = z.object({
-    type: z.literal('video'),
-    prompt: z.string().min(1).describe('The prompt to generate the video'),
-    model: videoModels.describe('The model to use for video generation'),
-    duration: z.number().min(1).max(60).describe('Video duration in seconds (1-60)'),
-    aspectRatio: z.enum(videoAspectRatios).default('16:9').describe('The aspect ratio of the video'),
-    referenceImage: z.url().optional().describe('Optional reference image URL to guide generation'),
+const getModelSchemaSchema = z.object({
+    modelId: z.string().describe('The ID of the model to get the schema for'),
 });
 
-const musicJobSchema = z.object({
-    type: z.literal('music'),
-    instructions: z.string().min(1).describe('A clear detailed prompt to generate the music'),
-});
+const submitRequestSchema = z.object({
+    modelId: z.string().describe('The model ID to use for the generation'),
+    prompt: z.string().min(1).describe('The prompt to generate the media'),
+    parameters: z.record(z.string(), z.unknown()).describe('The parameters to use for the generation based on the model schema'),
+})
 
-const textToSpeechJobSchema = z.object({
-    type: z.literal('text-to-speech'),
-    text: z.string().min(1).describe('The text to convert to speech (single speaker)'),
-    voice: ttsVoices.describe('The voice to use for text to speech'),
-    instructions: z.string().optional().describe('Optional style notes: tone, accent, pacing, emotion'),
-});
+export type SubmitRequestInput = z.infer<typeof submitRequestSchema>;
 
-const dialogueSpeakerSchema = z.object({
-    name: z.string().min(1).describe('Speaker label used in the script. Must match "Name:" line prefixes exactly.'),
-    voice: ttsVoices.describe('Gemini TTS voice for this speaker'),
-});
-
-/**
- * Multi-speaker TTS (exactly 2 speakers). Gemini Flash TTS dialogue format.
- * Script lines must be `SpeakerName: spoken text` with names matching speakers[].name.
- */
-const dialogueJobSchema = z.object({
-    type: z.literal('dialogue'),
-    script: z.string().min(1).describe(
-        'Dialogue transcript only. One turn per line as "SpeakerName: line". '
-        + 'Do NOT wrap with "TTS the following…". Speaker names must match speakers[].name exactly.',
-    ),
-    speakers: z.array(dialogueSpeakerSchema).length(2).describe(
-        'Exactly 2 speakers. Names must be unique and match script prefixes.',
-    ),
-    instructions: z.string().optional().describe(
-        'Optional scene direction for the whole dialogue: accents, moods, pacing, relationship energy.',
-    ),
-}).superRefine((job, ctx) => {
-    const names = job.speakers.map((s) => s.name.trim());
-    if (new Set(names).size !== names.length) {
-        ctx.addIssue({
-            code: 'custom',
-            path: ['speakers'],
-            message: 'Speaker names must be unique',
-        });
-    }
-});
-
-const htmlVideoJobSchema = z.object({
-    type: z.literal('html-video'),
-    instructions: z.string().min(1).describe(
-        'Clear creative brief for an HTML/HyperFrames motion-graphics video: '
-        + 'duration, aspect ratio, scenes, copy, visual style, transitions, and any dynamic/editable fields.',
-    ),
-});
-
-const mediaJobSchema = z.discriminatedUnion('type', [
-    imageJobSchema,
-    videoJobSchema,
-    musicJobSchema,
-    textToSpeechJobSchema,
-    dialogueJobSchema,
-    htmlVideoJobSchema,
-]);
-
-export type MediaJob = z.infer<typeof mediaJobSchema>;
-
-const submitMediaJobsSchema = z.object({
-    status: z.enum(['done', 'blocked']).describe('"done" = jobs are ready to submit. "blocked" = cannot proceed.'),
-    jobs: z.array(mediaJobSchema).default([]).describe('The media jobs to submit. Leave empty when status is "blocked".'),
-    message: z.string().describe('Super concise message to the user. If blocked, explain why.'),
-});
-
-export const submitMediaJobsTool = buildBaseTool({
-    name: 'submitMediaJobs',
-    description: 'End the execution loop. If status is "done", include all the media jobs the user requested. If status is "blocked", explain why you cannot proceed. Call this tool EXACTLY ONCE.',
-    inputSchema: submitMediaJobsSchema,
+export const listModelsTool = buildBaseTool({
+    name: 'listModels',
+    description: 'List the models available for asset generation for the given media type',
+    inputSchema: listModelsSchema,
     execute: async (input, { state, session }) => {
-        if(state.isExitStatus){
-            return success('Media generation was already submitted.');
+        try {
+            const models = await listGenerationModels(input.type);
+            if(models.length === 0){
+                return success('No models found for the given media type. No need to continue if no models are available for the given media type.');
+            }
+            return success(JSON.stringify(models));
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'An error occurred while listing models';
+            return failure(errorMsg);
+
         }
-
-        state.finishRun();
-        if(input.status === 'blocked'){
-            return success('The user will be notified that the request cannot be processed at the moment.');
-        }
-
-        for (const job of input.jobs) {
-            if (job.type !== 'html-video') continue;
-
-            await incrementKey(session.runId);
-            await inngest.send({
-                name: 'media/generate.html-video',
-                data: {
-                    requestId: session.runId,
-                    projectId: session.projectId,
-                    organizationId: session.organizationId,
-                    userId: session.userId,
-                    instructions: job.instructions,
-                },
-            });
-        }
-
-        return success('The generation has kicked off.');
     },
 });
+
+export const getModelSchemaTool = buildBaseTool({
+    name: 'getModelSchema',
+    description: 'Get the schema for the given model ID',
+    inputSchema: getModelSchemaSchema,
+    execute: async (input, { state, session, artifacts }) => {
+        try {
+            const schema = await getModelSchema(input.modelId);
+            artifacts.set(`schema-${input.modelId}`, schema);
+            return success(JSON.stringify(schema));
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'An error occurred while getting the model schema';
+            return failure(errorMsg);
+        }
+    },
+});
+
+
+export const submitRequestTool = buildBaseTool({
+    name: 'submitRequest',
+    description: 'Submit the request to the model',
+    inputSchema: submitRequestSchema,
+    execute: async (input, { state, session, artifacts }) => {
+        try {
+            let schema = artifacts.get(`schema-${input.modelId}`) as ModelSchema | undefined
+            if (!schema) {
+                schema = await getModelSchema(input.modelId)
+                artifacts.set(`schema-${input.modelId}`, schema)
+            }
+
+            const validation = validateInput(schema, input.parameters)
+            if (!validation.isValid) {
+                return failure(
+                    `Validation failed. ${validation.errorMsg} Fix the parameters and call submitRequest again.`,
+                )
+            }
+
+            artifacts.set('submitRequest', {status: 'ready', input})
+            state.finishRun()
+            return success('Request submitted successfully')
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'An error occurred while submitting the request'
+            return failure(errorMsg)
+        }
+    },
+})
+
+
+export const cancelRequestTool = buildBaseTool({
+    name: 'cancelRequest',
+    description: 'Call this function whenever you cannot proceed with the request due to any reason',
+    inputSchema: z.object({
+        message: z.string().describe('The message to the user explaining why you cannot proceed with the request'),
+    }),
+    execute: async (input, { state, session, artifacts }) => {
+        artifacts.set('submitRequest', {status: 'cancelled', reason: input.message})
+        return success('Request cancelled successfully')
+    },
+})
+
+function isOmitted(value: unknown): boolean {
+    return value === undefined || value === null || value === ''
+}
+
+function parseNumberValue(value: unknown): number | null {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim()
+        if (!trimmed || !/^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) {
+            return null
+        }
+        const parsed = Number(trimmed)
+        return Number.isFinite(parsed) ? parsed : null
+    }
+    return null
+}
+
+function parseArrayValue(value: unknown): unknown[] | null {
+    if (Array.isArray(value)) return value
+    if (typeof value !== 'string') return null
+    try {
+        const parsed = JSON.parse(value)
+        return Array.isArray(parsed) ? parsed : null
+    } catch {
+        return null
+    }
+}
+
+function validateInput(schema: ModelSchema, inputParameters: Record<string, unknown>) {
+    const errors: string[] = []
+
+    for (const parameter of schema) {
+        const value = inputParameters[parameter.key]
+        const constraint = parameter.constraints ?? {}
+
+        if (isOmitted(value)) {
+            if (parameter.required) {
+                errors.push(`This field '${parameter.key}' is required. Please provide a value for this field.`)
+            }
+            continue
+        }
+
+        if (parameter.type === 'number') {
+            const numberValue = parseNumberValue(value)
+            if (numberValue === null) {
+                errors.push(`This field '${parameter.key}' must be a number.`)
+                continue
+            }
+            if (constraint.min != null && numberValue < constraint.min) {
+                errors.push(`This field '${parameter.key}' must be at least ${constraint.min}.`)
+            }
+            if (constraint.max != null && numberValue > constraint.max) {
+                errors.push(`This field '${parameter.key}' must be at most ${constraint.max}.`)
+            }
+            if (constraint.step != null && constraint.step > 0) {
+                const base = constraint.min ?? 0
+                const steps = (numberValue - base) / constraint.step
+                if (!Number.isFinite(steps) || Math.abs(steps - Math.round(steps)) > 1e-8) {
+                    errors.push(`This field '${parameter.key}' must be a multiple of ${constraint.step}.`)
+                }
+            }
+            continue
+        }
+
+        if (parameter.type === 'boolean') {
+            if (typeof value !== 'boolean') {
+                errors.push(`This field '${parameter.key}' must be a boolean.`)
+            }
+            continue
+        }
+
+        if (parameter.type === 'string') {
+            if (typeof value !== 'string') {
+                errors.push(`This field '${parameter.key}' must be a string.`)
+                continue
+            }
+            if (parameter.options.length > 0 && !parameter.options.includes(value)) {
+                errors.push(`This field '${parameter.key}' must be one of: ${parameter.options.join(', ')}.`)
+            }
+            continue
+        }
+
+        if (parameter.type === 'array<string>' || parameter.type === 'array<number>') {
+            const parsed = parseArrayValue(value)
+            if (!parsed) {
+                errors.push(`This field '${parameter.key}' must be an array.`)
+                continue
+            }
+            if (parameter.required && parsed.length === 0) {
+                errors.push(`This field '${parameter.key}' is required. Please provide a value for this field.`)
+            }
+            if (constraint.min != null && parsed.length < constraint.min) {
+                errors.push(`This field '${parameter.key}' must contain at least ${constraint.min} item${constraint.min === 1 ? '' : 's'}.`)
+            }
+            if (constraint.max != null && parsed.length > constraint.max) {
+                errors.push(`This field '${parameter.key}' must contain at most ${constraint.max} item${constraint.max === 1 ? '' : 's'}.`)
+            }
+            if (parameter.type === 'array<string>') {
+                if (parsed.some((item) => typeof item !== 'string')) {
+                    errors.push(`This field '${parameter.key}' must be an array of strings.`)
+                } else if (parameter.options.length > 0) {
+                    const allowed = new Set(parameter.options)
+                    const hasInvalid = parsed.some((item) => typeof item === 'string' && !allowed.has(item))
+                    if (hasInvalid) {
+                        errors.push(`This field '${parameter.key}' contains invalid values. Allowed: ${parameter.options.join(', ')}.`)
+                    }
+                }
+            } else if (parsed.some((item) => parseNumberValue(item) === null)) {
+                errors.push(`This field '${parameter.key}' must be an array of numbers.`)
+            }
+        }
+    }
+
+    if (errors.length > 0) {
+        return { isValid: false as const, errorMsg: errors.join(' ') }
+    }
+    return { isValid: true as const, errorMsg: null }
+}

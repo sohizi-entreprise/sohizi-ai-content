@@ -37,6 +37,7 @@ import {
     type StickyDecision,
 } from '@/features/routing';
 import { MediaRateLimitError, MediaServiceUnavailableError } from './errors';
+import { SubmitRequestInput } from '../ai/agent/tools/submit-media-jobs';
 
 const MAX_MEDIA_POLL_ATTEMPTS = 60;
 const VIDEO_POLL_INTERVAL = '10s';
@@ -46,6 +47,8 @@ const VIDEO_RESERVATION_TTL_MS = 60 * 60 * 1000;
 
 type ProviderMediaType = 'image' | 'video' | 'audio';
 
+type ReferenceFile = {url: string, type: 'image' | 'video' | 'audio'};
+
 type ProviderMediaEventData = {
     requestId: string;
     projectId: string;
@@ -53,6 +56,7 @@ type ProviderMediaEventData = {
     userId: string;
     model: string;
     payload: SubmitPayload;
+    referenceFiles: ReferenceFile[];
     mediaType: ProviderMediaType;
     runMode: 'agent' | 'direct';
     _reservationId: string;
@@ -150,6 +154,7 @@ export const handleMediaGeneration = inngest.createFunction(
                     organizationId,
                     requestPayload: payload,
                     requestModelId: model,
+                    referenceFiles: data.referenceFiles,
                 });
                 if(output.ok){
                     return output.request as SubmitPayload;
@@ -164,10 +169,11 @@ export const handleMediaGeneration = inngest.createFunction(
 
         const decision = await step.run('resolve-route', async () => {
             try {
+                const {modelId, ...payload} = requestPayload;
                 return await resolveAndAcquire({
-                    modelId: model,
+                    modelId: modelId as string || model,
                     requestId,
-                    payload: requestPayload,
+                    payload,
                     leaseTtlMs: reservationTtlMs,
                 });
             } catch (error) {
@@ -369,6 +375,7 @@ type AgentPayload = {
     requestId: string;
     requestPayload: SubmitPayload;
     requestModelId: string;
+    referenceFiles: ReferenceFile[];
 }
 
 type AgentResponse = {
@@ -381,7 +388,7 @@ type AgentResponse = {
 
 
 async function runAgent(payload: AgentPayload){
-    const { userId, projectId, requestId, organizationId, requestPayload, requestModelId } = payload;
+    const { userId, projectId, requestId, organizationId, requestPayload, requestModelId, referenceFiles } = payload;
     const { controller, cleanup } = await createCancellableController(requestId);
 
     let response: AgentResponse = {
@@ -404,17 +411,14 @@ async function runAgent(payload: AgentPayload){
         throw new Error('Agent definition not found');
       }
 
-      const [model, modelSchema] = await Promise.all([
-        getModelWithVendorBinding(agentDefinition.modelId, agentDefinition.vendor),
-        getModelSchema(requestModelId),
-      ]);
+      const model = await getModelWithVendorBinding(agentDefinition.modelId, agentDefinition.vendor);
 
       if(!model){
         throw new Error('Model not found');
       }
       const agent = new Agent({
           name: agentDefinition.name,
-          systemPrompt: fullPrompt(agentDefinition.baseSystemPrompt, requestPayload, modelSchema),
+          systemPrompt: fullPrompt(agentDefinition.baseSystemPrompt, referenceFiles),
           session,
           model,
           vendor: agentDefinition.vendor,
@@ -428,26 +432,28 @@ async function runAgent(payload: AgentPayload){
       })
   
       const chunks = agent.runLoop(
-          buildUserPrompt(requestPayload),
+          buildUserPrompt(requestPayload.prompt as string, referenceFiles),
           controller.signal,
           250,
       )
 
-      let finalText = '';
-  
       for await (const chunk of chunks) {
-        if ((chunk.type === 'text_delta' || chunk.type === 'complete') && chunk.text) {
-            finalText = chunk.text;
-        }
         await writeStreamData(requestId, {runId: requestId, event:'chunk', chunk});
       }
 
-      const jsonResult = parseAgentPayload(finalText);
-      response = {
-        ok: true,
-        request: jsonResult,
+      const submitRequest = agent.artifacts.get('submitRequest') as {status: 'ready' | 'cancelled', input: SubmitRequestInput} | undefined;
+      if(submitRequest?.status === 'ready'){
+        response = {
+            ok: true,
+            request: { ...submitRequest.input.parameters, prompt: submitRequest.input.prompt, modelId: submitRequest.input.modelId },
+        };
+      }else{
+        response = {
+            ok: false,
+            error: 'Request cancelled',
+        };
       }
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Completion failed';
       console.error(error);
@@ -463,45 +469,31 @@ async function runAgent(payload: AgentPayload){
   }
 
 
-function parseAgentPayload(text: string): Record<string, unknown> {
-    const trimmed = text.trim();
-    if (!trimmed) {
-        throw new Error('Agent finished without a JSON payload');
-    }
 
-    const unfenced = trimmed
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/\s*```$/, '')
-        .trim();
+function buildUserPrompt(prompt: string, referenceFiles: ReferenceFile[]=[]): UserModelMessage {
 
-    try {
-        return JSON.parse(unfenced) as Record<string, unknown>;
-    } catch {
-        const start = unfenced.indexOf('{');
-        const end = unfenced.lastIndexOf('}');
-        if (start !== -1 && end > start) {
-            return JSON.parse(unfenced.slice(start, end + 1)) as Record<string, unknown>;
-        }
-        throw new Error('Agent output was not valid JSON');
-    }
+    const userMsg : UserModelMessage = {
+        role: 'user',
+        content: [
+            { type: 'text', text: prompt },
+            ...referenceFiles.map(file => ({ type: 'image' as const, image: file.url })),
+        ],
+    };
+
+    return userMsg;
 }
 
-function buildUserPrompt(payload: SubmitPayload): UserModelMessage {
-    const prompt = payload.prompt as string;
-
-    return { role: 'user', content: [{ type: 'text', text: prompt }] };
-}
-
-function fullPrompt(basePrompt: string, request: Record<string, unknown>, modelSchema: Record<string, unknown>[]){
+function fullPrompt(basePrompt: string, referenceFiles: ReferenceFile[]){
     return `
 ${basePrompt}
 
-<generation_request>
-${JSON.stringify(request)}
-</generation_request>
-
-<parameter_schema>
-${JSON.stringify(modelSchema)}
-</parameter_schema>
+${
+    referenceFiles.length > 0 ? `
+<reference_files>
+Here are the files referenced by the user:
+${JSON.stringify(referenceFiles)}
+</reference_files>
+` : ''
+    }
 `.trim();
 }

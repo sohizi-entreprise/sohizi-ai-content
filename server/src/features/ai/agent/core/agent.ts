@@ -52,7 +52,7 @@ export class Agent {
     private readonly contextManager: ContextManager;
     private lastInputTokens: number;
     private userMessage: UserModelMessage | null;
-    private artifacts: Map<string, unknown>;
+    public artifacts: Map<string, unknown>;
 
     constructor(config: AgentConfig) {
         this.name = config.name;
