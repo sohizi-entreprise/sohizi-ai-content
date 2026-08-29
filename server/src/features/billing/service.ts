@@ -66,6 +66,22 @@ export class BillingService {
     return repo.extend({ reservationId, ttlMs })
   }
 
+  /**
+   * Extend a reserved reservation when remaining TTL drops below
+   * `thresholdRatio` of the original window (default 20%).
+   */
+  async renewIfNearExpiry(
+    reservationId: string,
+    ttlMs: number,
+    thresholdRatio = 0.2,
+  ): Promise<void> {
+    const current = await this.getReservation(reservationId)
+    if (!current || current.status !== 'reserved') return
+    const remainingMs = current.expiresAt.getTime() - Date.now()
+    if (remainingMs > ttlMs * thresholdRatio) return
+    await this.extend(reservationId, ttlMs)
+  }
+
   /** Refund all expired reservations still in `reserved` state. */
   async sweepExpired(limit = 100): Promise<number> {
     return repo.sweepExpired(limit)

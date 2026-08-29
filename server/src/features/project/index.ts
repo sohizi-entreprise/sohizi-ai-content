@@ -3,9 +3,8 @@ import { z } from 'zod'
 import * as projectService from './service'
 import * as projectOptions from '@/constants/project-options'
 import { createProjectSchema, createTemplateSchema, updateProjectSchema} from "./schema";
-import { assertProjectAccess } from '@/lib/authorize'
+import { assertProjectAccess, requireActiveOrganization } from '@/lib/authorize'
 import { authMiddleware } from '@/lib/auth-middleware'
-import { BadRequest } from '../error'
 
 export const projectRoutes = new Elysia({ prefix: '/projects' })
   .get('/options', () => {
@@ -30,19 +29,13 @@ export const projectRoutes = new Elysia({ prefix: '/projects' })
   })
   .use(authMiddleware)
   .post('', ({ body, session }) => {
-    const organizationId = session.activeOrganizationId
-    if (!organizationId) {
-      throw new BadRequest('No active organization. Please select an organization first.')
-    }
+    const organizationId = requireActiveOrganization(session)
     return projectService.startProject(body, organizationId);
   }, {
     body: createProjectSchema,
   })
   .get('', ({ query, session }) => {
-    const organizationId = session.activeOrganizationId
-    if (!organizationId) {
-      throw new BadRequest('No active organization. Please select an organization first.')
-    }
+    const organizationId = requireActiveOrganization(session)
     return projectService.listProjects({
       cursor: query.cursor,
       limit: query.limit,
@@ -54,19 +47,13 @@ export const projectRoutes = new Elysia({ prefix: '/projects' })
     }),
   })
   .post('/templates', ({ body, session }) => {
-    const organizationId = session.activeOrganizationId
-    if (!organizationId) {
-      throw new BadRequest('No active organization. Please select an organization first.')
-    }
+    const organizationId = requireActiveOrganization(session)
     return projectService.createTemplate(body, organizationId);
   }, {
     body: createTemplateSchema,
   })
   .get('/templates', ({ query, session }) => {
-    const organizationId = session.activeOrganizationId
-    if (!organizationId) {
-      throw new BadRequest('No active organization. Please select an organization first.')
-    }
+    const organizationId = requireActiveOrganization(session)
     return projectService.listTemplates({
       cursor: query.cursor,
       limit: query.limit,

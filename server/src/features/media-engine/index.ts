@@ -15,12 +15,7 @@ export {
     MediaProviderError,
     MediaValidationError,
     MediaConfigurationError,
-    MediaGenerationFailedError,
-    MediaTimeoutError,
-    mediaErrorFromResponse,
-    wrapAsMediaError,
     isMediaError,
-    type WrapErrorOptions,
 } from './errors'
 
 const bulkAssetIdsSchema = z.object({

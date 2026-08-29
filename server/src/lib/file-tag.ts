@@ -20,8 +20,6 @@ export type FileTagParams = {
 export const FILE_TAG_REGEX =
   /@\[([^\]]+)\]\(file:([^?)\s]+)\?([^)]+)\)/g
 
-const FILE_TAG_PATTERN = /^@\[([^\]]+)\]\(file:([^?)\s]+)\?([^)]+)\)$/
-
 export function formatFileTag({
   displayName,
   fileId,
@@ -34,24 +32,4 @@ export function formatFileTag({
   if (lines) params.set('lines', lines)
   if (snippet) params.set('snippet', snippet)
   return `@[${displayName}](file:${fileId}?${params.toString()})`
-}
-
-export function parseFileTag(raw: string): FileTagParams | null {
-  const match = FILE_TAG_PATTERN.exec(raw.trim())
-  if (!match) return null
-
-  const displayName = match[1]
-  const fileId = match[2]
-  const query = match[3]
-  const params = new URLSearchParams(query)
-  const format = params.get('format')
-  if (!format) return null
-
-  return {
-    displayName,
-    fileId,
-    format,
-    lines: params.get('lines'),
-    snippet: params.get('snippet'),
-  }
 }

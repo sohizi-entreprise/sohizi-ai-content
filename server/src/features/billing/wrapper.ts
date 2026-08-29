@@ -229,12 +229,7 @@ export function withBillingAsync<TInput, TJobHandle>(
     combined.cleanup()
 
     const renewIfNearExpiry = async (opts?: { thresholdRatio?: number }) => {
-      const threshold = opts?.thresholdRatio ?? 0.2
-      const current = await billing.getReservation(reservation.id)
-      if (!current || current.status !== 'reserved') return
-      const remainingMs = current.expiresAt.getTime() - Date.now()
-      if (remainingMs > ttlMs * threshold) return
-      await billing.extend(reservation.id, ttlMs)
+      await billing.renewIfNearExpiry(reservation.id, ttlMs, opts?.thresholdRatio)
     }
 
     return { reservationId: reservation.id, jobHandle, renewIfNearExpiry }
@@ -325,7 +320,12 @@ export function withBillingStream<TInput, TChunk>(
   }
 }
 
-async function safeRefund(billing: BillingService, reservationId: string, reason: string) {
+export async function safeRefund(
+  billing: BillingService,
+  reservationId: string | undefined | null,
+  reason: string,
+) {
+  if (!reservationId) return
   try {
     await billing.refund(reservationId, reason)
   } catch (err) {

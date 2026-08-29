@@ -17,6 +17,8 @@ import type { Billable, BillableContext, BillableResult, BillableStream, Credits
 import type { ResolvedVendorModel } from "@/features/models/repo";
 import { calculateTextCredits, loaded_cost_usd, retail_price_usd, credits_to_charge } from "@/features/billing/credits";
 import { TOPUP_TARGET_MARGIN, PAYMENT_FEE_RESERVE, ESTIMATE_OVERBOOKING_FACTOR, TOKEN_OVERHEAD_RATE, CREDIT_RATE } from "@/features/billing/constants";
+import { getErrorMessage } from "@/utils/get-error-message";
+import { simpleHash } from "@/utils/simple-hash";
 
 export type ModelConfig = {
     tools?: ToolSet;
@@ -133,7 +135,7 @@ export class LlmClient {
                 type: streamEvents.complete,
                 text: '',
                 finishReason: 'error',
-                error: error instanceof Error ? error.message : String(error),
+                error: getErrorMessage(error),
                 usage: {
                     input: 0,
                     output: 0,
@@ -222,7 +224,7 @@ export class LlmClient {
                         break;
                     }
                     case 'error':{
-                        error = chunk.error instanceof Error ? chunk.error.message : String(chunk.error);
+                        error = getErrorMessage(chunk.error);
                         finishReason = 'error';
                         yield {
                             type: streamEvents.error,
@@ -284,7 +286,7 @@ export class LlmClient {
             };
 
         } catch (e) {
-            error = e instanceof Error ? e.message : String(e)
+            error = getErrorMessage(e)
             finishReason = 'error';
             yield {
                 type: streamEvents.error,
@@ -474,14 +476,4 @@ export function createBillableLlmClient(config: BillableLlmConfig): BillableLlmC
             return `llm:${ctx.organizationId}:${model.apiName}:${messageHash}:${runId}`;
         },
     };
-}
-
-function simpleHash(str: string): string {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return Math.abs(hash).toString(36);
 }

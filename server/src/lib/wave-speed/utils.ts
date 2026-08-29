@@ -102,20 +102,6 @@ export const getInferencePrice = async(apiKey: string, modelId: string, input: a
     }
 }
 
-
-export const pollResponse = async(apiKey: string, jobId: string, intervalMs: number = 3000, timeoutMs: number = 60000) => {
-    const startTime = Date.now();
-    const endTime = startTime + timeoutMs;
-    while (Date.now() < endTime) {
-        const result = await getJobResult(apiKey, jobId);
-        if (result.status === "completed") {
-            return result;
-        }
-        await new Promise(resolve => setTimeout(resolve, intervalMs));
-    }
-    throw new WaveSpeedError(408, `Request Timeout after ${timeoutMs}ms`, 'REQUEST_TIMEOUT');
-}
-
 async function requestJson(url: string, options: RequestInit = {}) {
     const response = await fetch(url, options);
     if (!response.ok) {

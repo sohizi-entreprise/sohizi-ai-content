@@ -1,5 +1,6 @@
 import { sse } from "elysia";
-import { getConversationById, getModelById } from "../chat/repo";
+import { getConversationById } from "../chat/repo";
+import { getModelById } from "../models/repo";
 import { BadRequest, NotFound } from "../error";
 import { ChatCompletionRequest } from "./schema";
 import { broadcastCancellation } from "./abort-manager";
@@ -70,8 +71,6 @@ export const cancelRequest = async (projectId: string, userId: string, requestId
 
     await updateGenerationRequest(requestId, { status: 'aborted' });
 
-    // await completeRequest(userId, requestId);
-
     return {}
 }
 
@@ -92,34 +91,8 @@ export async function getRequestStatuses(projectId: string, data: {requestIds: s
 }
 
 export async function* streamActiveRequestsSSE(
-    userId: string,
-    lastEventIds?: Record<string, string>,
+    _userId: string,
+    _lastEventIds?: Record<string, string>,
 ) {
-    try {
-        // for await (const entry of subscribeToActiveRequests({
-        //     userId,
-        //     lastEventIds,
-        //     blockMs: 30_000,
-        //     emitHandshake: true,
-        // })) {
-        //     if (entry.requestId) {
-        //         const data = entry.data ? JSON.parse(entry.data) : {};
-        //         console.log('data', data, '\n---------\n');
-        //         yield sse({
-        //             id: entry.id,
-        //             event: entry.event,
-        //             data: { ...data, requestId: entry.requestId },
-        //         });
-        //     } else {
-        //         yield sse({
-        //             id: entry.id,
-        //             event: entry.event,
-        //             data: entry.data ?? '',
-        //         });
-        //     }
-        // }
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        yield sse({ event: 'error', data: { error: message } });
-    }
+    yield sse({ event: 'ready', data: '' });
 }

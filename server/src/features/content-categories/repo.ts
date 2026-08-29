@@ -17,11 +17,6 @@ export const getContentCategoryById = async (id: string): Promise<ContentCategor
   return rows[0] ?? null
 }
 
-export const getContentCategoriesByIds = async (ids: string[]): Promise<ContentCategory[]> => {
-  if (ids.length === 0) return []
-  return db.select().from(categories).where(inArray(categories.id, ids))
-}
-
 export const createContentCategory = async (input: {
   name: string
   slug: string

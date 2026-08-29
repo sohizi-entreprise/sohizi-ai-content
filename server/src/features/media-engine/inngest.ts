@@ -4,9 +4,9 @@ import * as repo from './repo';
 import * as storage from './storage';
 import { v4 as uuidv4 } from 'uuid';
 import { Asset } from '@/db/schema';
-import { billingService } from '@/features/billing';
+import { billingService, safeRefund } from '@/features/billing';
 import { isMediaError } from './errors';
-import { decrementKey, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
+import { finalizeGenerationRequest, writeStreamData } from '../generation-request/stream-handler';
 import { appendRequestAssets } from '../generation-request/repo';
 import type { GenerationRequestAsset } from '@/type';
 import { createProvider } from './providers/factory';
@@ -24,10 +24,9 @@ import {
 import { createCancellableController } from '../generation-request/abort-manager';
 import { Session } from '../ai/agent/core/session';
 import { MediaGenerationPersistence } from '../ai/agent/core/persistence';
-import { getAgentDefinition } from '../ai/agent/core/agent-registry';
-import { getModelWithVendorBinding } from '../models/repo';
-import { Agent } from '../ai/agent/core/agent';
+import { createAgentFromDefinition } from '../ai/agent/core/agent-factory';
 import { UserModelMessage } from 'ai';
+import { getErrorMessage } from '@/utils/get-error-message';
 import { getModelSchema } from './repo';
 import {
     limiter,
@@ -38,9 +37,8 @@ import {
 } from '@/features/routing';
 import { MediaRateLimitError, MediaServiceUnavailableError } from './errors';
 import { SubmitRequestInput } from '../ai/agent/tools/submit-media-jobs';
+import { MAX_MEDIA_POLL_ATTEMPTS, VIDEO_POLL_INTERVAL } from './constants';
 
-const MAX_MEDIA_POLL_ATTEMPTS = 60;
-const VIDEO_POLL_INTERVAL = '10s';
 const MEDIA_POLL_INTERVAL = '5s';
 const SYNC_RESERVATION_TTL_MS = 30 * 60 * 1000;
 const VIDEO_RESERVATION_TTL_MS = 60 * 60 * 1000;
@@ -92,19 +90,10 @@ function wrapNonRetryable(error: unknown): never {
         throw error;
     }
 
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
     const cause = error instanceof Error ? error : undefined;
 
     throw new NonRetriableError(message, { cause });
-}
-
-async function safeRefund(reservationId: string | undefined | null, reason: string): Promise<void> {
-    if (!reservationId) return;
-    try {
-        await billingService.refund(reservationId, reason);
-    } catch (err) {
-        console.error('[billing] refund failed', reservationId, err);
-    }
 }
 
 function toRequestAsset(asset: Asset): GenerationRequestAsset | null {
@@ -112,14 +101,6 @@ function toRequestAsset(asset: Asset): GenerationRequestAsset | null {
         return { assetId: asset.id, type: asset.type, url: asset.url, name: asset.name };
     }
     return null;
-}
-
-async function commitRequest(requestId: string, status: 'completed' | 'failed') {
-    const res = await decrementKey(requestId);
-    if (res === 0) {
-        await repo.updateAssetRequest(requestId, { status });
-        await removeStreamActive(requestId);
-    }
 }
 
 // ─── Provider Media Generation ───────────────────────────────────────
@@ -131,10 +112,10 @@ export const handleMediaGeneration = inngest.createFunction(
         triggers: [{ event: 'media/generate' }],
         onFailure: async ({ event }) => {
             const data = event.data.event.data as ProviderMediaEventData;
-            await safeRefund(data._reservationId, 'media-generation-failed');
+            await safeRefund(billingService, data._reservationId, 'media-generation-failed');
             if (data.requestId) {
                 await limiter.releaseByRequestId(data.requestId, { outcome: 'none' });
-                await commitRequest(data.requestId, 'failed');
+                await finalizeGenerationRequest(data.requestId, 'failed');
             }
         },
     },
@@ -259,7 +240,7 @@ export const handleMediaGeneration = inngest.createFunction(
                     }
                 });
             } catch (error) {
-                await step.run('refund-on-submit-error', () => safeRefund(reservation.id, 'media-submit-error'));
+                await step.run('refund-on-submit-error', () => safeRefund(billingService, reservation.id, 'media-submit-error'));
                 throw error;
             }
 
@@ -269,11 +250,7 @@ export const handleMediaGeneration = inngest.createFunction(
                 await step.sleep(`wait-for-media-${attempt}`, pollInterval);
 
                 await step.run(`renew-reservation-${attempt}`, async () => {
-                    const current = await billingService.getReservation(reservation.id);
-                    if (!current || current.status !== 'reserved') return;
-                    const remainingMs = current.expiresAt.getTime() - Date.now();
-                    if (remainingMs > reservationTtlMs * 0.2) return;
-                    await billingService.extend(reservation.id, reservationTtlMs);
+                    await billingService.renewIfNearExpiry(reservation.id, reservationTtlMs);
                 });
 
                 const pollResult = await step.run(`poll-media-${attempt}`, async () => {
@@ -291,9 +268,9 @@ export const handleMediaGeneration = inngest.createFunction(
 
                 if (isTerminalFailureStatus(String(pollResult.status))) {
                     await step.run('refund-on-provider-failure', () =>
-                        safeRefund(reservation.id, 'media-provider-failed'),
+                        safeRefund(billingService, reservation.id, 'media-provider-failed'),
                     );
-                    await step.run('mark-error-on-provider-failure', () => commitRequest(requestId, 'failed'));
+                    await step.run('mark-error-on-provider-failure', () => finalizeGenerationRequest(requestId, 'failed'));
                     return { requestId, status: 'failed' as const };
                 }
             }
@@ -301,9 +278,9 @@ export const handleMediaGeneration = inngest.createFunction(
             const outputUrls = extractOutputUrls(resultData);
             if (outputUrls.length === 0) {
                 await step.run('refund-on-timeout-or-empty', () =>
-                    safeRefund(reservation.id, resultData ? 'media-no-valid-urls' : 'media-poll-timeout'),
+                    safeRefund(billingService, reservation.id, resultData ? 'media-no-valid-urls' : 'media-poll-timeout'),
                 );
-                await step.run('mark-error-on-timeout-or-empty', () => commitRequest(requestId, 'failed'));
+                await step.run('mark-error-on-timeout-or-empty', () => finalizeGenerationRequest(requestId, 'failed'));
                 return { requestId, status: 'failed' as const };
             }
 
@@ -349,7 +326,7 @@ export const handleMediaGeneration = inngest.createFunction(
                     await appendRequestAssets(requestId, requestAssets);
                 }
 
-                await commitRequest(requestId, 'completed');
+                await finalizeGenerationRequest(requestId, 'completed');
                 return newAssets;
             });
 
@@ -405,30 +382,11 @@ async function runAgent(payload: AgentPayload){
           runId: requestId,
       })
       const persistence = new MediaGenerationPersistence(requestId);
-  
-      const agentDefinition = getAgentDefinition('media-generator');
-      if(!agentDefinition){
-        throw new Error('Agent definition not found');
-      }
-
-      const model = await getModelWithVendorBinding(agentDefinition.modelId, agentDefinition.vendor);
-
-      if(!model){
-        throw new Error('Model not found');
-      }
-      const agent = new Agent({
-          name: agentDefinition.name,
-          systemPrompt: fullPrompt(agentDefinition.baseSystemPrompt, referenceFiles),
+      const agent = await createAgentFromDefinition({
+          agentName: 'media-generator',
           session,
-          model,
-          vendor: agentDefinition.vendor,
-          modelConfig: agentDefinition.modelConfig,
-          persistence: persistence,
-          maxContextTokens: agentDefinition.maxContextTokens,
-          contextThreshold: agentDefinition.contextThreshold,
-          summaryModelId: agentDefinition.summaryModelId,
-          evaluatorModelId: agentDefinition.evaluatorModelId,
-          evaluatorModelConfig: agentDefinition.evaluatorModelConfig,
+          persistence,
+          buildSystemPrompt: (baseSystemPrompt) => fullPrompt(baseSystemPrompt, referenceFiles),
       })
   
       const chunks = agent.runLoop(
@@ -455,7 +413,7 @@ async function runAgent(payload: AgentPayload){
       }
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Completion failed';
+      const errorMessage = getErrorMessage(error, 'Completion failed');
       console.error(error);
       response = {
         ok: false,

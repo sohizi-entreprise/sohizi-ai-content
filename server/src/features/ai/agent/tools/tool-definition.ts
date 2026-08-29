@@ -10,6 +10,7 @@ import { createBillableLlmClient, ModelConfig } from "../utils/llm-client";
 import { DEFAULT_AGENT_VENDOR } from "../core/vendor";
 import { billingService } from "@/features/billing";
 import { estimateInputTokens } from "../utils/estimate-token";
+import { getErrorMessage } from "@/utils/get-error-message";
 
 export type ToolResult = {
     success: boolean;
@@ -89,7 +90,7 @@ export class BaseTool<T extends z.ZodSchema>{
                 yield event;
             }
         } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : String(error);
+            const errorMsg = getErrorMessage(error);
             const event = this.buildEvent(toolCall, {
                 success: false,
                 output: errorMsg,

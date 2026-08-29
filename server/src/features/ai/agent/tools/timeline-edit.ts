@@ -3,6 +3,7 @@ import { buildBaseTool } from "./tool-definition";
 import { success, failure } from "./utils";
 import * as repo from "@/features/video-editor/repo";
 import type { VideoClipProperties } from "@/type";
+import { getErrorMessage } from "@/utils/get-error-message";
 
 const fileNodeId = z.uuid().describe("The file node ID of the video file.");
 
@@ -285,7 +286,7 @@ async function executeBatch(input: z.infer<typeof batchCommand>) {
     const results = await repo.executeBatch(batchOps);
     return success(`Batch executed: ${results.length} operations completed atomically.`);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = getErrorMessage(error);
     return failure(`Batch failed (all operations rolled back): ${msg}`);
   }
 }

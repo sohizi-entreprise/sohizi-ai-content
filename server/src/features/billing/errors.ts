@@ -36,13 +36,6 @@ export class ReservationExpiredError extends BillingError {
   }
 }
 
-export class IdempotencyConflictError extends BillingError {
-  readonly status = 409
-  constructor(public readonly idempotencyKey: string, public readonly existingReservationId: string) {
-    super(`Idempotency key ${idempotencyKey} already used by reservation ${existingReservationId}`)
-  }
-}
-
 export class BillingTimeoutError extends BillingError {
   readonly status = 504
   constructor(public readonly operation: string, public readonly timeoutMs: number) {

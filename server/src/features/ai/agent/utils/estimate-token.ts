@@ -1,5 +1,6 @@
 import { ModelMessage } from "ai";
 import { encodeChat } from 'gpt-tokenizer';
+import { extractTextFromContent } from "./message-content";
 
 
 export function estimateInputTokens(messages: ModelMessage[], overEstimateFactor: number = 1.2): number {
@@ -16,19 +17,5 @@ function sanitizeMessages(messages: ModelMessage[]): {role: ModelMessage["role"]
 }
 
 function sanitizeContent(content: ModelMessage["content"]): string {
-    if (typeof content === 'string') {
-        return content;
-    }
-
-    if (!Array.isArray(content)) {
-        return JSON.stringify(content);
-    }
-
-    return content.map((part) => {
-        if (part.type === 'text' || part.type === 'reasoning') {
-            return part.text;
-        }
-
-        return JSON.stringify(part);
-    }).join('\n');
+    return extractTextFromContent(content);
 }

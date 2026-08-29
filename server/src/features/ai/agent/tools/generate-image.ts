@@ -7,6 +7,7 @@ import { billingService, withBilling } from '@/features/billing';
 import { createBillableMultiModalClient } from '@/features/ai/agent/utils/multi-llm-client';
 import * as storage from '@/features/media-engine/storage';
 import { failure, success } from "./utils";
+import { getErrorMessage } from "@/utils/get-error-message";
 
 const models = [
     {
@@ -23,7 +24,7 @@ const models = [
 
 const description = models.map(model => `${model.id}: ${model.description}`).join('\n');
 
-export const generateImageSchema = z.object({
+const generateImageSchema = z.object({
     model: z.enum(models.map(model => model.id)).default('google/gemini-3.1-flash-image').describe(`The model to use for the image generation. ${description}`),
     prompt: z.string().min(1).describe('The prompt to generate the image'),
     aspectRatio: z.enum(mediaConstants.imageSizePresets).default('auto').describe('The aspect ratio of the image'),
@@ -63,7 +64,7 @@ export const generateImageTool = buildBaseTool({
     
             return success(msg);
         } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : String(error);
+            const errorMsg = getErrorMessage(error);
             return failure(`An error occurred while generating the image: ${errorMsg}`);
         }
 
@@ -80,7 +81,7 @@ const generateImage = withBilling(
     billingService,
 );
 
-export type GenerateAndStoreImageInput = {
+type GenerateAndStoreImageInput = {
     organizationId: string;
     userId: string;
     prompt: string;
@@ -93,7 +94,7 @@ export type GenerateAndStoreImageInput = {
     signal?: AbortSignal;
 };
 
-export type GenerateAndStoreImageResult = {
+type GenerateAndStoreImageResult = {
     /** Public storage URLs for the uploaded images (one per variation). */
     urls: string[];
     storageKeys: string[];
@@ -120,7 +121,7 @@ async function uploadImageSource(
  * Generate image(s) via the billable multimodal client (reserve → execute → settle),
  * upload results to storage, and return the final public storage URL(s).
  */
-export async function generateAndStoreImage(
+async function generateAndStoreImage(
     input: GenerateAndStoreImageInput,
 ): Promise<GenerateAndStoreImageResult> {
     const {

@@ -4,6 +4,7 @@ import { LlmChunk, streamEvents } from "../utils/llm-response";
 import { BillableLlmInput } from "../utils/llm-client";
 import { TokenUsage } from "@/type";
 import { estimateInputTokens } from "../utils/estimate-token";
+import { extractTextFromUserMessage } from "../utils/message-content";
 
 export const stopEvaluationSchema = z.object({
     isDone: z.boolean().describe('True if the agent message is a final response. False if it is an intermediate progress/intent statement.'),
@@ -37,27 +38,9 @@ type EvaluatorInput = {
     userMessage: UserModelMessage;
 };
 
-function extractUserText(message: UserModelMessage): string {
-    const content = message.content;
-    if (typeof content === 'string') {
-        return content;
-    }
-    if (!Array.isArray(content)) {
-        return JSON.stringify(content);
-    }
-    return content
-        .map((part) => {
-            if (part.type === 'text') {
-                return part.text;
-            }
-            return JSON.stringify(part);
-        })
-        .join('\n');
-}
-
 export function buildEvaluatorInput(input: EvaluatorInput): BillableLlmInput {
     const { lastAssistantText, userMessage } = input;
-    const userText = extractUserText(userMessage);
+    const userText = extractTextFromUserMessage(userMessage);
 
     const evaluatorMessages: ModelMessage[] = [
         { role: 'system', content: EVALUATOR_SYSTEM_PROMPT },

@@ -6,16 +6,10 @@ import { getProjectById } from '../project/repo';
 import z from 'zod';
 import { getFileNodeById, listDirectoryFiles, ORDER_GAP } from '../file-system/repo';
 import { AssetType, CursorPaginationOptions } from '@/type';
-import type { UserModelMessage } from 'ai';
-import { broadcastCancellation, createCancellableController } from '../generation-request/abort-manager';
-import { Session } from '../ai/agent/core/session';
+import { broadcastCancellation } from '../generation-request/abort-manager';
 import { v4 as uuidv4 } from 'uuid';
-import { MediaGenerationPersistence } from '../ai/agent/core/persistence';
-import { getAgentDefinition } from '../ai/agent/core/agent-registry';
-import { Agent } from '../ai/agent/core/agent';
-import { getModelWithVendorBinding } from '../models/repo';
-import { BaseStreamData, decrementKey, incrementKey, markStreamActive, readStreamChunks, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
-import { sse } from 'elysia';
+import { decrementKey, incrementKey, markStreamActive, removeStreamActive, streamChunksAsSse } from '../generation-request/stream-handler';
+import { getErrorMessage } from '@/utils/get-error-message';
 import { ZipArchive } from 'archiver';
 import { PassThrough, Readable } from 'node:stream';
 import { inngest } from '@/lib/inngest/client';
@@ -109,7 +103,7 @@ export async function uploadSuccess(projectId: string, data: z.infer<typeof uplo
         const response = await repo.createAssetWithFileNode({
             projectId,
             name: fileName,
-            type: getAssetType(fileMetadata.contentType),
+            type: storage.classifyContentType(fileMetadata.contentType).assetType,
             url: storage.buildPublicUrl(storageKey),
             source: 'user-uploaded',
             folderId: uploadfolderId,
@@ -209,7 +203,7 @@ async function runAiGeneration(payload: RunAgentPayload & { runId: string }){
 
     } catch (error) {
         console.error(error);
-        await repo.updateAssetRequest(runId, { status: 'failed', error: error instanceof Error ? error.message : 'Completion failed' });
+        await repo.updateAssetRequest(runId, { status: 'failed', error: getErrorMessage(error, 'Completion failed') });
         const remaining = await decrementKey(runId);
         if (remaining === 0) {
             await removeStreamActive(runId);
@@ -235,14 +229,7 @@ export const listUploadedAssets = async(
 }
 
 export async function* getRequestStreams(requestId: string) {
-    for await (const chunk of readStreamChunks(requestId)) {
-        const data = chunk.data as BaseStreamData;
-        yield sse({
-          id: chunk.id,
-          event: data.event || 'chunk',
-          data: chunk.data,
-      });
-      }
+    yield* streamChunksAsSse(requestId);
 }
 
 export const deleteAsset = async (assetId: string) => {
@@ -340,14 +327,6 @@ export const downloadAssetsZip = async (projectId: string, assetIds: string[]) =
             'Content-Disposition': `attachment; filename="generated-assets.zip"`,
         },
     });
-}
-
-function getAssetType(contentType: string): AssetType {
-    if (contentType.startsWith('image/')) return 'image';
-    if (contentType.startsWith('video/')) return 'video';
-    if (contentType.startsWith('audio/')) return 'audio';
-    if (contentType === 'text/html' || contentType.startsWith('text/html')) return 'html';
-    return 'document';
 }
 
 function getFileName(storageKey: string): string {

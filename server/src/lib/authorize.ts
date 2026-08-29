@@ -1,7 +1,18 @@
 import { db } from '@/db'
 import { projects, member, conversations, type UserType } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { Forbidden, NotFound } from '@/features/error'
+import { BadRequest, Forbidden, NotFound } from '@/features/error'
+
+export function requireActiveOrganization(
+  session: { activeOrganizationId?: string | null },
+  override?: string | null,
+): string {
+  const organizationId = override ?? session.activeOrganizationId
+  if (!organizationId) {
+    throw new BadRequest('No active organization. Please select an organization first.')
+  }
+  return organizationId
+}
 
 export function assertAdmin(user: { type?: UserType | string | null }) {
   if (user.type !== 'admin') {

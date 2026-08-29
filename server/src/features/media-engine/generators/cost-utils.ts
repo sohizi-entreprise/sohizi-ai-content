@@ -9,8 +9,7 @@ import {
     loaded_cost_usd,
     retail_price_usd,
 } from '@/features/billing/credits';
-
-const LUMEN_BASE_URL = 'https://api.lumenfall.ai/openai/v1';
+import { LUMEN_BASE_URL } from '@/features/media-engine/constants';
 
 export type LumenDryRunComponent = {
     type: string;

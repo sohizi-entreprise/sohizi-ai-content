@@ -1,6 +1,6 @@
 import { NonRetriableError } from 'inngest'
 import { inngest } from '@/lib/inngest/client'
-import { Agent } from '@/features/ai/agent/core/agent'
+import { createAgentFromDefinition } from '@/features/ai/agent/core/agent-factory'
 import { Session } from '@/features/ai/agent/core/session'
 import { getAgentDefinition } from '@/features/ai/agent/core/agent-registry'
 import { getModelWithVendorBinding } from '@/features/models/repo'
@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid'
 import * as repo from './repo'
 import * as storage from './storage'
 import { takeHtmlCompositionHandoff } from './html-composition'
-import { decrementKey, removeStreamActive, writeStreamData } from '../generation-request/stream-handler'
+import { finalizeGenerationRequest, writeStreamData } from '../generation-request/stream-handler'
 import { appendRequestAssets } from '../generation-request/repo'
 import type { AssetMetadata, CompositionVariable } from '@/type'
 
@@ -35,14 +35,6 @@ type UploadedHtmlComposition = {
     size: number
 }
 
-async function commitRequest(requestId: string, status: 'completed' | 'failed') {
-    const res = await decrementKey(requestId)
-    if (res === 0) {
-        await repo.updateAssetRequest(requestId, { status })
-        await removeStreamActive(requestId)
-    }
-}
-
 export const handleHtmlVideoGeneration = inngest.createFunction(
     {
         id: 'media-generate-html-video',
@@ -51,7 +43,7 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
         onFailure: async ({ event }) => {
             const data = event.data.event.data as HtmlVideoEventData
             if (data.requestId) {
-                await commitRequest(data.requestId, 'failed')
+                await finalizeGenerationRequest(data.requestId, 'failed')
             }
         },
     },
@@ -90,18 +82,10 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
                 runId: requestId,
             })
 
-            const agent = new Agent({
-                name: agentDefinition.name,
-                systemPrompt: agentDefinition.baseSystemPrompt,
+            const agent = await createAgentFromDefinition({
+                agentName: 'motion-graphic',
                 session,
                 model,
-                vendor: agentDefinition.vendor,
-                modelConfig: agentDefinition.modelConfig,
-                maxContextTokens: agentDefinition.maxContextTokens,
-                contextThreshold: agentDefinition.contextThreshold,
-                summaryModelId: agentDefinition.summaryModelId,
-                evaluatorModelId: agentDefinition.evaluatorModelId,
-                evaluatorModelConfig: agentDefinition.evaluatorModelConfig,
             })
 
             const userPrompt: UserModelMessage = {
@@ -191,7 +175,7 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
                 url: asset.url,
                 name: asset.name,
             }])
-            await commitRequest(requestId, 'completed')
+            await finalizeGenerationRequest(requestId, 'completed')
             return asset
         })
 

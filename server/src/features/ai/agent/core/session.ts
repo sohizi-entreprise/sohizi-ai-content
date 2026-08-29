@@ -36,15 +36,6 @@ export class Session {
         this.skillsCache = new Map();
     }
 
-    // get billableLlmClient(): BillableLlmClient {
-    //     const tools = listTools();
-    //     return createBillableLlmClient({
-    //         model: this.model,
-    //         modelConfig: { reasoningEffort: 'medium', reasoningSummary: 'auto' },
-    //         tools,
-    //     });
-    // }
-
     async resolveFileByPathOrId(filePathOrId: string): Promise<FileObject | null> {
         const cachedFile = this.fileCache.get(filePathOrId);
         if(cachedFile !== undefined){

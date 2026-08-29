@@ -12,6 +12,7 @@ import { AgentStateManager } from "./state-manager";
 import { Persistence } from "./persistence";
 import { estimateInputTokens } from "../utils/estimate-token";
 import { ContextManager } from "./context-manager";
+import { getErrorMessage } from "@/utils/get-error-message";
 
 
 const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096;
@@ -296,7 +297,7 @@ export class Agent {
                 yield this.buildEvent(chunk);
             }
         } catch (error) {
-            const errorMessage = this.errorToMessage(error);
+            const errorMessage = getErrorMessage(error);
             const incompleteToolCalls = validToolCalls.filter((toolCall) => !completedToolCallIds.has(toolCall.toolCallId));
             this.appendToolCallErrors(incompleteToolCalls, errorMessage);
             // throw error;
@@ -321,7 +322,7 @@ export class Agent {
     }
 
     private captureStepError(error: unknown): string {
-        const message = this.errorToMessage(error);
+        const message = getErrorMessage(error);
         let isAborted = false;
         if(error instanceof Error && error.name === 'AbortError'){
             isAborted = true;
@@ -330,13 +331,6 @@ export class Agent {
         this.stateManager.setFinishReason(isAborted ? 'abort' : 'error');
 
         return message;
-    }
-
-    private errorToMessage(error: unknown): string {
-        if(error instanceof Error){
-            return error.message;
-        }
-        return String(error);
     }
 
     private appendToolCallErrors(toolCalls: ToolCall[], errorMessage: string) {

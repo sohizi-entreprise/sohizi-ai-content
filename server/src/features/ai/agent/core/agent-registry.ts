@@ -26,7 +26,7 @@ export const supportedAgents = [
     'motion-graphic'
 ] as const;
 
-type AgentName = typeof supportedAgents[number];
+export type AgentName = typeof supportedAgents[number];
 
 export type AgentDefinition = {
     name: AgentName;

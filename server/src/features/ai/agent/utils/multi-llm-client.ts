@@ -11,23 +11,27 @@ import {
     openRouterImagePresetMap,
 } from '@/constants/media';
 import openAIClient from '@/lib/open-ai-client';
+import { getErrorMessage } from '@/utils/get-error-message';
+import { simpleHash } from '@/utils/simple-hash';
 import {
     lumenDryRun,
     microsToDollars,
     providerCostToActualCredits,
     providerCostToCredits,
 } from '@/features/media-engine/generators/cost-utils';
+import {
+    LUMEN_BASE_URL,
+    MAX_VIDEO_POLL_ATTEMPTS,
+    VIDEO_POLL_INTERVAL_MS,
+} from '@/features/media-engine/constants';
 
 const DEFAULT_TTS_MODEL = 'google/gemini-3.1-flash-tts-preview';
 const DEFAULT_STT_MODEL = 'openai/whisper-large-v3';
 const DEFAULT_CAPTION_MODEL = 'whisper-1';
 const DEFAULT_MUSIC_MODEL = 'google/lyria-3-clip-preview';
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-const LUMEN_BASE_URL = 'https://api.lumenfall.ai/openai/v1';
 const FALLBACK_USD_PER_IMAGE = 0.10;
 const FALLBACK_USD_PER_VIDEO_SECOND = 0.20;
-const VIDEO_POLL_INTERVAL_MS = 10_000;
-const MAX_VIDEO_POLL_ATTEMPTS = 60;
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000;
 const DEFAULT_TTL_MS = 60 * 60 * 1000;
 const DEFAULT_MUSIC_COST_USD = 0.04;
@@ -431,7 +435,7 @@ export class MultiModalClient {
             });
         } catch (error) {
             throw new Error(
-                `Video submission failed: ${error instanceof Error ? error.message : String(error)}`,
+                `Video submission failed: ${getErrorMessage(error)}`,
             );
         }
 
@@ -464,7 +468,7 @@ export class MultiModalClient {
             });
         } catch (error) {
             throw new Error(
-                `Video poll failed: ${error instanceof Error ? error.message : String(error)}`,
+                `Video poll failed: ${getErrorMessage(error)}`,
             );
         }
 
@@ -1025,14 +1029,4 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
         };
         signal?.addEventListener('abort', onAbort, { once: true });
     });
-}
-
-function simpleHash(str: string): string {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return Math.abs(hash).toString(36);
 }

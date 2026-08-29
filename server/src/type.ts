@@ -11,12 +11,6 @@ export type GenerationRequestAsset = {
     name: string;
 };
 
-export type ProjectFormat = 'storytime' | 'explainer' | 'documentary' | 'presenter';
-export type Audience = 'general' | 'kids' | 'teens' | 'adult';
-export type TimeOfDay = 'dawn' | 'day' | 'sunset' | 'night' | 'unspecified';
-
-export type EntityType = 'CHARACTER' | 'LOCATION' | 'PROP' | 'COSTUME';
-
 export type ModelCategory =
   | 'text-to-image'
   | 'image-to-image'
@@ -124,20 +118,12 @@ export type AgentState = {
   todos: TodoItem[];
 }
 
-// export type AgentRunFinishReason = 'response' | 'error' | 'tool-calls' | 'aborted' | 'max-iterations' | 'not-finished';
-
 export type ProseNode = {
   type: string
   attrs?: Record<string, unknown>
   content?: Array<{ type: 'text'; text?: string } | ProseNode>
   text?: string
 }
-
-export type SceneContent = 
-  | { type: 'slugline'; text: string; locationId?: string }
-  | { type: 'action'; text: string }
-  | { type: 'dialogue'; text: string; character: string; parenthetical?: string }
-  | { type: 'transition'; text: string }
 
 export type ProseDocument = { type: 'doc'; content: ProseNode[] }
 

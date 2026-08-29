@@ -1,8 +1,8 @@
 import { db } from "@/db";
-import { conversations, messages, checkpoints, llmModels, modelsAndCategories, modelCategories, conversationAgentRuns } from "@/db/schema";
-import { eq, desc, and, lt, arrayContains, inArray } from "drizzle-orm";
+import { conversations, messages, checkpoints, conversationAgentRuns } from "@/db/schema";
+import { eq, desc, and, lt } from "drizzle-orm";
 import { AgentRunMessage, AgentRunMetadata, AgentRunStatus, AgentState, CursorPaginationOptions, CursorPaginationResult, MsgContent } from "@/type";
-import { ModelMessage, UserModelMessage } from "ai";
+import { UserModelMessage } from "ai";
 
 
 // ============================================================================
@@ -29,21 +29,6 @@ export const updateConversationAgentRun = async(runId: string, data: { status?: 
     ...data,
   }).where(eq(conversationAgentRuns.id, runId)).returning();
   return result[0];
-}
-
-export const appendConversationAgentRunMessages = async(runId: string, messages: AgentRunMessage[]) => {
-  return await db.transaction(async (tx) => {
-    const response = await tx.select().from(conversationAgentRuns).where(eq(conversationAgentRuns.id, runId));
-    const agentRun = response[0];
-    if(!agentRun) {
-      throw new Error('Agent run not found');
-    }
-    const newMessages = [...agentRun.messages, ...messages];
-    const result = await tx.update(conversationAgentRuns).set({
-      messages: newMessages,
-    }).where(eq(conversationAgentRuns.id, runId)).returning();
-    return result[0];
-  })
 }
 
 export const createConversationComponents = async(payload: conversationWithAgentRunPayload) => {
@@ -82,27 +67,6 @@ export const createConversationRun = async(payload: Omit<conversationWithAgentRu
     messages: [userMsg],
   }).returning();
   return response[0];
-}
-
-
-export const createConversationWithCheckpoint = async (projectId: string, userId: string, title: string = 'New Chat') => {
-  return await db.transaction(async (tx) => {
-    const convResponse = await tx.insert(conversations).values({
-      projectId,
-      userId,
-      title
-    }).returning();
-    const conversation = convResponse[0];
-    const checkpointResponse = await tx.insert(checkpoints).values({
-      projectId,
-      conversationId: conversation.id
-    }).returning();
-    const checkpoint = checkpointResponse[0];
-    return {
-      conversation,
-      checkpoint
-    };
-  });
 }
 
 export const getConversationById = async (id: string) => {
@@ -217,16 +181,6 @@ export const createMessage = async (conversationId: string, payload: CreateMessa
   return result[0];
 }
 
-export const createMessagesBulk = async (conversationId: string, payloads: CreateMessageData[]) => {
-  if (payloads.length === 0) return [];
-  const values = payloads.map(payload => ({
-    conversationId,
-    ...payload
-  }));
-  const result = await db.insert(messages).values(values).returning();
-  return result;
-}
-
 export type ListMessagesByConversationIdResult = CursorPaginationResult<typeof messages.$inferSelect>;
 export type ListConversationAgentRunsResult = CursorPaginationResult<typeof conversationAgentRuns.$inferSelect>;
 
@@ -289,24 +243,4 @@ export const listConversationAgentRuns = async (
     hasMore && page.length > 0 ? String(page[0].createdAt.toISOString()) : null;
 
   return { data: page, nextCursor, hasMore };
-}
-
-export const listLlmModels = async (categories: string[]) => {
-  const result = await db.select({
-                          id: llmModels.id,
-                          name: llmModels.name,
-                          provider: llmModels.provider,
-                        })
-                         .from(llmModels)
-                         .leftJoin(modelsAndCategories, eq(llmModels.id, modelsAndCategories.modelId))
-                         .leftJoin(modelCategories, eq(modelsAndCategories.categoryId, modelCategories.id))
-                         .where(and(inArray(modelCategories.name, categories), eq(llmModels.enabled, true)))
-                         .limit(20);
-  return result;
-}
-
-
-export const getModelById = async (id: string) => {
-  const result = await db.select().from(llmModels).where(eq(llmModels.id, id));
-  return result[0];
 }

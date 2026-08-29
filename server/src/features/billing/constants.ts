@@ -3,7 +3,6 @@ export const TOKEN_OVERHEAD_RATE = 0.20; // 20% overhead rate
 export const IMAGE_OVERHEAD_RATE = 0.25; // 25% overhead rate
 export const AUDIO_OVERHEAD_RATE = 0.25; // 25% overhead rate
 export const VIDEO_OVERHEAD_RATE = 0.30; // 30% overhead rate
-export const SUBSCRIPTION_TARGET_MARGIN = 0.60; // 60% target margin
 export const TOPUP_TARGET_MARGIN = 0.70; // 70% target margin
 export const PAYMENT_FEE_RESERVE = 0.03; // 3% payment fee rate
 
@@ -12,10 +11,3 @@ export const PAYMENT_FEE_RESERVE = 0.03; // 3% payment fee rate
 // too much and refund the difference on settle than to under-reserve and
 // lose money on the overage.
 export const ESTIMATE_OVERBOOKING_FACTOR = 1.15; // 15% overbooking
-
-export const UNITS = {
-    TEXT: 'text',
-    IMAGE: 'image',
-    VIDEO: 'video/second',
-    AUDIO: 'audio/minute',
-}

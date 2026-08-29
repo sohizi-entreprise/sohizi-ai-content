@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { buildBaseTool } from "./tool-definition";
-import { getAgentDefinition, supportedAgents } from "../core/agent-registry";
+import { supportedAgents } from "../core/agent-registry";
 import { success, failure } from "./utils";
 import { createCancellableController } from "@/features/generation-request/abort-manager";
+import { getErrorMessage } from "@/utils/get-error-message";
 
 
 const assignTaskInputSchema = z.object({
@@ -20,8 +21,9 @@ export const assignTaskTool = buildBaseTool({
         const { controller, cleanup } = await createCancellableController(session.runId);
 
         try {
-            // Lazy import avoids circular init: tasks-assign → agent → tool-registry → tasks-assign
-            const { Agent } = await import("../core/agent");
+            // Lazy import avoids circular init: tasks-assign → agent-factory → agent → tool-registry → tasks-assign
+            const { createAgentFromDefinition } = await import("../core/agent-factory");
+            const { getAgentDefinition } = await import("../core/agent-registry");
             const agentDefinition = getAgentDefinition(subAgent);
             if(!agentDefinition){
                 return failure(`Invalid sub-agent name provided. Supported are ${supportedAgents.join(', ')}`)
@@ -31,20 +33,11 @@ export const assignTaskTool = buildBaseTool({
             if(!model){
                 return failure(`Model not found. The sub-agent ${subAgent} is unvailable right now. Either assign a different sub-agent if possible or return to the user if this is a blocker.`)
             }
-    
-    
-            const agent = new Agent({
-                name: agentDefinition.name,
-                systemPrompt: agentDefinition.baseSystemPrompt,
-                model,
-                vendor: agentDefinition.vendor,
-                modelConfig: agentDefinition.modelConfig,
+
+            const agent = await createAgentFromDefinition({
+                agentName: subAgent,
                 session,
-                maxContextTokens: agentDefinition.maxContextTokens,
-                contextThreshold: agentDefinition.contextThreshold,
-                summaryModelId: agentDefinition.summaryModelId,
-                evaluatorModelId: agentDefinition.evaluatorModelId,
-                evaluatorModelConfig: agentDefinition.evaluatorModelConfig,
+                model,
             });
     
             const msg = {
@@ -66,10 +59,7 @@ export const assignTaskTool = buildBaseTool({
             
         } catch (error) {
             console.error(error);
-            if(error instanceof Error){
-                return failure(error.message);
-            }
-            return failure('An unknown error occurred');
+            return failure(getErrorMessage(error, 'An unknown error occurred'));
         }
         finally {
             cleanup();

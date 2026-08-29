@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { buildBaseTool } from "./tool-definition";
 import { failure, success } from "./utils";
+import { getErrorMessage } from "@/utils/get-error-message";
 import { getModelSchema, listGenerationModels } from "@/features/media-engine/repo";
 
 
@@ -42,7 +43,7 @@ export const listModelsTool = buildBaseTool({
             }
             return success(JSON.stringify(models));
         } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : 'An error occurred while listing models';
+            const errorMsg = getErrorMessage(error, 'An error occurred while listing models');
             return failure(errorMsg);
 
         }
@@ -59,7 +60,7 @@ export const getModelSchemaTool = buildBaseTool({
             artifacts.set(`schema-${input.modelId}`, schema);
             return success(JSON.stringify(schema));
         } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : 'An error occurred while getting the model schema';
+            const errorMsg = getErrorMessage(error, 'An error occurred while getting the model schema');
             return failure(errorMsg);
         }
     },
@@ -89,7 +90,7 @@ export const submitRequestTool = buildBaseTool({
             state.finishRun()
             return success('Request submitted successfully')
         } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : 'An error occurred while submitting the request'
+            const errorMsg = getErrorMessage(error, 'An error occurred while submitting the request')
             return failure(errorMsg)
         }
     },

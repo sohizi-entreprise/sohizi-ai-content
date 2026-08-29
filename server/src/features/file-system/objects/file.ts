@@ -17,6 +17,7 @@ import * as fileSystemRepo from "../repo";
 import { fileFormat } from "../constants";
 import { getCompositionByFileNodeId } from "@/features/video-editor/repo";
 import { getAssetByFileNodeId } from "@/features/media-engine/repo";
+import { getErrorMessage } from "@/utils/get-error-message";
 
 
 type FileObjectResponse<T> = {
@@ -58,14 +59,6 @@ function err(error: string): FileObjectResponse<null> {
         error,
         data: null,
     };
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-    if (error instanceof Error && error.message) {
-        return error.message;
-    }
-
-    return fallback;
 }
 
 export class FileObject {

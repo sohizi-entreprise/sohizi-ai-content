@@ -97,12 +97,16 @@ const FOLDER_DEFAULT_EXT: Record<AssetFolder, string> = {
     htmls: 'html',
 };
 
+export function classifyContentType(contentType: string): { assetType: AssetType; folder: AssetFolder } {
+    if (contentType.startsWith('image/')) return { assetType: 'image', folder: 'images' };
+    if (contentType.startsWith('video/')) return { assetType: 'video', folder: 'videos' };
+    if (contentType.startsWith('audio/')) return { assetType: 'audio', folder: 'audios' };
+    if (contentType === 'text/html' || contentType.startsWith('text/html')) return { assetType: 'html', folder: 'htmls' };
+    return { assetType: 'document', folder: 'documents' };
+}
+
 export function getAssetFolder(contentType: string): AssetFolder {
-    if (contentType.startsWith('image/')) return 'images';
-    if (contentType.startsWith('video/')) return 'videos';
-    if (contentType.startsWith('audio/')) return 'audios';
-    if (contentType === 'text/html' || contentType.startsWith('text/html')) return 'htmls';
-    return 'documents';
+    return classifyContentType(contentType).folder;
 }
 
 function folderFromUrl(sourceUrl: string): AssetFolder | null {

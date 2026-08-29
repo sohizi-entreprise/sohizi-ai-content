@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { assets, assetVariants, fileNodes, generationRequests, llmVendorsAndParameters, modelParameters, llmVendors, parameterOptions, llmVendorsAndParameterOptions, modelsAndParameterOptions, modelsAndParameters, llmVendorsAndModels, llmModels, modelsAndCategories, modelCategories } from "@/db/schema";
-import type { AssetType, AssetSource, AssetStatus, AssetVariantType, AssetMetadata, CursorPaginationOptions, CursorPaginationResult, GenerationRequestStatus } from "@/type";
+import { assets, fileNodes, generationRequests, llmVendorsAndParameters, modelParameters, llmVendors, parameterOptions, llmVendorsAndParameterOptions, modelsAndParameterOptions, modelsAndParameters, llmVendorsAndModels, llmModels, modelsAndCategories, modelCategories } from "@/db/schema";
+import type { AssetType, AssetSource, AssetMetadata, CursorPaginationOptions, CursorPaginationResult, GenerationRequestStatus } from "@/type";
 import { and, eq, desc, lt, isNull, max, inArray, or, sql } from "drizzle-orm";
 import { ORDER_GAP } from "../file-system/repo";
 import { createGenerationRequest, deleteGenerationRequest, updateGenerationRequest } from "../generation-request/repo";
@@ -15,17 +15,6 @@ type CreateAssetPayload = {
     source: AssetSource;
     metadata: AssetMetadata;
     generationRequestId?: string;
-}
-
-type CreateAssetVariantPayload = {
-    assetId: string;
-    type: AssetVariantType;
-    storageKey: string;
-    url: string;
-    metadata?: AssetMetadata;
-    size: number;
-    status: AssetStatus;
-    blurhash?: string;
 }
 
 type CreateAssetWithFileNodePayload = {
@@ -44,38 +33,6 @@ type CreateAssetWithFileNodePayload = {
 export const createAsset = async (payload: CreateAssetPayload) => {
     const result = await db.insert(assets).values(payload).returning();
     return result[0];
-}
-
-export const createAssetVariant = async (payload: CreateAssetVariantPayload) => {
-    const result = await db.insert(assetVariants).values(payload).returning();
-    return result[0];
-}
-
-export const getAssetsByProject = async (
-    projectId: string,
-    options?: { type?: AssetType; cursor?: string; limit?: number },
-) => {
-    const { type, cursor, limit = 20 } = options ?? {};
-    const pageSize = Math.max(limit, 1);
-
-    const conditions = [eq(assets.projectId, projectId)];
-    if (type) conditions.push(eq(assets.type, type));
-    if (cursor) conditions.push(lt(assets.createdAt, new Date(cursor)));
-
-    const rows = await db
-        .select()
-        .from(assets)
-        .where(and(...conditions))
-        .orderBy(desc(assets.createdAt))
-        .limit(pageSize + 1);
-
-    const hasMore = rows.length > pageSize;
-    const data = rows.slice(0, pageSize);
-    const nextCursor = hasMore && data.length > 0
-        ? data[data.length - 1].createdAt.toISOString()
-        : null;
-
-    return { data, nextCursor, hasMore };
 }
 
 export const listUploadedAssets = async (
@@ -641,17 +598,6 @@ export const getVendorParamsMapping = async (vendor: string, modelId: string, pa
         eq(modelsAndParameters.modelId, modelId),
         inArray(modelParameters.key, params),
     ));
-}
-
-export const getVendorModelApiName = async (vendor: string, modelId: string) => {
-    const result = await db.select({
-        vendor: llmVendors.name,
-        apiName: llmVendorsAndModels.apiName,
-    })
-    .from(llmVendorsAndModels)
-    .innerJoin(llmVendors, eq(llmVendorsAndModels.vendorId, llmVendors.id))
-    .where(and(eq(llmVendors.name, vendor), eq(llmVendorsAndModels.modelId, modelId)));
-    return result[0];
 }
 
 export const getModelSchema = async (modelId: string) => {

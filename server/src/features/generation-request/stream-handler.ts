@@ -1,4 +1,6 @@
 import { createBlockingRedisClient, redis } from '@/lib'
+import { sse } from 'elysia'
+import { updateGenerationRequest } from './repo'
 
 const DEFAULT_STREAM_TTL_SECONDS = 300
 const DEFAULT_ACTIVE_STREAM_TTL_SECONDS = 1800
@@ -54,6 +56,28 @@ export async function decrementKey(key: string): Promise<number | null> {
     return 0
   }
   return await redis.decr(counterKey)
+}
+
+export async function finalizeGenerationRequest(
+  requestId: string,
+  status: 'completed' | 'failed',
+): Promise<void> {
+  const remaining = await decrementKey(requestId)
+  if (remaining === 0) {
+    await updateGenerationRequest(requestId, { status })
+    await removeStreamActive(requestId)
+  }
+}
+
+export async function* streamChunksAsSse(streamKey: string) {
+  for await (const chunk of readStreamChunks(streamKey)) {
+    const data = chunk.data as BaseStreamData
+    yield sse({
+      id: chunk.id,
+      event: data.event || 'chunk',
+      data: chunk.data,
+    })
+  }
 }
 
 export async function writeStreamData<T extends BaseStreamData>(

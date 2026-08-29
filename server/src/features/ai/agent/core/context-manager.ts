@@ -6,6 +6,7 @@ import { estimateInputTokens } from "../utils/estimate-token";
 import { buildEvaluatorInput, DEFAULT_EVALUATOR_OUTPUT_TOKENS, drainStreamForComplete, parseEvaluatorResponse, StopEvaluation } from "./stop-evaluator";
 import { Session } from "./session";
 import { AgentStateManager } from "./state-manager";
+import { extractTextFromContent } from "../utils/message-content";
 
 export type ContextManagerConfig = {
     maxContextTokens: number;
@@ -321,20 +322,7 @@ export class ContextManager {
     }
 
     private extractText(content: ModelMessage['content']): string {
-        if (typeof content === 'string') {
-            return content;
-        }
-        if (!Array.isArray(content)) {
-            return JSON.stringify(content);
-        }
-        return content
-            .map((part) => {
-                if (part.type === 'text' || part.type === 'reasoning') {
-                    return part.text;
-                }
-                return JSON.stringify(part);
-            })
-            .join('\n');
+        return extractTextFromContent(content);
     }
 
     private extractAssistantText(content: ModelMessage['content']): string {

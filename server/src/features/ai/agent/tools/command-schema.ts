@@ -44,9 +44,6 @@ touch
 mkdir
 mv
 rm
-5. entity relationships
- link
- query
 
 */
 
@@ -61,17 +58,6 @@ export const listCommandSchema = z.object({
     Returns: enumerated list of files and directories under the specified directory path.
     Example: {"cmd": "list", "filepathOrId": "/folder"} => 1. [ID: 9514ac94-7ca8-4efc-a330-8c67bd4c2ee5] - (file) - Name: file-name-1 [format: json] \n 2. [ID: 9514ac94-7ca8-4efc-a330-8c67bd4c2ee6] - (directory) - Name: folder-name-2
     Example: {"cmd": "list", "filepathOrId": "9514ac94-7ca8-4efc-a330-8c67bd4c2ee5"} => 1. [ID: 9514ac94-7ca8-4efc-a330-8c67bd4c2ee5] - (file) - Name: file-name-1 [format: json]
-`.trim());
-
-export const statCommandSchema = z.object({
-    cmd: z.literal('stat').describe("Returns the metadata of the file or directory specified by the file path."),
-    filePathOrId: z.string().describe("Absolute file path or file ID (uuid)."),
-}).describe(`
-    Returns: metadata of the file or directory.
-    - for file: lines number, words count, format
-    - for directory: number of files
-    Example: {"cmd": "stat", "filepathOrId": "/folder/file"} => words count: 100, lines number: 10, format: text
-    Example: {"cmd": "stat", "filepathOrId": "9514ac94-7ca8-4efc-a330-8c67bd4c2ee5"} => words count: 100, lines number: 10, format: text
 `.trim());
 
 export const describeCommandSchema = z.object({
@@ -189,54 +175,6 @@ export const existsCommandSchema = z.object({
 }).describe(`
     Returns: true if the file or directory exists, false otherwise.
     Example: {"cmd": "exists", "filepath": "/folder/file"} => true
-`.trim());
-
-export const diffCommandSchema = z.object({
-    cmd: z.literal('diff').describe("Shows what changed in the content of the file compared to the latest version."),
-    filepath: filePath
-}).describe(`
-    Returns: a diff showing the changes on the file compared to the latest version.
-    Example: {"cmd": "diff", "filepath": "/folder/file_id"} => diff output
-`.trim());
-
-
-export const linkCommandSchema = z.object({
-    cmd: z.literal('link').describe("Create a link between two files based on their content. Use this to maintain a knowledge graph of the file system."),
-    filepath: filePath,
-    targetPath: filePath,
-    relation: z.string().min(1).describe("A short verb describing the relationship between the two files. e.g. 'uses', 'depends-on', 'is-derived-from', 'is-located-in', 'is-worn-by', 'appears-in'. Reuse the relation type as much as possible to avoid creating too many links."),
-}).describe(`
-    Returns: confirmation message.
-    Example: {"cmd": "link", "filepath": "/folder/character-file", "targetPath": "/folder/shot-file", "relation": "appears-in"} => confirmation message
-`.trim());
-
-export const unlinkCommandSchema = z.object({
-    cmd: z.literal('unlink').describe("Remove a link between two files."),
-    filepath: filePath,
-    targetPath: filePath,
-}).describe(`
-    Returns: confirmation message.
-    Example: {"cmd": "unlink", "filepath": "/folder/character-file", "targetPath": "/folder/shot-file"} => confirmation message
-`.trim());
-
-export const queryCommandSchema = z.object({
-    cmd: z.literal('query').describe("Query the file system using a natural-language query."),
-    relation: z.string().min(1).describe("The type of relation to query. e.g. 'uses', 'depends-on', 'is-derived-from', 'is-located-in', 'is-worn-by', 'appears-in'. Reuse the relation type as much as possible to avoid creating too many links."),
-    leftFilePath: z.string().optional().describe("The file path to use as filter for the left node of the relation."),
-    rightFilePath: z.string().optional().describe("The file path to use as filter for the right node of the relation."),
-}).describe(`
-    Use leftFilePath and rightFilePath to filter the files when needed. If both are missing, it will return all files that are linked by the given relation.
-    Returns: a list of files that are linked by the given relation.
-    Example: {"cmd": "query", "relation": "uses"} => 1. /folder/file-1 - uses -> /folder/file-2 \n 2. /folder/file-3 - wears -> /folder/file-4
-    Example: {"cmd": "query", "relation": "uses", "leftFilePath": "/folder/file-1"} => 1. /folder/file-1 - uses -> /folder/file-2 \n 2. /folder/file-1 - uses -> /folder/file-3
-    Example: {"cmd": "query", "relation": "uses", "rightFilePath": "/folder/file-2"} => 1. /folder/file-1 - uses -> /folder/file-2 \n 2. /folder/file-3 - uses -> /folder/file-2
-`.trim());
-
-export const inspectGraphCommandSchema = z.object({
-    cmd: z.literal('inspect').describe("Returns the full list of relations between all files in the file system."),
-}).describe(`
-    Returns: a list of relation types.
-    Example: {"cmd": "inspect"} => 1. uses\n 2. wears\n 3. derived_from ...
 `.trim());
 
 export const renameCommandSchema = z.object({

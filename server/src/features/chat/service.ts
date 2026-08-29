@@ -9,17 +9,18 @@ import { BadRequest } from '../error';
 import { Session } from '../ai/agent/core/session';
 import { v4 as uuidv4 } from 'uuid';
 import { CheckpointPersistence } from '../ai/agent/core/persistence';
-import { Agent } from '../ai/agent/core/agent';
+import { createAgentFromDefinition } from '../ai/agent/core/agent-factory';
 import { getAgentDefinition } from '../ai/agent/core/agent-registry';
 import { generateTitle } from '../ai/agent/utils/generate-title';
 import { broadcastCancellation, createCancellableController } from '../generation-request/abort-manager';
-import { BaseStreamData, markStreamActive, readStreamChunks, removeStreamActive, writeStreamData } from '../generation-request/stream-handler';
+import { markStreamActive, removeStreamActive, streamChunksAsSse, writeStreamData } from '../generation-request/stream-handler';
 import { getProjectById } from '../project/repo';
-import { sse } from 'elysia';
+import { getErrorMessage } from '@/utils/get-error-message';
 import { listSkills } from '../file-system/repo';
 import * as commandService from '../command/service';
 import { buildInvokedCommandsPrompt, extractCommandNames } from '../command/resolve'
 import { buildEditorContextPrompt, editorContextSchema, type EditorContext } from './editor-context';
+import { extractTextFromUserMessage } from '../ai/agent/utils/message-content';
 
 export const listConversations = async (projectId: string, userId: string, options?: CursorPaginationOptions) => {
   const conversations = await repo.listConversations(projectId, userId, options);
@@ -59,19 +60,12 @@ export const cancelRun = async (runId: string) => {
     
   } catch (error) {
     console.error(error);
-    return {ok: false, error: error instanceof Error ? error.message : 'Failed to cancel run'};
+    return {ok: false, error: getErrorMessage(error, 'Failed to cancel run')};
   }
 }
 
 export async function* getStreams(runId: string) {
-  for await (const chunk of readStreamChunks(runId)) {
-    const data = chunk.data as BaseStreamData;
-    yield sse({
-      id: chunk.id,
-      event: data.event || 'chunk',
-      data: chunk.data,
-  });
-  }
+  yield* streamChunksAsSse(runId);
 }
 
 type CompletionPayload = z.infer<typeof completionSchema>;
@@ -145,7 +139,7 @@ async function runAgent(payload: RunAgentPayload){
       getProjectById(projectId),
       repo.getCheckpoint(projectId, conversationId),
       listSkills(projectId),
-      Promise.resolve(getUserPromptText(userPrompt)),
+      Promise.resolve(extractTextFromUserMessage(userPrompt)),
     ])
     
     const invokedCommandNames = extractCommandNames(userPromptText)
@@ -153,7 +147,6 @@ async function runAgent(payload: RunAgentPayload){
       ? await commandService.resolveCommandsByNames(projectId, invokedCommandNames)
       : []
     
-    // const checkpoint = await repo.getCheckpoint(project.id, conversationId);
     const session = new Session({
         sessionId: uuidv4(),
         userId,
@@ -163,30 +156,18 @@ async function runAgent(payload: RunAgentPayload){
         runId: runId,
     })
     const checkpointPersistence = new CheckpointPersistence(checkpoint, runId);
-
-    const agentDefinition = getAgentDefinition('main-agent');
-    if(!agentDefinition){
-      throw new Error('Agent definition not found');
-    }
-    const agent = new Agent({
-        name: agentDefinition.name,
-        systemPrompt: enrichSystemPrompt(
-          agentDefinition.baseSystemPrompt,
+    const agent = await createAgentFromDefinition({
+        agentName: 'main-agent',
+        session,
+        model,
+        persistence: checkpointPersistence,
+        buildSystemPrompt: (baseSystemPrompt, definition) => enrichSystemPrompt(
+          baseSystemPrompt,
           projectSkills,
-          agentDefinition.subAgents,
+          definition.subAgents,
           invokedCommands,
           editorContext,
         ),
-        session,
-        model,
-        vendor: agentDefinition.vendor,
-        modelConfig: agentDefinition.modelConfig,
-        persistence: checkpointPersistence,
-        maxContextTokens: agentDefinition.maxContextTokens,
-        contextThreshold: agentDefinition.contextThreshold,
-        summaryModelId: agentDefinition.summaryModelId,
-        evaluatorModelId: agentDefinition.evaluatorModelId,
-        evaluatorModelConfig: agentDefinition.evaluatorModelConfig,
     })
 
     const chunks = agent.runLoop(
@@ -208,7 +189,7 @@ async function runAgent(payload: RunAgentPayload){
     await repo.updateConversationAgentRun(runId, { status: 'finished' });
     
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Completion failed';
+    const errorMessage = getErrorMessage(error, 'Completion failed');
     console.error(error);
     await repo.updateConversationAgentRun(runId, { status: 'error', error: errorMessage });
   } finally {
@@ -219,23 +200,13 @@ async function runAgent(payload: RunAgentPayload){
 }
 
 async function handleTitleGeneration(userPrompt: UserModelMessage, organizationId: string){
-  const content = userPrompt.content;
-  const textPrompt = Array.isArray(content) ? content.find(p => p.type === 'text')?.text ?? '' : content;
   const {title} = await generateTitle({
-    message: textPrompt,
+    message: extractTextFromUserMessage(userPrompt),
     modelId: 'openai/gpt-5-nano',
     organizationId,
     abortSignal: new AbortController().signal, // This won't be aborted since the request will be done at this stage
   })
   return title
-}
-
-function getUserPromptText(userPrompt: UserModelMessage): string {
-  const content = userPrompt.content
-  if (typeof content === 'string') {
-    return content
-  }
-  return content.find((part) => part.type === 'text')?.text ?? ''
 }
 
 function enrichSystemPrompt(

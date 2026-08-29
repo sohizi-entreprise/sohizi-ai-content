@@ -1,17 +1,13 @@
 import { Elysia } from 'elysia'
 import { z } from 'zod'
 import { authMiddleware } from '@/lib/auth-middleware'
-import { assertOrgMember } from '@/lib/authorize'
-import { BadRequest } from '@/features/error'
+import { assertOrgMember, requireActiveOrganization } from '@/lib/authorize'
 import { billingService } from './service'
 
 export const billingRoutes = new Elysia({ prefix: '/billing' })
   .use(authMiddleware)
   .get('/balance', async ({ session, user, query }) => {
-    const organizationId = query.organizationId ?? session.activeOrganizationId
-    if (!organizationId) {
-      throw new BadRequest('No active organization. Please select an organization first.')
-    }
+    const organizationId = requireActiveOrganization(session, query.organizationId)
     await assertOrgMember(user.id, organizationId)
     const balance = await billingService.getBalance(organizationId)
     return {
@@ -30,5 +26,5 @@ export * from './types'
 export * from './errors'
 export * from './constants'
 export * from './credits'
-export { withBilling, withBillingAsync, withBillingStream } from './wrapper'
+export { withBilling, withBillingAsync, withBillingStream, safeRefund } from './wrapper'
 export type { AsyncReservationHandle, WithBillingCallContext } from './wrapper'
