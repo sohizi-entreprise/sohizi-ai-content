@@ -3,27 +3,28 @@ import Mention from '@tiptap/extension-mention'
 import { ReactRenderer } from '@tiptap/react'
 import { computePosition, flip, shift } from '@floating-ui/dom'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
-import type { SuggestionOptions, SuggestionProps, SuggestionKeyDownProps } from '@tiptap/suggestion'
-import type { Editor } from '@tiptap/core'
 import { toast } from 'sonner'
-import type { FileMentionItem } from '@/hooks/use-file-mention-search'
-import { FileMentionList } from './file-mention-list'
 import { useEditorStore } from '../stores/editor-store'
-import {
-  FILE_TAG_REGEX,
-  formatFileTag,
-  parseFileTag,
-} from '@/lib/file-tag'
+import { FileMentionList } from './file-mention-list'
+import type {
+  SuggestionKeyDownProps,
+  SuggestionOptions,
+  SuggestionProps,
+} from '@tiptap/suggestion'
+import type { Editor } from '@tiptap/core'
+import type { FileMentionItem } from '@/hooks/use-file-mention-search'
+import { FILE_TAG_REGEX, formatFileTag, parseFileTag } from '@/lib/file-tag'
 
-type MentionConfigureOptions = NonNullable<Parameters<typeof Mention.configure>[0]>
+type MentionConfigureOptions = NonNullable<
+  Parameters<typeof Mention.configure>[0]
+>
 type FileMentionOptions = MentionConfigureOptions & {
   enableClick: boolean
 }
 
 export const FILE_MENTION_REGEX = FILE_TAG_REGEX
 
-const FILE_MENTION_PATTERN =
-  /^@\[([^\]]+)\]\(file:([^?)\s]+)\?([^)]+)\)/
+const FILE_MENTION_PATTERN = /^@\[([^\]]+)\]\(file:([^?)\s]+)\?([^)]+)\)/
 
 function escapeHtmlAttribute(value: string): string {
   return value
@@ -160,16 +161,18 @@ const FileMentionExtension = Mention.extend<FileMentionOptions>({
           const parsed = parseFileTag(match[0])
           if (!parsed) return
 
-          chain().deleteRange(range).insertContentAt(range.from, {
-            type: this.name,
-            attrs: {
-              id: parsed.fileId,
-              label: parsed.displayName,
-              format: parsed.format,
-              lines: parsed.lines ?? null,
-              snippet: parsed.snippet ?? null,
-            },
-          })
+          chain()
+            .deleteRange(range)
+            .insertContentAt(range.from, {
+              type: this.name,
+              attrs: {
+                id: parsed.fileId,
+                label: parsed.displayName,
+                format: parsed.format,
+                lines: parsed.lines ?? null,
+                snippet: parsed.snippet ?? null,
+              },
+            })
         },
       },
     ]
@@ -247,7 +250,12 @@ function updatePosition(editor: Editor, element: HTMLElement) {
       const { view } = editor
       const start = view.coordsAtPos(from)
       const end = view.coordsAtPos(to)
-      return new DOMRect(start.left, start.top, end.right - start.left, end.bottom - start.top)
+      return new DOMRect(
+        start.left,
+        start.top,
+        end.right - start.left,
+        end.bottom - start.top,
+      )
     },
   }
 
@@ -264,7 +272,10 @@ function updatePosition(editor: Editor, element: HTMLElement) {
 }
 
 export function createFileMentionSuggestion(
-  searchFn: (query: string, options?: { signal?: AbortSignal }) => Promise<FileMentionItem[]>,
+  searchFn: (
+    query: string,
+    options?: { signal?: AbortSignal },
+  ) => Promise<Array<FileMentionItem>>,
 ): Omit<SuggestionOptions<FileMentionItem>, 'editor'> {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   let abortController: AbortController | null = null
@@ -274,7 +285,7 @@ export function createFileMentionSuggestion(
     allowSpaces: false,
 
     items: ({ query }) => {
-      return new Promise<FileMentionItem[]>((resolve) => {
+      return new Promise<Array<FileMentionItem>>((resolve) => {
         if (debounceTimer) clearTimeout(debounceTimer)
         if (abortController) abortController.abort()
 
@@ -286,7 +297,9 @@ export function createFileMentionSuggestion(
         debounceTimer = setTimeout(async () => {
           abortController = new AbortController()
           try {
-            const results = await searchFn(query, { signal: abortController.signal })
+            const results = await searchFn(query, {
+              signal: abortController.signal,
+            })
             resolve(results)
           } catch {
             resolve([])
@@ -313,7 +326,10 @@ export function createFileMentionSuggestion(
     },
 
     render: () => {
-      let component: ReactRenderer<FileMentionListRef, SuggestionProps<FileMentionItem>> | null = null
+      let component: ReactRenderer<
+        FileMentionListRef,
+        SuggestionProps<FileMentionItem>
+      > | null = null
       let scrollHandler: (() => void) | null = null
 
       return {

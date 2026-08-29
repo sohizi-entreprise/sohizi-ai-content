@@ -3,8 +3,8 @@ import { getProjectOptionsQueryOptions } from '@/features/projects/query-mutatio
 import StartProject from '@/features/projects/pages/start-project'
 
 export const Route = createFileRoute('/dashboard/projects/new')({
-  loader: async ({context}) => {
-    context.queryClient.prefetchQuery(getProjectOptionsQueryOptions)
+  loader: async ({ context }) => {
+    await context.queryClient.prefetchQuery(getProjectOptionsQueryOptions)
   },
   component: StartProject,
 })

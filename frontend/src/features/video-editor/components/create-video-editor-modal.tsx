@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Folder, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,10 +16,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   createFileNodeMutationOptions,
-  filesByFormatKey,
   fileTreeKey,
+  filesByFormatKey,
 } from '@/features/projects/query-mutation'
-import { listFileTreePerDirectory, searchFilesByName } from '@/features/projects/request'
+import { listFileTreePerDirectory } from '@/features/projects/request'
+import { useFolderSearch } from '@/hooks/use-folder-search'
 import { cn } from '@/lib/utils'
 
 type CreateVideoEditorModalProps = {
@@ -36,44 +37,29 @@ export function CreateVideoEditorModal({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
-  const [folderQuery, setFolderQuery] = useState('')
-  const [debouncedFolderQuery, setDebouncedFolderQuery] = useState('')
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const {
+    folderQuery,
+    setFolderQuery,
+    trimmedDebouncedFolderQuery,
+    folderOptions,
+    isSearchingFolders,
+  } = useFolderSearch(projectId, open)
 
   const trimmedName = name.trim()
-  const trimmedFolderQuery = folderQuery.trim()
-  const trimmedDebouncedFolderQuery = debouncedFolderQuery.trim()
 
   useEffect(() => {
     if (!open) return
     setName('')
     setFolderQuery('')
-    setDebouncedFolderQuery('')
     setSelectedFolderId(null)
     setIsSubmitting(false)
-  }, [open])
+  }, [open, setFolderQuery])
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setDebouncedFolderQuery(trimmedFolderQuery)
-    }, 250)
-    return () => window.clearTimeout(timeoutId)
-  }, [trimmedFolderQuery])
-
-  const { data: searchedFolders, isFetching: isSearchingFolders } = useQuery({
-    queryKey: ['project', projectId, 'folder-search', trimmedDebouncedFolderQuery],
-    queryFn: ({ signal }) =>
-      searchFilesByName(projectId, trimmedDebouncedFolderQuery, 25, {
-        signal,
-        directory: true,
-      }),
-    enabled: open && trimmedDebouncedFolderQuery.length > 0,
-    staleTime: 1000 * 60,
-  })
-
-  const folderOptions = useMemo(() => searchedFolders ?? [], [searchedFolders])
-  const selectedFolder = folderOptions.find((folder) => folder.id === selectedFolderId)
+  const selectedFolder = folderOptions.find(
+    (folder) => folder.id === selectedFolderId,
+  )
 
   const createMutation = useMutation(createFileNodeMutationOptions(projectId))
 
@@ -84,7 +70,10 @@ export function CreateVideoEditorModal({
 
     setIsSubmitting(true)
     try {
-      const siblings = await listFileTreePerDirectory(projectId, selectedFolder.id)
+      const siblings = await listFileTreePerDirectory(
+        projectId,
+        selectedFolder.id,
+      )
       const position = (siblings.length + 1) * 1000
       const created = await createMutation.mutateAsync({
         name: trimmedName,
@@ -95,8 +84,12 @@ export function CreateVideoEditorModal({
       })
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: filesByFormatKey(projectId, 'video-editor') }),
-        queryClient.invalidateQueries({ queryKey: fileTreeKey(projectId, selectedFolder.id) }),
+        queryClient.invalidateQueries({
+          queryKey: filesByFormatKey(projectId, 'video-editor'),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: fileTreeKey(projectId, selectedFolder.id),
+        }),
       ])
 
       onOpenChange(false)
@@ -107,7 +100,9 @@ export function CreateVideoEditorModal({
     } catch (error) {
       console.error(error)
       toast.error(
-        error instanceof Error ? error.message : 'Failed to create video editor',
+        error instanceof Error
+          ? error.message
+          : 'Failed to create video editor',
       )
       setIsSubmitting(false)
     }
@@ -164,7 +159,8 @@ export function CreateVideoEditorModal({
                     onClick={() => setSelectedFolderId(folder.id)}
                     className={cn(
                       'flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm transition-colors hover:bg-accent',
-                      selectedFolderId === folder.id && 'bg-accent text-accent-foreground',
+                      selectedFolderId === folder.id &&
+                        'bg-accent text-accent-foreground',
                     )}
                   >
                     <Folder className="size-4 text-muted-foreground" />
@@ -175,14 +171,21 @@ export function CreateVideoEditorModal({
             </div>
             {selectedFolder ? (
               <p className="text-xs text-muted-foreground">
-                Selected: <span className="font-medium text-foreground">{selectedFolder.name}</span>
+                Selected:{' '}
+                <span className="font-medium text-foreground">
+                  {selectedFolder.name}
+                </span>
               </p>
             ) : null}
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
           <Button disabled={!canSubmit} onClick={handleCreate}>

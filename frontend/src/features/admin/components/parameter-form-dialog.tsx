@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Plus, Trash2 } from 'lucide-react'
+import { createAdminParameterMutationOptions } from '../query-mutation'
+import type {
+  CreateParameterInput,
+  CreateParameterOptionInput,
+  ModelParameterDataType,
+  ModelParameterUIComponent,
+} from '../types'
+import { getErrorMessage } from '@/lib/errors'
 import {
   Dialog,
   DialogContent,
@@ -18,13 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createAdminParameterMutationOptions } from '../query-mutation'
-import type {
-  CreateParameterInput,
-  CreateParameterOptionInput,
-  ModelParameterDataType,
-  ModelParameterUIComponent,
-} from '../types'
 
 type Props = {
   open: boolean
@@ -32,7 +33,7 @@ type Props = {
   onCreated?: (parameterId: string) => void
 }
 
-const PARAMETER_TYPES: ModelParameterDataType[] = [
+const PARAMETER_TYPES: Array<ModelParameterDataType> = [
   'string',
   'number',
   'boolean',
@@ -40,7 +41,11 @@ const PARAMETER_TYPES: ModelParameterDataType[] = [
   'array<number>',
 ]
 
-const UI_COMPONENTS: ModelParameterUIComponent[] = ['select', 'slider', 'uploader']
+const UI_COMPONENTS: Array<ModelParameterUIComponent> = [
+  'select',
+  'slider',
+  'uploader',
+]
 const NONE_VALUE = '__none__'
 
 const emptyForm = {
@@ -51,11 +56,17 @@ const emptyForm = {
   xUiComponent: '' as ModelParameterUIComponent | '',
 }
 
-const emptyOption = (): CreateParameterOptionInput => ({ label: '', value: '', description: '' })
+const emptyOption = (): CreateParameterOptionInput => ({
+  label: '',
+  value: '',
+  description: '',
+})
 
 export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
   const [form, setForm] = useState(emptyForm)
-  const [options, setOptions] = useState<CreateParameterOptionInput[]>([emptyOption()])
+  const [options, setOptions] = useState<Array<CreateParameterOptionInput>>([
+    emptyOption(),
+  ])
   const [error, setError] = useState<string | null>(null)
 
   const createMutation = useMutation(createAdminParameterMutationOptions())
@@ -93,10 +104,7 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
       onOpenChange(false)
       onCreated?.(created.id)
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        (err instanceof Error ? err.message : 'Failed to save parameter')
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to save parameter'))
     }
   }
 
@@ -113,7 +121,9 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
               <Input
                 id="parameter-key"
                 value={form.key}
-                onChange={(event) => setForm((prev) => ({ ...prev, key: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, key: event.target.value }))
+                }
                 placeholder="aspectRatio"
                 required
               />
@@ -123,7 +133,9 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
               <Input
                 id="parameter-label"
                 value={form.label}
-                onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, label: event.target.value }))
+                }
                 placeholder="Aspect ratio"
                 required
               />
@@ -135,7 +147,10 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
               <Select
                 value={form.type}
                 onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, type: value as ModelParameterDataType }))
+                  setForm((prev) => ({
+                    ...prev,
+                    type: value as ModelParameterDataType,
+                  }))
                 }
               >
                 <SelectTrigger className="w-full">
@@ -157,7 +172,10 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
                 onValueChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
-                    xUiComponent: value === NONE_VALUE ? '' : (value as ModelParameterUIComponent),
+                    xUiComponent:
+                      value === NONE_VALUE
+                        ? ''
+                        : (value as ModelParameterUIComponent),
                   }))
                 }
               >
@@ -180,7 +198,12 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
             <Input
               id="parameter-description"
               value={form.description}
-              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  description: event.target.value,
+                }))
+              }
             />
           </div>
           {form.xUiComponent === 'select' ? (
@@ -188,14 +211,19 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
               <Label>Initial options</Label>
               <div className="space-y-2">
                 {options.map((option, index) => (
-                  <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                  <div
+                    key={index}
+                    className="grid grid-cols-[1fr_1fr_auto] gap-2"
+                  >
                     <Input
                       value={option.label}
                       placeholder="Label"
                       onChange={(event) =>
                         setOptions((prev) =>
                           prev.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, label: event.target.value } : item,
+                            itemIndex === index
+                              ? { ...item, label: event.target.value }
+                              : item,
                           ),
                         )
                       }
@@ -206,7 +234,9 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
                       onChange={(event) =>
                         setOptions((prev) =>
                           prev.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, value: event.target.value } : item,
+                            itemIndex === index
+                              ? { ...item, value: event.target.value }
+                              : item,
                           ),
                         )
                       }
@@ -217,7 +247,9 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
                       size="icon"
                       disabled={options.length <= 1}
                       onClick={() =>
-                        setOptions((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+                        setOptions((prev) =>
+                          prev.filter((_, itemIndex) => itemIndex !== index),
+                        )
                       }
                       aria-label="Remove option"
                     >
@@ -239,7 +271,11 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
           ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>

@@ -44,7 +44,8 @@ export const skillNameAvailableQueryOptions = (
 ) =>
   queryOptions({
     queryKey: keysFactory.nameAvailable(projectId, name),
-    queryFn: ({ signal }) => checkSkillNameAvailable(projectId, name, { signal }),
+    queryFn: ({ signal }) =>
+      checkSkillNameAvailable(projectId, name, { signal }),
     enabled: enabled && name.trim().length > 0,
     staleTime: 0,
   })

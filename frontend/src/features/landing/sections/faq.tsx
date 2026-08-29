@@ -1,11 +1,11 @@
+import { CtaButton } from '../components/cta-button'
+import { faq } from '../content'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { CtaButton } from '../components/cta-button'
-import { faq } from '../content'
 
 export function FaqSection() {
   return (

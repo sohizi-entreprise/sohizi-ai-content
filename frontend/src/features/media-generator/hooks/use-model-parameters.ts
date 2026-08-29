@@ -2,16 +2,24 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { listCatalogModelParametersQueryOptions } from '../query-mutations'
 import { useMediaGeneratorStore } from '../store/media-generator-store'
-import { ModelParameterBinding } from '@/features/admin/types'
 import { parseParameterAssetUrls } from '../lib/parameter-assets'
+import type { ModelParameterBinding } from '@/features/admin/types'
 
 export function useModelParameters() {
-  const selectedModelId = useMediaGeneratorStore((state) => state.selectedModelId)
-  const parameterValues = useMediaGeneratorStore((state) => state.parameterValues)
-  const setParameterValues = useMediaGeneratorStore((state) => state.setParameterValues)
+  const selectedModelId = useMediaGeneratorStore(
+    (state) => state.selectedModelId,
+  )
+  const parameterValues = useMediaGeneratorStore(
+    (state) => state.parameterValues,
+  )
+  const setParameterValues = useMediaGeneratorStore(
+    (state) => state.setParameterValues,
+  )
   const initializedFor = useRef<string | null>(null)
 
-  const parametersQuery = useQuery(listCatalogModelParametersQueryOptions(selectedModelId))
+  const parametersQuery = useQuery(
+    listCatalogModelParametersQueryOptions(selectedModelId),
+  )
 
   useEffect(() => {
     if (!selectedModelId) {
@@ -33,7 +41,13 @@ export function useModelParameters() {
         ]),
       ),
     )
-  }, [parameterValues, parametersQuery.data, parametersQuery.isFetching, selectedModelId, setParameterValues])
+  }, [
+    parameterValues,
+    parametersQuery.data,
+    parametersQuery.isFetching,
+    selectedModelId,
+    setParameterValues,
+  ])
 
   return {
     parameters: parametersQuery.data ?? [],
@@ -41,12 +55,12 @@ export function useModelParameters() {
   }
 }
 
-
 export function useValidateParameterValues() {
-
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const parameterValues = useMediaGeneratorStore((state) => state.parameterValues)
+  const parameterValues = useMediaGeneratorStore(
+    (state) => state.parameterValues,
+  )
 
   const assignError = (key: string, message: string) => {
     setErrors((prev) => ({ ...prev, [key]: message }))
@@ -55,80 +69,85 @@ export function useValidateParameterValues() {
   const resetErrors = useCallback(() => {
     setErrors({})
   }, [])
-  
-  const validate = useCallback((parameters: ModelParameterBinding[]) => {
-    let errorMsg: string | null = null
-    parameters.forEach((parameter) => {
-      const value = parameterValues[parameter.key]
-      const constraint = parameter.constraints ?? {}
-  
-      const parameterType = parameter.type
-  
-      if (parameter.required) {
-        const missing = parameter.xUiComponent === 'uploader'
-          ? parseParameterAssetUrls(typeof value === 'string' ? value : '').length === 0
-          : !value
-        if (missing) {
-          errorMsg = 'This field is required'
-          assignError(parameter.key, errorMsg)
+
+  const validate = useCallback(
+    (parameters: Array<ModelParameterBinding>) => {
+      let errorMsg: string | null = null
+      for (const parameter of parameters) {
+        const value = parameterValues[parameter.key]
+        const constraint = parameter.constraints ?? {}
+
+        const parameterType = parameter.type
+
+        if (parameter.required) {
+          const missing =
+            parameter.xUiComponent === 'uploader'
+              ? parseParameterAssetUrls(typeof value === 'string' ? value : '')
+                  .length === 0
+              : !value
+          if (missing) {
+            errorMsg = 'This field is required'
+            assignError(parameter.key, errorMsg)
+          }
         }
-      }
-  
-      if (parameterType === 'number'){
-        const numberValue = Number(value)
-        if (isNaN(numberValue)) {
-          errorMsg = 'This field must be a number'
-          assignError(parameter.key, errorMsg)
-        }
-        if (constraint.min && numberValue < constraint.min) {
-          errorMsg = `This field must be greater than ${constraint.min}`
-          assignError(parameter.key, errorMsg)
-        }
-        if (constraint.max && numberValue > constraint.max) {
-          errorMsg = `This field must be less than ${constraint.max}`
-          assignError(parameter.key, errorMsg)
-        }
-      }
-  
-      if(parameterType === 'boolean'){
-        if(typeof value !== 'boolean'){
-          errorMsg = 'This field must be a boolean'
-          assignError(parameter.key, errorMsg)
-        }
-      }
-  
-      if(parameterType === 'array<string>' || parameterType === 'array<number>'){
-        const parsed = parseArrayValue(value)
-        if(parsed){
-          if(constraint.min && parsed.length < constraint.min) {
+
+        if (parameterType === 'number') {
+          const numberValue = Number(value)
+          if (isNaN(numberValue)) {
+            errorMsg = 'This field must be a number'
+            assignError(parameter.key, errorMsg)
+          }
+          if (constraint.min && numberValue < constraint.min) {
             errorMsg = `This field must be greater than ${constraint.min}`
             assignError(parameter.key, errorMsg)
           }
-          if(constraint.max && parsed.length > constraint.max) {
+          if (constraint.max && numberValue > constraint.max) {
             errorMsg = `This field must be less than ${constraint.max}`
             assignError(parameter.key, errorMsg)
           }
         }
-        else {
-          errorMsg = 'This field must be an array'
-          assignError(parameter.key, errorMsg)
+
+        if (parameterType === 'boolean') {
+          if (typeof value !== 'boolean') {
+            errorMsg = 'This field must be a boolean'
+            assignError(parameter.key, errorMsg)
+          }
+        }
+
+        if (
+          parameterType === 'array<string>' ||
+          parameterType === 'array<number>'
+        ) {
+          const parsed = parseArrayValue(value)
+          if (parsed) {
+            if (constraint.min && parsed.length < constraint.min) {
+              errorMsg = `This field must be greater than ${constraint.min}`
+              assignError(parameter.key, errorMsg)
+            }
+            if (constraint.max && parsed.length > constraint.max) {
+              errorMsg = `This field must be less than ${constraint.max}`
+              assignError(parameter.key, errorMsg)
+            }
+          } else {
+            errorMsg = 'This field must be an array'
+            assignError(parameter.key, errorMsg)
+          }
         }
       }
-    })
 
-    if (errorMsg) {
-      return false
-    }
+      if (errorMsg) {
+        return false
+      }
 
-    return true
-
-  }, [parameterValues])
-
+      return true
+    },
+    [parameterValues],
+  )
 
   return { errors, validate, resetErrors }
 }
 
-function parseArrayValue(value: unknown): unknown[] | null {
+function parseArrayValue(value: unknown): Array<unknown> | null {
   if (Array.isArray(value)) return value
   if (value == null || value === '') return []
   if (typeof value !== 'string') return null

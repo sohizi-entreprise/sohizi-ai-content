@@ -6,7 +6,7 @@ export function EditorWorkspace() {
   const openTabs = useEditorStore((s) => s.openTabs)
   const activeTabId = useEditorStore((s) => s.activeTabId)
   const activeTab =
-    openTabs.find((t) => t.id === activeTabId) ?? openTabs[0] ?? null
+    openTabs.find((t) => t.id === activeTabId) ?? openTabs.at(0) ?? null
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">

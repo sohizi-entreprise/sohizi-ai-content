@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
+import { skillNameAvailableQueryOptions } from '../query-mutation'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -13,7 +15,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { skillNameAvailableQueryOptions } from '../query-mutation'
 
 type SkillNameConflictModalProps = {
   projectId: string
@@ -29,8 +30,8 @@ type SkillNameConflictModalProps = {
 function suggestRename(name: string) {
   const match = name.match(/^(.*?)(?:\s\((\d+)\))?$/)
   if (!match) return `${name} (2)`
-  const base = match[1]?.trim() || name
-  const next = Number(match[2] ?? '1') + 1
+  const base = match[1].trim() || name
+  const next = Number((match[2] as string | undefined) ?? '1') + 1
   return `${base} (${next})`
 }
 
@@ -45,21 +46,13 @@ export function SkillNameConflictModal({
   isRenaming = false,
 }: SkillNameConflictModalProps) {
   const [renameValue, setRenameValue] = useState('')
-  const [debouncedName, setDebouncedName] = useState('')
+  const trimmedName = renameValue.trim()
+  const debouncedName = useDebouncedValue(trimmedName, 250)
 
   useEffect(() => {
     if (!open) return
     setRenameValue(suggestRename(skillName))
   }, [open, skillName])
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedName(renameValue.trim())
-    }, 250)
-    return () => window.clearTimeout(timer)
-  }, [renameValue])
-
-  const trimmedName = renameValue.trim()
   const { data: availability, isFetching } = useQuery(
     skillNameAvailableQueryOptions(
       projectId,
@@ -84,8 +77,9 @@ export function SkillNameConflictModal({
         <DialogHeader>
           <DialogTitle>Skill already exists</DialogTitle>
           <DialogDescription>
-            A skill named “{skillName}” is already in this project. You can replace
-            it with the market version, or add this skill under a new name.
+            A skill named “{skillName}” is already in this project. You can
+            replace it with the market version, or add this skill under a new
+            name.
           </DialogDescription>
         </DialogHeader>
 
@@ -108,7 +102,10 @@ export function SkillNameConflictModal({
                 id="skill-rename"
                 value={renameValue}
                 onChange={(event) => setRenameValue(event.target.value)}
-                className={cn(nameTaken && 'border-destructive focus-visible:ring-destructive')}
+                className={cn(
+                  nameTaken &&
+                    'border-destructive focus-visible:ring-destructive',
+                )}
                 disabled={isReplacing || isRenaming}
                 maxLength={50}
               />
@@ -117,7 +114,9 @@ export function SkillNameConflictModal({
                 disabled={!nameReady || isReplacing || isRenaming}
                 onClick={() => onRename(trimmedName)}
               >
-                {isRenaming ? <Loader2 className="size-4 animate-spin" /> : null}
+                {isRenaming ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : null}
                 Rename
               </Button>
             </div>

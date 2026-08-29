@@ -55,7 +55,11 @@ export function LandingFooter() {
             {footer.tagline}
           </p>
           <div className="mt-5">
-            <CtaButton size="sm" className="h-9 px-4 text-sm" label="Get started" />
+            <CtaButton
+              size="sm"
+              className="h-9 px-4 text-sm"
+              label="Get started"
+            />
           </div>
           <div className="mt-6 flex items-center gap-3">
             {socialLinks.map((social) => {

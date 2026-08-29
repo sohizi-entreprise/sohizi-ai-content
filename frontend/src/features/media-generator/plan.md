@@ -2,11 +2,11 @@ Let's build a media generator feature where users can generate images, videos an
 Put all the code inside `frontend/src/features/media-generator`
 
 We have 2 main parts you need to implement:
+
 1. The media setting. That should be a button on the left bottom side of the main chat input. When it's clicked a dialog opens with different settings depending on the type of media users want to generate.
 2. A media viewer where users can view a grid list of media they've generated so far.
 
-
-1. Media settings
+3. Media settings
 
 - At the very top of the dialog we should have a tab style where we can select the type of media [image, video, audio]
 - Settings for image : model type, duration, resolution, aspect ratio

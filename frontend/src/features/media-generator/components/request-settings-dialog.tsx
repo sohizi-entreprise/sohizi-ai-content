@@ -1,3 +1,4 @@
+import { flattenRequestSettings } from '../lib/request-state'
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { flattenRequestSettings } from '../lib/request-state'
 
 type RequestSettingsDialogProps = {
   open: boolean
@@ -56,7 +56,9 @@ export function RequestSettingsDialog({
               <TableBody>
                 {rows.map((row) => (
                   <TableRow key={row.key} className="text-muted-foreground">
-                    <TableCell className="whitespace-normal">{row.key}</TableCell>
+                    <TableCell className="whitespace-normal">
+                      {row.key}
+                    </TableCell>
                     <TableCell className="whitespace-normal break-all">
                       {row.value}
                     </TableCell>

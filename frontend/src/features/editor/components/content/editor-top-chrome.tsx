@@ -7,6 +7,8 @@ import {
   Undo2,
 } from 'lucide-react'
 import { useEditorState } from '@tiptap/react'
+import { MAX_CHARACTER_COUNT } from '../../constants'
+import { useEditorStore } from '../../stores/editor-store'
 import type { Editor } from '@tiptap/core'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,8 +17,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn, timeFromNow } from '@/lib/utils'
-import { MAX_CHARACTER_COUNT } from '../../constants'
-import { useEditorStore } from '../../stores/editor-store'
 
 export function EditorTopChrome({
   editor,
@@ -89,9 +89,8 @@ export function EditorTopChrome({
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-56 text-left">
-            This document allows up to{' '}
-            {MAX_CHARACTER_COUNT.toLocaleString()} characters.{' '}
-            {remainingPercent}% of the limit remaining.
+            This document allows up to {MAX_CHARACTER_COUNT.toLocaleString()}{' '}
+            characters. {remainingPercent}% of the limit remaining.
           </TooltipContent>
         </Tooltip>
 
@@ -107,7 +106,8 @@ function CharacterUsageDonut({ percentage }: { percentage: number }) {
   const radius = (diameter - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset =
-    circumference - (Math.min(100, Math.max(0, percentage)) / 100) * circumference
+    circumference -
+    (Math.min(100, Math.max(0, percentage)) / 100) * circumference
 
   const strokeColor =
     percentage >= 90

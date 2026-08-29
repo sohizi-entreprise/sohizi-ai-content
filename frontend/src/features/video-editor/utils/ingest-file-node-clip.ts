@@ -1,7 +1,7 @@
-import { getFileContent } from '@/features/editor/requests'
 import { useVideoEditorStore } from '../store/editor-store'
 import { secondsToFrames } from './time'
 import { probeImageDimensions, probeMediaDuration } from './media-probe'
+import { getFileContent } from '@/features/editor/requests'
 
 type MediaFormat = 'video' | 'audio' | 'image'
 
@@ -24,7 +24,10 @@ export type IngestFileNodeClipParams = {
   guide: DropGuide | null
 }
 
-function resolveTrackId(guide: DropGuide | null, format: MediaFormat): string | undefined {
+function resolveTrackId(
+  guide: DropGuide | null,
+  format: MediaFormat,
+): string | undefined {
   const { tracks, insertTrackAt } = useVideoEditorStore.getState()
 
   if (!guide) return undefined

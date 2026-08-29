@@ -4,10 +4,10 @@
 const config = {
   semi: false,
   singleQuote: true,
-  trailingComma: "all",
+  trailingComma: 'all',
   tabWidth: 2,
   printWidth: 80,
-  bracketSpacing: true
-};
+  bracketSpacing: true,
+}
 
-export default config;
+export default config

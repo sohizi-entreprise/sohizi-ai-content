@@ -2,23 +2,22 @@ import { useRef } from 'react'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { Upload } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { useSaveFileBucket } from '@/hooks/use-save-file-bucket'
 import { listUploadedAssetsQueryOptions } from '../query-mutations'
-import { AssetPickerGrid } from './asset-picker-grid'
 import {
   acceptForFileTypes,
   describeFileTypes,
   isPickerAssetType,
   queryTypeForFileTypes,
-  type PickerAsset,
-  type PickerAssetType,
 } from '../lib/parameter-assets'
+import { AssetPickerGrid } from './asset-picker-grid'
+import type { PickerAsset, PickerAssetType } from '../lib/parameter-assets'
+import { Button } from '@/components/ui/button'
+import { useSaveFileBucket } from '@/hooks/use-save-file-bucket'
 
 type AssetPickerUploadTabProps = {
   projectId: string
-  fileTypes: PickerAssetType[]
-  selectedUrls: string[]
+  fileTypes: Array<PickerAssetType>
+  selectedUrls: Array<string>
   onSelect: (asset: PickerAsset) => void
   maxItems: number
   allowMultiple: boolean
@@ -44,44 +43,54 @@ export function AssetPickerUploadTab({
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useInfiniteQuery(listUploadedAssetsQueryOptions(projectId, queryType ? { type: queryType } : undefined))
+  } = useInfiniteQuery(
+    listUploadedAssetsQueryOptions(
+      projectId,
+      queryType ? { type: queryType } : undefined,
+    ),
+  )
 
   const allowed = new Set(fileTypes)
-  const items: PickerAsset[] = uploadedAssets.flatMap((asset) => {
+  const items: Array<PickerAsset> = uploadedAssets.flatMap((asset) => {
     if (!isPickerAssetType(asset.type) || !allowed.has(asset.type)) return []
-    return [{
-      id: asset.id,
-      name: asset.name,
-      url: asset.url,
-      type: asset.type,
-    }]
+    return [
+      {
+        id: asset.id,
+        name: asset.name,
+        url: asset.url,
+        type: asset.type,
+      },
+    ]
   })
 
   const handleFiles = (fileList: FileList | null) => {
     const file = fileList?.[0]
     if (!file) return
 
-    saveFile({ projectId, folderId: null, file }, {
-      onSuccess: (result) => {
-        void queryClient.invalidateQueries({
-          queryKey: ['media', projectId, 'uploaded-assets'],
-        })
-        const uploadedType = result.asset.type
-        if (isPickerAssetType(uploadedType) && allowed.has(uploadedType)) {
-          onSelect({
-            id: result.asset.id,
-            name: result.asset.name,
-            url: result.asset.url,
-            type: uploadedType,
+    saveFile(
+      { projectId, folderId: null, file },
+      {
+        onSuccess: (result) => {
+          void queryClient.invalidateQueries({
+            queryKey: ['media', projectId, 'uploaded-assets'],
           })
-          return
-        }
-        toast.error(`Only ${describeFileTypes(fileTypes)} files are allowed`)
+          const uploadedType = result.asset.type
+          if (isPickerAssetType(uploadedType) && allowed.has(uploadedType)) {
+            onSelect({
+              id: result.asset.id,
+              name: result.asset.name,
+              url: result.asset.url,
+              type: uploadedType,
+            })
+            return
+          }
+          toast.error(`Only ${describeFileTypes(fileTypes)} files are allowed`)
+        },
+        onError: (error) => {
+          toast.error(error.message)
+        },
       },
-      onError: (error) => {
-        toast.error(error.message)
-      },
-    })
+    )
 
     if (inputRef.current) {
       inputRef.current.value = ''

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { MoreVertical, type LucideIcon } from 'lucide-react'
+import { MoreVertical } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -17,7 +18,7 @@ export type MediaCardMenuOption = {
 
 type MediaCardMenuProps = {
   className?: string
-  options: MediaCardMenuOption[]
+  options: Array<MediaCardMenuOption>
 }
 
 export function MediaCardMenu({ className, options }: MediaCardMenuProps) {

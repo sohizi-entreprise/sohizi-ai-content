@@ -8,10 +8,8 @@
 import { Mark } from '@tiptap/react'
 
 /**
- * 
+ *
  */
-
-
 
 export const MarkdownHighlight = Mark.create({
   name: 'highlight',
@@ -51,9 +49,9 @@ export const MarkdownHighlight = Mark.create({
       if (!match) return undefined
 
       return {
-        type: 'highlight',       // token type (must match name)
-        raw: match[0],           // full matched string: ==text==
-        text: match[1],          // inner content: text
+        type: 'highlight', // token type (must match name)
+        raw: match[0], // full matched string: ==text==
+        text: match[1], // inner content: text
         // Let the Markdown lexer process nested inline formatting
         tokens: lexer.inlineTokens(match[1]),
       }
@@ -74,5 +72,4 @@ export const MarkdownHighlight = Mark.create({
     // Wrap serialized children in == delimiters
     return `==${content}==`
   },
-
 })

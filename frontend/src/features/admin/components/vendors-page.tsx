@@ -1,5 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+  deleteAdminVendorMutationOptions,
+  listAdminVendorsQueryOptions,
+  updateAdminVendorMutationOptions,
+} from '../query-mutation'
+import { VendorFormDialog } from './vendor-form-dialog'
+import type { AdminVendor } from '../types'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -10,16 +17,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  deleteAdminVendorMutationOptions,
-  listAdminVendorsQueryOptions,
-  updateAdminVendorMutationOptions,
-} from '../query-mutation'
-import type { AdminVendor } from '../types'
-import { VendorFormDialog } from './vendor-form-dialog'
 
 export function VendorsPage() {
-  const { data: vendors = [], isLoading, error } = useQuery(listAdminVendorsQueryOptions())
+  const {
+    data: vendors = [],
+    isLoading,
+    error,
+  } = useQuery(listAdminVendorsQueryOptions())
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<AdminVendor | null>(null)
 
@@ -41,7 +45,11 @@ export function VendorsPage() {
       vendor.modelCount > 0
         ? ` It will be removed from ${vendor.modelCount} model${vendor.modelCount === 1 ? '' : 's'}.`
         : ''
-    if (!window.confirm(`Delete vendor “${vendor.name}”?${assignmentNote} This cannot be undone.`)) {
+    if (
+      !window.confirm(
+        `Delete vendor “${vendor.name}”?${assignmentNote} This cannot be undone.`,
+      )
+    ) {
       return
     }
     deleteMutation.mutate(vendor.id)
@@ -59,8 +67,12 @@ export function VendorsPage() {
         <Button onClick={openCreate}>Add vendor</Button>
       </div>
 
-      {isLoading ? <p className="text-sm text-muted-foreground">Loading vendors…</p> : null}
-      {error ? <p className="text-sm text-destructive">Failed to load vendors</p> : null}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading vendors…</p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-destructive">Failed to load vendors</p>
+      ) : null}
 
       <div className="rounded-xl border">
         <Table>
@@ -83,15 +95,26 @@ export function VendorsPage() {
                   <Switch
                     checked={vendor.enabled}
                     onCheckedChange={(checked) =>
-                      updateMutation.mutate({ id: vendor.id, input: { enabled: checked } })
+                      updateMutation.mutate({
+                        id: vendor.id,
+                        input: { enabled: checked },
+                      })
                     }
                   />
                 </TableCell>
                 <TableCell className="space-x-2 text-right">
-                  <Button size="sm" variant="outline" onClick={() => openEdit(vendor)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEdit(vendor)}
+                  >
                     Edit
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDelete(vendor)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(vendor)}
+                  >
                     Delete
                   </Button>
                 </TableCell>
@@ -99,7 +122,10 @@ export function VendorsPage() {
             ))}
             {!isLoading && vendors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="py-8 text-center text-muted-foreground"
+                >
                   No vendors yet.
                 </TableCell>
               </TableRow>
@@ -108,7 +134,11 @@ export function VendorsPage() {
         </Table>
       </div>
 
-      <VendorFormDialog open={dialogOpen} onOpenChange={setDialogOpen} vendor={editing} />
+      <VendorFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        vendor={editing}
+      />
     </div>
   )
 }

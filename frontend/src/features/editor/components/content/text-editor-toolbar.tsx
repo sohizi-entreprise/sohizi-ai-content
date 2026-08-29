@@ -13,7 +13,6 @@ import {
   List,
   ListOrdered,
   ListTodo,
-  LucideProps,
   Minus,
   Play,
   Plus,
@@ -25,9 +24,11 @@ import {
 } from 'lucide-react'
 import React, { useState } from 'react'
 import { useEditorState } from '@tiptap/react'
-import type { Editor } from '@tiptap/core'
 import { LinkInsertDialog } from './link-insert-dialog'
 import { YoutubeEmbedDialog } from './youtube-embed-dialog'
+import type { Editor } from '@tiptap/core'
+import type { LucideProps } from 'lucide-react'
+import type { ClassValue } from 'clsx'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,16 +40,17 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { ClassValue } from 'clsx'
 
 type ToolbarOption = {
   label: string
-  icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>
+  icon: React.ForwardRefExoticComponent<
+    Omit<LucideProps, 'ref'> & React.RefAttributes<SVGSVGElement>
+  >
   onClick: () => void
   disabled?: boolean
   isActive?: boolean
   separator?: boolean
-  children?: ToolbarOption[]
+  children?: Array<ToolbarOption>
 }
 
 function preventToolbarFocusLoss(event: React.MouseEvent) {
@@ -74,7 +76,9 @@ function runToolbarCommand(editor: Editor, command: () => void) {
 /** Safe when an extension (e.g. TableKit) is not registered on this editor. */
 function canRunCommand(editor: Editor, commandName: string): boolean {
   const command = (editor.can() as Record<string, unknown>)[commandName]
-  return typeof command === 'function' ? Boolean((command as () => boolean)()) : false
+  return typeof command === 'function'
+    ? Boolean((command as () => boolean)())
+    : false
 }
 
 function getToolbarDropdownContentProps(portalContainer?: HTMLElement | null) {
@@ -128,7 +132,8 @@ export default function TextEditorToolbar({
       isAlignRight: currentEditor.isActive({ textAlign: 'right' }),
       isHighlight: currentEditor.isActive('highlight'),
       isInTable:
-        currentEditor.isActive('tableCell') || currentEditor.isActive('tableHeader'),
+        currentEditor.isActive('tableCell') ||
+        currentEditor.isActive('tableHeader'),
       canAddRowBefore: canRunCommand(currentEditor, 'addRowBefore'),
       canAddRowAfter: canRunCommand(currentEditor, 'addRowAfter'),
       canAddColumnBefore: canRunCommand(currentEditor, 'addColumnBefore'),
@@ -140,7 +145,7 @@ export default function TextEditorToolbar({
     }),
   })
 
-  const groupedOptions: ToolbarOption[] = [
+  const groupedOptions: Array<ToolbarOption> = [
     {
       label: 'Heading 1',
       icon: Heading1,
@@ -195,7 +200,10 @@ export default function TextEditorToolbar({
       label: 'Align text',
       icon: TextAlignJustify,
       onClick: () => {},
-      isActive: editorState.isAlignLeft || editorState.isAlignCenter || editorState.isAlignRight,
+      isActive:
+        editorState.isAlignLeft ||
+        editorState.isAlignCenter ||
+        editorState.isAlignRight,
       children: [
         {
           label: 'Align Left',
@@ -253,7 +261,12 @@ export default function TextEditorToolbar({
         {
           label: 'Image',
           icon: ImageIcon,
-          onClick: () => editor.chain().focus().insertImageLayout({ layout: 'single' }).run(),
+          onClick: () =>
+            editor
+              .chain()
+              .focus()
+              .insertImageLayout({ layout: 'single' })
+              .run(),
         },
         {
           label: 'Divider',
@@ -387,7 +400,9 @@ function ToolbarButton({
   )
 }
 
-type ToolbarDropdownContentProps = ReturnType<typeof getToolbarDropdownContentProps>
+type ToolbarDropdownContentProps = ReturnType<
+  typeof getToolbarDropdownContentProps
+>
 
 function RenderToolbarOption({
   option,
@@ -502,19 +517,25 @@ function UpdateTableOptions(data: {
         <DropdownMenuLabel>Rows</DropdownMenuLabel>
         <DropdownMenuItem
           disabled={!canAddRowBefore}
-          onSelect={runToolbarCommand(editor, () => editor.chain().focus().addRowBefore().run())}
+          onSelect={runToolbarCommand(editor, () =>
+            editor.chain().focus().addRowBefore().run(),
+          )}
         >
           Add row above
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={!canAddRowAfter}
-          onSelect={runToolbarCommand(editor, () => editor.chain().focus().addRowAfter().run())}
+          onSelect={runToolbarCommand(editor, () =>
+            editor.chain().focus().addRowAfter().run(),
+          )}
         >
           Add row below
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={!canDeleteRow}
-          onSelect={runToolbarCommand(editor, () => editor.chain().focus().deleteRow().run())}
+          onSelect={runToolbarCommand(editor, () =>
+            editor.chain().focus().deleteRow().run(),
+          )}
         >
           Delete row
         </DropdownMenuItem>
@@ -548,7 +569,9 @@ function UpdateTableOptions(data: {
         <DropdownMenuItem
           variant="destructive"
           disabled={!canDeleteTable}
-          onSelect={runToolbarCommand(editor, () => editor.chain().focus().deleteTable().run())}
+          onSelect={runToolbarCommand(editor, () =>
+            editor.chain().focus().deleteTable().run(),
+          )}
         >
           Delete table
         </DropdownMenuItem>

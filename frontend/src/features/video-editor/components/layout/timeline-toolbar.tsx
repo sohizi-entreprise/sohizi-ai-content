@@ -1,8 +1,5 @@
 import { Redo2, Scissors, Trash2, Undo2 } from 'lucide-react'
-import {
-  useTemporalStore,
-  useVideoEditorStore,
-} from '../../store/editor-store'
+import { useTemporalStore, useVideoEditorStore } from '../../store/editor-store'
 import { ZoomSlider } from '../zoom-slider'
 import { Button } from '@/components/ui/button'
 

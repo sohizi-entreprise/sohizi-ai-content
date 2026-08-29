@@ -1,5 +1,9 @@
+import { toast } from 'sonner'
 import { getGeneratorTitle, showsAgentMode } from '../constants'
-import { useModelParameters, useValidateParameterValues } from '../hooks/use-model-parameters'
+import {
+  useModelParameters,
+  useValidateParameterValues,
+} from '../hooks/use-model-parameters'
 import { useSendRequest } from '../hooks/use-send-request'
 import { useMediaGeneratorStore } from '../store/media-generator-store'
 import { MediaAgentSettings } from './media-agent-settings'
@@ -7,7 +11,6 @@ import { MediaChatInput } from './media-chat-input'
 import { MediaModelSettings } from './media-model-settings'
 import { MediaSubtypeTabs } from './media-subtype-tabs'
 import { MediaTypeRail } from './media-type-rail'
-import { toast } from 'sonner'
 
 export default function MediaComposer({ projectId }: { projectId: string }) {
   const generationType = useMediaGeneratorStore((state) => state.generationType)
@@ -25,7 +28,6 @@ export default function MediaComposer({ projectId }: { projectId: string }) {
         </header>
 
         <SettingsAndInput projectId={projectId} />
-
       </div>
 
       <MediaTypeRail />
@@ -33,15 +35,14 @@ export default function MediaComposer({ projectId }: { projectId: string }) {
   )
 }
 
-
-function SettingsAndInput({ projectId }: { projectId: string }){
+function SettingsAndInput({ projectId }: { projectId: string }) {
   const { sendRequest, isPending, disableButton } = useSendRequest(projectId)
   const { parameters, isLoadingParameters } = useModelParameters()
   const { validate, errors, resetErrors } = useValidateParameterValues()
   const generationType = useMediaGeneratorStore((state) => state.generationType)
   const runMode = useMediaGeneratorStore((state) => state.runMode)
   const isAgentMode = runMode === 'agent' && showsAgentMode(generationType)
-  
+
   const handleSendRequest = async () => {
     if (!isAgentMode) {
       const isValid = validate(parameters)
@@ -54,25 +55,27 @@ function SettingsAndInput({ projectId }: { projectId: string }){
   }
 
   return (
-    <div className='flex flex-col flex-1 min-h-0'>
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {isAgentMode ? (
           <MediaAgentSettings projectId={projectId} />
         ) : (
-          <MediaModelSettings projectId={projectId}
-                              errors={errors}
-                              isLoadingParameters={isLoadingParameters}
-                              parameters={parameters}
-                              resetErrors={resetErrors}
+          <MediaModelSettings
+            projectId={projectId}
+            errors={errors}
+            isLoadingParameters={isLoadingParameters}
+            parameters={parameters}
+            resetErrors={resetErrors}
           />
         )}
       </div>
 
       <div className="shrink-0 px-3 pb-3">
-        <MediaChatInput projectId={projectId}
-                        handleSendRequest={handleSendRequest}
-                        isPending={isPending}
-                        disableButton={disableButton}
+        <MediaChatInput
+          projectId={projectId}
+          handleSendRequest={handleSendRequest}
+          isPending={isPending}
+          disableButton={disableButton}
         />
       </div>
     </div>

@@ -52,15 +52,6 @@ export type LoadCompositionResponse = {
   tracks: Array<ServerTrackWithClips>
 }
 
-export type CreateCompositionInput = {
-  fileNodeId: string
-  fps?: number
-  durationInFrames?: number
-  aspectRatio?: string
-  width?: number
-  height?: number
-}
-
 export type UpdateCompositionInput = {
   fps?: number
   durationInFrames?: number
@@ -135,29 +126,6 @@ export async function loadComposition(
 ): Promise<LoadCompositionResponse> {
   const res = await api.get<LoadCompositionResponse>(
     `/video-editor/${projectId}/file-nodes/${fileNodeId}/composition`,
-  )
-  return res.data
-}
-
-export async function createComposition(
-  projectId: string,
-  input: CreateCompositionInput,
-): Promise<ServerComposition> {
-  const res = await api.post<ServerComposition>(
-    `/video-editor/${projectId}/compositions`,
-    input,
-  )
-  return res.data
-}
-
-export async function updateComposition(
-  projectId: string,
-  compositionId: string,
-  input: UpdateCompositionInput,
-): Promise<ServerComposition> {
-  const res = await api.patch<ServerComposition>(
-    `/video-editor/${projectId}/compositions/${compositionId}`,
-    input,
   )
   return res.data
 }

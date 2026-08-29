@@ -1,13 +1,13 @@
-import { create, type StateCreator } from 'zustand'
+import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import { Conversation, LlmModel, Message } from '../types'
 import { v4 as uuidv4 } from 'uuid'
-import { AttachedFile } from '@/components/widgets/file-attachments'
+import type { StateCreator } from 'zustand'
+import type { Conversation, LlmModel, Message } from '../types'
+import type { AttachedFile } from '@/components/widgets/file-attachments'
 
 // ============================================================================
 // INITIAL STATE
 // ============================================================================
-
 
 type AttachedFileUpdate =
   | Partial<Omit<Extract<AttachedFile, { status: 'pending' }>, 'id'>>
@@ -15,7 +15,7 @@ type AttachedFileUpdate =
   | Omit<Extract<AttachedFile, { status: 'failed' }>, 'id'>
 
 export type ActiveStreamEntry = {
-  messages: Message[]
+  messages: Array<Message>
   requestId: string
 }
 
@@ -28,7 +28,7 @@ type ChatState = {
   userPrompt: string
   activeConversation: StoreConversation | null
   model: LlmModel | null
-  attachedFiles: AttachedFile[]
+  attachedFiles: Array<AttachedFile>
 }
 
 type ChatActions = {
@@ -52,50 +52,60 @@ const initialState: ChatState = {
   attachedFiles: [],
 }
 
-
 // ============================================================================
 // STORE
 // ============================================================================
 
-export const useChatStore = create<ChatState & ChatActions>()(immer((set) => ({
-  ...initialState,
-  setUserPrompt: (userPrompt) => set({ userPrompt }),
-  appendUserPrompt: (content) => set((state) => ({ userPrompt: state.userPrompt + content })),
-  setModel: (model) => set({ model }),
-  setActiveConversation: (conversation) => set({ activeConversation: conversation }),
-  patchActiveConversation: (conversation) => set((state) => {
-    if (state.activeConversation) {
-      state.activeConversation = { ...state.activeConversation, ...conversation }
-    }
-  }),
-  clearInput: () => set({ userPrompt: '', attachedFiles: [] }),
-  init: (projectId) => set(createInitialState(projectId)),
-  reset: () => set(initialState),
+export const useChatStore = create<ChatState & ChatActions>()(
+  immer((set) => ({
+    ...initialState,
+    setUserPrompt: (userPrompt) => set({ userPrompt }),
+    appendUserPrompt: (content) =>
+      set((state) => ({ userPrompt: state.userPrompt + content })),
+    setModel: (model) => set({ model }),
+    setActiveConversation: (conversation) =>
+      set({ activeConversation: conversation }),
+    patchActiveConversation: (conversation) =>
+      set((state) => {
+        if (state.activeConversation) {
+          state.activeConversation = {
+            ...state.activeConversation,
+            ...conversation,
+          }
+        }
+      }),
+    clearInput: () => set({ userPrompt: '', attachedFiles: [] }),
+    init: (projectId) => set(createInitialState(projectId)),
+    reset: () => set(initialState),
 
-  addAttachedFile: (file) => set((state) => {
-    const index = state.attachedFiles.findIndex((f) => f.id === file.id)
+    addAttachedFile: (file) =>
+      set((state) => {
+        const index = state.attachedFiles.findIndex((f) => f.id === file.id)
 
-    if (index >= 0) {
-      state.attachedFiles[index] = file
-      return
-    }
-    state.attachedFiles.push(file)
-  }),
-  updateAttachedFile: (id, file) => set((state) => {
-    const index = state.attachedFiles.findIndex((f) => f.id === id)
-    if (index < 0) return
+        if (index >= 0) {
+          state.attachedFiles[index] = file
+          return
+        }
+        state.attachedFiles.push(file)
+      }),
+    updateAttachedFile: (id, file) =>
+      set((state) => {
+        const index = state.attachedFiles.findIndex((f) => f.id === id)
+        if (index < 0) return
 
-    const currentFile = state.attachedFiles[index]
-    state.attachedFiles[index] = { ...currentFile, ...file } as AttachedFile
-  }),
-  removeAttachedFile: (id) => set((state) => {
-    state.attachedFiles = state.attachedFiles.filter((file) => file.id !== id)
-  }),
-})) as StateCreator<ChatState & ChatActions>)
+        const currentFile = state.attachedFiles[index]
+        state.attachedFiles[index] = { ...currentFile, ...file } as AttachedFile
+      }),
+    removeAttachedFile: (id) =>
+      set((state) => {
+        state.attachedFiles = state.attachedFiles.filter(
+          (file) => file.id !== id,
+        )
+      }),
+  })) as StateCreator<ChatState & ChatActions>,
+)
 
-
-function createInitialState(projectId: string): ChatState{
-
+function createInitialState(projectId: string): ChatState {
   return {
     ...initialState,
     activeConversation: {
@@ -105,8 +115,7 @@ function createInitialState(projectId: string): ChatState{
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isNew: true,
-      isStreaming: false
-    }
+      isStreaming: false,
+    },
   }
-
 }

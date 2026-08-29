@@ -1,4 +1,3 @@
-import { cn } from '@/lib/utils'
 import {
   IconAdjustmentsBolt,
   IconCloud,
@@ -10,6 +9,7 @@ import {
   IconTerminal2,
 } from '@tabler/icons-react'
 import { features } from '../content'
+import { cn } from '@/lib/utils'
 
 const featureIcons = [
   IconTerminal2,
@@ -29,7 +29,12 @@ export function FeaturesSection() {
       className="bg-white-brand px-4 py-20 sm:px-6 sm:py-28"
     >
       <div className="mx-auto max-w-6xl">
-        <h2 className={cn("max-w-2xl font-display text-3xl  tracking-tight text-background sm:text-4xl md:text-5xl", '')}>
+        <h2
+          className={cn(
+            'max-w-2xl font-display text-3xl  tracking-tight text-background sm:text-4xl md:text-5xl',
+            '',
+          )}
+        >
           {features.headline} <br />
           {features.subheadline}
         </h2>

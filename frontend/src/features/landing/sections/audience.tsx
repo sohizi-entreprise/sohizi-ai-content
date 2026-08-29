@@ -1,4 +1,4 @@
-import { Film, Megaphone, Building2 } from 'lucide-react'
+import { Building2, Film, Megaphone } from 'lucide-react'
 import { CtaButton } from '../components/cta-button'
 import { audience } from '../content'
 

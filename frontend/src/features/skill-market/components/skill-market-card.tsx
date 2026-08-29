@@ -1,7 +1,13 @@
 import { Sparkles } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import type { MarketSkill } from '../types'
+import { Badge } from '@/components/ui/badge'
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
 type SkillMarketCardProps = {
   skill: MarketSkill
@@ -32,7 +38,11 @@ export function SkillMarketCard({ skill }: SkillMarketCardProps) {
         {skill.categories.length > 0 ? (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {skill.categories.slice(0, 3).map((category) => (
-              <Badge key={category.id} variant="secondary" className="text-[10px]">
+              <Badge
+                key={category.id}
+                variant="secondary"
+                className="text-[10px]"
+              >
                 {category.name}
               </Badge>
             ))}

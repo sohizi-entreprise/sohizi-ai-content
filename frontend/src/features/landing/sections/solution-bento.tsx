@@ -1,14 +1,9 @@
-import {
-  CreditCard,
-  GraduationCap,
-  Fingerprint,
-  Flame,
-} from 'lucide-react'
-import { CapabilityHub } from '@/components/ui/capability-hub'
-import { ContainerTextFlip } from '@/components/ui/container-text-flip'
+import { CreditCard, Fingerprint, Flame, GraduationCap } from 'lucide-react'
 import { CtaButton } from '../components/cta-button'
 import { SolutionsGrid } from '../components/solutions-grid'
 import { capabilityHub, solution } from '../content'
+import { ContainerTextFlip } from '@/components/ui/container-text-flip'
+import { CapabilityHub } from '@/components/ui/capability-hub'
 
 const icons = [CreditCard, GraduationCap, Fingerprint, Flame]
 
@@ -46,7 +41,9 @@ export function SolutionBentoSection() {
           items={solution.benefits.map((benefit, index) => {
             const Icon = icons[index] ?? CreditCard
             return {
-              icon: <Icon className="h-4 w-4 text-black dark:text-neutral-400" />,
+              icon: (
+                <Icon className="h-4 w-4 text-black dark:text-neutral-400" />
+              ),
               title: benefit.title,
               description: benefit.description,
             }

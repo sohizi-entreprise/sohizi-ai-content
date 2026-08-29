@@ -1,14 +1,9 @@
-import {
-  ArrowDown,
-  ArrowUp,
-  MoreHorizontal,
-  Pencil,
-  Trash,
-} from 'lucide-react'
+import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Trash } from 'lucide-react'
 import { useState } from 'react'
 import { useEditorStore } from '../../stores/editor-store'
 import { useFileTreeStore } from '../../stores/file-tree-store'
 import { DirectoryNode } from '../file-node/node-directory'
+import { getFileIcon } from '../../utils/get-file-icon'
 import { FILE_FORMAT_OPTIONS } from './node-menu'
 import type { FileNodeFormat, FileTreeNode, NodeProps } from '../../types'
 import { cn } from '@/lib/utils'
@@ -22,7 +17,6 @@ import {
   MenubarSubTrigger,
   MenubarTrigger,
 } from '@/components/ui/menubar'
-import { getFileIcon } from '../../utils/get-file-icon'
 
 export function DocumentNode(props: NodeProps) {
   const { node, style, dragHandle } = props
@@ -75,7 +69,6 @@ export function DocumentNode(props: NodeProps) {
     </div>
   )
 }
-
 
 function FileMenu({ node, tree, onCreateFile }: NodeProps) {
   const [activeInsertSubmenu, setActiveInsertSubmenu] = useState<

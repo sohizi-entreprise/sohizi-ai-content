@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import {
+  createAdminCommandMutationOptions,
+  updateAdminCommandMutationOptions,
+} from '../query-mutation'
+import type { AdminCommand, CreateCommandInput } from '../types'
+import { getErrorMessage } from '@/lib/errors'
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -12,11 +18,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  createAdminCommandMutationOptions,
-  updateAdminCommandMutationOptions,
-} from '../query-mutation'
-import type { AdminCommand, CreateCommandInput } from '../types'
 
 type Props = {
   open: boolean
@@ -68,10 +69,7 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
       }
       onOpenChange(false)
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        (err instanceof Error ? err.message : 'Failed to save command')
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to save command'))
     }
   }
 
@@ -89,7 +87,9 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
             <Input
               id="command-name"
               value={form.name}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, name: event.target.value }))
+              }
               placeholder="summarize"
               required
             />
@@ -102,7 +102,9 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
             <Textarea
               id="command-action"
               value={form.action}
-              onChange={(event) => setForm((prev) => ({ ...prev, action: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, action: event.target.value }))
+              }
               placeholder="Instruction injected when this command is invoked"
               rows={6}
               required
@@ -118,12 +120,18 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
             <Switch
               id="command-visible"
               checked={form.visible}
-              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, visible: checked }))}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({ ...prev, visible: checked }))
+              }
             />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={pending}>

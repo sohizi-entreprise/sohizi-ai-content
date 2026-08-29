@@ -42,7 +42,9 @@ export function DotGridLoader({
     let visible = true
     let running = true
     const startedAt = performance.now()
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
 
     const resize = () => {
       const rect = container.getBoundingClientRect()
@@ -59,7 +61,11 @@ export function DotGridLoader({
     const colorOf = () => {
       const parsed = getComputedStyle(container).color.match(/[\d.]+/g)
       if (!parsed || parsed.length < 3) return { r: 128, g: 128, b: 136 }
-      return { r: Number(parsed[0]), g: Number(parsed[1]), b: Number(parsed[2]) }
+      return {
+        r: Number(parsed[0]),
+        g: Number(parsed[1]),
+        b: Number(parsed[2]),
+      }
     }
 
     const draw = (now: number) => {
@@ -67,8 +73,10 @@ export function DotGridLoader({
 
       const t = (now - startedAt) / 1000
       const cx = width * (reduceMotion ? 0.5 : 0.5 + 0.34 * Math.sin(t * 0.62))
-      const cy = height * (reduceMotion ? 0.5 : 0.5 + 0.3 * Math.sin(t * 0.41 + 1.15))
-      const spotlight = Math.min(width, height) * Math.max(circleSizeRef.current, 0.05)
+      const cy =
+        height * (reduceMotion ? 0.5 : 0.5 + 0.3 * Math.sin(t * 0.41 + 1.15))
+      const spotlight =
+        Math.min(width, height) * Math.max(circleSizeRef.current, 0.05)
       const { r, g, b } = colorOf()
 
       ctx.clearRect(0, 0, width, height)
@@ -106,7 +114,7 @@ export function DotGridLoader({
     resizeObserver.observe(container)
 
     const intersectionObserver = new IntersectionObserver(([entry]) => {
-      visible = entry?.isIntersecting ?? false
+      visible = entry.isIntersecting
     })
     intersectionObserver.observe(container)
 
@@ -124,10 +132,16 @@ export function DotGridLoader({
   return (
     <div
       ref={containerRef}
-      className={cn('relative size-full overflow-hidden bg-background text-muted-foreground', className)}
+      className={cn(
+        'relative size-full overflow-hidden bg-background text-muted-foreground',
+        className,
+      )}
       style={dotColor ? { color: dotColor } : undefined}
     >
-      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 size-full" />
+      <canvas
+        ref={canvasRef}
+        className="pointer-events-none absolute inset-0 size-full"
+      />
       {progress != null && (
         <span className="absolute right-2 bottom-2 rounded-full bg-foreground/30 px-2 py-0.5 text-[10px] font-medium text-background tabular-nums">
           {Math.round(progress)}%

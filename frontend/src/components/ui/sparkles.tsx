@@ -5,10 +5,10 @@ import Particles, {
   ParticlesProvider,
   useParticlesProvider,
 } from '@tsparticles/react'
-import type { Container, Engine, ISourceOptions } from '@tsparticles/engine'
 import { loadSlim } from '@tsparticles/slim'
-import { cn } from '@/lib/utils'
 import { motion, useAnimation } from 'motion/react'
+import type { Container, Engine, ISourceOptions } from '@tsparticles/engine'
+import { cn } from '@/lib/utils'
 
 type SparklesProps = {
   id?: string
@@ -40,7 +40,7 @@ function SparklesCanvas({
   const controls = useAnimation()
   const generatedId = useId()
 
-  const particlesLoaded = async (container?: Container) => {
+  const particlesLoaded = (container?: Container) => {
     if (container) {
       void controls.start({
         opacity: 1,
@@ -136,14 +136,7 @@ function SparklesCanvas({
       },
       detectRetina: true,
     }),
-    [
-      background,
-      maxSize,
-      minSize,
-      particleColor,
-      particleDensity,
-      speed,
-    ],
+    [background, maxSize, minSize, particleColor, particleDensity, speed],
   )
 
   return (

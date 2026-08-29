@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useEffect, useId } from 'react'
+import React, { useEffect, useId, useState } from 'react'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
 export interface ContainerTextFlipProps {
   /** Array of words to cycle through in the animation */
-  words?: string[]
+  words?: Array<string>
   /** Time in milliseconds between word transitions */
   interval?: number
   /** Additional CSS classes to apply to the container */

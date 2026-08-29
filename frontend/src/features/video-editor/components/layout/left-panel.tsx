@@ -16,11 +16,11 @@ import { AssetsPanel } from '../settings/add/assets-panel'
 import { TextPresetsPanel } from '../settings/add/text-presets-panel'
 import { LibraryDragLayer } from '../settings/add/library-drag-layer'
 import { CLIP_TYPE_LABEL, ClipSettings } from '../settings/settings-panel'
+import { CaptionsLibrary } from './captions-library'
 import type { LeftPanelTab } from '../../store/ui-store'
 import type { ComponentType, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { CaptionsLibrary } from './captions-library'
 
 interface LeftPanelProps {
   projectId: string
@@ -73,7 +73,9 @@ export function LeftPanel({ projectId }: LeftPanelProps) {
             'transition-[transform,opacity] duration-300 ease-out',
             activeIndex < 0 && 'opacity-0',
           )}
-          style={{ transform: `translateY(${Math.max(activeIndex, 0) * 3}rem)` }}
+          style={{
+            transform: `translateY(${Math.max(activeIndex, 0) * 3}rem)`,
+          }}
         >
           <span className="absolute top-1/2 left-0 h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-primary/80" />
         </span>
@@ -91,7 +93,9 @@ export function LeftPanel({ projectId }: LeftPanelProps) {
       </nav>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-card">
-        {activeTab === 'assets' ? <AssetsLibrary projectId={projectId} /> : null}
+        {activeTab === 'assets' ? (
+          <AssetsLibrary projectId={projectId} />
+        ) : null}
         {activeTab === 'text' ? <TextLibrary /> : null}
         {activeTab === 'captions' ? (
           <CaptionsLibrary projectId={projectId} />
@@ -134,9 +138,7 @@ function RailButton({
           active && 'text-primary',
         )}
       />
-      <span className="text-[9px] leading-none font-medium">
-        {label}
-      </span>
+      <span className="text-[9px] leading-none font-medium">{label}</span>
     </button>
   )
 }
@@ -153,7 +155,9 @@ function SectionHeader({
   return (
     <div className="shrink-0 px-3.5 pt-3.5 pb-3">
       <div className="min-w-0 flex items-center justify-between gap-2">
-        <h2 className="truncate text-sm font-medium text-foreground">{title}</h2>
+        <h2 className="truncate text-sm font-medium text-foreground">
+          {title}
+        </h2>
         {children}
       </div>
       {description ? (

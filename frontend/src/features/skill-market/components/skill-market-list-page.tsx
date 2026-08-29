@@ -1,7 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { Search } from 'lucide-react'
+import {
+  listMarketCategoriesQueryOptions,
+  listMarketSkillsQueryOptions,
+} from '../query-mutation'
+import { SkillMarketCard } from './skill-market-card'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,27 +19,22 @@ import {
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import {
-  listMarketCategoriesQueryOptions,
-  listMarketSkillsQueryOptions,
-} from '../query-mutation'
-import { SkillMarketCard } from './skill-market-card'
 
 export function SkillMarketListPage() {
   const { projectId } = useParams({ from: '/dashboard/projects/$projectId' })
   const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search.trim())
-    }, 250)
-    return () => window.clearTimeout(timer)
-  }, [search])
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  )
+  const debouncedSearch = useDebouncedValue(search.trim(), 250)
 
   const { data: categories = [] } = useQuery(listMarketCategoriesQueryOptions())
-  const { data: skills = [], isLoading, isError, refetch } = useQuery(
+  const {
+    data: skills = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery(
     listMarketSkillsQueryOptions(
       debouncedSearch || undefined,
       selectedCategoryId ?? undefined,
@@ -64,7 +65,10 @@ export function SkillMarketListPage() {
           <div className="flex flex-wrap gap-2">
             <Badge
               variant={selectedCategoryId === null ? 'default' : 'outline'}
-              className={cn('cursor-pointer', selectedCategoryId === null && 'pointer-events-none')}
+              className={cn(
+                'cursor-pointer',
+                selectedCategoryId === null && 'pointer-events-none',
+              )}
               onClick={() => setSelectedCategoryId(null)}
             >
               All
@@ -72,7 +76,9 @@ export function SkillMarketListPage() {
             {categories.map((category) => (
               <Badge
                 key={category.id}
-                variant={selectedCategoryId === category.id ? 'default' : 'outline'}
+                variant={
+                  selectedCategoryId === category.id ? 'default' : 'outline'
+                }
                 className={cn(
                   'cursor-pointer',
                   selectedCategoryId === category.id && 'pointer-events-none',

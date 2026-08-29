@@ -5,7 +5,7 @@ import { useVideoEditorUiStore } from '../store/ui-store'
 import { batchEditMutationOptions } from '../query-mutations'
 import { diffStateToBatchOps, diffableSnapshotsEqual } from '../transforms'
 import { batchEdit } from '../requests'
-import type { Track, AspectRatio } from '../store/types'
+import type { AspectRatio, Track } from '../store/types'
 import type { BatchOperation } from '../requests'
 
 type SnapshotState = {
@@ -15,7 +15,7 @@ type SnapshotState = {
   aspectRatio: AspectRatio
   width: number
   height: number
-  tracks: Track[]
+  tracks: Array<Track>
 }
 
 const AUTOSAVE_DEBOUNCE_MS = 1500
@@ -30,7 +30,7 @@ function takeSnapshot(): SnapshotState | null {
     aspectRatio: s.aspectRatio,
     width: s.width,
     height: s.height,
-    tracks: structuredClone(s.tracks) as Track[],
+    tracks: structuredClone(s.tracks),
   }
 }
 
@@ -44,12 +44,12 @@ export function useVideoEditorAutosave() {
   )
 
   const lastSavedRef = useRef<SnapshotState | null>(null)
-  const pendingOpsRef = useRef<BatchOperation[] | null>(null)
+  const pendingOpsRef = useRef<Array<BatchOperation> | null>(null)
   const isSavingRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const runSave = useCallback(
-    async (ops: BatchOperation[]) => {
+    async (ops: Array<BatchOperation>) => {
       if (isSavingRef.current) {
         pendingOpsRef.current = ops
         return
@@ -93,11 +93,11 @@ export function useVideoEditorAutosave() {
       timerRef.current = setTimeout(() => {
         timerRef.current = null
 
-        const prev = lastSavedRef.current
+        const lastSaved = lastSavedRef.current
         const next = takeSnapshot()
-        if (!prev || !next) return
+        if (!lastSaved || !next) return
 
-        const ops = diffStateToBatchOps(prev, next)
+        const ops = diffStateToBatchOps(lastSaved, next)
         if (ops.length === 0) return
 
         lastSavedRef.current = next
@@ -121,8 +121,9 @@ export function useVideoEditorAutosave() {
         const ops = diffStateToBatchOps(prev, next)
         if (ops.length > 0) {
           lastSavedRef.current = next
-          void batchEdit(projectId, compositionId, ops)
-            .catch((err) => console.error('[video-autosave] flush failed:', err))
+          void batchEdit(projectId, compositionId, ops).catch((err) =>
+            console.error('[video-autosave] flush failed:', err),
+          )
         }
       }
     }

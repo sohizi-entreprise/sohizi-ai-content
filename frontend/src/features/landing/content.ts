@@ -1,6 +1,4 @@
 export const CTA_LABEL = 'Start creating free'
-export const CTA_FRICTION =
-  'Get free credit. Your first project takes two minutes to start.'
 
 export const navLinks = [
   { label: 'Showcase', href: '/#showcase' },
@@ -151,7 +149,7 @@ export const solution = {
     {
       title: "You don't need to be a specialist at every stage.",
       description:
-        'Not a strong writer? Not a video editor? The AI assistant helps you through scripting, generating, storyboarding, and editing so the output stays sharp even where you\'re less experienced.',
+        "Not a strong writer? Not a video editor? The AI assistant helps you through scripting, generating, storyboarding, and editing so the output stays sharp even where you're less experienced.",
     },
     {
       title: 'Consistency without babysitting every prompt.',
@@ -168,7 +166,6 @@ export const solution = {
       description:
         'Because the AI knows the full project, your characters, style, and story hold together from the first scene to the final cut.',
     },
-    
   ],
 } as const
 
@@ -248,7 +245,8 @@ export const howItWorks = {
 } as const
 
 export const audience = {
-  headline: 'If your video still lives across a pile of tools, this is for you.',
+  headline:
+    'If your video still lives across a pile of tools, this is for you.',
   segments: [
     {
       title: 'AI filmmakers and short-form creators',
@@ -317,7 +315,8 @@ export const finalCta = {
 } as const
 
 export const footer = {
-  tagline: 'The AI-native video workspace — write, generate, storyboard, and edit in one project.',
+  tagline:
+    'The AI-native video workspace — write, generate, storyboard, and edit in one project.',
   columns: [
     {
       title: 'Product',

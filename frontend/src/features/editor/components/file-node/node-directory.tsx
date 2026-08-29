@@ -13,9 +13,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useEditorStore } from '../../stores/editor-store'
 import { insertNodeAt as insertNodeInCache } from '../../stores/file-tree-cache'
-import { getlistFileTreePerDirectoryOptions } from '@/features/projects/query-mutation'
+import { getDirectoryIcon } from '../../utils/get-file-icon'
 import { FILE_FORMAT_OPTIONS } from './node-menu'
 import type { FileNodeFormat, FileTreeNode, NodeProps } from '../../types'
+import { getlistFileTreePerDirectoryOptions } from '@/features/projects/query-mutation'
 import { cn } from '@/lib/utils'
 import { useFileUpload } from '@/hooks/use-file-upload'
 import { useSaveFileBucket } from '@/hooks/use-save-file-bucket'
@@ -30,7 +31,6 @@ import {
   MenubarSubTrigger,
   MenubarTrigger,
 } from '@/components/ui/menubar'
-import { getDirectoryIcon } from '../../utils/get-file-icon'
 
 const MAX_CHILDREN_PER_DIRECTORY = 100
 

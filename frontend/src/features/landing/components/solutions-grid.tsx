@@ -11,11 +11,11 @@ const GRID_AREAS = [
 
 type Props = {
   className?: string
-  items: {
+  items: Array<{
     icon: React.ReactNode
     title: string
     description: string
-  }[]
+  }>
 }
 
 export function SolutionsGrid({ className, items }: Props) {

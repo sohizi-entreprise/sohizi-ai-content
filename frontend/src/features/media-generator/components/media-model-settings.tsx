@@ -1,5 +1,13 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { listGoogleVoicesQueryOptions } from '../query-mutations'
+import { useMediaCatalog } from '../hooks/use-media-catalog'
+import { showsVoiceSelector } from '../constants'
+import { useMediaGeneratorStore } from '../store/media-generator-store'
+import { MediaVoiceSelector } from './media-voice-selector'
+import { AssetPickerField } from './asset-picker-dialog'
+import { MediaModelSelector } from './media-model-selector'
+import type { ReactNode } from 'react'
 import type { ModelParameterBinding } from '@/features/admin/types'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,30 +21,30 @@ import {
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { MediaVoiceSelector } from './media-voice-selector'
-import { AssetPickerField } from './asset-picker-dialog'
-import { listGoogleVoicesQueryOptions } from '../query-mutations'
-import { useMediaCatalog } from '../hooks/use-media-catalog'
-import { showsVoiceSelector } from '../constants'
-import { useMediaGeneratorStore } from '../store/media-generator-store'
-import { MediaModelSelector } from './media-model-selector'
 import { cn } from '@/lib/utils'
 
 type MediaModelSettingsProps = {
   projectId: string
   errors: Record<string, string>
   isLoadingParameters: boolean
-  parameters: ModelParameterBinding[]
+  parameters: Array<ModelParameterBinding>
   resetErrors: () => void
 }
 
 export function MediaModelSettings(props: MediaModelSettingsProps) {
-  const { projectId, errors, isLoadingParameters, parameters, resetErrors } = props
+  const { projectId, errors, isLoadingParameters, parameters, resetErrors } =
+    props
 
   const generationType = useMediaGeneratorStore((state) => state.generationType)
-  const generationSubtype = useMediaGeneratorStore((state) => state.generationSubtype)
-  const parameterValues = useMediaGeneratorStore((state) => state.parameterValues)
-  const updateParameterValue = useMediaGeneratorStore((state) => state.updateParameterValue)
+  const generationSubtype = useMediaGeneratorStore(
+    (state) => state.generationSubtype,
+  )
+  const parameterValues = useMediaGeneratorStore(
+    (state) => state.parameterValues,
+  )
+  const updateParameterValue = useMediaGeneratorStore(
+    (state) => state.updateParameterValue,
+  )
   const {
     models,
     selectedModelId,
@@ -44,7 +52,9 @@ export function MediaModelSettings(props: MediaModelSettingsProps) {
     isLoadingModels,
     hasCatalog,
   } = useMediaCatalog()
-  const { data: voices = [], isLoading: isLoadingVoices } = useQuery(listGoogleVoicesQueryOptions)
+  const { data: voices = [], isLoading: isLoadingVoices } = useQuery(
+    listGoogleVoicesQueryOptions,
+  )
   const showVoice = showsVoiceSelector(generationType, generationSubtype)
 
   const handleParameterChange = (key: string, value: string) => {
@@ -75,7 +85,8 @@ export function MediaModelSettings(props: MediaModelSettingsProps) {
         </SettingsField>
       ) : (
         <p className="text-sm text-muted-foreground">
-          This mode uses the project agent. Describe what you want in the prompt below.
+          This mode uses the project agent. Describe what you want in the prompt
+          below.
         </p>
       )}
 
@@ -104,8 +115,14 @@ export function MediaModelSettings(props: MediaModelSettingsProps) {
                 key={parameter.parameterId}
                 projectId={projectId}
                 parameter={parameter}
-                value={parameterValues[parameter.key] ?? parameter.defaultValue ?? ''}
-                onChange={(value) => handleParameterChange(parameter.key, value)}
+                value={
+                  (parameterValues[parameter.key] as string | undefined) ??
+                  parameter.defaultValue ??
+                  ''
+                }
+                onChange={(value) =>
+                  handleParameterChange(parameter.key, value)
+                }
               />
             ))}
           </div>
@@ -132,9 +149,20 @@ function SettingsField({
   )
 }
 
-function ParameterLabel({ parameter, error }: { parameter: ModelParameterBinding, error?: string }) {
+function ParameterLabel({
+  parameter,
+  error,
+}: {
+  parameter: ModelParameterBinding
+  error?: string
+}) {
   return (
-    <Label className={cn("text-xs text-muted-foreground", error && "text-destructive")}>
+    <Label
+      className={cn(
+        'text-xs text-muted-foreground',
+        error && 'text-destructive',
+      )}
+    >
       {parameter.label}
       {parameter.required ? (
         <span className="ml-0.5 text-destructive" aria-hidden="true">
@@ -166,7 +194,9 @@ function ParameterField({
         <ParameterLabel parameter={parameter} error={error} />
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger className="h-11 w-full rounded-xl dark:bg-background dark:hover:bg-accent/40">
-            <SelectValue placeholder={`Select ${parameter.label.toLowerCase()}`} />
+            <SelectValue
+              placeholder={`Select ${parameter.label.toLowerCase()}`}
+            />
           </SelectTrigger>
           <SelectContent>
             {parameter.options.map((option) => (
@@ -232,7 +262,9 @@ function ParameterField({
           onChange={onChange}
         />
         {parameter.description ? (
-          <p className="text-xs text-muted-foreground">{parameter.description}</p>
+          <p className="text-xs text-muted-foreground">
+            {parameter.description}
+          </p>
         ) : null}
       </div>
     )
@@ -262,4 +294,3 @@ function ParameterField({
     </div>
   )
 }
-

@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useVideoEditorStore } from '../store/editor-store'
-import {
-  getClipLayout,
-  isCanvasEditableClip,
-  type CanvasEditableClip,
-  type SpatialLayout,
-} from '../store/types'
+import { getClipLayout, isCanvasEditableClip } from '../store/types'
+import type { CanvasEditableClip, SpatialLayout } from '../store/types'
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
@@ -46,7 +42,7 @@ export function CanvasOverlay() {
     for (const track of tracks) {
       if (track.hidden) continue
       for (const clip of track.clips) {
-        if (!clip || !isCanvasEditableClip(clip)) continue
+        if (!isCanvasEditableClip(clip)) continue
         if (currentFrame < clip.startFrame || currentFrame >= clip.endFrame) {
           continue
         }
@@ -68,16 +64,15 @@ export function CanvasOverlay() {
       if (clip.type === 'caption') {
         // Read latest properties from the store so rAF-batched patches
         // don't overwrite each other with a stale React snapshot.
-        const tracks = useVideoEditorStore.getState().tracks
+        const storeTracks = useVideoEditorStore.getState().tracks
         let current = clip
-        for (const track of tracks) {
+        for (const track of storeTracks) {
           const found = track.clips.find((c) => c.id === clip.id)
           if (found && found.type === 'caption') {
             current = found
             break
           }
         }
-        if (current.type !== 'caption') return
         updateClip(clip.id, {
           properties: { ...current.properties, ...patch },
         })

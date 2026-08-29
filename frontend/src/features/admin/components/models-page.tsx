@@ -1,6 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import {
+  deleteAdminModelMutationOptions,
+  listAdminModelsQueryOptions,
+  updateAdminModelMutationOptions,
+} from '../query-mutation'
+import { ModelFormDialog } from './model-form-dialog'
+import { formatModelPricingLabel } from './pricing-editor'
+import type { AdminModel } from '../types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,14 +27,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Switch } from '@/components/ui/switch'
-import {
-  deleteAdminModelMutationOptions,
-  listAdminModelsQueryOptions,
-  updateAdminModelMutationOptions,
-} from '../query-mutation'
-import type { AdminModel } from '../types'
-import { ModelFormDialog } from './model-form-dialog'
-import { formatModelPricingLabel } from './pricing-editor'
 
 const ALL_VALUE = '__all__'
 
@@ -51,7 +51,8 @@ export function ModelsPage() {
   const filteredModels = useMemo(() => {
     return models.filter((model) => {
       const matchesCategory =
-        categoryFilter === ALL_VALUE || model.categories.includes(categoryFilter)
+        categoryFilter === ALL_VALUE ||
+        model.categories.includes(categoryFilter)
       const matchesProvider =
         providerFilter === ALL_VALUE || model.provider === providerFilter
       return matchesCategory && matchesProvider
@@ -67,11 +68,13 @@ export function ModelsPage() {
   }
 
   const handleDelete = (model: AdminModel) => {
-    if (!window.confirm(`Delete model “${model.name}”? This cannot be undone.`)) return
+    if (!window.confirm(`Delete model “${model.name}”? This cannot be undone.`))
+      return
     deleteMutation.mutate(model.id)
   }
 
-  const hasActiveFilters = categoryFilter !== ALL_VALUE || providerFilter !== ALL_VALUE
+  const hasActiveFilters =
+    categoryFilter !== ALL_VALUE || providerFilter !== ALL_VALUE
 
   return (
     <div className="space-y-6">
@@ -135,8 +138,12 @@ export function ModelsPage() {
         ) : null}
       </div>
 
-      {isLoading ? <p className="text-sm text-muted-foreground">Loading models…</p> : null}
-      {error ? <p className="text-sm text-destructive">Failed to load models</p> : null}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading models…</p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-destructive">Failed to load models</p>
+      ) : null}
 
       <div className="rounded-xl border">
         <Table>
@@ -177,12 +184,22 @@ export function ModelsPage() {
                   <Switch
                     checked={model.enabled}
                     onCheckedChange={(checked) =>
-                      updateMutation.mutate({ id: model.id, input: { enabled: checked } })
+                      updateMutation.mutate({
+                        id: model.id,
+                        input: { enabled: checked },
+                      })
                     }
                   />
                 </TableCell>
-                <TableCell className="space-x-2 text-right" onClick={(event) => event.stopPropagation()}>
-                  <Button size="sm" variant="outline" onClick={() => openEdit(model)}>
+                <TableCell
+                  className="space-x-2 text-right"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEdit(model)}
+                  >
                     Open
                   </Button>
                   <Button
@@ -197,8 +214,13 @@ export function ModelsPage() {
             ))}
             {!isLoading && filteredModels.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                  {models.length === 0 ? 'No models yet.' : 'No models match these filters.'}
+                <TableCell
+                  colSpan={7}
+                  className="py-8 text-center text-muted-foreground"
+                >
+                  {models.length === 0
+                    ? 'No models yet.'
+                    : 'No models match these filters.'}
                 </TableCell>
               </TableRow>
             ) : null}

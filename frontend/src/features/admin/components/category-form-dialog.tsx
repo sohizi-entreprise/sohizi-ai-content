@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { createAdminCategoryMutationOptions } from '../query-mutation'
+import type { CreateCategoryInput } from '../types'
+import { getErrorMessage } from '@/lib/errors'
 import {
   Dialog,
   DialogContent,
@@ -11,8 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { createAdminCategoryMutationOptions } from '../query-mutation'
-import type { CreateCategoryInput } from '../types'
 
 type Props = {
   open: boolean
@@ -59,10 +60,7 @@ export function CategoryFormDialog({ open, onOpenChange }: Props) {
       await createMutation.mutateAsync(payload)
       onOpenChange(false)
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        (err instanceof Error ? err.message : 'Failed to create category')
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to create category'))
     }
   }
 
@@ -78,12 +76,18 @@ export function CategoryFormDialog({ open, onOpenChange }: Props) {
             <Input
               id="model-category-name"
               value={form.name}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              onBlur={() => setForm((prev) => ({ ...prev, name: toKebabCase(prev.name) }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, name: event.target.value }))
+              }
+              onBlur={() =>
+                setForm((prev) => ({ ...prev, name: toKebabCase(prev.name) }))
+              }
               placeholder="text-to-image"
               required
             />
-            <p className="text-xs text-muted-foreground">Lowercase kebab-case, e.g. text-to-image.</p>
+            <p className="text-xs text-muted-foreground">
+              Lowercase kebab-case, e.g. text-to-image.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="model-category-description">Description</Label>
@@ -91,7 +95,10 @@ export function CategoryFormDialog({ open, onOpenChange }: Props) {
               id="model-category-description"
               value={form.description}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, description: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  description: event.target.value,
+                }))
               }
               rows={3}
               placeholder="Models that generate images from text prompts."
@@ -99,7 +106,11 @@ export function CategoryFormDialog({ open, onOpenChange }: Props) {
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>

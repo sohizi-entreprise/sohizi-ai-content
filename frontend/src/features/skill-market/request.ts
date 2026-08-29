@@ -1,4 +1,3 @@
-import api from '@/lib/axios'
 import { isAxiosError } from 'axios'
 import type {
   InstallSkillResult,
@@ -6,6 +5,7 @@ import type {
   MarketSkillCategory,
   NameConflictErrorBody,
 } from './types'
+import api from '@/lib/axios'
 
 export class SkillNameConflictError extends Error {
   readonly code = 'NAME_CONFLICT' as const
@@ -22,7 +22,7 @@ export const listMarketSkills = async (params?: {
   q?: string
   categoryId?: string
   signal?: AbortSignal
-}): Promise<MarketSkill[]> => {
+}): Promise<Array<MarketSkill>> => {
   const response = await api.get('/skills/market', {
     params: {
       q: params?.q || undefined,
@@ -45,7 +45,7 @@ export const getMarketSkill = async (
 
 export const listMarketCategories = async (options?: {
   signal?: AbortSignal
-}): Promise<MarketSkillCategory[]> => {
+}): Promise<Array<MarketSkillCategory>> => {
   const response = await api.get('/skills/market/categories', {
     signal: options?.signal,
   })
@@ -57,10 +57,13 @@ export const checkSkillNameAvailable = async (
   name: string,
   options?: { signal?: AbortSignal },
 ): Promise<{ available: boolean }> => {
-  const response = await api.get(`/projects/${projectId}/skills/name-available`, {
-    params: { name },
-    signal: options?.signal,
-  })
+  const response = await api.get(
+    `/projects/${projectId}/skills/name-available`,
+    {
+      params: { name },
+      signal: options?.signal,
+    },
+  )
   return response.data
 }
 
@@ -73,7 +76,10 @@ export const installSkill = async (
   },
 ): Promise<InstallSkillResult> => {
   try {
-    const response = await api.post(`/projects/${projectId}/skills/install`, body)
+    const response = await api.post(
+      `/projects/${projectId}/skills/install`,
+      body,
+    )
     return response.data
   } catch (error) {
     if (
@@ -81,7 +87,9 @@ export const installSkill = async (
       error.response?.status === 409 &&
       error.response.data?.code === 'NAME_CONFLICT'
     ) {
-      throw new SkillNameConflictError(error.response.data as NameConflictErrorBody)
+      throw new SkillNameConflictError(
+        error.response.data as NameConflictErrorBody,
+      )
     }
     throw error
   }

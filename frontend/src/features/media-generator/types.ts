@@ -1,4 +1,4 @@
-import { ReactNode } from "react"
+import type { ReactNode } from 'react'
 
 export type MediaType = 'image' | 'video' | 'audio' | 'html'
 
@@ -43,7 +43,7 @@ export type AiGeneratedMediaRequest = {
   error: string | null
   createdAt: string
   updatedAt: string
-  assets: AiGeneratedRequestAsset[]
+  assets: Array<AiGeneratedRequestAsset>
 }
 
 export type GenerationType =
@@ -82,7 +82,7 @@ export type HtmlAssetMetadata = {
   duration?: number
   width?: number
   height?: number
-  variables?: HtmlAssetVariable[]
+  variables?: Array<HtmlAssetVariable>
   values?: Record<string, string | number | boolean>
   compositionId?: string
 }
@@ -125,10 +125,8 @@ export type MediaTuning = {
   key: string
   currentValue?: string
   options: Array<{
-      value: string
-      label: string
-      icon?: ReactNode
+    value: string
+    label: string
+    icon?: ReactNode
   }>
 }
-
-

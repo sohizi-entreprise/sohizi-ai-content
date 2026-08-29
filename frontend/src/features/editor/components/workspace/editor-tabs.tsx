@@ -1,8 +1,8 @@
 import { X } from 'lucide-react'
 import { useEditorStore } from '../../stores/editor-store'
+import { getFileIcon } from '../../utils/get-file-icon'
 import type { EditorTab } from '../../types'
 import { cn } from '@/lib/utils'
-import { getFileIcon } from '../../utils/get-file-icon'
 
 interface EditorTabsProps {
   tabs: Array<EditorTab>

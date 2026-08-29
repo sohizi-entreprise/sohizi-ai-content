@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Play } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { showcase } from '../content'
+import { cn } from '@/lib/utils'
 
 export function ShowcaseSection() {
   return (
@@ -33,17 +33,16 @@ export function ShowcaseSection() {
   )
 }
 
-function ShowcaseTile({
-  item,
-}: {
-  item: (typeof showcase.items)[number]
-}) {
+function ShowcaseTile({ item }: { item: (typeof showcase.items)[number] }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
 
   const handleEnter = () => {
     if (!item.videoUrl || !videoRef.current) return
-    void videoRef.current.play().then(() => setPlaying(true)).catch(() => {})
+    void videoRef.current
+      .play()
+      .then(() => setPlaying(true))
+      .catch(() => {})
   }
 
   const handleLeave = () => {

@@ -3,10 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { ArrowLeft, Check, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { filesByFormatKey } from '@/features/projects/query-mutation'
 import {
   getMarketSkillQueryOptions,
   installSkillMutationOptions,
@@ -14,6 +10,10 @@ import {
 import { SkillNameConflictError } from '../request'
 import { ReadonlySkillViewer } from './readonly-skill-viewer'
 import { SkillNameConflictModal } from './skill-name-conflict-modal'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { filesByFormatKey } from '@/features/projects/query-mutation'
 
 export function SkillMarketDetailPage() {
   const { projectId, skillId } = useParams({
@@ -22,11 +22,16 @@ export function SkillMarketDetailPage() {
   const queryClient = useQueryClient()
   const [added, setAdded] = useState(false)
   const [conflictOpen, setConflictOpen] = useState(false)
-  const [pendingMode, setPendingMode] = useState<'replace' | 'rename' | null>(null)
-
-  const { data: skill, isLoading, isError, refetch } = useQuery(
-    getMarketSkillQueryOptions(skillId),
+  const [pendingMode, setPendingMode] = useState<'replace' | 'rename' | null>(
+    null,
   )
+
+  const {
+    data: skill,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery(getMarketSkillQueryOptions(skillId))
 
   const installMutation = useMutation({
     ...installSkillMutationOptions(projectId),
@@ -50,7 +55,9 @@ export function SkillMarketDetailPage() {
         setConflictOpen(true)
         return
       }
-      toast.error(error instanceof Error ? error.message : 'Failed to add skill')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to add skill',
+      )
     },
   })
 
@@ -124,7 +131,11 @@ export function SkillMarketDetailPage() {
             {skill.categories.length > 0 ? (
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {skill.categories.map((category) => (
-                  <Badge key={category.id} variant="secondary" className="text-[10px]">
+                  <Badge
+                    key={category.id}
+                    variant="secondary"
+                    className="text-[10px]"
+                  >
                     {category.name}
                   </Badge>
                 ))}

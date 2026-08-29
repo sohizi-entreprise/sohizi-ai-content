@@ -1,10 +1,4 @@
 import { Check, Minus } from 'lucide-react'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
 import { MarketingShell } from '../marketing-shell'
 import { CtaButton } from '../components/cta-button'
 import {
@@ -12,8 +6,14 @@ import {
   plans,
   pricingFaq,
   pricingPage,
-  type CompareCell,
 } from '../content/pricing'
+import type { CompareCell } from '../content/pricing'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { WavyBackground } from '@/components/ui/wavy-background'
 import { cn } from '@/lib/utils'
 
@@ -31,7 +31,10 @@ function CellValue({ value }: { value: CompareCell }) {
     return value ? (
       <Check className="mx-auto size-4 text-primary" aria-label="Included" />
     ) : (
-      <Minus className="mx-auto size-4 text-muted-foreground/50" aria-label="Not included" />
+      <Minus
+        className="mx-auto size-4 text-muted-foreground/50"
+        aria-label="Not included"
+      />
     )
   }
   return <span className="text-sm text-foreground/90">{value}</span>
@@ -95,12 +98,7 @@ export function PricingPage() {
                 </p>
                 <p className="mt-4 flex items-baseline gap-1">
                   {plan.price === 0 ? (
-                    <span
-                      className={cn(
-                        'font-display font-semibold tracking-tight text-foreground',
-                        plan.highlighted ? 'text-5xl' : 'text-3xl',
-                      )}
-                    >
+                    <span className="font-display text-3xl font-semibold tracking-tight text-foreground">
                       $0
                     </span>
                   ) : (
@@ -124,7 +122,9 @@ export function PricingPage() {
                   )}
                 >
                   {plan.credits.toLocaleString()} credits
-                  {plan.creditCadence === 'one-time' ? ' (one-time)' : ' / month'}
+                  {plan.creditCadence === 'one-time'
+                    ? ' (one-time)'
+                    : ' / month'}
                 </p>
                 <p className="mt-4 flex-1 text-sm leading-relaxed text-foreground/80">
                   {plan.description}
@@ -146,8 +146,8 @@ export function PricingPage() {
             Compare plans
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Everything you need to write, generate, storyboard, and edit — scaled by how many
-            credits you need.
+            Everything you need to write, generate, storyboard, and edit —
+            scaled by how many credits you need.
           </p>
 
           <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10">

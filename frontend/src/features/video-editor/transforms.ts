@@ -1,23 +1,65 @@
 import type {
+  AspectRatio,
+  AudioClip,
   CaptionClip,
   Clip,
+  HtmlClip,
+  ImageClip,
+  // ServerCaption,
+  TextClip,
   Track,
   TrackType,
   VideoClip,
-  AudioClip,
-  TextClip,
-  ImageClip,
-  HtmlClip,
-  AspectRatio,
-  ServerCaption,
 } from './store/types'
-import type { BatchOperation, LoadCompositionResponse, ServerClip } from './requests'
+import type {
+  BatchOperation,
+  LoadCompositionResponse,
+  ServerClip,
+} from './requests'
 
 // ============================================================================
 // Server -> Store transforms
 // ============================================================================
 
 type ServerTrack = LoadCompositionResponse['tracks'][number]
+
+function stringProp(
+  props: Record<string, unknown>,
+  key: string,
+  fallback: string,
+): string {
+  const value = props[key]
+  return typeof value === 'string' ? value : fallback
+}
+
+function numberProp(
+  props: Record<string, unknown>,
+  key: string,
+  fallback: number,
+): number {
+  const value = props[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function arrayProp<T>(
+  props: Record<string, unknown>,
+  key: string,
+  fallback: Array<T>,
+): Array<T> {
+  const value = props[key]
+  return Array.isArray(value) ? (value as Array<T>) : fallback
+}
+
+function objectProp<T extends Record<string, unknown>>(
+  props: Record<string, unknown>,
+  key: string,
+  fallback: T,
+): T {
+  const value = props[key]
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as T)
+    : fallback
+}
 
 function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
   const base = {
@@ -29,101 +71,111 @@ function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
     sourceDurationInFrames: serverClip.sourceDurationInFrames,
   }
 
-  const props = serverClip.properties ?? {}
+  const props = serverClip.properties
 
   switch (trackType) {
     case 'video':
       return {
         ...base,
         type: 'video',
-        url: (props.url as string) ?? '',
-        fileName: (props.fileName as string) ?? '',
+        url: stringProp(props, 'url', ''),
+        fileName: stringProp(props, 'fileName', ''),
         width: props.width as number | undefined,
         height: props.height as number | undefined,
-        volume: (props.volume as number) ?? 1,
-        opacity: (props.opacity as number) ?? 1,
-        speed: (props.speed as number) ?? 1,
-        borderRadius: (props.borderRadius as number) ?? 0,
-        xRatio: (props.xRatio as number) ?? 0.5,
-        yRatio: (props.yRatio as number) ?? 0.5,
-        widthRatio: (props.widthRatio as number) ?? 1,
-        heightRatio: (props.heightRatio as number) ?? 1,
+        volume: numberProp(props, 'volume', 1),
+        opacity: numberProp(props, 'opacity', 1),
+        speed: numberProp(props, 'speed', 1),
+        borderRadius: numberProp(props, 'borderRadius', 0),
+        xRatio: numberProp(props, 'xRatio', 0.5),
+        yRatio: numberProp(props, 'yRatio', 0.5),
+        widthRatio: numberProp(props, 'widthRatio', 1),
+        heightRatio: numberProp(props, 'heightRatio', 1),
       } satisfies VideoClip
     case 'audio':
       return {
         ...base,
         type: 'audio',
-        url: (props.url as string) ?? '',
-        fileName: (props.fileName as string) ?? '',
-        volume: (props.volume as number) ?? 1,
-        speed: (props.speed as number) ?? 1,
+        url: stringProp(props, 'url', ''),
+        fileName: stringProp(props, 'fileName', ''),
+        volume: numberProp(props, 'volume', 1),
+        speed: numberProp(props, 'speed', 1),
       } satisfies AudioClip
     case 'text':
       return {
         ...base,
         type: 'text',
-        text: (props.text as string) ?? '',
-        fontSize: (props.fontSize as number) ?? 64,
-        color: (props.color as string) ?? '#ffffff',
-        fontFamily: (props.fontFamily as string) ?? 'Inter',
-        fontWeight: (props.fontWeight as TextClip['fontWeight']) ?? 'bold',
-        align: (props.align as TextClip['align']) ?? 'center',
-        opacity: (props.opacity as number) ?? 1,
-        xRatio: (props.xRatio as number) ?? 0.5,
-        yRatio: (props.yRatio as number) ?? 0.85,
-        widthRatio: (props.widthRatio as number) ?? 0.7,
-        heightRatio: (props.heightRatio as number) ?? 0.18,
+        text: stringProp(props, 'text', ''),
+        fontSize: numberProp(props, 'fontSize', 64),
+        color: stringProp(props, 'color', '#ffffff'),
+        fontFamily: stringProp(props, 'fontFamily', 'Inter'),
+        fontWeight: stringProp(
+          props,
+          'fontWeight',
+          'bold',
+        ) as TextClip['fontWeight'],
+        align: stringProp(props, 'align', 'center') as TextClip['align'],
+        opacity: numberProp(props, 'opacity', 1),
+        xRatio: numberProp(props, 'xRatio', 0.5),
+        yRatio: numberProp(props, 'yRatio', 0.85),
+        widthRatio: numberProp(props, 'widthRatio', 0.7),
+        heightRatio: numberProp(props, 'heightRatio', 0.18),
       } satisfies TextClip
     case 'image':
       return {
         ...base,
         type: 'image',
-        url: (props.url as string) ?? '',
-        fileName: (props.fileName as string) ?? '',
+        url: stringProp(props, 'url', ''),
+        fileName: stringProp(props, 'fileName', ''),
         width: props.width as number | undefined,
         height: props.height as number | undefined,
-        opacity: (props.opacity as number) ?? 1,
-        borderRadius: (props.borderRadius as number) ?? 0,
-        blur: (props.blur as number) ?? 0,
-        brightness: (props.brightness as number) ?? 100,
-        xRatio: (props.xRatio as number) ?? 0.5,
-        yRatio: (props.yRatio as number) ?? 0.5,
-        widthRatio: (props.widthRatio as number) ?? 1,
-        heightRatio: (props.heightRatio as number) ?? 1,
+        opacity: numberProp(props, 'opacity', 1),
+        borderRadius: numberProp(props, 'borderRadius', 0),
+        blur: numberProp(props, 'blur', 0),
+        brightness: numberProp(props, 'brightness', 100),
+        xRatio: numberProp(props, 'xRatio', 0.5),
+        yRatio: numberProp(props, 'yRatio', 0.5),
+        widthRatio: numberProp(props, 'widthRatio', 1),
+        heightRatio: numberProp(props, 'heightRatio', 1),
       } satisfies ImageClip
     case 'html':
       return {
         ...base,
         type: 'html',
-        html: (props.html as string) ?? '',
-        variables: (props.variables as HtmlClip['variables']) ?? [],
-        values: (props.values as HtmlClip['values']) ?? {},
-        xRatio: (props.xRatio as number) ?? 0.5,
-        yRatio: (props.yRatio as number) ?? 0.5,
-        widthRatio: (props.widthRatio as number) ?? 1,
-        heightRatio: (props.heightRatio as number) ?? 1,
+        html: stringProp(props, 'html', ''),
+        variables: arrayProp(props, 'variables', []),
+        values: objectProp(props, 'values', {}),
+        xRatio: numberProp(props, 'xRatio', 0.5),
+        yRatio: numberProp(props, 'yRatio', 0.5),
+        widthRatio: numberProp(props, 'widthRatio', 1),
+        heightRatio: numberProp(props, 'heightRatio', 1),
       } satisfies HtmlClip
     case 'caption':
       return {
         ...base,
         type: 'caption',
         captions: {
-          text: (props.text as string) ?? '',
-          words: (props.words as ServerCaption[]) ?? [],
+          text: stringProp(props, 'text', ''),
+          words: arrayProp(props, 'words', []),
         },
         properties: {
-          fontSize: (props.fontSize as number) ?? 48,
-          color: (props.color as string) ?? '#ffffff',
-          fontFamily: (props.fontFamily as string) ?? 'Inter',
-          fontWeight:
-            (props.fontWeight as CaptionClip['properties']['fontWeight']) ??
+          fontSize: numberProp(props, 'fontSize', 48),
+          color: stringProp(props, 'color', '#ffffff'),
+          fontFamily: stringProp(props, 'fontFamily', 'Inter'),
+          fontWeight: stringProp(
+            props,
+            'fontWeight',
             'bold',
-          align: (props.align as CaptionClip['properties']['align']) ?? 'center',
-          opacity: (props.opacity as number) ?? 1,
-          xRatio: (props.xRatio as number) ?? 0.5,
-          yRatio: (props.yRatio as number) ?? 0.85,
-          widthRatio: (props.widthRatio as number) ?? 0.7,
-          heightRatio: (props.heightRatio as number) ?? 0.18,
+          ) as CaptionClip['properties']['fontWeight'],
+          align: stringProp(
+            props,
+            'align',
+            'center',
+          ) as CaptionClip['properties']['align'],
+          opacity: numberProp(props, 'opacity', 1),
+          xRatio: numberProp(props, 'xRatio', 0.5),
+          yRatio: numberProp(props, 'yRatio', 0.85),
+          widthRatio: numberProp(props, 'widthRatio', 0.7),
+          heightRatio: numberProp(props, 'heightRatio', 0.18),
           hightlightColor: props.hightlightColor as string | undefined,
           backgroundColor: props.backgroundColor as string | undefined,
         },
@@ -133,9 +185,7 @@ function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
 
 function serverTrackToStore(serverTrack: ServerTrack): Track {
   const trackType = serverTrack.type as TrackType
-  const clips = (serverTrack.clips ?? [])
-    .map((c) => serverClipToStore(c, trackType))
-    .filter((c): c is Clip => c != null)
+  const clips = serverTrack.clips.map((c) => serverClipToStore(c, trackType))
   return {
     id: serverTrack.id,
     type: trackType,
@@ -154,7 +204,7 @@ export type HydrationData = {
   aspectRatio: AspectRatio
   width: number
   height: number
-  tracks: Track[]
+  tracks: Array<Track>
 }
 
 export function serverToHydration(res: LoadCompositionResponse): HydrationData {
@@ -175,8 +225,13 @@ export function serverToHydration(res: LoadCompositionResponse): HydrationData {
 // ============================================================================
 
 const STRUCTURAL_KEYS = new Set([
-  'id', 'trackId', 'type', 'startFrame', 'endFrame',
-  'sourceStartFrame', 'sourceDurationInFrames',
+  'id',
+  'trackId',
+  'type',
+  'startFrame',
+  'endFrame',
+  'sourceStartFrame',
+  'sourceDurationInFrames',
 ])
 
 function extractProperties(clip: Clip): Record<string, unknown> {
@@ -216,7 +271,7 @@ type DiffableState = {
   aspectRatio: AspectRatio
   width: number
   height: number
-  tracks: Track[]
+  tracks: Array<Track>
 }
 
 export function diffableSnapshotsEqual(
@@ -237,8 +292,8 @@ export function diffableSnapshotsEqual(
 export function diffStateToBatchOps(
   prev: DiffableState,
   next: DiffableState,
-): BatchOperation[] {
-  const ops: BatchOperation[] = []
+): Array<BatchOperation> {
+  const ops: Array<BatchOperation> = []
 
   // -- Composition-level changes ------------------------------------------
   const compositionPatch: Record<string, unknown> = {}
@@ -261,8 +316,10 @@ export function diffStateToBatchOps(
   // -- Build global clip maps to detect cross-track moves -----------------
   const prevAllClips = new Map<string, { clip: Clip; trackId: string }>()
   const nextAllClips = new Map<string, { clip: Clip; trackId: string }>()
-  for (const t of prev.tracks) for (const c of t.clips) prevAllClips.set(c.id, { clip: c, trackId: t.id })
-  for (const t of next.tracks) for (const c of t.clips) nextAllClips.set(c.id, { clip: c, trackId: t.id })
+  for (const t of prev.tracks)
+    for (const c of t.clips) prevAllClips.set(c.id, { clip: c, trackId: t.id })
+  for (const t of next.tracks)
+    for (const c of t.clips) nextAllClips.set(c.id, { clip: c, trackId: t.id })
 
   const movedClipIds = new Set<string>()
   for (const [clipId, nextInfo] of nextAllClips) {

@@ -2,11 +2,7 @@
 export {
   applyLiveHtmlConfig,
   buildDefaultValues,
-  buildVariableOverride,
   extractVariableSchema,
-  getLiveConfigApplyOptions,
-  injectGsap,
-  injectVariables,
   prepareHtmlDocument,
 } from '@sohizi/video-composition'
 

@@ -4,12 +4,12 @@ import { useParams } from '@tanstack/react-router'
 import { TextEditorView } from '../content/text-editor-view'
 import { getFileContentQueryOptions } from '../../query-mutations'
 import { useEditorStore } from '../../stores/editor-store'
+import AssetViewer from '../content/asset-viewer'
+import { SkillEditorView } from '../content/skill-editor-view'
 import type { EditorTab } from '../../types'
 import { VideoEditor } from '@/features/video-editor'
 import { MediaGenerator } from '@/features/media-generator'
-import AssetViewer from '../content/asset-viewer'
-import { SkillEditorView } from '../content/skill-editor-view'
-import { AssetSkeleton, TextSkeleton } from '@/features/text-editor'
+import { AssetSkeleton, TextSkeleton } from '@/components/ui/content-skeletons'
 
 interface ContentRouterProps {
   tab: EditorTab
@@ -23,7 +23,9 @@ export function ContentRouter({ tab }: ContentRouterProps) {
   const isMediaGenerator = tab.name === 'media-generator'
 
   if (tab.name === 'video-editor' || tab.format === 'video-editor') {
-    return <VideoEditor projectId={projectId} fileNodeId={tab.id} key={tab.id} />
+    return (
+      <VideoEditor projectId={projectId} fileNodeId={tab.id} key={tab.id} />
+    )
   }
 
   if (isMediaGenerator) {
@@ -33,7 +35,10 @@ export function ContentRouter({ tab }: ContentRouterProps) {
   return <ServerRenderedContent tab={tab} projectId={projectId} />
 }
 
-function ServerRenderedContent({ tab, projectId }: ContentRouterProps & { projectId: string }) {
+function ServerRenderedContent({
+  tab,
+  projectId,
+}: ContentRouterProps & { projectId: string }) {
   const baseQueryOptions = getFileContentQueryOptions(projectId, tab.id)
   const { data, isLoading } = useQuery(baseQueryOptions)
   const initLastSavedAt = useEditorStore((s) => s.initLastSavedAt)
@@ -52,7 +57,7 @@ function ServerRenderedContent({ tab, projectId }: ContentRouterProps & { projec
   }, [data, initLastSavedAt, tab.id])
 
   if (isLoading) {
-    if(tab.format === 'markdown' || tab.format === 'skill') {
+    if (tab.format === 'markdown' || tab.format === 'skill') {
       return (
         <div className="h-full w-full overflow-hidden">
           <div className="mx-auto min-w-2xl max-w-3xl px-6 pb-8 pt-12 space-y-4">
@@ -69,27 +74,31 @@ function ServerRenderedContent({ tab, projectId }: ContentRouterProps & { projec
     return <AssetSkeleton />
   }
 
-  if (data === undefined){
+  if (data === undefined) {
     return <div>Error: File content not found</div>
   }
 
   switch (data.type) {
     case 'markdown':
-      return <TextEditorView
-        tab={tab}
-        initialContent={data.content as string}
-        initialRevision={data.revision ?? 1}
-        key={tab.id}
-      />
+      return (
+        <TextEditorView
+          tab={tab}
+          initialContent={data.content}
+          initialRevision={data.revision}
+          key={tab.id}
+        />
+      )
     case 'skill':
-      return <SkillEditorView
-        key={tab.id}
-        tab={tab}
-        description={data.data.description}
-        instruction={data.data.instructions}
-        status={data.data.status}
-        visibility={data.data.visibility}
-      />
+      return (
+        <SkillEditorView
+          key={tab.id}
+          tab={tab}
+          description={data.data.description}
+          instruction={data.data.instructions}
+          status={data.data.status}
+          visibility={data.data.visibility}
+        />
+      )
     case 'audio':
     case 'video':
     case 'image':
@@ -98,5 +107,4 @@ function ServerRenderedContent({ tab, projectId }: ContentRouterProps & { projec
     default:
       return null
   }
-
 }

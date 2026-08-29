@@ -8,10 +8,9 @@ import {
   Wrench,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { Shimmer } from "@/components/ai-elements/shimmer";
-import { cn } from '@/lib/utils'
 import type { MsgToolCallPart, MsgToolResultPart } from '../types'
-
+import { Shimmer } from '@/components/ai-elements/shimmer'
+import { cn } from '@/lib/utils'
 
 // Control-flow tools that carry no useful signal for the user.
 const HIDDEN_TOOLS = new Set(['endExecutionLoop', 'finish'])
@@ -52,9 +51,14 @@ function ChatToolCallComponent({ toolCall }: ChatToolCallProps) {
       return EditFileToolCall({ toolCall })
     default:
       return (
-        <ToolViewer icon={Wrench}
-                    text={toolCall.isStreaming ? `Calling ${humanize(toolName)}` : `Called ${humanize(toolName)}`} 
-                    isStreaming={toolCall.isStreaming ?? false}
+        <ToolViewer
+          icon={Wrench}
+          text={
+            toolCall.isStreaming
+              ? `Calling ${humanize(toolName)}`
+              : `Called ${humanize(toolName)}`
+          }
+          isStreaming={toolCall.isStreaming ?? false}
         />
       )
   }
@@ -62,22 +66,21 @@ function ChatToolCallComponent({ toolCall }: ChatToolCallProps) {
 
 function assignTaskToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
   const isStreaming = toolCall.isStreaming ?? false
-  const input = toolCall.input as {subAgent: string, instructions: string}
+  const input = toolCall.input as {
+    subAgent?: string
+    instructions?: string
+  }
   const subAgent = input.subAgent ?? 'Sub-agent'
-  const text = isStreaming ? `Assigning task to ${subAgent}` : `Assigned task to ${subAgent}`
+  const text = isStreaming
+    ? `Assigning task to ${subAgent}`
+    : `Assigned task to ${subAgent}`
   return (
-    <div className='p-2 rounded-md bg-muted border flex items-center gap-2'>
-      {
-        isStreaming ? (
-          <Shimmer className='text-sm flex-1'>
-            {text}
-          </Shimmer>
-        ) : (
-          <p className='text-sm flex-1'>
-            {text}
-          </p>
-        )
-      }
+    <div className="p-2 rounded-md bg-muted border flex items-center gap-2">
+      {isStreaming ? (
+        <Shimmer className="text-sm flex-1">{text}</Shimmer>
+      ) : (
+        <p className="text-sm flex-1">{text}</p>
+      )}
     </div>
   )
 }
@@ -85,9 +88,11 @@ function assignTaskToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
 function manageTasksToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
   const isStreaming = toolCall.isStreaming ?? false
   const input = toolCall.input as {
-    manageTask: {action: string; tasks: string[]} | {action: string; taskId: string; status: string}
-  } 
-  const action = input.manageTask?.action ?? '' 
+    manageTask?:
+      | { action?: string; tasks?: Array<string> }
+      | { action?: string; taskId?: string; status?: string }
+  }
+  const action = input.manageTask?.action ?? ''
   let text = ''
   switch (action) {
     case 'add':
@@ -108,46 +113,69 @@ function manageTasksToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
     default:
       text = isStreaming ? 'Managing TODO list' : 'Managed TODO list'
   }
-  return <ToolViewer icon={ListChecks} text={text} isStreaming={isStreaming} input={input} />
+  return (
+    <ToolViewer
+      icon={ListChecks}
+      text={text}
+      isStreaming={isStreaming}
+      input={input}
+    />
+  )
 }
 
 function timelineExploreToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
   const isStreaming = toolCall.isStreaming ?? false
-  const input = toolCall.input as {command: {cmd: string}}
+  const input = toolCall.input as { command?: { cmd?: string } }
   const cmdName = input.command?.cmd ?? ''
   let text = ''
-  if(cmdName){
+  if (cmdName) {
     text = humanize(cmdName)
   } else {
     text = isStreaming ? 'Exploring timeline' : 'Explored timeline'
   }
-  return <ToolViewer icon={Scissors} text={text} isStreaming={isStreaming} input={input.command} />
+  return (
+    <ToolViewer
+      icon={Scissors}
+      text={text}
+      isStreaming={isStreaming}
+      input={input.command}
+    />
+  )
 }
 
 function timelineEditToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
   const isStreaming = toolCall.isStreaming ?? false
-  const input = toolCall.input as {command: {cmd: string}}
+  const input = toolCall.input as { command?: { cmd?: string } }
   const cmdName = input.command?.cmd ?? ''
   let text = ''
-  if(cmdName){
+  if (cmdName) {
     text = humanize(cmdName)
   } else {
     text = isStreaming ? 'Editing timeline' : 'Edited timeline'
   }
-  return <ToolViewer icon={Scissors} text={text} isStreaming={isStreaming} input={input.command} />
+  return (
+    <ToolViewer
+      icon={Scissors}
+      text={text}
+      isStreaming={isStreaming}
+      input={input.command}
+    />
+  )
 }
 
 function loadSkillToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
   const isStreaming = toolCall.isStreaming ?? false
-  const input = toolCall.input as {name: string}
+  const input = toolCall.input as { name: string }
   const skillName = input.name ? `: ${input.name}` : ''
-  const text = isStreaming ? `Reading skill ${skillName}` : `Read skill${skillName}`
+  const text = isStreaming
+    ? `Reading skill ${skillName}`
+    : `Read skill${skillName}`
   return <ToolViewer icon={Search} text={text} isStreaming={isStreaming} />
 }
 
 function SearchFileToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
   const isStreaming = toolCall.isStreaming ?? false
-  const input = toolCall.input as {command: {cmd: string}}
+  const input = toolCall.input as { command?: { cmd?: string } }
   const cmdName = input.command?.cmd ?? ''
   let text = ''
 
@@ -161,12 +189,19 @@ function SearchFileToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
     default:
       text = isStreaming ? 'Searching files' : 'Searched files'
   }
-  return <ToolViewer icon={Search} text={text} isStreaming={isStreaming} input={input.command} />
+  return (
+    <ToolViewer
+      icon={Search}
+      text={text}
+      isStreaming={isStreaming}
+      input={input.command}
+    />
+  )
 }
 
 function ExploreFileToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
   const isStreaming = toolCall.isStreaming ?? false
-  const input = toolCall.input as {command: {cmd: string}}
+  const input = toolCall.input as { command?: { cmd?: string } }
   const cmdName = input.command?.cmd ?? ''
   let text = ''
   switch (cmdName) {
@@ -185,13 +220,25 @@ function ExploreFileToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
     default:
       text = isStreaming ? 'Exploring files' : 'Explored files'
   }
-  return <ToolViewer icon={FolderTree} text={text} isStreaming={isStreaming} input={input.command} />
+  return (
+    <ToolViewer
+      icon={FolderTree}
+      text={text}
+      isStreaming={isStreaming}
+      input={input.command}
+    />
+  )
 }
 
 function EditFileToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
   const isStreaming = toolCall.isStreaming ?? false
-  const input = toolCall.input as {command: {cmd: string; content?: string; newText?: string}}
-  let displayedInput: string = input.command?.content ?? input.command?.newText ?? JSON.stringify(input.command, null, 2)
+  const input = toolCall.input as {
+    command?: { cmd?: string; content?: string; newText?: string }
+  }
+  const displayedInput: string =
+    input.command?.content ??
+    input.command?.newText ??
+    JSON.stringify(input.command, null, 2)
   const cmdName = input.command?.cmd ?? ''
   let text = ''
   const defaultOpen = cmdName === 'write' || cmdName === 'patch'
@@ -220,46 +267,54 @@ function EditFileToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
     default:
       text = isStreaming ? 'Editing files' : 'Edited files'
   }
-  return <ToolViewer icon={FilePen} text={text} isStreaming={isStreaming} defaultOpen={defaultOpen} input={displayedInput} />
+  return (
+    <ToolViewer
+      icon={FilePen}
+      text={text}
+      isStreaming={isStreaming}
+      defaultOpen={defaultOpen}
+      input={displayedInput}
+    />
+  )
 }
 
-function ToolViewer(props: {icon: LucideIcon; text: string; isStreaming: boolean; defaultOpen?: boolean; input?: Record<string, unknown> | string}){
-  const {icon: Icon, text, isStreaming, defaultOpen = false, input} = props
+function ToolViewer(props: {
+  icon: LucideIcon
+  text: string
+  isStreaming: boolean
+  defaultOpen?: boolean
+  input?: Record<string, unknown> | string
+}) {
+  const { icon: Icon, text, isStreaming, defaultOpen = false, input } = props
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
   const handleClick = () => {
-    if(!input || isStreaming) return
+    if (!input || isStreaming) return
     setIsOpen(!isOpen)
   }
 
   return (
-    <div className='space-y-2'>
-      <div className='w-full flex items-center gap-2 text-muted-foreground'>
-        <Icon className='size-4' />
-        <div className={cn('text-sm transition-colors', input && 'cursor-pointer hover:text-foreground')}
-             onClick={handleClick}
+    <div className="space-y-2">
+      <div className="w-full flex items-center gap-2 text-muted-foreground">
+        <Icon className="size-4" />
+        <div
+          className={cn(
+            'text-sm transition-colors',
+            input && 'cursor-pointer hover:text-foreground',
+          )}
+          onClick={handleClick}
         >
-          {
-            isStreaming?
-            <Shimmer>
-              {text}
-            </Shimmer>
-            :
-            <p className=''>
-              {text}
-            </p>
-          }
+          {isStreaming ? <Shimmer>{text}</Shimmer> : <p className="">{text}</p>}
         </div>
       </div>
 
       {isOpen && (
-        <div className='max-h-50 overflow-y-auto rounded-md bg-surface p-2'>
-          <p className='text-xs text-muted-foreground'>
-            { typeof input === 'string' ? input : JSON.stringify(input, null, 2)}
+        <div className="max-h-50 overflow-y-auto rounded-md bg-surface p-2">
+          <p className="text-xs text-muted-foreground">
+            {typeof input === 'string' ? input : JSON.stringify(input, null, 2)}
           </p>
         </div>
       )}
-
     </div>
   )
 }

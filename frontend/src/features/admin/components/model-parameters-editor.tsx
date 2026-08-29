@@ -5,7 +5,6 @@ import {
   closestCenter,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -17,6 +16,14 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import type { DragEndEvent } from '@dnd-kit/core'
+import type {
+  AdminParameter,
+  ModelParameterBinding,
+  ModelParameterConstraint,
+  ParameterOptionSummary,
+  ReplaceModelParameterBinding,
+} from '../types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,13 +37,6 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
-import type {
-  AdminParameter,
-  ModelParameterBinding,
-  ModelParameterConstraint,
-  ParameterOptionSummary,
-  ReplaceModelParameterBinding,
-} from '../types'
 
 export type ParameterBindingDraft = {
   parameterId: string
@@ -48,17 +48,19 @@ export type ParameterBindingDraft = {
   required: boolean
   defaultValue: string
   constraints: ModelParameterConstraint | null
-  optionIds: string[]
+  optionIds: Array<string>
   optionMultipliers: Record<string, string>
-  catalogOptions: ParameterOptionSummary[]
+  catalogOptions: Array<ParameterOptionSummary>
 }
 
 export const bindingsToDrafts = (
-  bindings: ModelParameterBinding[],
-  catalog: AdminParameter[],
-): ParameterBindingDraft[] =>
+  bindings: Array<ModelParameterBinding>,
+  catalog: Array<AdminParameter>,
+): Array<ParameterBindingDraft> =>
   bindings.map((binding) => {
-    const catalogParameter = catalog.find((item) => item.id === binding.parameterId)
+    const catalogParameter = catalog.find(
+      (item) => item.id === binding.parameterId,
+    )
     return {
       parameterId: binding.parameterId,
       key: binding.key,
@@ -80,15 +82,17 @@ export const bindingsToDrafts = (
     }
   })
 
-export const draftsToPayload = (drafts: ParameterBindingDraft[]): ReplaceModelParameterBinding[] =>
+export const draftsToPayload = (
+  drafts: Array<ParameterBindingDraft>,
+): Array<ReplaceModelParameterBinding> =>
   drafts.map((draft, index) => {
     const constraints = draft.constraints
     const hasConstraints = Boolean(
       constraints &&
-        (constraints.min != null ||
-          constraints.max != null ||
-          constraints.step != null ||
-          constraints.fileType),
+      (constraints.min != null ||
+        constraints.max != null ||
+        constraints.step != null ||
+        constraints.fileType),
     )
     return {
       parameterId: draft.parameterId,
@@ -96,7 +100,7 @@ export const draftsToPayload = (drafts: ParameterBindingDraft[]): ReplaceModelPa
       defaultValue: draft.defaultValue.trim() || null,
       constraints: hasConstraints ? constraints : null,
       options: draft.optionIds.map((optionId) => {
-        const raw = draft.optionMultipliers[optionId]?.trim() ?? ''
+        const raw = draft.optionMultipliers[optionId].trim()
         let priceMultiplier: number | null = null
         if (raw !== '') {
           const parsed = Number(raw)
@@ -111,7 +115,9 @@ export const draftsToPayload = (drafts: ParameterBindingDraft[]): ReplaceModelPa
     }
   })
 
-const parameterToDraft = (parameter: AdminParameter): ParameterBindingDraft => ({
+const parameterToDraft = (
+  parameter: AdminParameter,
+): ParameterBindingDraft => ({
   parameterId: parameter.id,
   key: parameter.key,
   label: parameter.label,
@@ -123,13 +129,13 @@ const parameterToDraft = (parameter: AdminParameter): ParameterBindingDraft => (
   constraints: null,
   optionIds: [],
   optionMultipliers: {},
-  catalogOptions: parameter.options ?? [],
+  catalogOptions: parameter.options,
 })
 
 type Props = {
-  value: ParameterBindingDraft[]
-  onChange: (value: ParameterBindingDraft[]) => void
-  catalog: AdminParameter[]
+  value: Array<ParameterBindingDraft>
+  onChange: (value: Array<ParameterBindingDraft>) => void
+  catalog: Array<AdminParameter>
 }
 
 export function ModelParametersEditor({ value, onChange, catalog }: Props) {
@@ -140,7 +146,9 @@ export function ModelParametersEditor({ value, onChange, catalog }: Props) {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -159,8 +167,15 @@ export function ModelParametersEditor({ value, onChange, catalog }: Props) {
     setSelectedId('')
   }
 
-  const updateDraft = (parameterId: string, patch: Partial<ParameterBindingDraft>) => {
-    onChange(value.map((item) => (item.parameterId === parameterId ? { ...item, ...patch } : item)))
+  const updateDraft = (
+    parameterId: string,
+    patch: Partial<ParameterBindingDraft>,
+  ) => {
+    onChange(
+      value.map((item) =>
+        item.parameterId === parameterId ? { ...item, ...patch } : item,
+      ),
+    )
   }
 
   const removeDraft = (parameterId: string) => {
@@ -171,9 +186,19 @@ export function ModelParametersEditor({ value, onChange, catalog }: Props) {
     <div className="space-y-3">
       <Label>Parameters</Label>
       <div className="flex gap-2">
-        <Select value={selectedId || undefined} onValueChange={setSelectedId} disabled={unbound.length === 0}>
+        <Select
+          value={selectedId || undefined}
+          onValueChange={setSelectedId}
+          disabled={unbound.length === 0}
+        >
           <SelectTrigger className="flex-1">
-            <SelectValue placeholder={unbound.length === 0 ? 'All parameters bound' : 'Add a parameter'} />
+            <SelectValue
+              placeholder={
+                unbound.length === 0
+                  ? 'All parameters bound'
+                  : 'Add a parameter'
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             {unbound.map((parameter) => (
@@ -183,7 +208,12 @@ export function ModelParametersEditor({ value, onChange, catalog }: Props) {
             ))}
           </SelectContent>
         </Select>
-        <Button type="button" variant="outline" onClick={addParameter} disabled={!selectedId}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={addParameter}
+          disabled={!selectedId}
+        >
           <Plus className="size-4" />
           Add
         </Button>
@@ -194,7 +224,11 @@ export function ModelParametersEditor({ value, onChange, catalog }: Props) {
           No parameters bound yet.
         </p>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
           <SortableContext
             items={value.map((item) => item.parameterId)}
             strategy={verticalListSortingStrategy}
@@ -225,19 +259,31 @@ function SortableBindingCard({
   onChange: (patch: Partial<ParameterBindingDraft>) => void
   onRemove: () => void
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: draft.parameterId,
   })
 
-  const showOptions = draft.xUiComponent === 'select' || draft.catalogOptions.length > 0
-  const showNumericConstraints = draft.type === 'number' || draft.xUiComponent === 'slider'
+  const showOptions =
+    draft.xUiComponent === 'select' || draft.catalogOptions.length > 0
+  const showNumericConstraints =
+    draft.type === 'number' || draft.xUiComponent === 'slider'
   const showFileType = draft.xUiComponent === 'uploader'
 
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn('rounded-lg border bg-background p-3', isDragging && 'opacity-60')}
+      className={cn(
+        'rounded-lg border bg-background p-3',
+        isDragging && 'opacity-60',
+      )}
     >
       <div className="flex items-start gap-2">
         <button
@@ -253,9 +299,17 @@ function SortableBindingCard({
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-sm font-medium">{draft.label}</p>
-              <p className="font-mono text-xs text-muted-foreground">{draft.key}</p>
+              <p className="font-mono text-xs text-muted-foreground">
+                {draft.key}
+              </p>
             </div>
-            <Button type="button" variant="ghost" size="icon" onClick={onRemove} aria-label="Remove parameter">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onRemove}
+              aria-label="Remove parameter"
+            >
               <Trash2 className="size-4" />
             </Button>
           </div>
@@ -263,7 +317,9 @@ function SortableBindingCard({
             <Label className="text-xs">Default value</Label>
             <Input
               value={draft.defaultValue}
-              onChange={(event) => onChange({ defaultValue: event.target.value })}
+              onChange={(event) =>
+                onChange({ defaultValue: event.target.value })
+              }
             />
           </div>
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">
@@ -278,7 +334,9 @@ function SortableBindingCard({
               options={draft.catalogOptions}
               selectedIds={draft.optionIds}
               multipliers={draft.optionMultipliers}
-              onChange={(optionIds, optionMultipliers) => onChange({ optionIds, optionMultipliers })}
+              onChange={(optionIds, optionMultipliers) =>
+                onChange({ optionIds, optionMultipliers })
+              }
             />
           ) : null}
           {showNumericConstraints ? (
@@ -299,7 +357,9 @@ function SortableBindingCard({
                       fileType:
                         selected === '__none__'
                           ? undefined
-                          : (selected as NonNullable<ModelParameterConstraint['fileType']>),
+                          : (selected as NonNullable<
+                              ModelParameterConstraint['fileType']
+                            >),
                     },
                   })
                 }
@@ -328,10 +388,13 @@ function VisibleOptionsEditor({
   multipliers,
   onChange,
 }: {
-  options: ParameterOptionSummary[]
-  selectedIds: string[]
+  options: Array<ParameterOptionSummary>
+  selectedIds: Array<string>
   multipliers: Record<string, string>
-  onChange: (optionIds: string[], optionMultipliers: Record<string, string>) => void
+  onChange: (
+    optionIds: Array<string>,
+    optionMultipliers: Record<string, string>,
+  ) => void
 }) {
   if (options.length === 0) {
     return (
@@ -353,7 +416,10 @@ function VisibleOptionsEditor({
     }
     const nextMultipliers = { ...multipliers }
     delete nextMultipliers[optionId]
-    onChange(selectedIds.filter((id) => id !== optionId), nextMultipliers)
+    onChange(
+      selectedIds.filter((id) => id !== optionId),
+      nextMultipliers,
+    )
   }
 
   return (
@@ -367,11 +433,15 @@ function VisibleOptionsEditor({
               <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
                 <Checkbox
                   checked={isSelected}
-                  onCheckedChange={(checked) => toggle(option.id, checked === true)}
+                  onCheckedChange={(checked) =>
+                    toggle(option.id, checked === true)
+                  }
                 />
                 <span className="min-w-0 truncate">
                   {option.label}
-                  <span className="ml-1 font-mono text-xs text-muted-foreground">{option.value}</span>
+                  <span className="ml-1 font-mono text-xs text-muted-foreground">
+                    {option.value}
+                  </span>
                 </span>
               </label>
               {isSelected ? (
@@ -409,7 +479,10 @@ function ConstraintsEditor({
   const update = (patch: Partial<ModelParameterConstraint>) => {
     const next = { ...value, ...patch }
     const empty =
-      next.min == null && next.max == null && next.step == null && next.fileType == null
+      next.min == null &&
+      next.max == null &&
+      next.step == null &&
+      next.fileType == null
     onChange(empty ? null : next)
   }
 
@@ -421,7 +494,12 @@ function ConstraintsEditor({
           type="number"
           value={value?.min ?? ''}
           onChange={(event) =>
-            update({ min: event.target.value === '' ? undefined : Number(event.target.value) })
+            update({
+              min:
+                event.target.value === ''
+                  ? undefined
+                  : Number(event.target.value),
+            })
           }
         />
       </div>
@@ -431,7 +509,12 @@ function ConstraintsEditor({
           type="number"
           value={value?.max ?? ''}
           onChange={(event) =>
-            update({ max: event.target.value === '' ? undefined : Number(event.target.value) })
+            update({
+              max:
+                event.target.value === ''
+                  ? undefined
+                  : Number(event.target.value),
+            })
           }
         />
       </div>
@@ -441,7 +524,12 @@ function ConstraintsEditor({
           type="number"
           value={value?.step ?? ''}
           onChange={(event) =>
-            update({ step: event.target.value === '' ? undefined : Number(event.target.value) })
+            update({
+              step:
+                event.target.value === ''
+                  ? undefined
+                  : Number(event.target.value),
+            })
           }
         />
       </div>

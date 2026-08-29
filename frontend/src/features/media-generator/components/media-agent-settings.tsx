@@ -1,11 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { useEffect } from 'react'
 import { useMediaGeneratorStore } from '../store/media-generator-store'
 import { useMediaCatalog } from '../hooks/use-media-catalog'
 import {
@@ -16,21 +9,35 @@ import {
   getAgentReferenceFileTypes,
 } from '../lib/agent-settings'
 import { ReferenceAssetPickerField } from './asset-picker-dialog'
+import type { ReactNode } from 'react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export function MediaAgentSettings({ projectId }: { projectId: string }) {
   const generationType = useMediaGeneratorStore((state) => state.generationType)
-  const parameterValues = useMediaGeneratorStore((state) => state.parameterValues)
-  const setParameterValues = useMediaGeneratorStore((state) => state.setParameterValues)
-  const updateParameterValue = useMediaGeneratorStore((state) => state.updateParameterValue)
+  const parameterValues = useMediaGeneratorStore(
+    (state) => state.parameterValues,
+  )
+  const setParameterValues = useMediaGeneratorStore(
+    (state) => state.setParameterValues,
+  )
+  const updateParameterValue = useMediaGeneratorStore(
+    (state) => state.updateParameterValue,
+  )
   useMediaCatalog()
   const seeded = defaultAgentParameterValues(parameterValues)
   const fileTypes = getAgentReferenceFileTypes(generationType)
 
   useEffect(() => {
     if (
-      parameterValues.aspectRatio
-      && parameterValues.quality
-      && parameterValues.references != null
+      parameterValues.aspectRatio &&
+      parameterValues.quality &&
+      'references' in parameterValues
     ) {
       return
     }
@@ -85,7 +92,9 @@ export function MediaAgentSettings({ projectId }: { projectId: string }) {
           onChange={(value) => updateParameterValue('references', value)}
         />
         <p className="text-xs text-muted-foreground">
-          Optional. Up to {AGENT_MAX_REFERENCES} {generationType === 'video' ? 'image, video, or audio' : 'image'} files.
+          Optional. Up to {AGENT_MAX_REFERENCES}{' '}
+          {generationType === 'video' ? 'image, video, or audio' : 'image'}{' '}
+          files.
         </p>
       </SettingsField>
     </div>

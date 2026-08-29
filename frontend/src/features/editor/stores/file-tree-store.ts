@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { ProjectResponse } from '@/features/projects/type'
+import type { ProjectResponse } from '@/features/projects/type'
 
 type Project = Omit<ProjectResponse, 'format' | 'genre'>
 

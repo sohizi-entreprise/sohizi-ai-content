@@ -35,7 +35,7 @@ export function VideoEditor({ projectId, fileNodeId }: VideoEditorProps) {
 
   useProjectFileTreeInit(projectId)
 
-  const { data, isLoading, isError, error } = useQuery(  
+  const { data, isLoading, isError, error } = useQuery(
     loadCompositionQueryOptions(projectId, fileNodeId),
   )
 

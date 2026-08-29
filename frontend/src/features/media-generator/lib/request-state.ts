@@ -1,14 +1,17 @@
-import type { AttachedFile } from '@/components/widgets/file-attachments'
 import {
   AUDIO_SUBTYPES,
   GENERATION_TYPES,
-  getDefaultSubtype,
   IMAGE_SUBTYPES,
   VIDEO_SUBTYPES,
+  getDefaultSubtype,
   showsAgentMode,
 } from '../constants'
-import { defaultAgentParameterValues, serializeAgentReferences } from './agent-settings'
+import {
+  defaultAgentParameterValues,
+  serializeAgentReferences,
+} from './agent-settings'
 import { isPickerAssetType } from './parameter-assets'
+import type { AttachedFile } from '@/components/widgets/file-attachments'
 import type { GenerationSubtype, GenerationType, MediaRunMode } from '../types'
 
 export type ParsedRequestState = {
@@ -17,7 +20,7 @@ export type ParsedRequestState = {
   selectedModelId: string | null
   parameterValues: Record<string, string>
   prompt: string
-  attachments: AttachedFile[]
+  attachments: Array<AttachedFile>
   runMode: MediaRunMode
   voice?: string
 }
@@ -27,7 +30,9 @@ export type RequestSettingsRow = {
   value: string
 }
 
-const GENERATION_TYPE_SET = new Set<string>(GENERATION_TYPES.map((type) => type.value))
+const GENERATION_TYPE_SET = new Set<string>(
+  GENERATION_TYPES.map((type) => type.value),
+)
 const SUBTYPE_SET = new Set<string>([
   ...IMAGE_SUBTYPES.map((subtype) => subtype.value),
   ...VIDEO_SUBTYPES.map((subtype) => subtype.value),
@@ -59,20 +64,23 @@ function parseSettings(settings: unknown): Record<string, string> {
   )
 }
 
-function parseAttachments(referencedFiles: unknown): AttachedFile[] {
+function parseAttachments(referencedFiles: unknown): Array<AttachedFile> {
   if (!Array.isArray(referencedFiles)) return []
 
   return referencedFiles.flatMap((file) => {
     if (!file || typeof file !== 'object') return []
     const url = 'url' in file && typeof file.url === 'string' ? file.url : null
     if (!url) return []
-    const type = 'type' in file && typeof file.type === 'string' ? file.type : 'image'
-    return [{
-      id: crypto.randomUUID(),
-      status: 'uploaded' as const,
-      type,
-      url,
-    }]
+    const type =
+      'type' in file && typeof file.type === 'string' ? file.type : 'image'
+    return [
+      {
+        id: crypto.randomUUID(),
+        status: 'uploaded' as const,
+        type,
+        url,
+      },
+    ]
   })
 }
 
@@ -81,9 +89,10 @@ export function parseStoredRequest(
 ): ParsedRequestState | null {
   if (!request) return null
 
-  const context = request.context && typeof request.context === 'object'
-    ? request.context as Record<string, unknown>
-    : {}
+  const context =
+    request.context && typeof request.context === 'object'
+      ? (request.context as Record<string, unknown>)
+      : {}
 
   const generationType = isGenerationType(context.generationType)
     ? context.generationType
@@ -91,11 +100,12 @@ export function parseStoredRequest(
   const generationSubtype = isGenerationSubtype(context.subtype)
     ? context.subtype
     : getDefaultSubtype(generationType)
-  const model = typeof request.model === 'string' && request.model.length > 0
-    ? request.model
-    : typeof context.model === 'string' && context.model.length > 0
-      ? context.model
-      : null
+  const model =
+    typeof request.model === 'string' && request.model.length > 0
+      ? request.model
+      : typeof context.model === 'string' && context.model.length > 0
+        ? context.model
+        : null
 
   const attachments = parseAttachments(context.referencedFiles)
   const runMode: MediaRunMode = request.runMode === 'agent' ? 'agent' : 'direct'
@@ -128,11 +138,11 @@ export function parseStoredRequest(
 
 export function flattenRequestSettings(
   request: Record<string, unknown> | null,
-): RequestSettingsRow[] {
+): Array<RequestSettingsRow> {
   const parsed = parseStoredRequest(request)
   if (!parsed) return []
 
-  const rows: RequestSettingsRow[] = []
+  const rows: Array<RequestSettingsRow> = []
   const add = (key: string, value: unknown) => {
     if (value == null || value === '') return
     rows.push({

@@ -1,4 +1,4 @@
-import { EditorContent, useEditor, type Editor, type JSONContent } from '@tiptap/react'
+import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TextAlign from '@tiptap/extension-text-align'
@@ -9,7 +9,8 @@ import { CharacterCount } from '@tiptap/extension-character-count'
 import { Markdown } from '@tiptap/markdown'
 import { useParams } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { useAutoSave } from '../../hooks/use-autosave'
 import TextEditorBubbleMenu from '../text-editor-extensions/bubble-menu'
 import { useEditorInputBridge } from '../../bridge/use-editor-input-bridge'
@@ -19,30 +20,28 @@ import {
   preprocessFileMentions,
 } from '../../extensions/file-mention'
 import { ImageLayout } from '../../extensions/image-layout'
-import { EditorTopChrome } from './editor-top-chrome'
-import type { EditorTab, PendingFileOperation } from '../../types'
-import { useFileMentionSearch } from '@/hooks/use-file-mention-search'
 import { MAX_CHARACTER_COUNT } from '../../constants'
-import './text-editor.css'
+import { MarkdownHighlight } from '../../extensions/markdown-highlight'
+import { MarkdownDiffExtensions } from '../../extensions/markdown-diff'
 import {
   deletePendingOperationMutationOptions,
   getPendingOperationQueryOptions,
   saveFileContentMutationOptions,
 } from '../../query-mutations'
-import { useQuery } from '@tanstack/react-query'
-import { MarkdownDiffExtensions } from '../../extensions/markdown-diff'
-import { MarkdownHighlight } from '../../extensions/markdown-highlight'
-import { toast } from 'sonner'
 import { SlashCommandExtension } from '../../extensions/slash-command'
 import { YoutubeEmbed } from '../../extensions/youtube-embed'
 import { EditorLink } from '../../extensions/editor-link'
 import {
+  acceptDiffMarkdown,
   asDiffMarkdown,
   buildDiff,
-  acceptDiffMarkdown,
   rejectDiffMarkdown,
 } from '../../diff-markdown'
-
+import { EditorTopChrome } from './editor-top-chrome'
+import './text-editor.css'
+import type { Editor, JSONContent } from '@tiptap/react'
+import type { EditorTab, PendingFileOperation } from '../../types'
+import { useFileMentionSearch } from '@/hooks/use-file-mention-search'
 
 const editorExtensions = [
   StarterKit.configure({
@@ -95,7 +94,7 @@ const editorExtensions = [
   }),
   ...MarkdownDiffExtensions,
   MarkdownHighlight,
-  SlashCommandExtension
+  SlashCommandExtension,
 ]
 
 interface TextEditorViewProps {
@@ -104,10 +103,7 @@ interface TextEditorViewProps {
   initialRevision: number
 }
 
-export function TextEditorView({
-  tab,
-  initialContent,
-}: TextEditorViewProps) {
+export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
   const { projectId } = useParams({
     from: '/dashboard/projects/$projectId/editor',
   })
@@ -117,7 +113,9 @@ export function TextEditorView({
     [baseMarkdown],
   )
 
-  const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(null)
+  const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(
+    null,
+  )
   const appliedDiffRef = useRef(false)
   const visualizedPendingKeyRef = useRef<string | null>(null)
   const isApplyingVisualDiffRef = useRef(false)
@@ -137,7 +135,9 @@ export function TextEditorView({
   const searchFiles = useFileMentionSearch(projectId)
 
   // Get the pending operations so we can apply the diffs
-  const { data, isLoading: isLoadingPendingOperation } = useQuery(getPendingOperationQueryOptions(projectId, tab.id))
+  const { data, isLoading: isLoadingPendingOperation } = useQuery(
+    getPendingOperationQueryOptions(projectId, tab.id),
+  )
   const pendingOperation = data?.operation ?? null
 
   const { mutateAsync: saveFileContent } = useMutation(
@@ -146,7 +146,6 @@ export function TextEditorView({
   const { mutateAsync: deletePendingOperation } = useMutation(
     deletePendingOperationMutationOptions(projectId, tab.id),
   )
-
 
   const fileMentionSuggestion = useMemo(
     () => createFileMentionSuggestion(searchFiles),
@@ -192,7 +191,6 @@ export function TextEditorView({
     },
   })
 
-
   useEffect(() => {
     if (!pendingOperation) {
       visualizedPendingKeyRef.current = null
@@ -201,11 +199,11 @@ export function TextEditorView({
   }, [pendingOperation])
 
   useEffect(() => {
-    if (!pendingOperation || !editor || isLoadingPendingOperation) return
+    if (!pendingOperation || isLoadingPendingOperation) return
     if (pendingOperation.diffApplied) return
 
     const payload = pendingOperation.payload
-    if (payload?.type !== 'patch') return
+    if (payload.type !== 'patch') return
 
     const pendingKey = getPendingOperationKey(pendingOperation)
     if (visualizedPendingKeyRef.current === pendingKey) return
@@ -222,11 +220,17 @@ export function TextEditorView({
       content: editor.getMarkdown(),
       diffApplied: true,
     })
-  }, [pendingOperation, editor, isLoadingPendingOperation, baseMarkdown, autosave])
+  }, [
+    pendingOperation,
+    editor,
+    isLoadingPendingOperation,
+    baseMarkdown,
+    autosave,
+  ])
 
   const resolvePendingChanges = useCallback(
     async (content: string) => {
-      if (!editor || !pendingOperation) return
+      if (!pendingOperation) return
 
       isApplyingVisualDiffRef.current = true
       setEditorMarkdownContent(editor, content)
@@ -237,12 +241,12 @@ export function TextEditorView({
       try {
         await saveFileContent({ content })
         await deletePendingOperation()
-
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to save changes')
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to save changes',
+        )
         console.error(error)
       }
-
     },
     [editor, pendingOperation, saveFileContent, deletePendingOperation],
   )
@@ -250,26 +254,25 @@ export function TextEditorView({
   // Resolve from the current editor content (not the stored proposal) so any
   // edits the user made while the diff was pending are preserved.
   const handleAcceptChanges = useCallback(() => {
-    if (!editor) return
     void resolvePendingChanges(
       acceptDiffMarkdown(asDiffMarkdown(editor.getMarkdown())),
     )
   }, [editor, resolvePendingChanges])
 
   const handleRejectChanges = useCallback(() => {
-    if (!editor) return
     void resolvePendingChanges(
       rejectDiffMarkdown(asDiffMarkdown(editor.getMarkdown())),
     )
   }, [editor, resolvePendingChanges])
 
-  if (!editor) return null
-
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
       <EditorTopChrome editor={editor} tabId={tab.id} />
 
-      <div ref={setScrollContainer} className="flex-1 overflow-auto overscroll-none scrollbar-hide">
+      <div
+        ref={setScrollContainer}
+        className="flex-1 overflow-auto overscroll-none scrollbar-hide"
+      >
         <div className="mx-auto min-w-2xl max-w-3xl px-6 pb-8 pt-12">
           <EditorContent
             editor={editor}
@@ -278,32 +281,33 @@ export function TextEditorView({
           <TextEditorBubbleMenu
             editor={editor}
             scrollContainer={scrollContainer}
-            file={{ id: tab.id, name: tab.name, format: tab.format ?? 'markdown' }}
+            file={{
+              id: tab.id,
+              name: tab.name,
+              format: tab.format ?? 'markdown',
+            }}
           />
-          {
-            pendingOperation && 
-            (
-              <div className="mt-4 border border-gray-200 bg-black/50 rounded-xl p-2 flex items-center justify-between backdrop-blur-sm absolute bottom-8 left-1/2 -translate-x-1/2 z-10 w-100">
-                <h3 className="text-sm font-medium">Pending Operations</h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="bg-blue-500 text-white py-2 px-4 rounded-md text-sm"
-                    onClick={handleAcceptChanges}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    type="button"
-                    className="bg-red-500 text-white py-2 px-4 rounded-md text-sm"
-                    onClick={handleRejectChanges}
-                  >
-                    Reject
-                  </button>
-                </div>
+          {pendingOperation && (
+            <div className="mt-4 border border-gray-200 bg-black/50 rounded-xl p-2 flex items-center justify-between backdrop-blur-sm absolute bottom-8 left-1/2 -translate-x-1/2 z-10 w-100">
+              <h3 className="text-sm font-medium">Pending Operations</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="bg-blue-500 text-white py-2 px-4 rounded-md text-sm"
+                  onClick={handleAcceptChanges}
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  className="bg-red-500 text-white py-2 px-4 rounded-md text-sm"
+                  onClick={handleRejectChanges}
+                >
+                  Reject
+                </button>
               </div>
-            )
-          }
+            </div>
+          )}
         </div>
       </div>
     </div>

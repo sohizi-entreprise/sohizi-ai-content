@@ -1,5 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+  deleteAdminSkillMutationOptions,
+  listAdminSkillsQueryOptions,
+} from '../query-mutation'
+import { SkillFormDialog } from './skill-form-dialog'
+import type { AdminSkill } from '../types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,15 +16,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  deleteAdminSkillMutationOptions,
-  listAdminSkillsQueryOptions,
-} from '../query-mutation'
-import type { AdminSkill } from '../types'
-import { SkillFormDialog } from './skill-form-dialog'
 
 export function SkillsPage() {
-  const { data: skills = [], isLoading, error } = useQuery(listAdminSkillsQueryOptions())
+  const {
+    data: skills = [],
+    isLoading,
+    error,
+  } = useQuery(listAdminSkillsQueryOptions())
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<AdminSkill | null>(null)
 
@@ -35,7 +39,8 @@ export function SkillsPage() {
   }
 
   const handleDelete = (skill: AdminSkill) => {
-    if (!window.confirm(`Delete skill “${skill.name}”? This cannot be undone.`)) return
+    if (!window.confirm(`Delete skill “${skill.name}”? This cannot be undone.`))
+      return
     deleteMutation.mutate(skill.id)
   }
 
@@ -45,14 +50,19 @@ export function SkillsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Skills</h1>
           <p className="text-sm text-muted-foreground">
-            Platform catalog skills. Published + public skills are available to agents.
+            Platform catalog skills. Published + public skills are available to
+            agents.
           </p>
         </div>
         <Button onClick={openCreate}>Add skill</Button>
       </div>
 
-      {isLoading ? <p className="text-sm text-muted-foreground">Loading skills…</p> : null}
-      {error ? <p className="text-sm text-destructive">Failed to load skills</p> : null}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading skills…</p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-destructive">Failed to load skills</p>
+      ) : null}
 
       <div className="rounded-xl border">
         <Table>
@@ -75,7 +85,11 @@ export function SkillsPage() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={skill.status === 'published' ? 'default' : 'secondary'}>
+                  <Badge
+                    variant={
+                      skill.status === 'published' ? 'default' : 'secondary'
+                    }
+                  >
                     {skill.status}
                   </Badge>
                 </TableCell>
@@ -96,10 +110,18 @@ export function SkillsPage() {
                   </div>
                 </TableCell>
                 <TableCell className="space-x-2 text-right">
-                  <Button size="sm" variant="outline" onClick={() => openEdit(skill)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEdit(skill)}
+                  >
                     Edit
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDelete(skill)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(skill)}
+                  >
                     Delete
                   </Button>
                 </TableCell>
@@ -107,7 +129,10 @@ export function SkillsPage() {
             ))}
             {!isLoading && skills.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="py-8 text-center text-muted-foreground"
+                >
                   No skills yet.
                 </TableCell>
               </TableRow>
@@ -116,7 +141,11 @@ export function SkillsPage() {
         </Table>
       </div>
 
-      <SkillFormDialog open={dialogOpen} onOpenChange={setDialogOpen} skill={editing} />
+      <SkillFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        skill={editing}
+      />
     </div>
   )
 }

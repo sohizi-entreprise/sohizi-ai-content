@@ -15,8 +15,8 @@ export type MarketSkill = {
   fileNodeId: string | null
   createdAt: string
   updatedAt: string
-  categoryIds: string[]
-  categories: MarketSkillCategory[]
+  categoryIds: Array<string>
+  categories: Array<MarketSkillCategory>
 }
 
 export type InstallSkillResult = {

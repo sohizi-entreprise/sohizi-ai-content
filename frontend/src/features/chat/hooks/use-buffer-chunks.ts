@@ -1,38 +1,51 @@
 import { useEffect, useState } from 'react'
-import type { AgentRunBlock, ChatStreamChunk, Message, FilePendingOperation } from '../types'
-import { useGetSSE } from '@/hooks/use-get-sse'
-import { useChatStore } from '../store/chat-store'
-import { MediaAsset } from '@/features/media-generator/requests'
 import { parse } from 'partial-json'
+import { useChatStore } from '../store/chat-store'
+import type {
+  AgentRunBlock,
+  ChatStreamChunk,
+  FilePendingOperation,
+  Message,
+} from '../types'
+import type { MediaAsset } from '@/features/media-generator/requests'
+import { useGetSSE } from '@/hooks/use-get-sse'
 
 type AssistantMessage = Extract<Message, { role: 'assistant' }>
 type AssistantMessageContent = AssistantMessage['content']
 
 type Params = {
-  url: string;
-  initialMessages: Message[];
-  onFinish: (status: AgentRunBlock['status']) => void;
-  onAsset?: (asset: MediaAsset) => void;
-  onOperation?: (operation: FilePendingOperation) => void;
+  url: string
+  initialMessages: Array<Message>
+  onFinish: (status: AgentRunBlock['status']) => void
+  onAsset?: (asset: MediaAsset) => void
+  onOperation?: (operation: FilePendingOperation) => void
 }
 
-export function useBufferChunks({url, initialMessages, onFinish, onAsset, onOperation}: Params) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages)
-  const [assets, setAssets] = useState<MediaAsset[]>([])
-  const patchConversation = useChatStore((state) => state.patchActiveConversation)
+export function useBufferChunks({
+  url,
+  initialMessages,
+  onFinish,
+  onAsset,
+  onOperation,
+}: Params) {
+  const [messages, setMessages] = useState<Array<Message>>(initialMessages)
+  const [assets, setAssets] = useState<Array<MediaAsset>>([])
+  const patchConversation = useChatStore(
+    (state) => state.patchActiveConversation,
+  )
 
   const subscribe = useGetSSE({
     eventFuncMap: {
       chunk: (data) => {
-        const chunk = (data as {chunk: ChatStreamChunk}).chunk
+        const chunk = (data as { chunk: ChatStreamChunk }).chunk
         setMessages((prev) => applyChunk(chunk, prev, onOperation))
       },
       asset: (data) => {
-        const asset = (data as {data: MediaAsset}).data
+        const asset = (data as { data: MediaAsset }).data
         setAssets((prev) => [...prev, asset])
         onAsset?.(asset)
       },
-      done: (_, {closeEventSource}) => {
+      done: (_, { closeEventSource }) => {
         onFinish('finished')
         closeEventSource()
         patchConversation({ isStreaming: false })
@@ -46,14 +59,19 @@ export function useBufferChunks({url, initialMessages, onFinish, onAsset, onOper
     return () => unsubscribe()
   }, [url, subscribe])
 
-  return {messages, assets}
+  return { messages, assets }
 }
 
-function applyChunk(chunk: ChatStreamChunk, messages: Message[], onOperation?: (operation: FilePendingOperation) => void): Message[] {
+function applyChunk(
+  chunk: ChatStreamChunk,
+  messages: Array<Message>,
+  onOperation?: (operation: FilePendingOperation) => void,
+): Array<Message> {
   if (!chunk.runId) return messages
 
   const existingMessage = messages.find(
-    (m): m is AssistantMessage => m.id === chunk.runId && m.role === 'assistant',
+    (m): m is AssistantMessage =>
+      m.id === chunk.runId && m.role === 'assistant',
   )
   const message = existingMessage ?? createAssistantMessage(chunk.runId)
   const nextMessage = applyChunkToMessage(message, chunk, onOperation)
@@ -78,7 +96,11 @@ function createAssistantMessage(runId: string): AssistantMessage {
   }
 }
 
-function applyChunkToMessage(message: AssistantMessage, chunk: ChatStreamChunk, onOperation?: (operation: FilePendingOperation) => void): AssistantMessage {
+function applyChunkToMessage(
+  message: AssistantMessage,
+  chunk: ChatStreamChunk,
+  onOperation?: (operation: FilePendingOperation) => void,
+): AssistantMessage {
   const currentMessage =
     chunk.type === 'reasoning_delta' ? message : finishReasoning(message)
 
@@ -91,7 +113,12 @@ function applyChunkToMessage(message: AssistantMessage, chunk: ChatStreamChunk, 
     case 'reasoning_delta':
       return {
         ...currentMessage,
-        content: upsertTextPart(currentMessage.content, 'reasoning', chunk.text, true),
+        content: upsertTextPart(
+          currentMessage.content,
+          'reasoning',
+          chunk.text,
+          true,
+        ),
       }
     case 'tool_call_start':
       return {
@@ -107,7 +134,10 @@ function applyChunkToMessage(message: AssistantMessage, chunk: ChatStreamChunk, 
       return {
         ...currentMessage,
         content: currentMessage.content.map((part) => {
-          if (part.type !== 'tool-call' || part.toolCallId !== chunk.toolCallId) {
+          if (
+            part.type !== 'tool-call' ||
+            part.toolCallId !== chunk.toolCallId
+          ) {
             return part
           }
           if (!chunk.input.trim()) {
@@ -154,7 +184,7 @@ function applyChunkToMessage(message: AssistantMessage, chunk: ChatStreamChunk, 
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
             output: {
-              type: (chunk.success ? 'text' : 'error-text') as 'text' | 'error-text',
+              type: chunk.success ? 'text' : 'error-text',
               value: chunk.output,
             },
           },
@@ -222,7 +252,8 @@ function upsertToolCallPart(
   },
 ): AssistantMessageContent {
   const hasPart = content.some(
-    (part) => part.type === 'tool-call' && part.toolCallId === toolCall.toolCallId,
+    (part) =>
+      part.type === 'tool-call' && part.toolCallId === toolCall.toolCallId,
   )
 
   if (!hasPart) {

@@ -1,6 +1,6 @@
-import { lazy, Suspense } from 'react'
+import { Suspense, lazy } from 'react'
 import '@cyntler/react-doc-viewer/dist/index.css'
-import { AssetSkeleton } from '@/features/text-editor'
+import { AssetSkeleton } from '@/components/ui/content-skeletons'
 
 const DocViewer = lazy(() =>
   import('@cyntler/react-doc-viewer').then((module) => ({
@@ -31,7 +31,7 @@ function DocViewerLazy({ uri }: Props) {
           disableHeader: true,
         },
       }}
-      className='bg-surface!'
+      className="bg-surface!"
     />
   )
 }

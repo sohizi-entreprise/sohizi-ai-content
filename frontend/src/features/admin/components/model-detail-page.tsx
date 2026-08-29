@@ -2,6 +2,31 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
+import {
+  createModelVendorBindingMutationOptions,
+  deleteModelVendorBindingMutationOptions,
+  getAdminModelQueryOptions,
+  listAdminCategoriesQueryOptions,
+  listAdminParametersQueryOptions,
+  listAdminVendorsQueryOptions,
+  listModelParametersQueryOptions,
+  replaceModelParametersMutationOptions,
+  updateAdminModelMutationOptions,
+  updateModelVendorBindingMutationOptions,
+} from '../query-mutation'
+import {
+  ModelParametersEditor,
+  bindingsToDrafts,
+  draftsToPayload,
+} from './model-parameters-editor'
+import {
+  PricingEditor,
+  formStateToPricing,
+  pricingToFormState,
+} from './pricing-editor'
+import type { ParameterBindingDraft } from './model-parameters-editor'
+import type { PricingFormState } from './pricing-editor'
+import { getErrorMessage } from '@/lib/errors'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -23,43 +48,31 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  createModelVendorBindingMutationOptions,
-  deleteModelVendorBindingMutationOptions,
-  getAdminModelQueryOptions,
-  listAdminCategoriesQueryOptions,
-  listAdminParametersQueryOptions,
-  listAdminVendorsQueryOptions,
-  listModelParametersQueryOptions,
-  replaceModelParametersMutationOptions,
-  updateAdminModelMutationOptions,
-  updateModelVendorBindingMutationOptions,
-} from '../query-mutation'
-import {
-  ModelParametersEditor,
-  bindingsToDrafts,
-  draftsToPayload,
-  type ParameterBindingDraft,
-} from './model-parameters-editor'
-import {
-  formStateToPricing,
-  PricingEditor,
-  pricingToFormState,
-  type PricingFormState,
-} from './pricing-editor'
 
 type Props = {
   modelId: string
 }
 
-const EMPTY_LIST: never[] = []
+const EMPTY_LIST: Array<never> = []
 
 export function ModelDetailPage({ modelId }: Props) {
-  const { data: model, isLoading, error } = useQuery(getAdminModelQueryOptions(modelId))
-  const { data: categories = EMPTY_LIST } = useQuery(listAdminCategoriesQueryOptions())
-  const { data: catalog = EMPTY_LIST } = useQuery(listAdminParametersQueryOptions())
-  const { data: existingBindings } = useQuery(listModelParametersQueryOptions(modelId))
-  const { data: vendors = EMPTY_LIST } = useQuery(listAdminVendorsQueryOptions())
+  const {
+    data: model,
+    isLoading,
+    error,
+  } = useQuery(getAdminModelQueryOptions(modelId))
+  const { data: categories = EMPTY_LIST } = useQuery(
+    listAdminCategoriesQueryOptions(),
+  )
+  const { data: catalog = EMPTY_LIST } = useQuery(
+    listAdminParametersQueryOptions(),
+  )
+  const { data: existingBindings } = useQuery(
+    listModelParametersQueryOptions(modelId),
+  )
+  const { data: vendors = EMPTY_LIST } = useQuery(
+    listAdminVendorsQueryOptions(),
+  )
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading model…</p>
@@ -94,7 +107,7 @@ function ModelDetailForm({
     description: string | null
     enabled: boolean
     pricing?: Parameters<typeof pricingToFormState>[0]
-    categories: string[]
+    categories: Array<string>
     vendors: Array<{
       vendorId: string
       name: string
@@ -115,30 +128,39 @@ function ModelDetailForm({
     enabled: model.enabled,
     categoryNames: model.categories,
   })
-  const [pricing, setPricing] = useState<PricingFormState>(() => pricingToFormState(model.pricing))
-  const [bindings, setBindings] = useState<ParameterBindingDraft[]>(() =>
+  const [pricing, setPricing] = useState<PricingFormState>(() =>
+    pricingToFormState(model.pricing),
+  )
+  const [bindings, setBindings] = useState<Array<ParameterBindingDraft>>(() =>
     existingBindings ? bindingsToDrafts(existingBindings, catalog) : [],
   )
   const [saveError, setSaveError] = useState<string | null>(null)
-  const hydratedBindingsFor = useRef<string | null>(existingBindings ? model.id : null)
+  const hydratedBindingsFor = useRef<string | null>(
+    existingBindings ? model.id : null,
+  )
 
   const updateMutation = useMutation(updateAdminModelMutationOptions())
-  const replaceParametersMutation = useMutation(replaceModelParametersMutationOptions())
+  const replaceParametersMutation = useMutation(
+    replaceModelParametersMutationOptions(),
+  )
 
   useEffect(() => {
     if (!existingBindings) return
     if (hydratedBindingsFor.current === model.id) {
       setBindings((prev) => {
-        let changed = false
         const next = prev.map((draft) => {
-          const catalogParameter = catalog.find((item) => item.id === draft.parameterId)
-          if (!catalogParameter || draft.catalogOptions === catalogParameter.options) {
+          const catalogParameter = catalog.find(
+            (item) => item.id === draft.parameterId,
+          )
+          if (
+            !catalogParameter ||
+            draft.catalogOptions === catalogParameter.options
+          ) {
             return draft
           }
-          changed = true
           return { ...draft, catalogOptions: catalogParameter.options }
         })
-        return changed ? next : prev
+        return next.some((draft, index) => draft !== prev[index]) ? next : prev
       })
       return
     }
@@ -176,22 +198,25 @@ function ModelDetailForm({
         input: parameterPayload,
       })
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        (err instanceof Error ? err.message : 'Failed to save model')
-      setSaveError(message)
+      setSaveError(getErrorMessage(err, 'Failed to save model'))
     }
   }
 
-  const pending = updateMutation.isPending || replaceParametersMutation.isPending
+  const pending =
+    updateMutation.isPending || replaceParametersMutation.isPending
 
   return (
     <div className="space-y-8">
       <div>
-        <Link to="/admin/models" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/admin/models"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
           ← Models
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{model.name}</h1>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+          {model.name}
+        </h1>
         <p className="font-mono text-sm text-muted-foreground">{model.id}</p>
       </div>
 
@@ -203,7 +228,9 @@ function ModelDetailForm({
             <Input
               id="model-provider"
               value={form.provider}
-              onChange={(event) => setForm((prev) => ({ ...prev, provider: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, provider: event.target.value }))
+              }
               required
             />
           </div>
@@ -212,7 +239,9 @@ function ModelDetailForm({
             <Input
               id="model-name"
               value={form.name}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, name: event.target.value }))
+              }
               required
             />
           </div>
@@ -222,7 +251,10 @@ function ModelDetailForm({
               id="model-description"
               value={form.description}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, description: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  description: event.target.value,
+                }))
               }
               rows={3}
               placeholder="Optional summary of what this model is for."
@@ -233,17 +265,24 @@ function ModelDetailForm({
             <Switch
               id="model-enabled"
               checked={form.enabled}
-              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, enabled: checked }))}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({ ...prev, enabled: checked }))
+              }
             />
           </div>
           <div className="space-y-2">
             <Label>Categories</Label>
             <div className="grid max-h-40 grid-cols-2 gap-2 overflow-y-auto rounded-lg border p-3">
               {categories.map((category) => (
-                <label key={category.id} className="flex items-center gap-2 text-sm">
+                <label
+                  key={category.id}
+                  className="flex items-center gap-2 text-sm"
+                >
                   <Checkbox
                     checked={form.categoryNames.includes(category.name)}
-                    onCheckedChange={(checked) => toggleCategory(category.name, checked === true)}
+                    onCheckedChange={(checked) =>
+                      toggleCategory(category.name, checked === true)
+                    }
                   />
                   <span>{category.name}</span>
                 </label>
@@ -255,16 +294,23 @@ function ModelDetailForm({
         <section className="space-y-4 rounded-xl border p-4">
           <h2 className="text-sm font-medium">Pricing</h2>
           <p className="text-sm text-muted-foreground">
-            Listed rates for this model. Option multipliers on parameters below adjust this base rate.
+            Listed rates for this model. Option multipliers on parameters below
+            adjust this base rate.
           </p>
           <PricingEditor value={pricing} onChange={setPricing} />
         </section>
 
         <section className="space-y-4 rounded-xl border p-4">
-          <ModelParametersEditor value={bindings} onChange={setBindings} catalog={catalog} />
+          <ModelParametersEditor
+            value={bindings}
+            onChange={setBindings}
+            catalog={catalog}
+          />
         </section>
 
-        {saveError ? <p className="text-sm text-destructive">{saveError}</p> : null}
+        {saveError ? (
+          <p className="text-sm text-destructive">{saveError}</p>
+        ) : null}
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving…' : 'Save model'}
         </Button>
@@ -323,10 +369,7 @@ function ModelVendorsSection({
       setApiName('')
       setPriority('100')
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        (err instanceof Error ? err.message : 'Failed to attach vendor')
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to attach vendor'))
     }
   }
 
@@ -335,7 +378,8 @@ function ModelVendorsSection({
       <div>
         <h2 className="text-lg font-medium">Vendors</h2>
         <p className="text-sm text-muted-foreground">
-          Bind vendors that provide this model. Each binding has its own API name, enabled state, and priority (lower is preferred).
+          Bind vendors that provide this model. Each binding has its own API
+          name, enabled state, and priority (lower is preferred).
         </p>
       </div>
 
@@ -356,17 +400,25 @@ function ModelVendorsSection({
                 key={binding.vendorId}
                 binding={binding}
                 onUpdate={(input) =>
-                  updateMutation.mutate({ modelId, vendorId: binding.vendorId, input })
+                  updateMutation.mutate({
+                    modelId,
+                    vendorId: binding.vendorId,
+                    input,
+                  })
                 }
                 onDelete={() => {
-                  if (!window.confirm(`Detach vendor “${binding.name}”?`)) return
+                  if (!window.confirm(`Detach vendor “${binding.name}”?`))
+                    return
                   deleteMutation.mutate({ modelId, vendorId: binding.vendorId })
                 }}
               />
             ))}
             {boundVendors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="py-6 text-center text-muted-foreground"
+                >
                   No vendors bound to this model.
                 </TableCell>
               </TableRow>
@@ -386,7 +438,13 @@ function ModelVendorsSection({
               disabled={unusedVendors.length === 0}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={unusedVendors.length === 0 ? 'All vendors attached' : 'Select vendor'} />
+                <SelectValue
+                  placeholder={
+                    unusedVendors.length === 0
+                      ? 'All vendors attached'
+                      : 'Select vendor'
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {unusedVendors.map((vendor) => (
@@ -437,7 +495,11 @@ function VendorBindingRow({
     enabled: boolean
     priority: number
   }
-  onUpdate: (input: { apiName?: string; enabled?: boolean; priority?: number }) => void
+  onUpdate: (input: {
+    apiName?: string
+    enabled?: boolean
+    priority?: number
+  }) => void
   onDelete: () => void
 }) {
   const [apiName, setApiName] = useState(binding.apiName)
@@ -482,7 +544,13 @@ function VendorBindingRow({
         />
       </TableCell>
       <TableCell className="align-top text-right">
-        <Button type="button" variant="ghost" size="icon" onClick={onDelete} aria-label={`Detach ${binding.name}`}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onDelete}
+          aria-label={`Detach ${binding.name}`}
+        >
           <Trash2 className="size-4" />
         </Button>
       </TableCell>

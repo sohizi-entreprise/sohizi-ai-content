@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Menu } from 'lucide-react'
+import { CtaButton } from '../components/cta-button'
+import { navLinks } from '../content'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -10,8 +12,6 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
-import { CtaButton } from '../components/cta-button'
-import { navLinks } from '../content'
 
 function getNavHeight() {
   return window.matchMedia('(min-width: 640px)').matches ? 64 : 56
@@ -97,7 +97,9 @@ export function LandingNav() {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
           <img
-            src={overLight? "/logo-monochrome.svg" :"/logo-monochrome-white.svg"}
+            src={
+              overLight ? '/logo-monochrome.svg' : '/logo-monochrome-white.svg'
+            }
             alt=""
             width={32}
             height={28}
@@ -136,7 +138,8 @@ export function LandingNav() {
             size="sm"
             className={cn(
               'transition-colors duration-300',
-              overLight && 'text-background hover:bg-background/10 hover:text-background',
+              overLight &&
+                'text-background hover:bg-background/10 hover:text-background',
             )}
           >
             <Link to="/sign-in">Sign in</Link>
@@ -151,16 +154,22 @@ export function LandingNav() {
               size="icon"
               className={cn(
                 'md:hidden transition-colors duration-300',
-                overLight && 'text-background hover:bg-background/10 hover:text-background',
+                overLight &&
+                  'text-background hover:bg-background/10 hover:text-background',
               )}
               aria-label="Open menu"
             >
               <Menu className="size-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[min(100%,20rem)] border-border bg-background">
+          <SheetContent
+            side="right"
+            className="w-[min(100%,20rem)] border-border bg-background"
+          >
             <SheetHeader>
-              <SheetTitle className="text-left font-display">Sohizi Lab</SheetTitle>
+              <SheetTitle className="text-left font-display">
+                Sohizi Lab
+              </SheetTitle>
             </SheetHeader>
             <div className="mt-6 flex flex-col gap-1">
               {navLinks.map((link) => (
@@ -173,7 +182,11 @@ export function LandingNav() {
                 />
               ))}
               <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
-                <Button asChild variant="outline" className="h-11 justify-center">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-11 justify-center"
+                >
                   <Link to="/sign-in" onClick={() => setOpen(false)}>
                     Sign in
                   </Link>

@@ -1,9 +1,6 @@
 import { create } from 'zustand'
 import { toast } from 'sonner'
-import type {
-  EditorTab,
-  FileTreeNode,
-} from '../types'
+import type { EditorTab, FileTreeNode } from '../types'
 
 export type ChatChromeContext = 'file-system' | 'video-editor'
 
@@ -24,7 +21,11 @@ interface EditorState {
   setSavingStatus: (tabId: string, status: 'saving' | 'saved' | 'error') => void
   initLastSavedAt: (tabId: string, updatedAt: string) => void
   openFile: (node: FileTreeNode) => void
-  openFileFromMention: (mention: { id: string; label: string; format: string }) => void
+  openFileFromMention: (mention: {
+    id: string
+    label: string
+    format: string
+  }) => void
   closeTab: (tabId: string) => void
   setActiveTab: (tabId: string) => void
   setActivityBarItem: (item: string) => void

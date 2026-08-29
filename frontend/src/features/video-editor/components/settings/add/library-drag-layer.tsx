@@ -1,11 +1,13 @@
 import { useDragLayer } from 'react-dnd'
-import { ARBORIST_NODE_DRAG_TYPE } from '@/features/editor/utils/arborist-dnd'
 import {
   VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE,
   isPointerOverTimelineDropArea,
-  type LibraryAssetDragItem,
-  type TextPresetDragItem,
 } from '../../../utils/library-dnd'
+import type {
+  LibraryAssetDragItem,
+  TextPresetDragItem,
+} from '../../../utils/library-dnd'
+import { ARBORIST_NODE_DRAG_TYPE } from '@/features/editor/utils/arborist-dnd'
 import { cn } from '@/lib/utils'
 
 /**
@@ -55,7 +57,7 @@ function getLibraryDragLabel(
     return (item as TextPresetDragItem).label
   }
   if (itemType === ARBORIST_NODE_DRAG_TYPE) {
-    const asset = item as LibraryAssetDragItem
+    const asset = item as LibraryAssetDragItem | undefined
     if (asset?.fromLibrary) return asset.label
   }
   return null

@@ -92,7 +92,11 @@ export function LinkInsertDialog({
               Remove link
             </Button>
           )}
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="button" onClick={handleApply} disabled={!url.trim()}>

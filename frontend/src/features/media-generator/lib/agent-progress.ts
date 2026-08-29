@@ -1,12 +1,15 @@
 import type { Message } from '@/features/chat'
 
 type SubmitMediaJobsInput = {
-  jobs: Record<string, string>[]
+  jobs: Array<Record<string, string>>
   status: 'done' | 'blocked'
   message: string
 }
 
-export function extractLastMessageContent(messages: Message[], isLoading = false) {
+export function extractLastMessageContent(
+  messages: Array<Message>,
+  isLoading = false,
+) {
   let submitMediaJobsMessage: string | undefined
   let textContent: string | undefined
   let hasStreamingReasoning = false

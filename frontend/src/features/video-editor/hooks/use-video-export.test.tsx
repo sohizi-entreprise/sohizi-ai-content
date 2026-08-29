@@ -25,7 +25,6 @@ const toast = vi.hoisted(() => ({
 vi.mock('../requests', () => ({
   ...requests,
   loadComposition: vi.fn(),
-  createComposition: vi.fn(),
   batchEdit: vi.fn(),
   generateCaption: vi.fn(),
 }))

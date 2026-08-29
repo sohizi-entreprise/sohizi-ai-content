@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { QueryClient, QueryKey } from '@tanstack/react-query'
-import { fileTreeKey } from '@/features/projects/query-mutation'
 import type { FileTreeNode } from '../types'
+import { fileTreeKey } from '@/features/projects/query-mutation'
 
 /**
  * The editor file tree is stored in the TanStack Query cache as one entry per
@@ -15,15 +15,15 @@ function getEntry(
   qc: QueryClient,
   projectId: string,
   dirId: string,
-): FileTreeNode[] | undefined {
-  return qc.getQueryData<FileTreeNode[]>(fileTreeKey(projectId, dirId))
+): Array<FileTreeNode> | undefined {
+  return qc.getQueryData<Array<FileTreeNode>>(fileTreeKey(projectId, dirId))
 }
 
 function setEntry(
   qc: QueryClient,
   projectId: string,
   dirId: string,
-  children: FileTreeNode[],
+  children: Array<FileTreeNode>,
 ): void {
   qc.setQueryData(fileTreeKey(projectId, dirId), children)
 }
@@ -32,7 +32,7 @@ export function getDirChildren(
   qc: QueryClient,
   projectId: string,
   dirId: string,
-): FileTreeNode[] | undefined {
+): Array<FileTreeNode> | undefined {
   return getEntry(qc, projectId, dirId)
 }
 
@@ -98,7 +98,7 @@ export function assembleTree(
   qc: QueryClient,
   projectId: string,
   rootFolderId: string | null,
-): FileTreeNode[] {
+): Array<FileTreeNode> {
   if (!rootFolderId) return []
   return buildChildren(qc, projectId, rootFolderId)
 }
@@ -107,7 +107,7 @@ function buildChildren(
   qc: QueryClient,
   projectId: string,
   dirId: string,
-): FileTreeNode[] {
+): Array<FileTreeNode> {
   const entry = getEntry(qc, projectId, dirId)
   if (!entry) return []
   return entry.map((node) =>
@@ -161,7 +161,7 @@ function isFileTreeKey(key: QueryKey, projectId: string): boolean {
 export function useProjectFileTree(
   projectId: string,
   rootFolderId: string | null,
-): FileTreeNode[] {
+): Array<FileTreeNode> {
   const qc = useQueryClient()
   const versionRef = useRef(0)
 
@@ -173,7 +173,7 @@ export function useProjectFileTree(
         // Ignoring observer add/remove/result events avoids re-render loops
         // and setState-during-render warnings.
         if (event.type !== 'updated') return
-        const key = event.query?.queryKey
+        const key = event.query.queryKey
         if (key && isFileTreeKey(key, projectId)) {
           versionRef.current += 1
           onStoreChange()
@@ -188,7 +188,6 @@ export function useProjectFileTree(
 
   return useMemo(
     () => assembleTree(qc, projectId, rootFolderId),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [qc, projectId, rootFolderId, version],
   )
 }

@@ -1,23 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Folder } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
-import { searchFilesByName } from '@/features/projects/request'
-import { listFolderMediaQueryOptions } from '@/features/projects/query-mutation'
-import { AssetPickerGrid } from './asset-picker-grid'
 import {
   describeFileTypes,
   isPickerAssetType,
   queryTypeForFileTypes,
-  type PickerAsset,
-  type PickerAssetType,
 } from '../lib/parameter-assets'
+import { AssetPickerGrid } from './asset-picker-grid'
+import type { PickerAsset, PickerAssetType } from '../lib/parameter-assets'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+import { listFolderMediaQueryOptions } from '@/features/projects/query-mutation'
+import { useFolderSearch } from '@/hooks/use-folder-search'
 
 type AssetPickerFolderTabProps = {
   projectId: string
-  fileTypes: PickerAssetType[]
-  selectedUrls: string[]
+  fileTypes: Array<PickerAssetType>
+  selectedUrls: Array<string>
   onSelect: (asset: PickerAsset) => void
   maxItems: number
   allowMultiple: boolean
@@ -31,47 +30,39 @@ export function AssetPickerFolderTab({
   maxItems,
   allowMultiple,
 }: AssetPickerFolderTabProps) {
-  const [folderQuery, setFolderQuery] = useState('')
-  const [debouncedFolderQuery, setDebouncedFolderQuery] = useState('')
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
-  const trimmedFolderQuery = folderQuery.trim()
-  const trimmedDebouncedFolderQuery = debouncedFolderQuery.trim()
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setDebouncedFolderQuery(trimmedFolderQuery)
-    }, 250)
-    return () => window.clearTimeout(timeoutId)
-  }, [trimmedFolderQuery])
-
-  const { data: searchedFiles, isFetching: isSearchingFolders } = useQuery({
-    queryKey: ['project', projectId, 'folder-search', trimmedDebouncedFolderQuery],
-    queryFn: ({ signal }) =>
-      searchFilesByName(projectId, trimmedDebouncedFolderQuery, 25, {
-        signal,
-        directory: true,
-      }),
-    enabled: trimmedDebouncedFolderQuery.length > 0,
-    staleTime: 1000 * 60,
-  })
-
-  const folderOptions = useMemo(() => searchedFiles ?? [], [searchedFiles])
-  const selectedFolder = folderOptions.find((folder) => folder.id === selectedFolderId)
+  const {
+    folderQuery,
+    setFolderQuery,
+    trimmedDebouncedFolderQuery,
+    folderOptions,
+    isSearchingFolders,
+  } = useFolderSearch(projectId)
+  const selectedFolder = folderOptions.find(
+    (folder) => folder.id === selectedFolderId,
+  )
 
   const queryType = queryTypeForFileTypes(fileTypes)
   const { data: folderFiles = [], isLoading: isLoadingFolderFiles } = useQuery(
-    listFolderMediaQueryOptions(projectId, selectedFolderId, queryType ? { format: queryType } : undefined),
+    listFolderMediaQueryOptions(
+      projectId,
+      selectedFolderId,
+      queryType ? { format: queryType } : undefined,
+    ),
   )
 
   const allowed = new Set(fileTypes)
-  const items: PickerAsset[] = folderFiles.flatMap((file) => {
-    if (!isPickerAssetType(file.type) || !allowed.has(file.type) || !file.url) return []
-    return [{
-      id: file.id,
-      name: file.name,
-      url: file.url,
-      type: file.type,
-    }]
+  const items: Array<PickerAsset> = folderFiles.flatMap((file) => {
+    if (!isPickerAssetType(file.type) || !allowed.has(file.type) || !file.url)
+      return []
+    return [
+      {
+        id: file.id,
+        name: file.name,
+        url: file.url,
+        type: file.type,
+      },
+    ]
   })
 
   return (
@@ -103,7 +94,8 @@ export function AssetPickerFolderTab({
                 onClick={() => setSelectedFolderId(folder.id)}
                 className={cn(
                   'flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm transition-colors hover:bg-accent',
-                  selectedFolderId === folder.id && 'bg-accent text-accent-foreground',
+                  selectedFolderId === folder.id &&
+                    'bg-accent text-accent-foreground',
                 )}
               >
                 <Folder className="size-4 text-muted-foreground" />

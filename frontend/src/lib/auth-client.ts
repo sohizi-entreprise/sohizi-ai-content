@@ -1,5 +1,9 @@
-import { createAuthClient } from "better-auth/react"
-import { organizationClient, emailOTPClient, inferAdditionalFields } from "better-auth/client/plugins"
+import { createAuthClient } from 'better-auth/react'
+import {
+  emailOTPClient,
+  inferAdditionalFields,
+  organizationClient,
+} from 'better-auth/client/plugins'
 
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -9,16 +13,16 @@ export const authClient = createAuthClient({
     inferAdditionalFields({
       user: {
         type: {
-          type: "string",
+          type: 'string',
         },
       },
     }),
   ],
   fetchOptions: {
-    credentials: "include",
+    credentials: 'include',
   },
 })
 
-export const { signIn, signUp, signOut, useSession, organization, emailOtp } = authClient
+export const { signIn, signUp, useSession, organization, emailOtp } = authClient
 
-export type UserType = "user" | "admin"
+export type UserType = 'user' | 'admin'

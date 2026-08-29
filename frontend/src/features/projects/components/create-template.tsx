@@ -1,24 +1,25 @@
-import { FormEvent, useState } from 'react'
+import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { IconTemplate } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { isAxiosError } from 'axios'
+import { createTemplateSchema } from '../schema'
+import { createTemplateMutationOptions } from '../query-mutation'
+import type { FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-  } from '@/components/ui/dialog'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
-import { createTemplateSchema } from '../schema'
-import { createTemplateMutationOptions } from '../query-mutation'
 
 function toSlug(name: string) {
   return name
@@ -33,7 +34,9 @@ export default function CreateTemplate() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [error, setError] = useState('')
-  const { mutate: createTemplate, isPending } = useMutation(createTemplateMutationOptions)
+  const { mutate: createTemplate, isPending } = useMutation(
+    createTemplateMutationOptions,
+  )
   const navigate = useNavigate()
   const slug = toSlug(name)
 
@@ -59,12 +62,19 @@ export default function CreateTemplate() {
           },
         })
       },
-      onError: (error) => {
-        if (isAxiosError(error) && typeof error.response?.data?.error === 'string') {
-          setError(error.response.data.error)
+      onError: (createError) => {
+        if (
+          isAxiosError(createError) &&
+          typeof createError.response?.data?.error === 'string'
+        ) {
+          setError(createError.response.data.error)
           return
         }
-        setError(error instanceof Error ? error.message : 'Failed to create template')
+        setError(
+          createError instanceof Error
+            ? createError.message
+            : 'Failed to create template',
+        )
       },
     })
   }
@@ -72,7 +82,10 @@ export default function CreateTemplate() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 hover:scale-105">
+        <Button
+          variant="outline"
+          className="font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 hover:scale-105"
+        >
           <IconTemplate className="size-6" />
           Create Template
         </Button>
@@ -81,7 +94,8 @@ export default function CreateTemplate() {
         <DialogHeader>
           <DialogTitle>Create Template</DialogTitle>
           <DialogDescription>
-            Start a reusable template project that can be used as a base for future projects.
+            Start a reusable template project that can be used as a base for
+            future projects.
           </DialogDescription>
         </DialogHeader>
 
@@ -101,18 +115,19 @@ export default function CreateTemplate() {
               autoFocus
             />
             {name && (
-              <p className="text-xs text-muted-foreground">
-                Slug: {slug}
-              </p>
+              <p className="text-xs text-muted-foreground">Slug: {slug}</p>
             )}
           </div>
 
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isPending || !name.trim()}>

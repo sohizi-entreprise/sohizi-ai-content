@@ -1,7 +1,18 @@
-import { mutationOptions, infiniteQueryOptions, keepPreviousData, queryOptions, type InfiniteData, useQueryClient } from "@tanstack/react-query";
-import * as requests from './requests';
-import { AiGeneratedMediaRequest, AiGeneratedRequestAsset, MediaAsset } from "./requests";
-import { useCallback } from "react";
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  mutationOptions,
+  queryOptions,
+  useQueryClient,
+} from '@tanstack/react-query'
+import { useCallback } from 'react'
+import * as requests from './requests'
+import type { InfiniteData } from '@tanstack/react-query'
+import type {
+  AiGeneratedMediaRequest,
+  AiGeneratedRequestAsset,
+  MediaAsset,
+} from './requests'
 
 type AssetRequestsInfiniteData = InfiniteData<
   requests.CursorPaginationResult<requests.MediaGenerationRun>,
@@ -14,11 +25,25 @@ type AiGeneratedAssetsInfiniteData = InfiniteData<
 >
 
 export const mediaGeneratorKeys = {
-  assetsRequests: (projectId: string, options?: requests.ListAssetsOptions) => ['media', projectId, 'assets', options],
-  aiGeneratedAssets: (projectId: string, options?: requests.ListAssetsOptions) => ['media', projectId, 'ai-assets', options],
-  uploadedAssets: (projectId: string, options?: requests.ListAssetsOptions) => ['media', projectId, 'uploaded-assets', options],
+  assetsRequests: (projectId: string, options?: requests.ListAssetsOptions) => [
+    'media',
+    projectId,
+    'assets',
+    options,
+  ],
+  aiGeneratedAssets: (
+    projectId: string,
+    options?: requests.ListAssetsOptions,
+  ) => ['media', projectId, 'ai-assets', options],
+  uploadedAssets: (projectId: string, options?: requests.ListAssetsOptions) => [
+    'media',
+    projectId,
+    'uploaded-assets',
+    options,
+  ],
   googleVoices: ['media', 'google-voices'] as const,
-  modelParameters: (modelId: string) => ['media', 'models', modelId, 'parameters'] as const,
+  modelParameters: (modelId: string) =>
+    ['media', 'models', modelId, 'parameters'] as const,
 }
 
 export const listGoogleVoicesQueryOptions = queryOptions({
@@ -27,39 +52,40 @@ export const listGoogleVoicesQueryOptions = queryOptions({
   staleTime: Infinity,
 })
 
-export const listCatalogModelParametersQueryOptions = (modelId: string | null) =>
+export const listCatalogModelParametersQueryOptions = (
+  modelId: string | null,
+) =>
   queryOptions({
     queryKey: mediaGeneratorKeys.modelParameters(modelId ?? ''),
     queryFn: () => requests.listCatalogModelParameters(modelId!),
     enabled: Boolean(modelId),
   })
 
-export const listAssetsRequestsQueryOptions = (projectId: string, options?: requests.ListAssetsOptions) =>
-  infiniteQueryOptions({
-    queryKey: ['media', projectId, 'assets', options],
-    queryFn: ({ pageParam }) => requests.listAssetsRequests(projectId, { ...options, cursor: pageParam }),
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    initialPageParam: undefined as string | undefined,
-    placeholderData: keepPreviousData,
-    // Backend returns each page oldest→newest; page[0] is the newest batch.
-    // Reverse pages so older batches render above newer ones (chat order).
-    select: (data) => [...data.pages].reverse().flatMap((page) => page.data),
-  })
-
-export const listAiGeneratedAssetsQueryOptions = (projectId: string, options?: requests.ListAssetsOptions) =>
+export const listAiGeneratedAssetsQueryOptions = (
+  projectId: string,
+  options?: requests.ListAssetsOptions,
+) =>
   infiniteQueryOptions({
     queryKey: ['media', projectId, 'ai-assets', options],
-    queryFn: ({ pageParam }) => requests.listAiGeneratedAssets(projectId, { ...options, cursor: pageParam }),
+    queryFn: ({ pageParam }) =>
+      requests.listAiGeneratedAssets(projectId, {
+        ...options,
+        cursor: pageParam,
+      }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
     placeholderData: keepPreviousData,
-    select: (data) => data.pages.flatMap(page => page.data),
-})
+    select: (data) => data.pages.flatMap((page) => page.data),
+  })
 
-export const listUploadedAssetsQueryOptions = (projectId: string, options?: requests.ListAssetsOptions) =>
+export const listUploadedAssetsQueryOptions = (
+  projectId: string,
+  options?: requests.ListAssetsOptions,
+) =>
   infiniteQueryOptions({
     queryKey: mediaGeneratorKeys.uploadedAssets(projectId, options),
-    queryFn: ({ pageParam }) => requests.listUploadedAssets(projectId, { ...options, cursor: pageParam }),
+    queryFn: ({ pageParam }) =>
+      requests.listUploadedAssets(projectId, { ...options, cursor: pageParam }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
     placeholderData: keepPreviousData,
@@ -68,7 +94,8 @@ export const listUploadedAssetsQueryOptions = (projectId: string, options?: requ
 
 export const startGenerationMutationOptions = (projectId: string) =>
   mutationOptions({
-    mutationFn: (data: requests.AssetRequest) => requests.startGeneration(projectId, data),
+    mutationFn: (data: requests.AssetRequest) =>
+      requests.startGeneration(projectId, data),
     onSuccess: (data, _variables, _onMutateResult, context) => {
       context.client.setQueriesData<AssetRequestsInfiniteData>(
         { queryKey: mediaGeneratorKeys.assetsRequests(projectId) },
@@ -76,22 +103,16 @@ export const startGenerationMutationOptions = (projectId: string) =>
       )
       context.client.setQueriesData<AiGeneratedAssetsInfiniteData>(
         { queryKey: ['media', projectId, 'ai-assets'] },
-        (old) => prependAiGeneratedRequest(old, toAiGeneratedMediaRequest(data)),
+        (old) =>
+          prependAiGeneratedRequest(old, toAiGeneratedMediaRequest(data)),
       )
     },
-   
-})
+  })
 
-
-export const cancelGenerationMutationOptions = (projectId: string, requestId: string) =>
-  mutationOptions({
-    mutationFn: () => requests.cancelGeneration(projectId, requestId),
-    meta: {
-      invalidateQueries: [mediaGeneratorKeys.assetsRequests(projectId), ['media', projectId, 'ai-assets']],
-    },
-})
-
-export const deleteAssetMutationOptions = (projectId: string, assetId: string) =>
+export const deleteAssetMutationOptions = (
+  projectId: string,
+  assetId: string,
+) =>
   mutationOptions({
     mutationFn: () => requests.deleteAsset(projectId, assetId),
     meta: {
@@ -99,7 +120,10 @@ export const deleteAssetMutationOptions = (projectId: string, assetId: string) =
     },
   })
 
-export const deleteGenerationRequestMutationOptions = (projectId: string, requestId: string) =>
+export const deleteGenerationRequestMutationOptions = (
+  projectId: string,
+  requestId: string,
+) =>
   mutationOptions({
     mutationFn: () => requests.deleteGenerationRequest(projectId, requestId),
     meta: {
@@ -107,15 +131,22 @@ export const deleteGenerationRequestMutationOptions = (projectId: string, reques
     },
   })
 
-export const moveAssetToFolderMutationOptions = (projectId: string, assetId: string) =>
+export const moveAssetToFolderMutationOptions = (
+  projectId: string,
+  assetId: string,
+) =>
   mutationOptions({
-    mutationFn: (folderId: string) => requests.moveAssetToFolder(projectId, assetId, folderId),
+    mutationFn: (folderId: string) =>
+      requests.moveAssetToFolder(projectId, assetId, folderId),
     meta: {
       invalidateQueries: [['media', projectId, 'ai-assets']],
     },
   })
 
-export const updateHtmlAssetValuesMutationOptions = (projectId: string, assetId: string) =>
+export const updateHtmlAssetValuesMutationOptions = (
+  projectId: string,
+  assetId: string,
+) =>
   mutationOptions({
     mutationFn: (values: Record<string, string | number | boolean>) =>
       requests.updateHtmlAssetValues(projectId, assetId, values),
@@ -133,8 +164,13 @@ export const updateHtmlAssetValuesMutationOptions = (projectId: string, assetId:
 
 export const bulkMoveAssetsToFolderMutationOptions = (projectId: string) =>
   mutationOptions({
-    mutationFn: ({ assetIds, folderId }: { assetIds: string[]; folderId: string }) =>
-      requests.bulkMoveAssetsToFolder(projectId, assetIds, folderId),
+    mutationFn: ({
+      assetIds,
+      folderId,
+    }: {
+      assetIds: Array<string>
+      folderId: string
+    }) => requests.bulkMoveAssetsToFolder(projectId, assetIds, folderId),
     meta: {
       invalidateQueries: [['media', projectId, 'ai-assets']],
     },
@@ -142,7 +178,8 @@ export const bulkMoveAssetsToFolderMutationOptions = (projectId: string) =>
 
 export const bulkDeleteAssetsMutationOptions = (projectId: string) =>
   mutationOptions({
-    mutationFn: (assetIds: string[]) => requests.bulkDeleteAssets(projectId, assetIds),
+    mutationFn: (assetIds: Array<string>) =>
+      requests.bulkDeleteAssets(projectId, assetIds),
     meta: {
       invalidateQueries: [['media', projectId, 'ai-assets']],
     },
@@ -150,32 +187,41 @@ export const bulkDeleteAssetsMutationOptions = (projectId: string) =>
 
 export const downloadAssetsZipMutationOptions = (projectId: string) =>
   mutationOptions({
-    mutationFn: (assetIds: string[]) => requests.downloadAssetsZip(projectId, assetIds),
+    mutationFn: (assetIds: Array<string>) =>
+      requests.downloadAssetsZip(projectId, assetIds),
   })
 
 export const useUpdateAssetsList = (projectId: string) => {
   const queryClient = useQueryClient()
 
-  return useCallback((assets: MediaAsset[], requestId?: string) => {
-    queryClient.setQueriesData<AiGeneratedAssetsInfiniteData>(
-      { queryKey: ['media', projectId, 'ai-assets'] },
-      (old) => appendAssetsToAiGeneratedRequests(old, assets, requestId),
-    )
-  }, [projectId, queryClient])
+  return useCallback(
+    (assets: Array<MediaAsset>, requestId?: string) => {
+      queryClient.setQueriesData<AiGeneratedAssetsInfiniteData>(
+        { queryKey: ['media', projectId, 'ai-assets'] },
+        (old) => appendAssetsToAiGeneratedRequests(old, assets, requestId),
+      )
+    },
+    [projectId, queryClient],
+  )
 }
 
 export const usePatchAiGeneratedRequest = (projectId: string) => {
   const queryClient = useQueryClient()
 
-  return useCallback((requestId: string, patch: Partial<AiGeneratedMediaRequest>) => {
-    queryClient.setQueriesData<AiGeneratedAssetsInfiniteData>(
-      { queryKey: ['media', projectId, 'ai-assets'] },
-      (old) => patchAiGeneratedRequest(old, requestId, patch),
-    )
-  }, [projectId, queryClient])
+  return useCallback(
+    (requestId: string, patch: Partial<AiGeneratedMediaRequest>) => {
+      queryClient.setQueriesData<AiGeneratedAssetsInfiniteData>(
+        { queryKey: ['media', projectId, 'ai-assets'] },
+        (old) => patchAiGeneratedRequest(old, requestId, patch),
+      )
+    },
+    [projectId, queryClient],
+  )
 }
 
-function toAiGeneratedMediaRequest(run: requests.MediaGenerationRun): AiGeneratedMediaRequest {
+function toAiGeneratedMediaRequest(
+  run: requests.MediaGenerationRun,
+): AiGeneratedMediaRequest {
   return {
     id: run.id,
     projectId: run.projectId,
@@ -201,7 +247,9 @@ function toRequestAsset(asset: MediaAsset): AiGeneratedRequestAsset {
 
 function getAssetRequestId(asset: MediaAsset, fallbackRequestId?: string) {
   if (fallbackRequestId) return fallbackRequestId
-  const streamedRequestId = (asset as MediaAsset & { generationRequestId?: string }).generationRequestId
+  const streamedRequestId = (
+    asset as MediaAsset & { generationRequestId?: string }
+  ).generationRequestId
   return streamedRequestId ?? asset.generationRequest?.id ?? null
 }
 
@@ -257,9 +305,14 @@ function patchAssetInRequests(
       ...page,
       data: page.data.map((request) => ({
         ...request,
-        assets: (request.assets ?? []).map((asset) =>
+        assets: request.assets.map((asset) =>
           asset.assetId === updatedAsset.id
-            ? { ...asset, url: updatedAsset.url, name: updatedAsset.name, type: updatedAsset.type }
+            ? {
+                ...asset,
+                url: updatedAsset.url,
+                name: updatedAsset.name,
+                type: updatedAsset.type,
+              }
             : asset,
         ),
       })),
@@ -269,12 +322,12 @@ function patchAssetInRequests(
 
 function appendAssetsToAiGeneratedRequests(
   current: AiGeneratedAssetsInfiniteData | undefined,
-  assets: MediaAsset[],
+  assets: Array<MediaAsset>,
   requestId?: string,
 ): AiGeneratedAssetsInfiniteData | undefined {
   if (!current || assets.length === 0) return current
 
-  const assetsByRequestId = new Map<string, AiGeneratedRequestAsset[]>()
+  const assetsByRequestId = new Map<string, Array<AiGeneratedRequestAsset>>()
   for (const asset of assets) {
     const parentRequestId = getAssetRequestId(asset, requestId)
     if (!parentRequestId) continue
@@ -292,16 +345,19 @@ function appendAssetsToAiGeneratedRequests(
       data: page.data.map((request) => {
         const incoming = assetsByRequestId.get(request.id)
         if (!incoming) return request
-        return { ...request, assets: mergeRequestAssets(request.assets, incoming) }
+        return {
+          ...request,
+          assets: mergeRequestAssets(request.assets, incoming),
+        }
       }),
     })),
   }
 }
 
 function mergeRequestAssets(
-  current: AiGeneratedRequestAsset[],
-  incoming: AiGeneratedRequestAsset[],
-): AiGeneratedRequestAsset[] {
+  current: Array<AiGeneratedRequestAsset>,
+  incoming: Array<AiGeneratedRequestAsset>,
+): Array<AiGeneratedRequestAsset> {
   const existingIds = new Set(current.map((asset) => asset.id))
   const newAssets = incoming.filter((asset) => !existingIds.has(asset.id))
   return newAssets.length > 0 ? [...current, ...newAssets] : current
@@ -313,22 +369,29 @@ function prependAiGeneratedRequest(
 ): AiGeneratedAssetsInfiniteData {
   if (!current) {
     return {
-      pages: [{
-        data: [request],
-        nextCursor: null,
-        hasMore: false,
-      }],
+      pages: [
+        {
+          data: [request],
+          nextCursor: null,
+          hasMore: false,
+        },
+      ],
       pageParams: [undefined],
     }
   }
 
-  let didReplace = false
+  const didReplace = current.pages.some((page) =>
+    page.data.some((item) => item.id === request.id),
+  )
   const pages = current.pages.map((page) => ({
     ...page,
     data: page.data.map((item) => {
       if (item.id !== request.id) return item
-      didReplace = true
-      return { ...item, ...request, assets: item.assets.length > 0 ? item.assets : request.assets }
+      return {
+        ...item,
+        ...request,
+        assets: item.assets.length > 0 ? item.assets : request.assets,
+      }
     }),
   }))
 
@@ -336,18 +399,20 @@ function prependAiGeneratedRequest(
     return { ...current, pages }
   }
 
-  const [firstPage, ...restPages] = pages
-  if (!firstPage) {
+  if (pages.length === 0) {
     return {
       ...current,
-      pages: [{
-        data: [request],
-        nextCursor: null,
-        hasMore: false,
-      }],
+      pages: [
+        {
+          data: [request],
+          nextCursor: null,
+          hasMore: false,
+        },
+      ],
     }
   }
 
+  const [firstPage, ...restPages] = pages
   return {
     ...current,
     pages: [{ ...firstPage, data: [request, ...firstPage.data] }, ...restPages],
@@ -360,21 +425,24 @@ function appendAssetRequest(
 ): AssetRequestsInfiniteData {
   if (!current) {
     return {
-      pages: [{
-        data: [request],
-        nextCursor: null,
-        hasMore: false,
-      }],
+      pages: [
+        {
+          data: [request],
+          nextCursor: null,
+          hasMore: false,
+        },
+      ],
       pageParams: [undefined],
     }
   }
 
-  let didReplace = false
+  const didReplace = current.pages.some((page) =>
+    page.data.some((item) => item.id === request.id),
+  )
   const pages = current.pages.map((page) => ({
     ...page,
     data: page.data.map((item) => {
       if (item.id !== request.id) return item
-      didReplace = true
       return request
     }),
   }))
@@ -384,18 +452,20 @@ function appendAssetRequest(
   }
 
   // pages[0] is the newest batch (matches listMessages / chat upsert pattern).
-  const [firstPage, ...restPages] = pages
-  if (!firstPage) {
+  if (pages.length === 0) {
     return {
       ...current,
-      pages: [{
-        data: [request],
-        nextCursor: null,
-        hasMore: false,
-      }],
+      pages: [
+        {
+          data: [request],
+          nextCursor: null,
+          hasMore: false,
+        },
+      ],
     }
   }
 
+  const [firstPage, ...restPages] = pages
   return {
     ...current,
     pages: [{ ...firstPage, data: [...firstPage.data, request] }, ...restPages],

@@ -1,5 +1,23 @@
 import { useEffect, useState } from 'react'
 import { ImagePlus, Music, X } from 'lucide-react'
+import {
+  describeFileTypes,
+  getMaxAssetItems,
+  getUploaderFileTypes,
+  isArrayParameter,
+  parseParameterAssetUrls,
+  serializeParameterAssetUrls,
+} from '../lib/parameter-assets'
+import {
+  parseAgentReferences,
+  serializeAgentReferences,
+} from '../lib/agent-settings'
+import { AssetPickerFolderTab } from './asset-picker-folder-tab'
+import { AssetPickerGeneratedTab } from './asset-picker-generated-tab'
+import { AssetPickerUploadTab } from './asset-picker-upload-tab'
+import type { PickerAsset, PickerAssetType } from '../lib/parameter-assets'
+import type { ModelParameterBinding } from '@/features/admin/types'
+import type { AgentReference } from '../lib/agent-settings'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,33 +29,17 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { buildOptimizeddImageUrl, imageUrlTransforms } from '@/utils/transform-url'
-import type { ModelParameterBinding } from '@/features/admin/types'
 import {
-  describeFileTypes,
-  getMaxAssetItems,
-  getUploaderFileTypes,
-  isArrayParameter,
-  parseParameterAssetUrls,
-  serializeParameterAssetUrls,
-  type PickerAsset,
-  type PickerAssetType,
-} from '../lib/parameter-assets'
-import {
-  parseAgentReferences,
-  serializeAgentReferences,
-  type AgentReference,
-} from '../lib/agent-settings'
-import { AssetPickerFolderTab } from './asset-picker-folder-tab'
-import { AssetPickerGeneratedTab } from './asset-picker-generated-tab'
-import { AssetPickerUploadTab } from './asset-picker-upload-tab'
+  buildOptimizeddImageUrl,
+  imageUrlTransforms,
+} from '@/utils/transform-url'
 
 type AssetPickerValueFormat = 'urls' | 'references'
 
 type SharedAssetPickerProps = {
   projectId: string
   label: string
-  fileTypes: PickerAssetType[]
+  fileTypes: Array<PickerAssetType>
   maxItems: number
   allowMultiple: boolean
   value: string
@@ -82,7 +84,7 @@ export function ReferenceAssetPickerField({
 }: {
   projectId: string
   label: string
-  fileTypes: PickerAssetType[]
+  fileTypes: Array<PickerAssetType>
   maxItems: number
   value: string
   onChange: (value: string) => void
@@ -113,9 +115,10 @@ function SharedAssetPicker({
 }: SharedAssetPickerProps) {
   const [open, setOpen] = useState(false)
   const selected = parsePickerValue(value, fileTypes, valueFormat)
-  const chooseLabel = fileTypes.length === 1
-    ? `${fileTypes[0]}${allowMultiple ? 's' : ''}`
-    : 'files'
+  const chooseLabel =
+    fileTypes.length === 1
+      ? `${fileTypes[0]}${allowMultiple ? 's' : ''}`
+      : 'files'
 
   return (
     <>
@@ -143,7 +146,9 @@ function SharedAssetPicker({
             type="button"
             variant="ghost"
             size="icon-sm"
-            onClick={() => onChange(serializePickerValue([], allowMultiple, valueFormat))}
+            onClick={() =>
+              onChange(serializePickerValue([], allowMultiple, valueFormat))
+            }
             aria-label="Clear selected assets"
           >
             <X className="size-3.5" />
@@ -167,7 +172,7 @@ function SharedAssetPicker({
   )
 }
 
-function SelectedThumbnails({ items }: { items: AgentReference[] }) {
+function SelectedThumbnails({ items }: { items: Array<AgentReference> }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
       <div className="flex">
@@ -195,7 +200,10 @@ function ReferenceThumbnail({ item }: { item: AgentReference }) {
   if (item.type === 'image') {
     return (
       <img
-        src={buildOptimizeddImageUrl(item.url, imageUrlTransforms.thumbnails.small)}
+        src={buildOptimizeddImageUrl(
+          item.url,
+          imageUrlTransforms.thumbnails.small,
+        )}
         alt=""
         className="size-full object-cover"
       />
@@ -204,7 +212,13 @@ function ReferenceThumbnail({ item }: { item: AgentReference }) {
 
   if (item.type === 'video') {
     return (
-      <video src={item.url} muted playsInline preload="metadata" className="size-full object-cover" />
+      <video
+        src={item.url}
+        muted
+        playsInline
+        preload="metadata"
+        className="size-full object-cover"
+      />
     )
   }
 
@@ -230,7 +244,7 @@ function AssetPickerDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const [draftItems, setDraftItems] = useState<AgentReference[]>([])
+  const [draftItems, setDraftItems] = useState<Array<AgentReference>>([])
   const selectedUrls = draftItems.map((item) => item.url)
   const fileTypeLabel = describeFileTypes(fileTypes)
   const fileTypesKey = fileTypes.join(',')
@@ -241,7 +255,7 @@ function AssetPickerDialog({
     }
   }, [fileTypesKey, open, value, valueFormat])
 
-  const applySelection = (items: AgentReference[]) => {
+  const applySelection = (items: Array<AgentReference>) => {
     onChange(serializePickerValue(items, allowMultiple, valueFormat))
     onOpenChange(false)
   }
@@ -302,7 +316,10 @@ function AssetPickerDialog({
               allowMultiple={allowMultiple}
             />
           </TabsContent>
-          <TabsContent value="generated" className="flex min-h-0 flex-1 flex-col">
+          <TabsContent
+            value="generated"
+            className="flex min-h-0 flex-1 flex-col"
+          >
             <AssetPickerGeneratedTab
               projectId={projectId}
               fileTypes={fileTypes}
@@ -323,7 +340,10 @@ function AssetPickerDialog({
               disabled={draftItems.length === 0}
               onClick={() => applySelection(draftItems)}
             >
-              Add {draftItems.length > 0 ? `(${draftItems.length}${Number.isFinite(maxItems) ? ` / ${maxItems}` : ''})` : ''}
+              Add{' '}
+              {draftItems.length > 0
+                ? `(${draftItems.length}${Number.isFinite(maxItems) ? ` / ${maxItems}` : ''})`
+                : ''}
             </Button>
           </DialogFooter>
         ) : null}
@@ -334,20 +354,23 @@ function AssetPickerDialog({
 
 function parsePickerValue(
   value: string,
-  fileTypes: PickerAssetType[],
+  fileTypes: Array<PickerAssetType>,
   valueFormat: AssetPickerValueFormat,
-): AgentReference[] {
+): Array<AgentReference> {
   if (valueFormat === 'references') {
     const allowed = new Set(fileTypes)
     return parseAgentReferences(value).filter((item) => allowed.has(item.type))
   }
 
   const fallbackType = fileTypes[0] ?? 'image'
-  return parseParameterAssetUrls(value).map((url) => ({ url, type: fallbackType }))
+  return parseParameterAssetUrls(value).map((url) => ({
+    url,
+    type: fallbackType,
+  }))
 }
 
 function serializePickerValue(
-  items: AgentReference[],
+  items: Array<AgentReference>,
   allowMultiple: boolean,
   valueFormat: AssetPickerValueFormat,
 ): string {

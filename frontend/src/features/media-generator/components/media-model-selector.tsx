@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
+import type { CatalogModel } from '@/features/admin/types'
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -13,10 +14,9 @@ import {
   ModelSelectorTrigger,
 } from '@/components/ai-elements/model-selector'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { CatalogModel } from '@/features/admin/types'
 
 type MediaModelSelectorProps = {
-  models: CatalogModel[]
+  models: Array<CatalogModel>
   selectedModelId: string | null
   onSelect: (modelId: string) => void
   isLoading: boolean
@@ -32,7 +32,7 @@ export function MediaModelSelector({
   const selectedModel = models.find((model) => model.id === selectedModelId)
 
   const grouped = useMemo(() => {
-    const map = new Map<string, CatalogModel[]>()
+    const map = new Map<string, Array<CatalogModel>>()
     for (const model of models) {
       const list = map.get(model.provider) ?? []
       list.push(model)
@@ -54,11 +54,18 @@ export function MediaModelSelector({
         >
           {selectedModel ? (
             <>
-              <ModelSelectorLogo provider={selectedModel.provider} className="size-4" />
-              <span className="min-w-0 flex-1 truncate text-left">{selectedModel.name}</span>
+              <ModelSelectorLogo
+                provider={selectedModel.provider}
+                className="size-4"
+              />
+              <span className="min-w-0 flex-1 truncate text-left">
+                {selectedModel.name}
+              </span>
             </>
           ) : (
-            <span className="flex-1 text-left text-muted-foreground">Select model</span>
+            <span className="flex-1 text-left text-muted-foreground">
+              Select model
+            </span>
           )}
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         </button>
@@ -79,7 +86,10 @@ export function MediaModelSelector({
                   }}
                   className="flex items-center gap-2"
                 >
-                  <ModelSelectorLogo provider={model.provider} className="size-4" />
+                  <ModelSelectorLogo
+                    provider={model.provider}
+                    className="size-4"
+                  />
                   <ModelSelectorName>{model.name}</ModelSelectorName>
                   {model.id === selectedModelId ? (
                     <Check className="ml-auto size-4 shrink-0 text-primary" />

@@ -1,14 +1,20 @@
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { listCatalogModelsQueryOptions } from '@/features/admin/query-mutation'
 import { getCatalogCategories } from '../constants'
 import { useMediaGeneratorStore } from '../store/media-generator-store'
+import { listCatalogModelsQueryOptions } from '@/features/admin/query-mutation'
 
 export function useMediaCatalog() {
   const generationType = useMediaGeneratorStore((state) => state.generationType)
-  const generationSubtype = useMediaGeneratorStore((state) => state.generationSubtype)
-  const selectedModelId = useMediaGeneratorStore((state) => state.selectedModelId)
-  const setSelectedModelId = useMediaGeneratorStore((state) => state.setSelectedModelId)
+  const generationSubtype = useMediaGeneratorStore(
+    (state) => state.generationSubtype,
+  )
+  const selectedModelId = useMediaGeneratorStore(
+    (state) => state.selectedModelId,
+  )
+  const setSelectedModelId = useMediaGeneratorStore(
+    (state) => state.setSelectedModelId,
+  )
 
   const categories = getCatalogCategories(generationType, generationSubtype)
   const hasCatalog = categories.length > 0
@@ -25,7 +31,8 @@ export function useMediaCatalog() {
       return
     }
 
-    const stillValid = selectedModelId && models.some((model) => model.id === selectedModelId)
+    const stillValid =
+      selectedModelId && models.some((model) => model.id === selectedModelId)
     if (!stillValid) {
       setSelectedModelId(models[0].id)
     }

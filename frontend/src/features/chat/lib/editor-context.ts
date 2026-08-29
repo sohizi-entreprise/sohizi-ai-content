@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/core'
-import { formatFileTag } from '@/lib/file-tag'
 import type { EditorTab } from '@/features/editor/types'
 import type { AttachedSelection, EditorContext } from '../types'
+import { formatFileTag } from '@/lib/file-tag'
 import { useEditorStore } from '@/features/editor/stores/editor-store'
 
 const CONTEXT_WORD_LIMIT = 200
@@ -13,21 +13,21 @@ function isWhitespace(token: string): boolean {
   return WHITESPACE.test(token)
 }
 
-function splitKeepingWhitespace(text: string): string[] {
+function splitKeepingWhitespace(text: string): Array<string> {
   return text.split(/(\s+)/).filter((part) => part.length > 0)
 }
 
-export function countWords(text: string): number {
+function countWords(text: string): number {
   const trimmed = text.trim()
   if (!trimmed) return 0
   return trimmed.split(/\s+/).length
 }
 
-export function takeFirstWords(text: string, n: number): string {
+function takeFirstWords(text: string, n: number): string {
   if (n <= 0 || !text) return ''
   const parts = splitKeepingWhitespace(text)
   let wordCount = 0
-  const out: string[] = []
+  const out: Array<string> = []
   for (const part of parts) {
     if (isWhitespace(part)) {
       if (wordCount === 0) continue
@@ -42,11 +42,11 @@ export function takeFirstWords(text: string, n: number): string {
   return out.join('').trimEnd()
 }
 
-export function takeLastWords(text: string, n: number): string {
+function takeLastWords(text: string, n: number): string {
   if (n <= 0 || !text) return ''
   const parts = splitKeepingWhitespace(text)
   let wordCount = 0
-  const out: string[] = []
+  const out: Array<string> = []
   for (let i = parts.length - 1; i >= 0; i -= 1) {
     const part = parts[i]
     if (isWhitespace(part)) {
@@ -62,7 +62,7 @@ export function takeLastWords(text: string, n: number): string {
   return out.join('').trimStart()
 }
 
-export function truncateSelectedText(text: string): string {
+function truncateSelectedText(text: string): string {
   if (countWords(text) <= CONTEXT_WORD_LIMIT) return text
   return `${takeFirstWords(text, TRUNCATE_KEEP_WORDS)} [Truncated] ... ${takeLastWords(text, TRUNCATE_KEEP_WORDS)}`
 }
@@ -93,11 +93,19 @@ export function buildAttachedSelection(params: {
   const selectedText = editor.state.doc.textBetween(from, to, '\n')
   if (!selectedText) return null
 
-  const fullText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n')
+  const fullText = editor.state.doc.textBetween(
+    0,
+    editor.state.doc.content.size,
+    '\n',
+  )
   const isEntireFile = selectedText === fullText
   const textBeforeDoc = editor.state.doc.textBetween(0, from, '\n')
   const textThroughSelection = editor.state.doc.textBetween(0, to, '\n')
-  const textAfterDoc = editor.state.doc.textBetween(to, editor.state.doc.content.size, '\n')
+  const textAfterDoc = editor.state.doc.textBetween(
+    to,
+    editor.state.doc.content.size,
+    '\n',
+  )
 
   return {
     file: formatFileTag({
@@ -130,9 +138,11 @@ function isAttachedSelection(value: unknown): value is AttachedSelection {
   )
 }
 
-export function collectSelectionsFromChatEditor(editor: Editor | null): AttachedSelection[] {
+function collectSelectionsFromChatEditor(
+  editor: Editor | null,
+): Array<AttachedSelection> {
   if (!editor) return []
-  const selections: AttachedSelection[] = []
+  const selections: Array<AttachedSelection> = []
   editor.state.doc.descendants((node) => {
     if (node.type.name !== 'fileMention') return
     if (isAttachedSelection(node.attrs.selection)) {

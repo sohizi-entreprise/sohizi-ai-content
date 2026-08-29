@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
+import { CTA_LABEL } from '../content'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { CTA_LABEL } from '../content'
 
 type CtaButtonProps = {
   className?: string

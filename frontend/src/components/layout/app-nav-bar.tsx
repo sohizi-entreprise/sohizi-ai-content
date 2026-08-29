@@ -1,23 +1,38 @@
-import {
-  Clapperboard,
-  Files,
-  Play,
-  Sparkles,
-} from 'lucide-react'
+import { Clapperboard, Files, Play, Sparkles } from 'lucide-react'
+import { Link, useParams, useRouterState } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 import {
   Tooltip,
-  TooltipTrigger,
   TooltipContent,
+  TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useEditorStore } from '@/features/editor/stores/editor-store'
-import { Link, useParams, useRouterState } from '@tanstack/react-router'
 
 const ITEMS = [
-  { id: 'files', icon: Files, label: 'Explorer', link: '/dashboard/projects/$projectId/editor' },
-  { id: 'media-generator', icon: Play, label: 'AI media generator', link: '/dashboard/projects/$projectId/generate' },
-  { id: 'video-editor', icon: Clapperboard, label: 'Video editor', link: '/dashboard/projects/$projectId/video-editor' },
-  { id: 'skill-market', icon: Sparkles, label: 'Skill market', link: '/dashboard/projects/$projectId/skill-market' },
+  {
+    id: 'files',
+    icon: Files,
+    label: 'Explorer',
+    link: '/dashboard/projects/$projectId/editor',
+  },
+  {
+    id: 'media-generator',
+    icon: Play,
+    label: 'AI media generator',
+    link: '/dashboard/projects/$projectId/generate',
+  },
+  {
+    id: 'video-editor',
+    icon: Clapperboard,
+    label: 'Video editor',
+    link: '/dashboard/projects/$projectId/video-editor',
+  },
+  {
+    id: 'skill-market',
+    icon: Sparkles,
+    label: 'Skill market',
+    link: '/dashboard/projects/$projectId/skill-market',
+  },
 ] as const
 
 type ActivityBarItem = (typeof ITEMS)[number]['id']

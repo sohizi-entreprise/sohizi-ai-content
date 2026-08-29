@@ -1,23 +1,31 @@
 import { useRef, useState } from 'react'
 import { IconAlertTriangle } from '@tabler/icons-react'
 import { Eye, RotateCcw, Trash2 } from 'lucide-react'
-import { useBufferChunks } from '@/features/chat/hooks/use-buffer-chunks'
-import { DotsLoader, SphereLoader } from '@/components/ui/loaders'
+import { GENERATION_TYPES } from '../constants'
+import { useRequestActions } from '../hooks/use-request-actions'
+import { extractLastMessageContent } from '../lib/agent-progress'
+import {
+  usePatchAiGeneratedRequest,
+  useUpdateAssetsList,
+} from '../query-mutations'
 import { MediaCard } from './media-card'
 import { MediaCardMenu } from './media-card-menu'
 import { RequestSettingsDialog } from './request-settings-dialog'
 import { DotGridLoader } from './dot-grid-loader'
-import { GENERATION_TYPES } from '../constants'
-import { useRequestActions } from '../hooks/use-request-actions'
-import { extractLastMessageContent } from '../lib/agent-progress'
-import { usePatchAiGeneratedRequest, useUpdateAssetsList } from '../query-mutations'
 import type { LucideIcon } from 'lucide-react'
-import type { AiGeneratedMediaRequest, AiGeneratedRequestAsset, GenerationType, MediaAsset } from '../types'
+import type {
+  AiGeneratedMediaRequest,
+  AiGeneratedRequestAsset,
+  GenerationType,
+  MediaAsset,
+} from '../types'
+import { DotsLoader, SphereLoader } from '@/components/ui/loaders'
+import { useBufferChunks } from '@/features/chat/hooks/use-buffer-chunks'
 
 type MediaCardRendererProps = {
   item: AiGeneratedMediaRequest
   projectId: string
-  selectedAssetIds: string[]
+  selectedAssetIds: Array<string>
   onSelectedChange?: (assetId: string, selected: boolean) => void
 }
 
@@ -75,13 +83,12 @@ function PendingMediaCard({ item }: { item: AiGeneratedMediaRequest }) {
   if (runMode === 'direct') {
     const GenerationIcon = GENERATION_TYPE_ICONS[generationType]
     return (
-        <StreamingContainer>
-            <div className="flex flex-col min-w-0 items-center gap-2">
-                <GenerationIcon className="size-4 shrink-0 text-foreground" />
-                <DotsLoader bgColor="text-foreground" />
-            </div>
-        </StreamingContainer>
-
+      <StreamingContainer>
+        <div className="flex flex-col min-w-0 items-center gap-2">
+          <GenerationIcon className="size-4 shrink-0 text-foreground" />
+          <DotsLoader bgColor="text-foreground" />
+        </div>
+      </StreamingContainer>
     )
   }
 
@@ -96,7 +103,6 @@ function PendingMediaCard({ item }: { item: AiGeneratedMediaRequest }) {
         </p>
       </div>
     </StreamingContainer>
-    
   )
 }
 
@@ -108,7 +114,11 @@ function FailedMediaCard({
   projectId: string
 }) {
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
-  const { onDelete, onReuseSettings } = useRequestActions(projectId, item.id, item.request)
+  const { onDelete, onReuseSettings } = useRequestActions(
+    projectId,
+    item.id,
+    item.request,
+  )
 
   const options = [
     {
@@ -152,12 +162,12 @@ function FailedMediaCard({
 function StreamingContainer({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative aspect-4/3 overflow-hidden rounded-md border bg-background">
-        <DotGridLoader circleSize={0.6} dotColor="rgb(212, 255, 0)" />
-        <div className='absolute inset-0 flex items-center justify-center px-3'>
-        <div className='min-w-0 max-w-full rounded-md px-2 py-1 backdrop-blur-xs'>
-            {children}
+      <DotGridLoader circleSize={0.6} dotColor="rgb(212, 255, 0)" />
+      <div className="absolute inset-0 flex items-center justify-center px-3">
+        <div className="min-w-0 max-w-full rounded-md px-2 py-1 backdrop-blur-xs">
+          {children}
         </div>
-        </div>
+      </div>
     </div>
   )
 }
@@ -172,8 +182,8 @@ function CompletedMediaCards({
     return <FailedMediaCard item={item} projectId={projectId} />
   }
 
-  const [singleAsset] = item.assets
-  if (item.assets.length === 1 && singleAsset) {
+  if (item.assets.length === 1) {
+    const [singleAsset] = item.assets
     return (
       <MediaCard
         item={toMediaAsset(singleAsset, item)}
@@ -199,7 +209,10 @@ function CompletedMediaCards({
   )
 }
 
-function toMediaAsset(asset: AiGeneratedRequestAsset, request: AiGeneratedMediaRequest): MediaAsset {
+function toMediaAsset(
+  asset: AiGeneratedRequestAsset,
+  request: AiGeneratedMediaRequest,
+): MediaAsset {
   return {
     id: asset.id,
     projectId: request.projectId,
@@ -232,22 +245,26 @@ function toRequestAsset(asset: MediaAsset): AiGeneratedRequestAsset {
   }
 }
 
-const GENERATION_TYPE_ICONS: Record<GenerationType, LucideIcon> = Object.fromEntries(
-  GENERATION_TYPES.map(({ value, icon }) => [value, icon]),
-) as Record<GenerationType, LucideIcon>
+const GENERATION_TYPE_ICONS: Record<GenerationType, LucideIcon> =
+  Object.fromEntries(
+    GENERATION_TYPES.map(({ value, icon }) => [value, icon]),
+  ) as Record<GenerationType, LucideIcon>
 
-function getRequestGenerationType(request: Record<string, unknown> | null): GenerationType {
+function getRequestGenerationType(
+  request: Record<string, unknown> | null,
+): GenerationType {
   const context = request?.context
   if (!context || typeof context !== 'object') return 'image'
   const value = (context as { generationType?: unknown }).generationType
-  if (typeof value !== 'string' || !(value in GENERATION_TYPE_ICONS)) return 'image'
+  if (typeof value !== 'string' || !(value in GENERATION_TYPE_ICONS))
+    return 'image'
   return value as GenerationType
 }
 
 function mergeRequestAssets(
-  current: AiGeneratedRequestAsset[],
-  incoming: AiGeneratedRequestAsset[],
-): AiGeneratedRequestAsset[] {
+  current: Array<AiGeneratedRequestAsset>,
+  incoming: Array<AiGeneratedRequestAsset>,
+): Array<AiGeneratedRequestAsset> {
   const existingIds = new Set(current.map((asset) => asset.id))
   const newAssets = incoming.filter((asset) => !existingIds.has(asset.id))
   return newAssets.length > 0 ? [...current, ...newAssets] : current

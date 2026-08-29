@@ -5,9 +5,9 @@ type NestedTrailingNodeOptions = {
   /** Block node inserted at the end of each container when needed. */
   node: string
   /** Container node names that should always end with `node` when their last child isn't already one. */
-  containers: string[]
+  containers: Array<string>
   /** Last-child types that should not get a trailing node after them. */
-  notAfter: string[]
+  notAfter: Array<string>
 }
 
 /**
@@ -35,9 +35,9 @@ export const NestedTrailingNode = Extension.create<NestedTrailingNodeOptions>({
         key: pluginKey,
         appendTransaction: (_transactions, _oldState, state) => {
           const type = state.schema.nodes[nodeName]
-          if (!type || containers.length === 0) return null
+          if (containers.length === 0) return null
 
-          const insertPositions: number[] = []
+          const insertPositions: Array<number> = []
 
           state.doc.descendants((node, pos) => {
             if (!containers.includes(node.type.name)) return true

@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
-import { cn } from '@/lib/utils'
 import { LandingNav } from './sections/nav'
 import { LandingFooter } from './sections/footer'
+import type { ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 
 type MarketingShellProps = {
   children: ReactNode
@@ -9,7 +9,10 @@ type MarketingShellProps = {
   mainClassName?: string
 }
 
-export function MarketingShell({ children, mainClassName }: MarketingShellProps) {
+export function MarketingShell({
+  children,
+  mainClassName,
+}: MarketingShellProps) {
   return (
     <div className="min-h-svh bg-background text-foreground">
       <div className="fixed inset-x-0 top-0 z-50">

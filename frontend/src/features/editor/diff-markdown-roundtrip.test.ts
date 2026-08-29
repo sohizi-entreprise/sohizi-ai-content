@@ -2,11 +2,7 @@ import { Editor } from '@tiptap/core'
 import { Markdown, MarkdownManager } from '@tiptap/markdown'
 import StarterKit from '@tiptap/starter-kit'
 import { describe, expect, it } from 'vitest'
-import {
-  acceptDiffMarkdown,
-  asDiffMarkdown,
-  buildDiff,
-} from './diff-markdown'
+import { acceptDiffMarkdown, asDiffMarkdown, buildDiff } from './diff-markdown'
 import { MarkdownDiffExtensions } from './extensions/markdown-diff'
 
 const extensions = [
@@ -23,12 +19,15 @@ function roundTrip(markdown: string) {
   return manager.serialize(manager.parse(markdown))
 }
 
-function collectTypes(node: { type?: string; content?: unknown[] }): string[] {
-  const types: string[] = []
-  const visit = (value: { type?: string; content?: unknown[] }) => {
+function collectTypes(node: {
+  type?: string
+  content?: Array<unknown>
+}): Array<string> {
+  const types: Array<string> = []
+  const visit = (value: { type?: string; content?: Array<unknown> }) => {
     if (value.type) types.push(value.type)
     for (const child of value.content ?? []) {
-      visit(child as { type?: string; content?: unknown[] })
+      visit(child as { type?: string; content?: Array<unknown> })
     }
   }
   visit(node)

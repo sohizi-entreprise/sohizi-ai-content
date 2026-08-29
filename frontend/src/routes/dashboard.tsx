@@ -1,6 +1,6 @@
-import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
-import { useSession, authClient, organization } from '@/lib/auth-client'
+import { Outlet, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { authClient, organization, useSession } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,9 @@ import {
 
 export const Route = createFileRoute('/dashboard')({
   component: RouteComponent,
-  errorComponent: ({error}) => <div>Error loading dashboard: {error.message}</div>,
+  errorComponent: ({ error }) => (
+    <div>Error loading dashboard: {error.message}</div>
+  ),
 })
 
 function toSlug(name: string) {
@@ -65,7 +67,6 @@ function RouteComponent() {
       cancelled = true
     }
     // session intentionally omitted — bootstrap runs per userId, not on session refetch
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, isPending, navigate, refetch])
 
   if (isPending && !session) {
@@ -116,7 +117,10 @@ function OrgSetupModal({
     setLoading(true)
 
     const slug = toSlug(name)
-    const { data: orgData, error: orgError } = await organization.create({ name, slug })
+    const { data: orgData, error: orgError } = await organization.create({
+      name,
+      slug,
+    })
 
     if (orgError) {
       setError(orgError.message || 'Failed to create organization')
@@ -124,10 +128,8 @@ function OrgSetupModal({
       return
     }
 
-    if (orgData) {
-      await organization.setActive({ organizationId: orgData.id })
-      await onCreated()
-    }
+    await organization.setActive({ organizationId: orgData.id })
+    await onCreated()
 
     setLoading(false)
   }
@@ -160,9 +162,7 @@ function OrgSetupModal({
             )}
           </div>
 
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button
             type="submit"

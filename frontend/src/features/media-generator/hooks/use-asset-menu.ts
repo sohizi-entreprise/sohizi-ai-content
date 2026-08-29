@@ -16,7 +16,9 @@ export const useAssetMenu = (projectId: string, asset: MediaAsset) => {
   const { mutateAsync: moveMutate } = useMutation(
     moveAssetToFolderMutationOptions(projectId, asset.id),
   )
-  const applyRequestState = useMediaGeneratorStore((state) => state.applyRequestState)
+  const applyRequestState = useMediaGeneratorStore(
+    (state) => state.applyRequestState,
+  )
 
   const onDelete = useCallback(() => {
     const ok = confirm('Are you sure you want to delete this asset?')

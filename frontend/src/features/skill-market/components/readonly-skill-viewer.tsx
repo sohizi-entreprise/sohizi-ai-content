@@ -159,11 +159,16 @@ function markdownToBlocks(markdown: string): Array<JSONContent> {
   }
 
   const preprocessed = preprocessFileMentions(markdown)
-  const blocks = markdownManager.parse(preprocessed).content ?? [{ type: 'paragraph' }]
+  const blocks = markdownManager.parse(preprocessed).content ?? [
+    { type: 'paragraph' },
+  ]
   return blocks.length > 0 ? blocks : [{ type: 'paragraph' }]
 }
 
-function createSkillContent(description: string, instruction: string): JSONContent {
+function createSkillContent(
+  description: string,
+  instruction: string,
+): JSONContent {
   return {
     type: 'doc',
     content: [
@@ -202,8 +207,6 @@ export function ReadonlySkillViewer({
       },
     },
   })
-
-  if (!editor) return null
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl px-6 pb-10 pt-4">

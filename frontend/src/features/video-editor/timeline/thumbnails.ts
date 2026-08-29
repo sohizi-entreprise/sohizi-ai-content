@@ -16,10 +16,6 @@ export function getVideoThumbnails(
   return promise
 }
 
-export function clearThumbnailCache(clipId: string): void {
-  cache.delete(clipId)
-}
-
 async function extractThumbnails(
   url: string,
   durationSec: number,

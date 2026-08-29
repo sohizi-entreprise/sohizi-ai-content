@@ -17,11 +17,6 @@ export function HtmlBlock({ clip, selected }: HtmlBlockProps) {
   const label = getHtmlClipLabel(clip.html)
 
   return (
-    <ClipShell
-      type="html"
-      selected={selected}
-      label={label}
-      icon={Code2}
-    />
+    <ClipShell type="html" selected={selected} label={label} icon={Code2} />
   )
 }

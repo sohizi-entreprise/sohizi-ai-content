@@ -23,7 +23,7 @@ export function AudioBlock({ clip, selected }: AudioBlockProps) {
     let cancelled = false
     let wavesurfer: WaveSurfer | null = null
     let ro: ResizeObserver | null = null
-    let peakChannel: number[] | null = null
+    let peakChannel: Array<number> | null = null
     let duration = 1
 
     const teardown = () => {
@@ -63,9 +63,11 @@ export function AudioBlock({ clip, selected }: AudioBlockProps) {
         barHeight: 0.9,
       })
 
-      void wavesurfer.load('', [peakChannel], duration).catch((err: unknown) => {
-        console.warn('[audio-block] wavesurfer load failed', err)
-      })
+      void wavesurfer
+        .load('', [peakChannel], duration)
+        .catch((err: unknown) => {
+          console.warn('[audio-block] wavesurfer load failed', err)
+        })
     }
 
     const mount = async () => {

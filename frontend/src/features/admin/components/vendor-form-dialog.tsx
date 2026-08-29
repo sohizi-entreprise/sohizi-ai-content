@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
+  createAdminVendorMutationOptions,
+  listMediaVendorSlugsQueryOptions,
+  updateAdminVendorMutationOptions,
+} from '../query-mutation'
+import type { AdminVendor, VendorKind } from '../types'
+import { getErrorMessage } from '@/lib/errors'
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -18,12 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  createAdminVendorMutationOptions,
-  listMediaVendorSlugsQueryOptions,
-  updateAdminVendorMutationOptions,
-} from '../query-mutation'
-import type { AdminVendor, VendorKind } from '../types'
 
 type Props = {
   open: boolean
@@ -54,11 +55,11 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
     if (vendor) {
       setForm({
         name: vendor.name,
-        kind: vendor.kind ?? 'llm',
+        kind: vendor.kind,
         enabled: vendor.enabled,
-        rpm: vendor.rateLimit?.rpm ?? 60,
-        burst: vendor.rateLimit?.burst ?? vendor.rateLimit?.rpm ?? 60,
-        maxConcurrency: vendor.rateLimit?.maxConcurrency ?? 10,
+        rpm: vendor.rateLimit.rpm,
+        burst: vendor.rateLimit.burst ?? vendor.rateLimit.rpm,
+        maxConcurrency: vendor.rateLimit.maxConcurrency,
       })
     } else {
       setForm(emptyForm)
@@ -90,10 +91,7 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
       }
       onOpenChange(false)
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        (err instanceof Error ? err.message : 'Failed to save vendor')
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to save vendor'))
     }
   }
 
@@ -115,7 +113,10 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                 setForm((prev) => ({
                   ...prev,
                   kind: kind as VendorKind,
-                  name: kind === 'media' && slugs.length === 1 ? slugs[0] : prev.name,
+                  name:
+                    kind === 'media' && slugs.length === 1
+                      ? slugs[0]
+                      : prev.name,
                 }))
               }
             >
@@ -150,7 +151,9 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
               <Input
                 id="vendor-name"
                 value={form.name}
-                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, name: event.target.value }))
+                }
                 placeholder="openrouter"
                 required
               />
@@ -166,7 +169,10 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                   min={1}
                   value={form.rpm}
                   onChange={(event) =>
-                    setForm((prev) => ({ ...prev, rpm: Number(event.target.value) }))
+                    setForm((prev) => ({
+                      ...prev,
+                      rpm: Number(event.target.value),
+                    }))
                   }
                 />
               </div>
@@ -178,7 +184,10 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                   min={1}
                   value={form.burst}
                   onChange={(event) =>
-                    setForm((prev) => ({ ...prev, burst: Number(event.target.value) }))
+                    setForm((prev) => ({
+                      ...prev,
+                      burst: Number(event.target.value),
+                    }))
                   }
                 />
               </div>
@@ -190,7 +199,10 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                   min={1}
                   value={form.maxConcurrency}
                   onChange={(event) =>
-                    setForm((prev) => ({ ...prev, maxConcurrency: Number(event.target.value) }))
+                    setForm((prev) => ({
+                      ...prev,
+                      maxConcurrency: Number(event.target.value),
+                    }))
                   }
                 />
               </div>
@@ -201,12 +213,18 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
             <Switch
               id="vendor-enabled"
               checked={form.enabled}
-              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, enabled: checked }))}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({ ...prev, enabled: checked }))
+              }
             />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={pending || !form.name}>

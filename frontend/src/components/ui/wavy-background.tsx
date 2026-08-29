@@ -1,7 +1,7 @@
 'use client'
-import { cn } from '@/lib/utils'
 import { useEffect, useRef, useState } from 'react'
 import { createNoise3D } from 'simplex-noise'
+import { cn } from '@/lib/utils'
 
 export const WavyBackground = ({
   children,
@@ -18,7 +18,7 @@ export const WavyBackground = ({
   children?: React.ReactNode
   className?: string
   containerClassName?: string
-  colors?: string[]
+  colors?: Array<string>
   waveWidth?: number
   backgroundFill?: string
   blur?: number

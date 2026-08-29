@@ -2,10 +2,14 @@ import { mergeAttributes } from '@tiptap/core'
 import Mention from '@tiptap/extension-mention'
 import { ReactRenderer } from '@tiptap/react'
 import { computePosition, flip, shift } from '@floating-ui/dom'
-import type { SuggestionOptions, SuggestionProps, SuggestionKeyDownProps } from '@tiptap/suggestion'
+import { CommandMentionList } from './command-mention-list'
+import type {
+  SuggestionKeyDownProps,
+  SuggestionOptions,
+  SuggestionProps,
+} from '@tiptap/suggestion'
 import type { Editor } from '@tiptap/core'
 import type { CommandMentionItem } from '@/hooks/use-command-mention-search'
-import { CommandMentionList } from './command-mention-list'
 
 export const COMMAND_MENTION_REGEX = /#\[command=([^\]]+)\]/g
 
@@ -46,7 +50,7 @@ const CommandMentionExtension = Mention.extend({
       mergeAttributes(
         { 'data-type': 'commandMention' },
         HTMLAttributes,
-        this.options.HTMLAttributes ?? {},
+        this.options.HTMLAttributes,
       ),
       `/${node.attrs.name ?? ''}`,
     ]
@@ -106,12 +110,9 @@ export const CommandMention = CommandMentionExtension as Omit<
 }
 
 export function preprocessCommandMentions(markdown: string): string {
-  return markdown.replace(
-    COMMAND_MENTION_REGEX,
-    (_match, name) => {
-      return `<span data-type="commandMention" data-name="${escapeHtmlAttribute(name)}" class="command-mention">/${name}</span>`
-    },
-  )
+  return markdown.replace(COMMAND_MENTION_REGEX, (_match, name) => {
+    return `<span data-type="commandMention" data-name="${escapeHtmlAttribute(name)}" class="command-mention">/${name}</span>`
+  })
 }
 
 type CommandMentionListRef = {
@@ -125,7 +126,12 @@ function updatePosition(editor: Editor, element: HTMLElement) {
       const { view } = editor
       const start = view.coordsAtPos(from)
       const end = view.coordsAtPos(to)
-      return new DOMRect(start.left, start.top, end.right - start.left, end.bottom - start.top)
+      return new DOMRect(
+        start.left,
+        start.top,
+        end.right - start.left,
+        end.bottom - start.top,
+      )
     },
   }
 
@@ -142,7 +148,10 @@ function updatePosition(editor: Editor, element: HTMLElement) {
 }
 
 export function createCommandMentionSuggestion(
-  searchFn: (query: string, options?: { signal?: AbortSignal }) => Promise<CommandMentionItem[]>,
+  searchFn: (
+    query: string,
+    options?: { signal?: AbortSignal },
+  ) => Promise<Array<CommandMentionItem>>,
 ): Omit<SuggestionOptions<CommandMentionItem>, 'editor'> {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   let abortController: AbortController | null = null
@@ -152,7 +161,7 @@ export function createCommandMentionSuggestion(
     allowSpaces: false,
 
     items: ({ query }) => {
-      return new Promise<CommandMentionItem[]>((resolve) => {
+      return new Promise<Array<CommandMentionItem>>((resolve) => {
         if (debounceTimer) clearTimeout(debounceTimer)
         if (abortController) abortController.abort()
 
@@ -164,7 +173,9 @@ export function createCommandMentionSuggestion(
         debounceTimer = setTimeout(async () => {
           abortController = new AbortController()
           try {
-            const results = await searchFn(query, { signal: abortController.signal })
+            const results = await searchFn(query, {
+              signal: abortController.signal,
+            })
             resolve(results)
           } catch {
             resolve([])
@@ -189,7 +200,10 @@ export function createCommandMentionSuggestion(
     },
 
     render: () => {
-      let component: ReactRenderer<CommandMentionListRef, SuggestionProps<CommandMentionItem>> | null = null
+      let component: ReactRenderer<
+        CommandMentionListRef,
+        SuggestionProps<CommandMentionItem>
+      > | null = null
       let scrollHandler: (() => void) | null = null
 
       return {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import type { Editor } from '@tiptap/core'
 import { toast } from 'sonner'
+import { isValidYoutubeUrl } from '../../extensions/youtube-embed'
+import type { Editor } from '@tiptap/core'
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { isValidYoutubeUrl } from '../../extensions/youtube-embed'
 
 type YoutubeEmbedDialogProps = {
   editor: Editor
@@ -35,7 +35,11 @@ export function YoutubeEmbedDialog({
       return
     }
 
-    const success = editor.chain().focus().setYoutubeVideo({ src: trimmed }).run()
+    const success = editor
+      .chain()
+      .focus()
+      .setYoutubeVideo({ src: trimmed })
+      .run()
     if (!success) {
       toast.error('Could not embed this YouTube video')
       return
@@ -74,7 +78,11 @@ export function YoutubeEmbedDialog({
           />
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="button" onClick={handleEmbed} disabled={!url.trim()}>

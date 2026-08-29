@@ -42,7 +42,9 @@ export function SettingSection({
   return (
     <section className={cn('flex flex-col gap-2', className)}>
       {title ? (
-        <h3 className="px-0.5 text-sm font-medium text-muted-foreground">{title}</h3>
+        <h3 className="px-0.5 text-sm font-medium text-muted-foreground">
+          {title}
+        </h3>
       ) : null}
       <div className="flex flex-col gap-4 rounded-xl border border-border bg-background p-4">
         {children}

@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { IconLoader2 } from '@tabler/icons-react'
 import { Check, Music } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { buildOptimizeddImageUrl, imageUrlTransforms } from '@/utils/transform-url'
 import type { PickerAsset } from '../lib/parameter-assets'
+import { cn } from '@/lib/utils'
+import {
+  buildOptimizeddImageUrl,
+  imageUrlTransforms,
+} from '@/utils/transform-url'
 
 type AssetPickerGridProps = {
-  items: PickerAsset[]
-  selectedUrls: string[]
+  items: Array<PickerAsset>
+  selectedUrls: Array<string>
   onSelect: (asset: PickerAsset) => void
   maxItems: number
   allowMultiple: boolean
@@ -64,7 +67,8 @@ export function AssetPickerGrid({
               onClick={() => onSelect(item)}
               className={cn(
                 'group relative aspect-square overflow-hidden rounded-xl border bg-muted text-left transition-colors',
-                isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+                isSelected &&
+                  'ring-2 ring-primary ring-offset-2 ring-offset-background',
                 disabled && 'cursor-not-allowed opacity-50',
               )}
             >
@@ -91,7 +95,10 @@ export function AssetPickerGrid({
 
 function PickerPreview({ asset }: { asset: PickerAsset }) {
   if (asset.type === 'image') {
-    const thumbnailUrl = buildOptimizeddImageUrl(asset.url, imageUrlTransforms.thumbnails.small)
+    const thumbnailUrl = buildOptimizeddImageUrl(
+      asset.url,
+      imageUrlTransforms.thumbnails.small,
+    )
     return (
       <img
         src={thumbnailUrl}

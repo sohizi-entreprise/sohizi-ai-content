@@ -1,3 +1,4 @@
+import type { ModelBasePricing } from '../types'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -7,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ModelBasePricing } from '../types'
 
 export type PricingUnit = 'none' | 'per_1m_tokens' | 'per_inference'
 
@@ -19,15 +19,19 @@ export type PricingFormState = {
   inferenceRate: string
 }
 
-export const isModelPriced = (pricing: ModelBasePricing | null | undefined): pricing is ModelBasePricing => {
+export const isModelPriced = (
+  pricing: ModelBasePricing | null | undefined,
+): pricing is ModelBasePricing => {
   if (!pricing) return false
   if (pricing.unit === 'per_1m_tokens') {
     return Number.isFinite(pricing.input) && Number.isFinite(pricing.output)
   }
-  return pricing.unit === 'per_inference' && Number.isFinite(pricing.rate)
+  return Number.isFinite(pricing.rate)
 }
 
-export const formatModelPricingLabel = (pricing: ModelBasePricing | null | undefined): string => {
+export const formatModelPricingLabel = (
+  pricing: ModelBasePricing | null | undefined,
+): string => {
   if (!isModelPriced(pricing)) {
     return 'No pricing'
   }
@@ -47,7 +51,9 @@ export const emptyPricingFormState = (): PricingFormState => ({
   inferenceRate: '',
 })
 
-export const pricingToFormState = (pricing: ModelBasePricing | null | undefined): PricingFormState => {
+export const pricingToFormState = (
+  pricing: ModelBasePricing | null | undefined,
+): PricingFormState => {
   if (!isModelPriced(pricing)) {
     return emptyPricingFormState()
   }
@@ -57,7 +63,8 @@ export const pricingToFormState = (pricing: ModelBasePricing | null | undefined)
       unit: 'per_1m_tokens',
       input: String(pricing.input),
       output: String(pricing.output),
-      cachedInput: pricing.cached_input == null ? '' : String(pricing.cached_input),
+      cachedInput:
+        pricing.cached_input == null ? '' : String(pricing.cached_input),
       inferenceRate: '',
     }
   }
@@ -71,7 +78,9 @@ export const pricingToFormState = (pricing: ModelBasePricing | null | undefined)
   }
 }
 
-export const formStateToPricing = (state: PricingFormState): ModelBasePricing | null => {
+export const formStateToPricing = (
+  state: PricingFormState,
+): ModelBasePricing | null => {
   if (state.unit === 'none') {
     return null
   }
@@ -129,7 +138,10 @@ export function PricingEditor({ value, onChange }: Props) {
     <div className="space-y-3">
       <div className="space-y-2">
         <Label>Pricing unit</Label>
-        <Select value={value.unit} onValueChange={(unit) => setUnit(unit as PricingUnit)}>
+        <Select
+          value={value.unit}
+          onValueChange={(unit) => setUnit(unit as PricingUnit)}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select pricing unit" />
           </SelectTrigger>
@@ -151,7 +163,9 @@ export function PricingEditor({ value, onChange }: Props) {
               step="any"
               placeholder="1.25"
               value={value.input}
-              onChange={(event) => onChange({ ...value, input: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...value, input: event.target.value })
+              }
               required
             />
           </div>
@@ -163,7 +177,9 @@ export function PricingEditor({ value, onChange }: Props) {
               step="any"
               placeholder="10"
               value={value.output}
-              onChange={(event) => onChange({ ...value, output: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...value, output: event.target.value })
+              }
               required
             />
           </div>
@@ -175,7 +191,9 @@ export function PricingEditor({ value, onChange }: Props) {
               step="any"
               placeholder="0.125"
               value={value.cachedInput}
-              onChange={(event) => onChange({ ...value, cachedInput: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...value, cachedInput: event.target.value })
+              }
             />
           </div>
         </div>
@@ -190,7 +208,9 @@ export function PricingEditor({ value, onChange }: Props) {
             step="any"
             placeholder="0.04"
             value={value.inferenceRate}
-            onChange={(event) => onChange({ ...value, inferenceRate: event.target.value })}
+            onChange={(event) =>
+              onChange({ ...value, inferenceRate: event.target.value })
+            }
             required
           />
         </div>

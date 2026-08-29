@@ -13,7 +13,10 @@ export function FinalCtaSection() {
         transition={{ duration: 0.5 }}
         className="relative mx-auto max-w-6xl px-6 py-14 sm:px-12 sm:py-20"
       >
-        <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-3xl">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-3xl"
+        >
           <div className="absolute -left-[20%] -top-[30%] size-[70%] animate-mesh-a rounded-full bg-[radial-gradient(circle_at_center,oklch(0.77_0.22_148/0.55),oklch(0.68_0.16_155/0.2)_45%,transparent_70%)] blur-2xl" />
           <div className="absolute -bottom-[25%] -right-[15%] size-[75%] animate-mesh-b rounded-full bg-[radial-gradient(circle_at_center,oklch(0.78_0.12_185/0.45),oklch(0.77_0.22_148/0.25)_40%,transparent_70%)] blur-2xl" />
         </div>

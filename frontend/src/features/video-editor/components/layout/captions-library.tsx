@@ -100,9 +100,7 @@ export function CaptionsLibrary({ projectId }: CaptionsLibraryProps) {
           {captionClips.length === 0 ? (
             <div className="flex h-full min-h-28 flex-col items-center justify-center gap-2 px-4 text-center">
               <Subtitles className="size-4 text-muted-foreground/60" />
-              <p className="text-xs text-muted-foreground">
-                No captions yet
-              </p>
+              <p className="text-xs text-muted-foreground">No captions yet</p>
             </div>
           ) : (
             <ul className="flex flex-col gap-0.5">

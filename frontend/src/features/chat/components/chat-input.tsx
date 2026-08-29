@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { IconPlus } from '@tabler/icons-react'
 import { toast } from 'sonner'
-import type { Editor } from '@tiptap/core'
 import { useSendMessage } from '../hooks/use-chat'
 import { useChatStore } from '../store/chat-store'
 import ChatSelectModel from './chat-select-model'
 import { ContextWindowDonut } from './context-window-donut'
 import ChatTextarea from './chat-textarea'
+import ChatFilesPreview from './chat-files-preview'
+import type { Editor } from '@tiptap/core'
 import { cn } from '@/lib/utils'
 import {
   PromptInput,
@@ -17,7 +18,6 @@ import {
   PromptInputTools,
 } from '@/components/ai-elements/prompt-input'
 import { useEditorInputBridge } from '@/features/editor/bridge/use-editor-input-bridge'
-import ChatFilesPreview from './chat-files-preview'
 import { useFileUpload } from '@/hooks/use-file-upload'
 import { useSaveFileBucket } from '@/hooks/use-save-file-bucket'
 
@@ -38,8 +38,10 @@ export function ChatInput({
 
   const editorRef = useRef<Editor | null>(null)
 
-  const { sendMessage, loadingState, disableSendButton } = useSendMessage(projectId)
-  const { getInputProps, onRemoveFile, openFileDialog } = useHandleUploadedFiles({ projectId })
+  const { sendMessage, loadingState, disableSendButton } =
+    useSendMessage(projectId)
+  const { getInputProps, onRemoveFile, openFileDialog } =
+    useHandleUploadedFiles({ projectId })
 
   const attachedFiles = useChatStore((state) => state.attachedFiles)
   const hasAttachments = attachedFiles.length > 0
@@ -77,7 +79,7 @@ export function ChatInput({
           className,
         )}
       >
-        <PromptInputBody className=''>
+        <PromptInputBody className="">
           {hasAttachments ? (
             <div className="w-full px-3 pt-3">
               <ChatFilesPreview onRemoveFile={onRemoveFile} />
@@ -92,7 +94,7 @@ export function ChatInput({
               onEditorReady={handleEditorReady}
               editorRef={editorRef}
               placeholder={placeholder}
-              className=''
+              className=""
             />
           </div>
         </PromptInputBody>
@@ -131,54 +133,55 @@ function useHandleUploadedFiles({ projectId }: { projectId: string }) {
   // const insertNodeAt = useFileTreeStore((s) => s.insertNodeAt)
   const { saveFile } = useSaveFileBucket()
 
-  const [
-    _state,
+  const [_state, { openFileDialog, getInputProps, removeFile }] = useFileUpload(
     {
-      openFileDialog,
-      getInputProps,
-      removeFile,
-    },
-  ] = useFileUpload({
-    multiple: true,
-    accept: 'image/*,video/*,audio/*,application/pdf,text/plain',
-    maxSize: 5 * 1024 * 1024, // 5MB
-    maxFiles: 5,
-    onFilesAdded: async (data) => {
-      for (const file of data) {
-        addAttachedFile({
-          id: file.id,
-          preview: file.preview,
-          status: 'pending',
-          type: file.file.type,
-        })
+      multiple: true,
+      accept: 'image/*,video/*,audio/*,application/pdf,text/plain',
+      maxSize: 5 * 1024 * 1024, // 5MB
+      maxFiles: 5,
+      onFilesAdded: (data) => {
+        for (const file of data) {
+          addAttachedFile({
+            id: file.id,
+            preview: file.preview,
+            status: 'pending',
+            type: file.file.type,
+          })
 
-        saveFile({ projectId, folderId: null, file: file.file as File }, {
-          onSuccess: (result) => {
-            updateAttachedFile(file.id, {
-              status: 'uploaded',
-              type: file.file.type,
-              preview: file.preview,
-              url: result.asset.url,
-            })
-            // insertNodeAt(DUMMY_FOLDER_ID, result.fileNode)
-          },
-          onError: (error) => {
-            removeFile(file.id)
-            removeAttachedFile(file.id)
-            toast.error(error.message)
-          },
-        })
-      }
+          saveFile(
+            { projectId, folderId: null, file: file.file as File },
+            {
+              onSuccess: (result) => {
+                updateAttachedFile(file.id, {
+                  status: 'uploaded',
+                  type: file.file.type,
+                  preview: file.preview,
+                  url: result.asset.url,
+                })
+                // insertNodeAt(DUMMY_FOLDER_ID, result.fileNode)
+              },
+              onError: (error) => {
+                removeFile(file.id)
+                removeAttachedFile(file.id)
+                toast.error(error.message)
+              },
+            },
+          )
+        }
+      },
+      onError: (error) => {
+        toast.error(error)
+      },
     },
-    onError: (error) => {
-      toast.error(error)
-    },
-  })
+  )
 
-  const onRemoveFile = useCallback((id: string) => {
-    removeAttachedFile(id)
-    removeFile(id)
-  }, [removeAttachedFile, removeFile])
+  const onRemoveFile = useCallback(
+    (id: string) => {
+      removeAttachedFile(id)
+      removeFile(id)
+    },
+    [removeAttachedFile, removeFile],
+  )
 
   return {
     getInputProps,

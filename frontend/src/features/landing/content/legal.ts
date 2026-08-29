@@ -1,13 +1,13 @@
 export type LegalSection = {
   heading: string
-  paragraphs: string[]
+  paragraphs: Array<string>
 }
 
 export type LegalDocument = {
   title: string
   lastUpdated: string
   intro: string
-  sections: LegalSection[]
+  sections: Array<LegalSection>
 }
 
 export const privacyPolicy: LegalDocument = {

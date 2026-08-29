@@ -43,10 +43,6 @@ export function getAudioPeaks(
   return promise
 }
 
-export function clearWaveformCache(clipId: string): void {
-  cache.delete(clipId)
-}
-
 /** Slice full-file peaks to the trimmed source window used by a clip. */
 export function sliceAudioPeaks(
   peaks: Float32Array,

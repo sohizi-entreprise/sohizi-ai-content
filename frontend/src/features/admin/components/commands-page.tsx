@@ -1,5 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+  deleteAdminCommandMutationOptions,
+  listAdminCommandsQueryOptions,
+  updateAdminCommandMutationOptions,
+} from '../query-mutation'
+import { CommandFormDialog } from './command-form-dialog'
+import type { AdminCommand } from '../types'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -10,19 +17,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Switch } from '@/components/ui/switch'
-import {
-  deleteAdminCommandMutationOptions,
-  listAdminCommandsQueryOptions,
-  updateAdminCommandMutationOptions,
-} from '../query-mutation'
-import type { AdminCommand } from '../types'
-import { CommandFormDialog } from './command-form-dialog'
 
 const previewAction = (action: string) =>
   action.length > 80 ? `${action.slice(0, 80)}…` : action
 
 export function CommandsPage() {
-  const { data: commands = [], isLoading, error } = useQuery(listAdminCommandsQueryOptions())
+  const {
+    data: commands = [],
+    isLoading,
+    error,
+  } = useQuery(listAdminCommandsQueryOptions())
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<AdminCommand | null>(null)
 
@@ -40,7 +44,12 @@ export function CommandsPage() {
   }
 
   const handleDelete = (command: AdminCommand) => {
-    if (!window.confirm(`Delete command “${command.name}”? This cannot be undone.`)) return
+    if (
+      !window.confirm(
+        `Delete command “${command.name}”? This cannot be undone.`,
+      )
+    )
+      return
     deleteMutation.mutate(command.id)
   }
 
@@ -56,8 +65,12 @@ export function CommandsPage() {
         <Button onClick={openCreate}>Add command</Button>
       </div>
 
-      {isLoading ? <p className="text-sm text-muted-foreground">Loading commands…</p> : null}
-      {error ? <p className="text-sm text-destructive">Failed to load commands</p> : null}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading commands…</p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-destructive">Failed to load commands</p>
+      ) : null}
 
       <div className="rounded-xl border">
         <Table>
@@ -72,7 +85,9 @@ export function CommandsPage() {
           <TableBody>
             {commands.map((command) => (
               <TableRow key={command.id}>
-                <TableCell className="font-mono text-sm">/{command.name}</TableCell>
+                <TableCell className="font-mono text-sm">
+                  /{command.name}
+                </TableCell>
                 <TableCell className="max-w-md text-sm text-muted-foreground">
                   {previewAction(command.action)}
                 </TableCell>
@@ -80,15 +95,26 @@ export function CommandsPage() {
                   <Switch
                     checked={command.visible}
                     onCheckedChange={(checked) =>
-                      updateMutation.mutate({ id: command.id, input: { visible: checked } })
+                      updateMutation.mutate({
+                        id: command.id,
+                        input: { visible: checked },
+                      })
                     }
                   />
                 </TableCell>
                 <TableCell className="space-x-2 text-right">
-                  <Button size="sm" variant="outline" onClick={() => openEdit(command)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEdit(command)}
+                  >
                     Edit
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDelete(command)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(command)}
+                  >
                     Delete
                   </Button>
                 </TableCell>
@@ -96,7 +122,10 @@ export function CommandsPage() {
             ))}
             {!isLoading && commands.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={4}
+                  className="py-8 text-center text-muted-foreground"
+                >
                   No commands yet.
                 </TableCell>
               </TableRow>
@@ -105,7 +134,11 @@ export function CommandsPage() {
         </Table>
       </div>
 
-      <CommandFormDialog open={dialogOpen} onOpenChange={setDialogOpen} command={editing} />
+      <CommandFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        command={editing}
+      />
     </div>
   )
 }

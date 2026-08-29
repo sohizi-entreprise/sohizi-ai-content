@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import {
+  createAdminContentCategoryMutationOptions,
+  updateAdminContentCategoryMutationOptions,
+} from '../query-mutation'
+import type {
+  AdminContentCategory,
+  ContentCategoryType,
+  CreateContentCategoryInput,
+} from '../types'
+import { getErrorMessage } from '@/lib/errors'
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -18,15 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  createAdminContentCategoryMutationOptions,
-  updateAdminContentCategoryMutationOptions,
-} from '../query-mutation'
-import type {
-  AdminContentCategory,
-  ContentCategoryType,
-  CreateContentCategoryInput,
-} from '../types'
 
 type Props = {
   open: boolean
@@ -34,7 +35,12 @@ type Props = {
   category?: AdminContentCategory | null
 }
 
-const CATEGORY_TYPES: ContentCategoryType[] = ['genre', 'format', 'audience', 'platform']
+const CATEGORY_TYPES: Array<ContentCategoryType> = [
+  'genre',
+  'format',
+  'audience',
+  'platform',
+]
 
 const emptyForm = {
   name: '',
@@ -51,14 +57,22 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 
-export function ContentCategoryFormDialog({ open, onOpenChange, category }: Props) {
+export function ContentCategoryFormDialog({
+  open,
+  onOpenChange,
+  category,
+}: Props) {
   const isEdit = Boolean(category)
   const [form, setForm] = useState(emptyForm)
   const [slugTouched, setSlugTouched] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const createMutation = useMutation(createAdminContentCategoryMutationOptions())
-  const updateMutation = useMutation(updateAdminContentCategoryMutationOptions())
+  const createMutation = useMutation(
+    createAdminContentCategoryMutationOptions(),
+  )
+  const updateMutation = useMutation(
+    updateAdminContentCategoryMutationOptions(),
+  )
 
   useEffect(() => {
     if (!open) return
@@ -96,10 +110,7 @@ export function ContentCategoryFormDialog({ open, onOpenChange, category }: Prop
       }
       onOpenChange(false)
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        (err instanceof Error ? err.message : 'Failed to save category')
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to save category'))
     }
   }
 
@@ -145,7 +156,10 @@ export function ContentCategoryFormDialog({ open, onOpenChange, category }: Prop
             <Select
               value={form.type}
               onValueChange={(value) =>
-                setForm((prev) => ({ ...prev, type: value as ContentCategoryType }))
+                setForm((prev) => ({
+                  ...prev,
+                  type: value as ContentCategoryType,
+                }))
               }
             >
               <SelectTrigger>
@@ -180,14 +194,21 @@ export function ContentCategoryFormDialog({ open, onOpenChange, category }: Prop
               id="category-description"
               value={form.description}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, description: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  description: event.target.value,
+                }))
               }
               rows={3}
             />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={pending}>

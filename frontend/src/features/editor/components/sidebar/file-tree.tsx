@@ -24,8 +24,8 @@ import type { FileNodeFormat, FileTreeNode, NodeProps } from '../../types'
 import {
   createFileNodeMutationOptions,
   deleteFileNodeMutationOptions,
-  getlistFileTreePerDirectoryOptions,
   getProjectQueryOptions,
+  getlistFileTreePerDirectoryOptions,
   moveFileNodeMutationOptions,
   renameFileNodeMutationOptions,
 } from '@/features/projects/query-mutation'
@@ -140,12 +140,16 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
     if (!node || node.name === name.trim()) return
 
     const parentId = node.parentId ?? rootFolderId
-    updateNodeInCache(queryClient, projectId, parentId, id, { name: name.trim() })
+    updateNodeInCache(queryClient, projectId, parentId, id, {
+      name: name.trim(),
+    })
     try {
       await renameMutation.mutateAsync({ fileId: id, name: name.trim() })
     } catch (err) {
       console.error('Failed to rename:', err)
-      updateNodeInCache(queryClient, projectId, parentId, id, { name: node.name })
+      updateNodeInCache(queryClient, projectId, parentId, id, {
+        name: node.name,
+      })
     }
   }
 
@@ -179,7 +183,11 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
     if (!node) return
 
     const oldParentId = node.parentId ?? rootFolderId
-    const parentWasLoaded = isDirLoaded(queryClient, projectId, resolvedParentId)
+    const parentWasLoaded = isDirLoaded(
+      queryClient,
+      projectId,
+      resolvedParentId,
+    )
 
     removeNodeFromCache(queryClient, projectId, oldParentId, fileId)
     const clampedIndex = Math.min(index, filteredSiblings.length)
@@ -274,10 +282,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   if (!storeRootFolderId) return null
 
   return (
-    <div
-      ref={containerRef}
-      className="min-h-0 flex-1 overflow-hidden"
-    >
+    <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden">
       <Tree<FileTreeNode>
         ref={setTree}
         dndManager={dndManager}
@@ -317,10 +322,10 @@ function findNodeInTree(
   return null
 }
 
-function collectDescendantFileIds(node: FileTreeNode): string[] {
+function collectDescendantFileIds(node: FileTreeNode): Array<string> {
   if (!node.directory) return [node.id]
 
-  const ids: string[] = []
+  const ids: Array<string> = []
   for (const child of node.children ?? []) {
     ids.push(...collectDescendantFileIds(child))
   }

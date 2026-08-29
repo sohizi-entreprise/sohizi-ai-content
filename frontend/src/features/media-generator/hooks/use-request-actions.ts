@@ -11,7 +11,9 @@ export const useRequestActions = (
   const { mutate: deleteMutate } = useMutation(
     deleteGenerationRequestMutationOptions(projectId, requestId),
   )
-  const applyRequestState = useMediaGeneratorStore((state) => state.applyRequestState)
+  const applyRequestState = useMediaGeneratorStore(
+    (state) => state.applyRequestState,
+  )
 
   const onDelete = useCallback(() => {
     const ok = confirm('Are you sure you want to delete this asset?')

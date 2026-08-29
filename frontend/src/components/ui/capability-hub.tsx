@@ -13,7 +13,7 @@ export type Capability = {
 
 export type CapabilityHubProps = {
   hubLabel?: string
-  capabilities?: Capability[]
+  capabilities?: Array<Capability>
   className?: string
   /** Show capability labels as connected components / mobile chips */
   showLabels?: boolean
@@ -30,7 +30,7 @@ const DEFAULT_COLORS = [
   '#67e8f9', // cyan
 ] as const
 
-const DEFAULT_CAPABILITIES: Capability[] = [
+const DEFAULT_CAPABILITIES: Array<Capability> = [
   { id: 'text-editor', label: 'Text Editor' },
   { id: 'storyboard', label: 'Storyboard' },
   { id: 'image-gen', label: 'Image Gen' },
@@ -73,9 +73,16 @@ type Slot = {
  * capabilities sit at every angle (360 degrees) around the core.
  * cx=480 cy=300, hub half-size 100 x 40 -> edges L380 R580 T260 B340.
  */
-const SLOTS: Slot[] = [
+const SLOTS: Array<Slot> = [
   // N — straight vertical
-  { px: 480, py: 74, hx: 480, hy: 260, path: 'M480 74 L480 260', anchor: 'top' },
+  {
+    px: 480,
+    py: 74,
+    hx: 480,
+    hy: 260,
+    path: 'M480 74 L480 260',
+    anchor: 'top',
+  },
   // NE — right then down
   {
     px: 812,
@@ -87,7 +94,14 @@ const SLOTS: Slot[] = [
     anchor: 'right',
   },
   // E — straight horizontal
-  { px: 852, py: 300, hx: 580, hy: 300, path: 'M852 300 L580 300', anchor: 'right' },
+  {
+    px: 852,
+    py: 300,
+    hx: 580,
+    hy: 300,
+    path: 'M852 300 L580 300',
+    anchor: 'right',
+  },
   // SE — right then up
   {
     px: 812,
@@ -99,7 +113,14 @@ const SLOTS: Slot[] = [
     anchor: 'right',
   },
   // S — straight vertical
-  { px: 480, py: 526, hx: 480, hy: 340, path: 'M480 526 L480 340', anchor: 'bottom' },
+  {
+    px: 480,
+    py: 526,
+    hx: 480,
+    hy: 340,
+    path: 'M480 526 L480 340',
+    anchor: 'bottom',
+  },
   // SW — left then up
   {
     px: 148,
@@ -111,7 +132,14 @@ const SLOTS: Slot[] = [
     anchor: 'left',
   },
   // W — straight horizontal
-  { px: 108, py: 300, hx: 380, hy: 300, path: 'M108 300 L380 300', anchor: 'left' },
+  {
+    px: 108,
+    py: 300,
+    hx: 380,
+    hy: 300,
+    path: 'M108 300 L380 300',
+    anchor: 'left',
+  },
   // NW — left then down
   {
     px: 148,
@@ -124,7 +152,7 @@ const SLOTS: Slot[] = [
   },
 ]
 
-const HUB_ENTRIES: [number, number][] = [
+const HUB_ENTRIES: Array<[number, number]> = [
   [480, 260],
   [480, 340],
   [380, 300],
@@ -258,13 +286,15 @@ export function CapabilityHub({
   const uid = `cap-hub-${reactId}`
   const reduceMotion = useReducedMotion() ?? false
 
-  const nodes: Node[] = capabilities.slice(0, SLOTS.length).map((cap, i) => ({
-    ...SLOTS[i],
-    id: cap.id,
-    label: cap.label,
-    color: cap.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
-    index: i,
-  }))
+  const nodes: Array<Node> = capabilities
+    .slice(0, SLOTS.length)
+    .map((cap, i) => ({
+      ...SLOTS[i],
+      id: cap.id,
+      label: cap.label,
+      color: cap.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+      index: i,
+    }))
 
   return (
     <div
@@ -298,9 +328,21 @@ export function CapabilityHub({
               </feMerge>
             </filter>
             <radialGradient id={`${uid}-ambient`} cx="50%" cy="50%" r="50%">
-              <stop offset="0" stopColor="oklch(0.77 0.22 148)" stopOpacity="0.14" />
-              <stop offset="0.6" stopColor="oklch(0.77 0.22 148)" stopOpacity="0.03" />
-              <stop offset="1" stopColor="oklch(0.77 0.22 148)" stopOpacity="0" />
+              <stop
+                offset="0"
+                stopColor="oklch(0.77 0.22 148)"
+                stopOpacity="0.14"
+              />
+              <stop
+                offset="0.6"
+                stopColor="oklch(0.77 0.22 148)"
+                stopOpacity="0.03"
+              />
+              <stop
+                offset="1"
+                stopColor="oklch(0.77 0.22 148)"
+                stopOpacity="0"
+              />
             </radialGradient>
             <pattern
               id={`${uid}-grid`}
@@ -318,7 +360,13 @@ export function CapabilityHub({
           </defs>
 
           {/* PCB grid + ambient core glow */}
-          <rect x="0" y="0" width={VIEW_W} height={VIEW_H} fill={`url(#${uid}-grid)`} />
+          <rect
+            x="0"
+            y="0"
+            width={VIEW_W}
+            height={VIEW_H}
+            fill={`url(#${uid}-grid)`}
+          />
           <ellipse
             cx={VIEW_W / 2}
             cy={VIEW_H / 2}

@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { createAdminModelMutationOptions } from '../query-mutation'
+import type { AdminCategoryOption, CreateModelInput } from '../types'
+import { getErrorMessage } from '@/lib/errors'
 import {
   Dialog,
   DialogContent,
@@ -13,13 +16,11 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
-import { createAdminModelMutationOptions } from '../query-mutation'
-import type { AdminCategoryOption, CreateModelInput } from '../types'
 
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  categories: AdminCategoryOption[]
+  categories: Array<AdminCategoryOption>
   onCreated?: (modelId: string) => void
 }
 
@@ -29,10 +30,15 @@ const emptyForm = {
   name: '',
   description: '',
   enabled: true,
-  categoryNames: [] as string[],
+  categoryNames: [] as Array<string>,
 }
 
-export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: Props) {
+export function ModelFormDialog({
+  open,
+  onOpenChange,
+  categories,
+  onCreated,
+}: Props) {
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState<string | null>(null)
   const createMutation = useMutation(createAdminModelMutationOptions())
@@ -68,10 +74,7 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
       onOpenChange(false)
       onCreated?.(created.id)
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        (err instanceof Error ? err.message : 'Failed to save model')
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to save model'))
     }
   }
 
@@ -88,7 +91,9 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
               id="model-id"
               value={form.id}
               placeholder="openai/gpt-5.1"
-              onChange={(event) => setForm((prev) => ({ ...prev, id: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, id: event.target.value }))
+              }
               required
             />
           </div>
@@ -97,7 +102,9 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
             <Input
               id="model-provider"
               value={form.provider}
-              onChange={(event) => setForm((prev) => ({ ...prev, provider: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, provider: event.target.value }))
+              }
               required
             />
           </div>
@@ -106,7 +113,9 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
             <Input
               id="model-name"
               value={form.name}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, name: event.target.value }))
+              }
               required
             />
           </div>
@@ -116,7 +125,10 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
               id="model-description"
               value={form.description}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, description: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  description: event.target.value,
+                }))
               }
               rows={3}
               placeholder="Optional summary of what this model is for."
@@ -127,17 +139,24 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
             <Switch
               id="model-enabled"
               checked={form.enabled}
-              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, enabled: checked }))}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({ ...prev, enabled: checked }))
+              }
             />
           </div>
           <div className="space-y-2">
             <Label>Categories</Label>
             <div className="grid max-h-40 grid-cols-2 gap-2 overflow-y-auto rounded-lg border p-3">
               {categories.map((category) => (
-                <label key={category.id} className="flex items-center gap-2 text-sm">
+                <label
+                  key={category.id}
+                  className="flex items-center gap-2 text-sm"
+                >
                   <Checkbox
                     checked={form.categoryNames.includes(category.name)}
-                    onCheckedChange={(checked) => toggleCategory(category.name, checked === true)}
+                    onCheckedChange={(checked) =>
+                      toggleCategory(category.name, checked === true)
+                    }
                   />
                   <span>{category.name}</span>
                 </label>
@@ -146,7 +165,11 @@ export function ModelFormDialog({ open, onOpenChange, categories, onCreated }: P
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>

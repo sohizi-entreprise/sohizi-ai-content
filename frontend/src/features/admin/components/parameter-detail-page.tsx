@@ -2,24 +2,6 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { Plus, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   createAdminParameterOptionMutationOptions,
   deleteAdminParameterOptionMutationOptions,
@@ -39,15 +21,37 @@ import type {
   ModelParameterUIComponent,
   UpdateParameterInput,
 } from '../types'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
-const PARAMETER_TYPES: ModelParameterDataType[] = [
+const PARAMETER_TYPES: Array<ModelParameterDataType> = [
   'string',
   'number',
   'boolean',
   'array<string>',
   'array<number>',
 ]
-const UI_COMPONENTS: ModelParameterUIComponent[] = ['select', 'slider', 'uploader']
+const UI_COMPONENTS: Array<ModelParameterUIComponent> = [
+  'select',
+  'slider',
+  'uploader',
+]
 const NONE_VALUE = '__none__'
 
 type Props = {
@@ -55,7 +59,11 @@ type Props = {
 }
 
 export function ParameterDetailPage({ parameterId }: Props) {
-  const { data: parameter, isLoading, error } = useQuery(getAdminParameterQueryOptions(parameterId))
+  const {
+    data: parameter,
+    isLoading,
+    error,
+  } = useQuery(getAdminParameterQueryOptions(parameterId))
   const { data: vendors = [] } = useQuery(listAdminVendorsQueryOptions())
 
   if (isLoading) {
@@ -68,16 +76,27 @@ export function ParameterDetailPage({ parameterId }: Props) {
   return (
     <div className="space-y-8">
       <div>
-        <Link to="/admin/parameters" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/admin/parameters"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
           ← Parameters
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{parameter.label}</h1>
-        <p className="font-mono text-sm text-muted-foreground">{parameter.key}</p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+          {parameter.label}
+        </h1>
+        <p className="font-mono text-sm text-muted-foreground">
+          {parameter.key}
+        </p>
       </div>
 
       <ParameterMetaForm parameterId={parameterId} parameter={parameter} />
       {parameter.xUiComponent === 'select' ? (
-        <OptionsSection parameterId={parameterId} options={parameter.options} vendors={vendors} />
+        <OptionsSection
+          parameterId={parameterId}
+          options={parameter.options}
+          vendors={vendors}
+        />
       ) : null}
       <VendorParameterMaps
         parameterId={parameterId}
@@ -147,7 +166,9 @@ function ParameterMetaForm({
           <Input
             id="detail-key"
             value={form.key}
-            onChange={(event) => setForm((prev) => ({ ...prev, key: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, key: event.target.value }))
+            }
             required
           />
         </div>
@@ -156,7 +177,9 @@ function ParameterMetaForm({
           <Input
             id="detail-label"
             value={form.label}
-            onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, label: event.target.value }))
+            }
             required
           />
         </div>
@@ -165,7 +188,10 @@ function ParameterMetaForm({
           <Select
             value={form.type}
             onValueChange={(value) =>
-              setForm((prev) => ({ ...prev, type: value as ModelParameterDataType }))
+              setForm((prev) => ({
+                ...prev,
+                type: value as ModelParameterDataType,
+              }))
             }
           >
             <SelectTrigger className="w-full">
@@ -187,7 +213,10 @@ function ParameterMetaForm({
             onValueChange={(value) =>
               setForm((prev) => ({
                 ...prev,
-                xUiComponent: value === NONE_VALUE ? '' : (value as ModelParameterUIComponent),
+                xUiComponent:
+                  value === NONE_VALUE
+                    ? ''
+                    : (value as ModelParameterUIComponent),
               }))
             }
           >
@@ -210,7 +239,9 @@ function ParameterMetaForm({
         <Input
           id="detail-description"
           value={form.description}
-          onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+          onChange={(event) =>
+            setForm((prev) => ({ ...prev, description: event.target.value }))
+          }
         />
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -227,14 +258,20 @@ function OptionsSection({
   vendors,
 }: {
   parameterId: string
-  options: AdminParameterOption[]
+  options: Array<AdminParameterOption>
   vendors: Array<{ id: string; name: string }>
 }) {
   const [draft, setDraft] = useState({ label: '', value: '', description: '' })
   const [error, setError] = useState<string | null>(null)
-  const createMutation = useMutation(createAdminParameterOptionMutationOptions())
-  const updateMutation = useMutation(updateAdminParameterOptionMutationOptions())
-  const deleteMutation = useMutation(deleteAdminParameterOptionMutationOptions())
+  const createMutation = useMutation(
+    createAdminParameterOptionMutationOptions(),
+  )
+  const updateMutation = useMutation(
+    updateAdminParameterOptionMutationOptions(),
+  )
+  const deleteMutation = useMutation(
+    deleteAdminParameterOptionMutationOptions(),
+  )
 
   const addOption = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -259,16 +296,22 @@ function OptionsSection({
       <div>
         <h2 className="text-lg font-medium">Options</h2>
         <p className="text-sm text-muted-foreground">
-          Catalog values for this parameter. Map each option to a vendor-specific value.
+          Catalog values for this parameter. Map each option to a
+          vendor-specific value.
         </p>
       </div>
 
-      <form className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2" onSubmit={addOption}>
+      <form
+        className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2"
+        onSubmit={addOption}
+      >
         <div className="space-y-1.5">
           <Label className="text-xs">Label</Label>
           <Input
             value={draft.label}
-            onChange={(event) => setDraft((prev) => ({ ...prev, label: event.target.value }))}
+            onChange={(event) =>
+              setDraft((prev) => ({ ...prev, label: event.target.value }))
+            }
             required
           />
         </div>
@@ -276,7 +319,9 @@ function OptionsSection({
           <Label className="text-xs">Value</Label>
           <Input
             value={draft.value}
-            onChange={(event) => setDraft((prev) => ({ ...prev, value: event.target.value }))}
+            onChange={(event) =>
+              setDraft((prev) => ({ ...prev, value: event.target.value }))
+            }
             required
           />
         </div>
@@ -284,7 +329,9 @@ function OptionsSection({
           <Label className="text-xs">Description</Label>
           <Input
             value={draft.description}
-            onChange={(event) => setDraft((prev) => ({ ...prev, description: event.target.value }))}
+            onChange={(event) =>
+              setDraft((prev) => ({ ...prev, description: event.target.value }))
+            }
           />
         </div>
         <Button type="submit" disabled={createMutation.isPending}>
@@ -302,7 +349,11 @@ function OptionsSection({
             option={option}
             vendors={vendors}
             onSave={async (input) => {
-              await updateMutation.mutateAsync({ parameterId, optionId: option.id, input })
+              await updateMutation.mutateAsync({
+                parameterId,
+                optionId: option.id,
+                input,
+              })
             }}
             onDelete={() => {
               if (!window.confirm(`Delete option “${option.label}”?`)) return
@@ -330,7 +381,11 @@ function OptionCard({
   parameterId: string
   option: AdminParameterOption
   vendors: Array<{ id: string; name: string }>
-  onSave: (input: { label: string; value: string; description: string | null }) => Promise<void>
+  onSave: (input: {
+    label: string
+    value: string
+    description: string | null
+  }) => Promise<void>
   onDelete: () => void
 }) {
   const [form, setForm] = useState({
@@ -353,7 +408,8 @@ function OptionCard({
   }, [option])
 
   const unusedVendors = vendors.filter(
-    (vendor) => !option.vendorMappings.some((mapping) => mapping.vendorId === vendor.id),
+    (vendor) =>
+      !option.vendorMappings.some((mapping) => mapping.vendorId === vendor.id),
   )
 
   return (
@@ -363,21 +419,27 @@ function OptionCard({
           <Label className="text-xs">Label</Label>
           <Input
             value={form.label}
-            onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, label: event.target.value }))
+            }
           />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Value</Label>
           <Input
             value={form.value}
-            onChange={(event) => setForm((prev) => ({ ...prev, value: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, value: event.target.value }))
+            }
           />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Description</Label>
           <Input
             value={form.description}
-            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, description: event.target.value }))
+            }
           />
         </div>
         <Button
@@ -399,14 +461,22 @@ function OptionCard({
         >
           Save
         </Button>
-        <Button type="button" variant="ghost" size="icon" onClick={onDelete} aria-label="Delete option">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onDelete}
+          aria-label="Delete option"
+        >
           <Trash2 className="size-4" />
         </Button>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">Vendor mappings</p>
+        <p className="text-xs font-medium text-muted-foreground">
+          Vendor mappings
+        </p>
         {option.vendorMappings.length > 0 ? (
           <Table>
             <TableHeader>
@@ -420,7 +490,9 @@ function OptionCard({
               {option.vendorMappings.map((mapping) => (
                 <TableRow key={mapping.vendorId}>
                   <TableCell>{mapping.vendorName}</TableCell>
-                  <TableCell className="font-mono text-xs">{mapping.vendorOptionValue}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {mapping.vendorOptionValue}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       type="button"
@@ -446,9 +518,17 @@ function OptionCard({
           <p className="text-xs text-muted-foreground">No vendor mappings.</p>
         )}
         <div className="flex gap-2">
-          <Select value={vendorId || undefined} onValueChange={setVendorId} disabled={unusedVendors.length === 0}>
+          <Select
+            value={vendorId || undefined}
+            onValueChange={setVendorId}
+            disabled={unusedVendors.length === 0}
+          >
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder={unusedVendors.length === 0 ? 'All vendors mapped' : 'Vendor'} />
+              <SelectValue
+                placeholder={
+                  unusedVendors.length === 0 ? 'All vendors mapped' : 'Vendor'
+                }
+              />
             </SelectTrigger>
             <SelectContent>
               {unusedVendors.map((vendor) => (
@@ -480,7 +560,9 @@ function OptionCard({
                 setVendorId('')
                 setVendorValue('')
               } catch (err) {
-                setError(getAdminErrorMessage(err, 'Failed to map vendor option'))
+                setError(
+                  getAdminErrorMessage(err, 'Failed to map vendor option'),
+                )
               }
             }}
           >
@@ -539,15 +621,22 @@ function VendorParameterMaps({
             {mappings.map((mapping) => (
               <TableRow key={mapping.vendorId}>
                 <TableCell>{mapping.vendorName}</TableCell>
-                <TableCell className="font-mono text-xs">{mapping.vendorParamName ?? '—'}</TableCell>
-                <TableCell className="font-mono text-xs">{mapping.vendorDefaultValue ?? '—'}</TableCell>
+                <TableCell className="font-mono text-xs">
+                  {mapping.vendorParamName ?? '—'}
+                </TableCell>
+                <TableCell className="font-mono text-xs">
+                  {mapping.vendorDefaultValue ?? '—'}
+                </TableCell>
                 <TableCell className="text-right">
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() =>
-                      deleteMap.mutate({ parameterId, vendorId: mapping.vendorId })
+                      deleteMap.mutate({
+                        parameterId,
+                        vendorId: mapping.vendorId,
+                      })
                     }
                     aria-label="Remove vendor parameter mapping"
                   >
@@ -558,7 +647,10 @@ function VendorParameterMaps({
             ))}
             {mappings.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={4}
+                  className="py-6 text-center text-muted-foreground"
+                >
                   No vendor parameter mappings.
                 </TableCell>
               </TableRow>
@@ -567,9 +659,17 @@ function VendorParameterMaps({
         </Table>
       </div>
       <div className="grid grid-cols-[200px_1fr_1fr_auto] gap-2">
-        <Select value={vendorId || undefined} onValueChange={setVendorId} disabled={unusedVendors.length === 0}>
+        <Select
+          value={vendorId || undefined}
+          onValueChange={setVendorId}
+          disabled={unusedVendors.length === 0}
+        >
           <SelectTrigger>
-            <SelectValue placeholder={unusedVendors.length === 0 ? 'All vendors mapped' : 'Vendor'} />
+            <SelectValue
+              placeholder={
+                unusedVendors.length === 0 ? 'All vendors mapped' : 'Vendor'
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             {unusedVendors.map((vendor) => (
@@ -608,7 +708,9 @@ function VendorParameterMaps({
               setVendorParamName('')
               setVendorDefaultValue('')
             } catch (err) {
-              setError(getAdminErrorMessage(err, 'Failed to map vendor parameter'))
+              setError(
+                getAdminErrorMessage(err, 'Failed to map vendor parameter'),
+              )
             }
           }}
         >

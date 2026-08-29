@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { CompositionVariable } from '@hyperframes/core'
 import {
   isBooleanVariable,
   isColorVariable,
@@ -10,6 +9,11 @@ import {
 import { useMutation } from '@tanstack/react-query'
 import { Code2, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { updateHtmlAssetValuesMutationOptions } from '../query-mutations'
+import type { CompositionVariable } from '@hyperframes/core'
+import type { HyperframesPlayerElement } from '@/types/hyperframes-player'
+import type { MediaAsset } from '../requests'
+import type { HtmlAssetMetadata } from '../types'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -34,10 +38,6 @@ import {
   extractVariableSchema,
   prepareHtmlDocument,
 } from '@/features/video-editor/utils/html-clip'
-import type { HyperframesPlayerElement } from '@/types/hyperframes-player'
-import { updateHtmlAssetValuesMutationOptions } from '../query-mutations'
-import type { MediaAsset } from '../requests'
-import type { HtmlAssetMetadata } from '../types'
 
 import '@hyperframes/player'
 
@@ -47,8 +47,10 @@ function readHtmlMetadata(item: MediaAsset): HtmlAssetMetadata {
   return (item.metadata ?? {}) as HtmlAssetMetadata
 }
 
-function toCompositionVariables(metadata: HtmlAssetMetadata): CompositionVariable[] {
-  return (metadata.variables ?? []) as CompositionVariable[]
+function toCompositionVariables(
+  metadata: HtmlAssetMetadata,
+): Array<CompositionVariable> {
+  return (metadata.variables ?? []) as Array<CompositionVariable>
 }
 
 function formatDuration(seconds?: number) {
@@ -113,10 +115,14 @@ function HtmlPreviewDialogBody({
   metadata: HtmlAssetMetadata
 }) {
   const playerRef = useRef<HyperframesPlayerElement | null>(null)
-  const metadataVariables = useMemo(() => toCompositionVariables(metadata), [metadata])
+  const metadataVariables = useMemo(
+    () => toCompositionVariables(metadata),
+    [metadata],
+  )
   const savedValuesFromMetadata = metadata.values ?? {}
   const [rawHtml, setRawHtml] = useState<string | null>(null)
-  const [variables, setVariables] = useState<CompositionVariable[]>(metadataVariables)
+  const [variables, setVariables] =
+    useState<Array<CompositionVariable>>(metadataVariables)
   const [values, setValues] = useState<CompositionValues>(() => ({
     ...buildDefaultValues(metadataVariables),
     ...savedValuesFromMetadata,
@@ -167,14 +173,18 @@ function HtmlPreviewDialogBody({
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Failed to load HTML composition')
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to load HTML composition',
+        )
         setIsLoadingHtml(false)
       })
 
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reload when the HTML source URL changes (not after saving values)
+    // only reload when the HTML source URL changes (not after saving values)
   }, [item.url])
 
   // 2) Build the player document once when source HTML is ready (not on every edit).
@@ -182,11 +192,13 @@ function HtmlPreviewDialogBody({
     if (!rawHtml) return
 
     const prepared = prepareHtmlDocument(rawHtml, variables, values)
-    const objectUrl = URL.createObjectURL(new Blob([prepared], { type: 'text/html' }))
+    const objectUrl = URL.createObjectURL(
+      new Blob([prepared], { type: 'text/html' }),
+    )
     setPlayerSrc(objectUrl)
     return () => URL.revokeObjectURL(objectUrl)
     // Only recreate the blob when the source HTML changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- values/variables applied live below
+    // values/variables are applied live below
   }, [rawHtml])
 
   // 3) Push edits into the live iframe — no src reload, no playback reset.
@@ -197,15 +209,19 @@ function HtmlPreviewDialogBody({
     if (!player) return
 
     const apply = () => {
-      applyLiveHtmlConfig(player.iframeElement?.contentDocument, variables, values)
+      applyLiveHtmlConfig(
+        player.iframeElement.contentDocument,
+        variables,
+        values,
+      )
     }
 
     apply()
     player.addEventListener('ready', apply)
-    player.iframeElement?.addEventListener('load', apply)
+    player.iframeElement.addEventListener('load', apply)
     return () => {
       player.removeEventListener('ready', apply)
-      player.iframeElement?.removeEventListener('load', apply)
+      player.iframeElement.removeEventListener('load', apply)
     }
   }, [playerSrc, variables, values])
 
@@ -255,7 +271,9 @@ function HtmlPreviewDialogBody({
       {hasVariables ? (
         <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border/60 bg-background/90 p-3">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
-            <div className="text-sm font-medium text-foreground">Dynamic fields</div>
+            <div className="text-sm font-medium text-foreground">
+              Dynamic fields
+            </div>
             <Button
               size="sm"
               disabled={!isDirty || isSaving}

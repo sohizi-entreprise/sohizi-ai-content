@@ -28,7 +28,7 @@ export type LibraryMediaFormat = 'image' | 'video' | 'audio'
 /** Marks file-tree NODE drags that originate from the Add library panel. */
 export type LibraryAssetDragItem = {
   id: string
-  dragIds: string[]
+  dragIds: Array<string>
   fromLibrary: true
   label: string
   format: LibraryMediaFormat

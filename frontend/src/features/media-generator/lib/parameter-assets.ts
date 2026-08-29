@@ -13,19 +13,25 @@ export function isPickerAssetType(value: unknown): value is PickerAssetType {
   return value === 'image' || value === 'video' || value === 'audio'
 }
 
-export function getUploaderFileType(parameter: ModelParameterBinding): PickerAssetType {
+export function getUploaderFileType(
+  parameter: ModelParameterBinding,
+): PickerAssetType {
   return parameter.constraints?.fileType ?? 'image'
 }
 
-export function getUploaderFileTypes(parameter: ModelParameterBinding): PickerAssetType[] {
+export function getUploaderFileTypes(
+  parameter: ModelParameterBinding,
+): Array<PickerAssetType> {
   return [getUploaderFileType(parameter)]
 }
 
-export function queryTypeForFileTypes(fileTypes: PickerAssetType[]): PickerAssetType | undefined {
+export function queryTypeForFileTypes(
+  fileTypes: Array<PickerAssetType>,
+): PickerAssetType | undefined {
   return fileTypes.length === 1 ? fileTypes[0] : undefined
 }
 
-export function acceptForFileTypes(fileTypes: PickerAssetType[]): string {
+export function acceptForFileTypes(fileTypes: Array<PickerAssetType>): string {
   const mime: Record<PickerAssetType, string> = {
     image: 'image/*',
     video: 'video/*',
@@ -34,14 +40,16 @@ export function acceptForFileTypes(fileTypes: PickerAssetType[]): string {
   return fileTypes.map((type) => mime[type]).join(',')
 }
 
-export function describeFileTypes(fileTypes: PickerAssetType[]): string {
+export function describeFileTypes(fileTypes: Array<PickerAssetType>): string {
   if (fileTypes.length === 1) return fileTypes[0]
   if (fileTypes.length === 2) return `${fileTypes[0]} or ${fileTypes[1]}`
   return `${fileTypes.slice(0, -1).join(', ')}, or ${fileTypes[fileTypes.length - 1]}`
 }
 
 export function isArrayParameter(parameter: ModelParameterBinding) {
-  return parameter.type === 'array<string>' || parameter.type === 'array<number>'
+  return (
+    parameter.type === 'array<string>' || parameter.type === 'array<number>'
+  )
 }
 
 export function getMaxAssetItems(parameter: ModelParameterBinding) {
@@ -49,13 +57,17 @@ export function getMaxAssetItems(parameter: ModelParameterBinding) {
   return parameter.constraints?.max ?? Number.POSITIVE_INFINITY
 }
 
-export function parseParameterAssetUrls(value: string | undefined): string[] {
+export function parseParameterAssetUrls(
+  value: string | undefined,
+): Array<string> {
   if (!value) return []
 
   try {
     const parsed = JSON.parse(value)
     if (Array.isArray(parsed)) {
-      return parsed.filter((item): item is string => typeof item === 'string' && item.length > 0)
+      return parsed.filter(
+        (item): item is string => typeof item === 'string' && item.length > 0,
+      )
     }
   } catch {
     // Stored as a single URL string.
@@ -64,7 +76,10 @@ export function parseParameterAssetUrls(value: string | undefined): string[] {
   return [value]
 }
 
-export function serializeParameterAssetUrls(urls: string[], allowMultiple: boolean) {
+export function serializeParameterAssetUrls(
+  urls: Array<string>,
+  allowMultiple: boolean,
+) {
   const next = urls.filter(Boolean)
   if (!allowMultiple) return next[0] ?? ''
   return JSON.stringify(next)
@@ -72,7 +87,7 @@ export function serializeParameterAssetUrls(urls: string[], allowMultiple: boole
 
 export function coerceParameterSettings(
   values: Record<string, string>,
-  parameters: ModelParameterBinding[],
+  parameters: Array<ModelParameterBinding>,
 ): Record<string, unknown> {
   const next: Record<string, unknown> = { ...values }
 

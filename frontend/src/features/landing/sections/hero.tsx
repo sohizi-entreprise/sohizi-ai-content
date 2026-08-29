@@ -1,8 +1,8 @@
 import { useId } from 'react'
 import { motion } from 'motion/react'
-import { cn } from '@/lib/utils'
 import { CtaButton } from '../components/cta-button'
 import { hero } from '../content'
+import { cn } from '@/lib/utils'
 import { SparklesCore } from '@/components/ui/sparkles'
 
 export function HeroSection() {
@@ -35,7 +35,9 @@ export function HeroSection() {
               <span className="truncate font-medium text-foreground bg-background px-4 py-1 rounded-full">
                 {hero.brand}
               </span>
-              <span className="truncate pr-3 text-foreground">{hero.eyebrow}</span>
+              <span className="truncate pr-3 text-foreground">
+                {hero.eyebrow}
+              </span>
             </p>
             <h1 className="mt-5 max-w-[14ch] font-display text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:mt-6 sm:text-5xl md:max-w-none md:text-6xl lg:text-7xl">
               {hero.headline}
@@ -67,7 +69,6 @@ export function HeroSection() {
     </section>
   )
 }
-
 
 type ArcBackgroundProps = {
   className?: string
@@ -251,4 +252,3 @@ function ArcBackground({ className }: ArcBackgroundProps) {
     </svg>
   )
 }
-

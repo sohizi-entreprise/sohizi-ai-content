@@ -1,20 +1,13 @@
 import { mutationOptions, queryOptions } from '@tanstack/react-query'
 import {
-  getFileContent,
-  saveSkill,
-  saveFileContent,
-  saveFileContentDiff,
-  listPendingOperations,
-  getPendingOperation,
   deletePendingOperation,
+  getFileContent,
+  getPendingOperation,
+  saveFileContent,
+  saveSkill,
 } from './requests'
-import type { CompactTextDiff, CursorPaginationOptions, SaveSkillPayload } from './requests'
+import type { CursorPaginationOptions, SaveSkillPayload } from './requests'
 import type { PendingFileOperation } from './types'
-
-type SaveFileContentDiffVariables = {
-  diff: CompactTextDiff
-  baseRevision: number
-}
 
 const keysFactory = {
   fileContent: (
@@ -44,8 +37,6 @@ const keysFactory = {
   ],
 }
 
-export const getPendingOperationQueryKey = (projectId: string, fileId: string) => keysFactory.pendingOperation(projectId, fileId)
-
 export const getFileContentQueryOptions = (
   projectId: string,
   fileId: string,
@@ -62,7 +53,7 @@ export const saveFileContentMutationOptions = (
   fileId: string,
 ) =>
   mutationOptions({
-    mutationFn: (data: {content: string, diffApplied?: boolean}) =>
+    mutationFn: (data: { content: string; diffApplied?: boolean }) =>
       saveFileContent(projectId, fileId, data.content, data.diffApplied),
     onSuccess: (data, variables, _, context) => {
       context.client.setQueryData(keysFactory.fileContent(projectId, fileId), {
@@ -86,28 +77,7 @@ export const saveFileContentMutationOptions = (
     },
   })
 
-export const saveFileContentDiffMutationOptions = (
-  projectId: string,
-  fileId: string,
-) =>
-  mutationOptions({
-    mutationFn: ({ diff, baseRevision }: SaveFileContentDiffVariables) =>
-      saveFileContentDiff(projectId, fileId, diff, baseRevision),
-    onSuccess: (data, _var, _, context) => {
-      context.client.setQueryData(keysFactory.fileContent(projectId, fileId), {
-        type: 'markdown',
-        content: data.content,
-        revision: data.revision,
-        updatedAt: new Date().toISOString(),
-      })
-    },
-  })
-
-
-export const saveSkillMutationOptions = (
-  projectId: string,
-  fileId: string,
-) =>
+export const saveSkillMutationOptions = (projectId: string, fileId: string) =>
   mutationOptions({
     mutationFn: (skill: SaveSkillPayload) =>
       saveSkill(projectId, fileId, skill),
@@ -117,31 +87,34 @@ export const saveSkillMutationOptions = (
         data,
       })
     },
-})
-
-export const listPendingOperationsQueryOptions = (projectId: string) =>
-  queryOptions({
-    queryKey: keysFactory.pendingOperations(projectId),
-    queryFn: () => listPendingOperations(projectId),
-    enabled: !!projectId,
   })
 
-export const getPendingOperationQueryOptions = (projectId: string, fileId: string) =>
+export const getPendingOperationQueryOptions = (
+  projectId: string,
+  fileId: string,
+) =>
   queryOptions({
     queryKey: keysFactory.pendingOperation(projectId, fileId),
     queryFn: () => getPendingOperation(projectId, fileId),
     enabled: !!projectId && !!fileId,
-})
+  })
 
-export const getFilePendingKey = (projectId: string, fileId: string) => keysFactory.pendingOperation(projectId, fileId)
+export const getFilePendingKey = (projectId: string, fileId: string) =>
+  keysFactory.pendingOperation(projectId, fileId)
 
-export const deletePendingOperationMutationOptions = (projectId: string, fileId: string) =>
+export const deletePendingOperationMutationOptions = (
+  projectId: string,
+  fileId: string,
+) =>
   mutationOptions({
     mutationFn: () => deletePendingOperation(projectId, fileId),
     meta: {
       invalidateQueries: [keysFactory.pendingOperations(projectId)],
     },
     onSuccess: (_data, _var, _, context) => {
-      context.client.setQueryData(keysFactory.pendingOperation(projectId, fileId), {operation: null})
-    }
-})
+      context.client.setQueryData(
+        keysFactory.pendingOperation(projectId, fileId),
+        { operation: null },
+      )
+    },
+  })

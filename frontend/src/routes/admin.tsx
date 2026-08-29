@@ -1,4 +1,10 @@
-import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from '@tanstack/react-router'
+import {
+  Link,
+  Outlet,
+  createFileRoute,
+  useMatchRoute,
+  useNavigate,
+} from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { useSession } from '@/lib/auth-client'
 import { cn } from '@/lib/utils'
@@ -56,7 +62,10 @@ function AdminLayout() {
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-6">
-            <Link to="/admin/models" className="text-lg font-semibold tracking-tight">
+            <Link
+              to="/admin/models"
+              className="text-lg font-semibold tracking-tight"
+            >
               Admin
             </Link>
             <nav className="flex flex-wrap items-center gap-1">
@@ -107,8 +116,12 @@ function AdminNavLink({
 
 function CategoriesNavMenu() {
   const matchRoute = useMatchRoute()
-  const modelsActive = Boolean(matchRoute({ to: '/admin/categories/models', fuzzy: false }))
-  const contentActive = Boolean(matchRoute({ to: '/admin/categories/content', fuzzy: false }))
+  const modelsActive = Boolean(
+    matchRoute({ to: '/admin/categories/models', fuzzy: false }),
+  )
+  const contentActive = Boolean(
+    matchRoute({ to: '/admin/categories/content', fuzzy: false }),
+  )
   const categoriesActive = modelsActive || contentActive
 
   return (

@@ -66,7 +66,7 @@ export function ClipShell({
         {labelOverlay ? (
           <>
             {children}
-            <span className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-1 bg-gradient-to-b from-black/55 to-transparent py-1 pl-2.5 pr-2 text-[11px] font-medium text-white">
+            <span className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-1 bg-linear-to-b from-black/55 to-transparent py-1 pl-2.5 pr-2 text-[11px] font-medium text-white">
               <Icon className="size-3 shrink-0" />
               <span className="truncate">{label}</span>
             </span>

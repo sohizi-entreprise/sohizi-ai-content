@@ -10,7 +10,7 @@ export type TextPreset = {
   previewClassName?: string
 }
 
-export const TEXT_PRESETS: TextPreset[] = [
+export const TEXT_PRESETS: Array<TextPreset> = [
   {
     id: 'title',
     label: 'Title text',
@@ -45,7 +45,11 @@ export const TEXT_PRESETS: TextPreset[] = [
       fontSize: 56,
       color: '#ffffff',
     },
-    previewStyle: { fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: 13 },
+    previewStyle: {
+      fontFamily: 'Georgia, serif',
+      fontStyle: 'italic',
+      fontSize: 13,
+    },
   },
   {
     id: 'italic',

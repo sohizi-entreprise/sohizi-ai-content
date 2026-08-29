@@ -1,4 +1,3 @@
-import type { LucideIcon } from 'lucide-react'
 import {
   AudioLines,
   Clapperboard,
@@ -7,6 +6,7 @@ import {
   Mic,
   Repeat2,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type {
   AudioSubtype,
   GenerationSubtype,
@@ -14,9 +14,6 @@ import type {
   ImageSubtype,
   VideoSubtype,
 } from './types'
-
-export const MEDIA_GENERATOR_TAB_ID = 'media-generator'
-export const MEDIA_GENERATOR_TAB_NAME = 'media-generator'
 
 export const GENERATION_TYPES: Array<{
   value: GenerationType
@@ -48,7 +45,9 @@ export const AUDIO_SUBTYPES: Array<{ value: AudioSubtype; label: string }> = [
   { value: 'dialogue', label: 'Dialogue' },
 ]
 
-export function getDefaultSubtype(type: GenerationType): GenerationSubtype | null {
+export function getDefaultSubtype(
+  type: GenerationType,
+): GenerationSubtype | null {
   if (type === 'image') return 'from-text'
   if (type === 'video') return 'create'
   if (type === 'audio') return 'tts'
@@ -106,7 +105,7 @@ export function getPromptPlaceholder(
 export function getCatalogCategories(
   type: GenerationType,
   subtype: GenerationSubtype | null,
-): string[] {
+): Array<string> {
   switch (type) {
     case 'image':
       return subtype === 'from-image' ? ['image-to-image'] : ['text-to-image']
@@ -142,16 +141,6 @@ export function getAgentMediaType(
     case 'clone-voice':
       return 'audio'
   }
-}
-
-export function supportsReferenceAttachments(
-  type: GenerationType,
-  subtype: GenerationSubtype | null,
-): boolean {
-  if (type === 'clone-voice') return false
-  if (type === 'audio' && subtype !== 'dialogue') return false
-  if (type === 'image' && subtype !== 'from-image') return false
-  return true
 }
 
 export function showsVoiceSelector(

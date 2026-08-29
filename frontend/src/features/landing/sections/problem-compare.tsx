@@ -1,12 +1,12 @@
 import {
-  CheckCircle2,
   AlertCircle,
-  Layers,
-  Workflow,
+  ArrowLeftRight,
   Brain,
+  CheckCircle2,
+  Layers,
   Sparkles,
   Wallet,
-  ArrowLeftRight,
+  Workflow,
 } from 'lucide-react'
 import { compareRows, problem } from '../content'
 
@@ -67,10 +67,12 @@ export function ProblemCompareSection() {
                 </div>
                 <div className="flex items-start gap-2.5 bg-white/2 px-4 py-3 sm:px-5 sm:py-5">
                   <span className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground md:hidden">
-                  Tools
+                    Tools
                   </span>
                   <AlertCircle className="mt-0.5 size-4 shrink-0 text-chart-4" />
-                  <span className="text-sm text-foreground">{row.traditional}</span>
+                  <span className="text-sm text-foreground">
+                    {row.traditional}
+                  </span>
                 </div>
                 <div className="flex items-start gap-2.5 px-4 py-3 sm:px-5 sm:py-5">
                   <span className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground md:hidden">

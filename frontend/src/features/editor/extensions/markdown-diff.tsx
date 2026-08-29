@@ -1,5 +1,11 @@
+import {
+  Mark,
+  Node,
+  markInputRule,
+  markPasteRule,
+  mergeAttributes,
+} from '@tiptap/react'
 import type { MarkdownToken } from '@tiptap/core'
-import { Mark, Node, mergeAttributes, markInputRule, markPasteRule } from '@tiptap/react'
 
 // Input/paste rules may match anywhere in the document.
 const ADDITION_DIFF_REGEX = /\{\+([\s\S]+?)\+\}/
@@ -42,7 +48,7 @@ function shouldParseDiffAsBlock(inner: string) {
 
 function tokenizeBlockDiff(
   src: string,
-  lexer: { blockTokens: (src: string) => MarkdownToken[] },
+  lexer: { blockTokens: (src: string) => Array<MarkdownToken> },
   tokenRegex: RegExp,
   tokenType: string,
 ) {
@@ -235,7 +241,12 @@ const AdditionDiffBlock = Node.create({
     level: 'block',
     start: blockDiffStart,
     tokenize: (src, _tokens, lexer) =>
-      tokenizeBlockDiff(src, lexer, ADDITION_DIFF_BLOCK_TOKEN_REGEX, 'additionDiffBlock'),
+      tokenizeBlockDiff(
+        src,
+        lexer,
+        ADDITION_DIFF_BLOCK_TOKEN_REGEX,
+        'additionDiffBlock',
+      ),
   },
 
   parseMarkdown: (token, helpers) => ({
@@ -283,7 +294,12 @@ const DeletionDiffBlock = Node.create({
     level: 'block',
     start: blockDiffStart,
     tokenize: (src, _tokens, lexer) =>
-      tokenizeBlockDiff(src, lexer, DELETION_DIFF_BLOCK_TOKEN_REGEX, 'deletionDiffBlock'),
+      tokenizeBlockDiff(
+        src,
+        lexer,
+        DELETION_DIFF_BLOCK_TOKEN_REGEX,
+        'deletionDiffBlock',
+      ),
   },
 
   parseMarkdown: (token, helpers) => ({
@@ -307,6 +323,3 @@ export const MarkdownDiffExtensions = [
   AdditionDiffBlock,
   DeletionDiffBlock,
 ]
-
-/** @deprecated Use `MarkdownDiffExtensions` */
-export const MarkdownDiffMarks = MarkdownDiffExtensions

@@ -1,11 +1,11 @@
 import { create, useStore } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { temporal } from 'zundo'
+import { v4 as uuidv4 } from 'uuid'
 import { ASPECT_RATIO_DIMENSIONS } from './types'
 import type { HydrationData } from '../transforms'
 import type { StateCreator } from 'zustand'
 import type { TemporalState } from 'zundo'
-import { v4 as uuidv4 } from 'uuid'
 import type {
   AspectRatio,
   AudioClip,
@@ -483,7 +483,12 @@ const creator: StateCreator<
       const found = findClip(state.tracks, clipId)
       if (!found) return
       const { clip } = found
-      const { id: _id, type: _type, trackId: _trackId, ...safe } = patch as {
+      const {
+        id: _id,
+        type: _type,
+        trackId: _trackId,
+        ...safe
+      } = patch as {
         id?: string
         type?: string
         trackId?: string
@@ -740,8 +745,14 @@ export const useVideoEditorStore = create<EditorState & EditorActions>()(
   temporal(immer(creator), {
     partialize: (state) => {
       const {
-        currentFrame, viewport, isPlaying, selection,
-        compositionId, fileNodeId, projectId, isHydrated,
+        currentFrame,
+        viewport,
+        isPlaying,
+        selection,
+        compositionId,
+        fileNodeId,
+        projectId,
+        isHydrated,
         ...rest
       } = state
       void currentFrame

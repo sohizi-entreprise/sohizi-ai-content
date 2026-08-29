@@ -1,6 +1,12 @@
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clapperboard } from 'lucide-react'
 import type { FileNode } from '@/features/projects/type'
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
 type VideoEditorCardProps = {
   file: FileNode

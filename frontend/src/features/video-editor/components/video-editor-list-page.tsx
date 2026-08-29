@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { Clapperboard, Plus } from 'lucide-react'
+import { CreateVideoEditorModal } from './create-video-editor-modal'
+import { VideoEditorCard } from './video-editor-card'
 import { Button } from '@/components/ui/button'
 import {
   Empty,
@@ -12,16 +14,17 @@ import {
 } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
 import { listFilesByFormatQueryOptions } from '@/features/projects/query-mutation'
-import { CreateVideoEditorModal } from './create-video-editor-modal'
-import { VideoEditorCard } from './video-editor-card'
 
 export function VideoEditorListPage() {
   const { projectId } = useParams({ from: '/dashboard/projects/$projectId' })
   const [createOpen, setCreateOpen] = useState(false)
 
-  const { data: files = [], isLoading, isError, refetch } = useQuery(
-    listFilesByFormatQueryOptions(projectId, 'video-editor'),
-  )
+  const {
+    data: files = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery(listFilesByFormatQueryOptions(projectId, 'video-editor'))
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
@@ -43,7 +46,9 @@ export function VideoEditorListPage() {
           <VideoEditorListSkeleton />
         ) : isError ? (
           <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-destructive/40 p-8">
-            <p className="text-sm text-destructive">Failed to load video editors</p>
+            <p className="text-sm text-destructive">
+              Failed to load video editors
+            </p>
             <Button variant="outline" onClick={() => void refetch()}>
               Retry
             </Button>

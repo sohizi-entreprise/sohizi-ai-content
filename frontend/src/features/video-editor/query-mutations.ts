@@ -2,18 +2,12 @@ import { mutationOptions, queryOptions } from '@tanstack/react-query'
 import {
   batchEdit,
   cancelRender,
-  createComposition,
   createRender,
   generateCaption,
   getRender,
   loadComposition,
 } from './requests'
-import type {
-  BatchOperation,
-  CreateCompositionInput,
-  CreateRenderInput,
-  RenderJob,
-} from './requests'
+import type { BatchOperation, CreateRenderInput, RenderJob } from './requests'
 
 const keysFactory = {
   composition: (projectId: string, fileNodeId: string) => [
@@ -40,12 +34,6 @@ export const loadCompositionQueryOptions = (
     enabled: !!projectId && !!fileNodeId,
     gcTime: 0,
     refetchOnWindowFocus: false,
-  })
-
-export const createCompositionMutationOptions = (projectId: string) =>
-  mutationOptions({
-    mutationFn: (input: CreateCompositionInput) =>
-      createComposition(projectId, input),
   })
 
 export const batchEditMutationOptions = (

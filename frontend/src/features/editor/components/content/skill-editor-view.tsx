@@ -20,14 +20,14 @@ import {
 import { ImageLayout } from '../../extensions/image-layout'
 import { SlashCommandExtension } from '../../extensions/slash-command'
 import { NestedTrailingNode } from '../../extensions/nested-trailing-node'
+import { useEditorInputBridge } from '../../bridge/use-editor-input-bridge'
+import { MAX_CHARACTER_COUNT } from '../../constants'
 import { EditorTopChrome } from './editor-top-chrome'
 import { SkillMetaBadges } from './skill-meta-badges'
 import type { EditorTab, Skill } from '../../types'
 import type { JSONContent } from '@tiptap/react'
 import { useFileMentionSearch } from '@/hooks/use-file-mention-search'
 import './text-editor.css'
-import { useEditorInputBridge } from '../../bridge/use-editor-input-bridge'
-import { MAX_CHARACTER_COUNT } from '../../constants'
 
 const SkillDocument = Node.create({
   name: 'doc',
@@ -294,7 +294,9 @@ export function SkillEditorView({
   visibility = 'private',
   ...props
 }: SkillEditorViewProps) {
-  const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(null)
+  const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(
+    null,
+  )
   const { projectId } = useParams({
     from: '/dashboard/projects/$projectId/editor',
   })
@@ -351,13 +353,14 @@ export function SkillEditorView({
     },
   })
 
-  if (!editor) return null
-
   return (
     <div className="relative flex h-full w-full flex-col bg-surface">
       <style>{skillEditorStyles}</style>
       <EditorTopChrome editor={editor} tabId={tab.id} />
-      <div ref={setScrollContainer} className="flex-1 overflow-auto overscroll-none">
+      <div
+        ref={setScrollContainer}
+        className="flex-1 overflow-auto overscroll-none"
+      >
         <div className="mx-auto min-w-2xl max-w-3xl px-6 pb-8 pt-12">
           <SkillMetaBadges
             projectId={projectId}

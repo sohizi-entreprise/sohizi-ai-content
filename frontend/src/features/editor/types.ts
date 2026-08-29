@@ -58,15 +58,15 @@ export type AiGeneratedAssetsContent = {
 }
 
 export type Skill = {
-    id: string;
-    name: string;
-    description: string;
-    instructions: string;
-    fileNodeId: string | null;
-    status: "draft" | "published";
-    visibility: "private" | "public";
-    createdAt: string;
-    updatedAt: string;
+  id: string
+  name: string
+  description: string
+  instructions: string
+  fileNodeId: string | null
+  status: 'draft' | 'published'
+  visibility: 'private' | 'public'
+  createdAt: string
+  updatedAt: string
 }
 
 export type SkillContent = {
@@ -83,7 +83,6 @@ export type FileContentResponse =
 // ==================
 
 export type ContentType = 'text' | 'video'
-
 
 // ========================= VIDEO EDITOR ==========================
 export type VideoTrackType = 'video' | 'audio' | 'text' | 'image'
@@ -142,68 +141,67 @@ export type ImageMediaClipProperties = {
 }
 
 export type VideoComposition = {
-  id: string;
-  projectId: string;
-  fileNodeId: string;
-  fps: number;
-  durationInFrames: number;
-  aspectRatio: string;
-  width: number;
-  height: number;
-  version: number;
-  createdAt: string;
-  updatedAt: string;
-
+  id: string
+  projectId: string
+  fileNodeId: string
+  fps: number
+  durationInFrames: number
+  aspectRatio: string
+  width: number
+  height: number
+  version: number
+  createdAt: string
+  updatedAt: string
 }
 
 export type VideoTracks = {
-  id: string;
-  compositionId: string;
-  type: VideoTrackType;
-  position: number;
-  muted: boolean;
-  hidden: boolean;
-  createdAt: string;
-  updatedAt: string;
+  id: string
+  compositionId: string
+  type: VideoTrackType
+  position: number
+  muted: boolean
+  hidden: boolean
+  createdAt: string
+  updatedAt: string
 }
-  
+
 export type VideoClips = {
-  id: string;
-  trackId: string;
-  compositionId: string;
-  type: VideoTrackType;
-  startFrame: number;
-  endFrame: number;
-  sourceStartFrame: number;
-  sourceDurationInFrames: number;
+  id: string
+  trackId: string
+  compositionId: string
+  type: VideoTrackType
+  startFrame: number
+  endFrame: number
+  sourceStartFrame: number
+  sourceDurationInFrames: number
 }
 
 // ========================== PENDING OPERATIONS ==========================
 export type PatchOperation = {
-  type: 'patch';
-  content: string;
-  fileId: string;
-  fileName: string;
+  type: 'patch'
+  content: string
+  fileId: string
+  fileName: string
 }
 
 export type DeleteOperation = {
-  type: 'delete';
-  fileId: string;
-  fileName: string;
+  type: 'delete'
+  fileId: string
+  fileName: string
 }
 
 export type RefreshOperation = {
-  type: 'refresh';
-  fileId: string;
-  fileName: string;
+  type: 'refresh'
+  fileId: string
+  fileName: string
 }
 
 export type PendingFileOperation = {
-  id: string;
-  fileNodeId: string;
-  operation: 'patch' | 'delete' | 'refresh';
-  payload: PatchOperation | DeleteOperation | RefreshOperation;
-  diffApplied: boolean;
-  createdAt: string;
-  updatedAt: string;
+  id: string
+  fileNodeId: string
+  operation: 'patch' | 'delete' | 'refresh'
+  payload: PatchOperation | DeleteOperation | RefreshOperation
+  diffApplied: boolean
+  createdAt: string
+  updatedAt: string
 }

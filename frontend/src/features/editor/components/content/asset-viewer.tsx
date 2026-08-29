@@ -1,7 +1,10 @@
 import ReactPlayer from 'react-player'
-import { AssetContent, AssetType } from '../../types'
 import { DocumentViewer } from './document-viewer'
-import { buildOptimizeddImageUrl, imageUrlTransforms } from '@/utils/transform-url'
+import type { AssetContent, AssetType } from '../../types'
+import {
+  buildOptimizeddImageUrl,
+  imageUrlTransforms,
+} from '@/utils/transform-url'
 
 type Props = AssetContent
 
@@ -10,9 +13,14 @@ export default function AssetViewer(props: Props) {
 
   switch (type) {
     case 'image':
-      return <ImageViewer uri={getOptimizedUrl(type, url, storageKey)} name={props.name} />
+      return (
+        <ImageViewer
+          uri={getOptimizedUrl(type, url, storageKey)}
+          name={props.name}
+        />
+      )
     case 'document':
-      return <DocumentViewer uri={url}/>
+      return <DocumentViewer uri={url} />
     case 'video':
     case 'audio':
       return <VideoAndAudioViewer url={url} />
@@ -24,7 +32,11 @@ export default function AssetViewer(props: Props) {
 function ImageViewer({ uri, name }: { uri: string; name: string }) {
   return (
     <div className="flex h-full w-full items-center justify-center p-4">
-      <img src={uri} alt={name} className="max-h-full max-w-full object-contain" />
+      <img
+        src={uri}
+        alt={name}
+        className="max-h-full max-w-full object-contain"
+      />
     </div>
   )
 }

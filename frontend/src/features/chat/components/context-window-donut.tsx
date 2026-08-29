@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 
 type ContextWindowDonutProps = {
-  usage: {percentage: number}
+  usage: { percentage: number }
   size?: 'sm' | 'md' | 'lg' | 'xs'
   showLabel?: boolean
   className?: string
@@ -23,7 +23,8 @@ export function ContextWindowDonut({
   const { diameter, strokeWidth } = sizeConfig[size]
   const radius = (diameter - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = circumference - (usage.percentage / 100) * circumference
+  const strokeDashoffset =
+    circumference - (usage.percentage / 100) * circumference
 
   // Color based on usage
   const getStrokeColor = () => {
@@ -73,4 +74,3 @@ export function ContextWindowDonut({
     </div>
   )
 }
-

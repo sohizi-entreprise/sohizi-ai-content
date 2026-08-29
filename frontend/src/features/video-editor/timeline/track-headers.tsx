@@ -137,7 +137,7 @@ interface TrackHeaderRowProps {
   onDragOver: (e: React.DragEvent) => void
   onDrop: (e: React.DragEvent) => void
   onDragEnd: (e: React.DragEvent) => void
-}   
+}
 
 function TrackHeaderRow({
   track,
@@ -231,10 +231,7 @@ function TrackHeaderRow({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="right" className="min-w-36">
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={onDelete}
-          >
+          <DropdownMenuItem variant="destructive" onClick={onDelete}>
             <Trash2 className="size-3.5" />
             Delete track
           </DropdownMenuItem>

@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { signUp, signIn, emailOtp } from '@/lib/auth-client'
+import { emailOtp, signIn, signUp } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
@@ -68,7 +68,9 @@ function SignUpPage() {
     const { error: signInError } = await signIn.email({ email, password })
 
     if (signInError) {
-      setError(signInError.message || 'Verification succeeded but sign-in failed.')
+      setError(
+        signInError.message || 'Verification succeeded but sign-in failed.',
+      )
       setLoading(false)
       return
     }
@@ -111,10 +113,14 @@ function SignUpPage() {
             {step === 'form' ? 'Create Account' : 'Verify your email'}
           </CardTitle>
           <CardDescription>
-            {step === 'form'
-              ? 'Get started with Sohizi'
-              : <>We sent a 6-digit code to <span className="font-medium text-foreground">{email}</span></>
-            }
+            {step === 'form' ? (
+              'Get started with Sohizi'
+            ) : (
+              <>
+                We sent a 6-digit code to{' '}
+                <span className="font-medium text-foreground">{email}</span>
+              </>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -193,9 +199,7 @@ function SignUpPage() {
                   />
                 </div>
 
-                {error && (
-                  <p className="text-sm text-destructive">{error}</p>
-                )}
+                {error && <p className="text-sm text-destructive">{error}</p>}
 
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Spinner />}
@@ -258,7 +262,10 @@ function SignUpPage() {
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link to="/sign-in" className="text-primary underline-offset-4 hover:underline">
+            <Link
+              to="/sign-in"
+              className="text-primary underline-offset-4 hover:underline"
+            >
               Sign in
             </Link>
           </p>

@@ -1,9 +1,10 @@
-import { Editor, useEditorState } from '@tiptap/react'
+import { useEditorState } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import { AtSign } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useEditorInputBridge } from '../../bridge/use-editor-input-bridge'
 import TextEditorToolbar from '../content/text-editor-toolbar'
+import type { Editor } from '@tiptap/react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { buildAttachedSelection } from '@/features/chat/lib/editor-context'
@@ -95,8 +96,7 @@ export default function TextEditorBubbleMenu({
         const inTable =
           currentEditor.isActive('tableCell') ||
           currentEditor.isActive('tableHeader')
-        const hasSelection =
-          !currentEditor.state.selection.empty || inTable
+        const hasSelection = !currentEditor.state.selection.empty || inTable
         if (!hasSelection) return false
 
         // TipTap hides on blur unless focus stays inside the bubble element.

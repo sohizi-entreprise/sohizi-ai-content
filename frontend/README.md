@@ -93,6 +93,7 @@ src/
 ## Database Schema
 
 The app uses the following tables:
+
 - `projects` - Video projects
 - `project_briefs` - Project metadata (title, logline, audience, tone, etc.)
 - `outline_acts` - Story acts structure

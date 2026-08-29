@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { useMediaGeneratorStore } from '../store/media-generator-store'
+import type { GoogleVoiceDescription } from '../requests'
 import {
   VoiceSelector,
   VoiceSelectorBullet,
@@ -15,12 +17,20 @@ import {
 } from '@/components/ai-elements/voice-selector'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { GoogleVoiceDescription } from '../requests'
-import { useMediaGeneratorStore } from '../store/media-generator-store'
 
-export function MediaVoiceSelector({voices, isLoading}: {voices: GoogleVoiceDescription[]; isLoading: boolean}) {
-  const updatePromptSettings = useMediaGeneratorStore((state) => state.updatePromptSettings)
-  const selectedVoice = useMediaGeneratorStore((state) => state.promptSettings.audio.voice)
+export function MediaVoiceSelector({
+  voices,
+  isLoading,
+}: {
+  voices: Array<GoogleVoiceDescription>
+  isLoading: boolean
+}) {
+  const updatePromptSettings = useMediaGeneratorStore(
+    (state) => state.updatePromptSettings,
+  )
+  const selectedVoice = useMediaGeneratorStore(
+    (state) => state.promptSettings.audio.voice,
+  )
 
   const [open, setOpen] = useState(false)
   const [playingVoice, setPlayingVoice] = useState<string | null>(null)

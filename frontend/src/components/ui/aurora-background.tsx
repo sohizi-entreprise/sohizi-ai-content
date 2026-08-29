@@ -1,10 +1,11 @@
-"use client";
-import { cn } from "@/lib/utils";
-import React, { ReactNode } from "react";
+'use client'
+import React from 'react'
+import type { ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 
 interface AuroraBackgroundProps extends React.HTMLProps<HTMLDivElement> {
-  children: ReactNode;
-  showRadialGradient?: boolean;
+  children: ReactNode
+  showRadialGradient?: boolean
 }
 
 export const AuroraBackground = ({
@@ -17,7 +18,7 @@ export const AuroraBackground = ({
     <main>
       <div
         className={cn(
-          "transition-bg relative flex h-[100vh] flex-col items-center justify-center bg-zinc-50 text-slate-950 dark:bg-zinc-900",
+          'transition-bg relative flex h-[100vh] flex-col items-center justify-center bg-zinc-50 text-slate-950 dark:bg-zinc-900',
           className,
         )}
         {...props}
@@ -26,21 +27,21 @@ export const AuroraBackground = ({
           className="absolute inset-0 overflow-hidden"
           style={
             {
-              "--aurora":
-                "repeating-linear-gradient(100deg,#3b82f6_10%,#a5b4fc_15%,#93c5fd_20%,#ddd6fe_25%,#60a5fa_30%)",
-              "--dark-gradient":
-                "repeating-linear-gradient(100deg,#000_0%,#000_7%,transparent_10%,transparent_12%,#000_16%)",
-              "--white-gradient":
-                "repeating-linear-gradient(100deg,#fff_0%,#fff_7%,transparent_10%,transparent_12%,#fff_16%)",
+              '--aurora':
+                'repeating-linear-gradient(100deg,#3b82f6_10%,#a5b4fc_15%,#93c5fd_20%,#ddd6fe_25%,#60a5fa_30%)',
+              '--dark-gradient':
+                'repeating-linear-gradient(100deg,#000_0%,#000_7%,transparent_10%,transparent_12%,#000_16%)',
+              '--white-gradient':
+                'repeating-linear-gradient(100deg,#fff_0%,#fff_7%,transparent_10%,transparent_12%,#fff_16%)',
 
-              "--blue-300": "#93c5fd",
-              "--blue-400": "#60a5fa",
-              "--blue-500": "#3b82f6",
-              "--indigo-300": "#a5b4fc",
-              "--violet-200": "#ddd6fe",
-              "--black": "#000",
-              "--white": "#fff",
-              "--transparent": "transparent",
+              '--blue-300': '#93c5fd',
+              '--blue-400': '#60a5fa',
+              '--blue-500': '#3b82f6',
+              '--indigo-300': '#a5b4fc',
+              '--violet-200': '#ddd6fe',
+              '--black': '#000',
+              '--white': '#fff',
+              '--transparent': 'transparent',
             } as React.CSSProperties
           }
         >
@@ -57,5 +58,5 @@ export const AuroraBackground = ({
         {children}
       </div>
     </main>
-  );
-};
+  )
+}

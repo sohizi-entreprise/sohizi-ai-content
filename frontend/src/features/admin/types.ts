@@ -1,12 +1,14 @@
-export type ModelBasePricing = {
-  unit: 'per_1m_tokens'
-  input: number
-  output: number
-  cached_input?: number
-} | {
-  unit: 'per_inference'
-  rate: number
-}
+export type ModelBasePricing =
+  | {
+      unit: 'per_1m_tokens'
+      input: number
+      output: number
+      cached_input?: number
+    }
+  | {
+      unit: 'per_inference'
+      rate: number
+    }
 
 export type AdminModelVendor = {
   vendorId: string
@@ -25,13 +27,13 @@ export type AdminModel = {
   pricing?: ModelBasePricing | null
   createdAt: string
   updatedAt: string
-  categories: string[]
+  categories: Array<string>
   vendorCount?: number
   hasPricing?: boolean
 }
 
 export type AdminModelDetail = AdminModel & {
-  vendors: AdminModelVendor[]
+  vendors: Array<AdminModelVendor>
 }
 
 export type AdminCategoryOption = {
@@ -45,8 +47,8 @@ export type AdminCategory = AdminCategoryOption & {
 }
 
 export type AdminModelsCatalog = {
-  models: AdminModel[]
-  categories: AdminCategoryOption[]
+  models: Array<AdminModel>
+  categories: Array<AdminCategoryOption>
 }
 
 export type CreateCategoryInput = {
@@ -94,7 +96,7 @@ export type ParameterVendorMapping = {
 export type AdminParameterOption = ParameterOptionSummary & {
   createdAt: string
   updatedAt: string
-  vendorMappings: OptionVendorMapping[]
+  vendorMappings: Array<OptionVendorMapping>
 }
 
 export type AdminParameter = {
@@ -107,12 +109,15 @@ export type AdminParameter = {
   createdAt: string
   updatedAt: string
   optionCount: number
-  options: ParameterOptionSummary[]
+  options: Array<ParameterOptionSummary>
 }
 
-export type AdminParameterDetail = Omit<AdminParameter, 'optionCount' | 'options'> & {
-  options: AdminParameterOption[]
-  vendorMappings: ParameterVendorMapping[]
+export type AdminParameterDetail = Omit<
+  AdminParameter,
+  'optionCount' | 'options'
+> & {
+  options: Array<AdminParameterOption>
+  vendorMappings: Array<ParameterVendorMapping>
 }
 
 export type CreateParameterOptionInput = {
@@ -129,10 +134,12 @@ export type CreateParameterInput = {
   type: ModelParameterDataType
   description?: string | null
   xUiComponent?: ModelParameterUIComponent | null
-  options?: CreateParameterOptionInput[]
+  options?: Array<CreateParameterOptionInput>
 }
 
-export type UpdateParameterInput = Partial<Omit<CreateParameterInput, 'options'>>
+export type UpdateParameterInput = Partial<
+  Omit<CreateParameterInput, 'options'>
+>
 
 export type ModelParameterBinding = {
   parameterId: string
@@ -145,7 +152,7 @@ export type ModelParameterBinding = {
   sortOrder: number
   defaultValue: string | null
   constraints: ModelParameterConstraint | null
-  options: ParameterOptionSummary[]
+  options: Array<ParameterOptionSummary>
 }
 
 export type ReplaceModelParameterBinding = {
@@ -199,7 +206,9 @@ export type CreateModelVendorBindingInput = {
   priority?: number
 }
 
-export type UpdateModelVendorBindingInput = Partial<Omit<CreateModelVendorBindingInput, 'vendorId'>>
+export type UpdateModelVendorBindingInput = Partial<
+  Omit<CreateModelVendorBindingInput, 'vendorId'>
+>
 
 export type UpsertVendorOptionMapInput = {
   vendorOptionValue: string
@@ -217,7 +226,7 @@ export type CreateModelInput = {
   description?: string | null
   enabled?: boolean
   pricing?: ModelBasePricing | null
-  categoryNames: string[]
+  categoryNames: Array<string>
 }
 
 export type UpdateModelInput = Partial<Omit<CreateModelInput, 'id'>>
@@ -283,7 +292,7 @@ export type AdminSkill = {
   visibility: SkillVisibility
   createdAt: string
   updatedAt: string
-  categoryIds: string[]
+  categoryIds: Array<string>
   categories: Array<{ id: string; name: string; slug: string; type: string }>
 }
 
@@ -293,7 +302,7 @@ export type CreateSkillInput = {
   instructions: string
   status?: SkillStatus
   visibility?: SkillVisibility
-  categoryIds?: string[]
+  categoryIds?: Array<string>
 }
 
 export type UpdateSkillInput = Partial<CreateSkillInput>

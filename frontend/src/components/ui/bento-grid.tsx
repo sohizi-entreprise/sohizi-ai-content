@@ -1,24 +1,24 @@
-import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import type { ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 
 export const BentoGrid = ({
   className,
   children,
 }: {
-  className?: string;
-  children?: ReactNode;
+  className?: string
+  children?: ReactNode
 }) => {
   return (
     <div
       className={cn(
-        "mx-auto grid max-w-7xl grid-cols-1 gap-4 md:auto-rows-[18rem] md:grid-cols-3",
+        'mx-auto grid max-w-7xl grid-cols-1 gap-4 md:auto-rows-[18rem] md:grid-cols-3',
         className,
       )}
     >
       {children}
     </div>
-  );
-};
+  )
+}
 
 export const BentoGridItem = ({
   className,
@@ -27,16 +27,16 @@ export const BentoGridItem = ({
   header,
   icon,
 }: {
-  className?: string;
-  title?: string | ReactNode;
-  description?: string | ReactNode;
-  header?: ReactNode;
-  icon?: ReactNode;
+  className?: string
+  title?: string | ReactNode
+  description?: string | ReactNode
+  header?: ReactNode
+  icon?: ReactNode
 }) => {
   return (
     <div
       className={cn(
-        "group/bento row-span-1 flex flex-col justify-between space-y-4 rounded-2xl border border-border bg-card p-4 transition duration-200 hover:border-primary/30 dark:shadow-none",
+        'group/bento row-span-1 flex flex-col justify-between space-y-4 rounded-2xl border border-border bg-card p-4 transition duration-200 hover:border-primary/30 dark:shadow-none',
         className,
       )}
     >
@@ -51,5 +51,5 @@ export const BentoGridItem = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

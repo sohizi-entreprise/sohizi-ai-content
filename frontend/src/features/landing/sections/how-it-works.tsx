@@ -1,5 +1,5 @@
-import { Spotlight } from '@/components/ui/spotlight'
 import { howItWorks } from '../content'
+import { Spotlight } from '@/components/ui/spotlight'
 
 export function HowItWorksSection() {
   return (

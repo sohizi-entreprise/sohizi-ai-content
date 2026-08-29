@@ -1,8 +1,8 @@
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cn } from '@/lib/utils'
 import { AUDIO_SUBTYPES, IMAGE_SUBTYPES, VIDEO_SUBTYPES } from '../constants'
 import { useMediaGeneratorStore } from '../store/media-generator-store'
 import type { GenerationSubtype } from '../types'
+import { cn } from '@/lib/utils'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const SUBTYPE_OPTIONS = {
   image: IMAGE_SUBTYPES,
@@ -12,10 +12,18 @@ const SUBTYPE_OPTIONS = {
 
 export function MediaSubtypeTabs() {
   const generationType = useMediaGeneratorStore((state) => state.generationType)
-  const generationSubtype = useMediaGeneratorStore((state) => state.generationSubtype)
-  const setGenerationSubtype = useMediaGeneratorStore((state) => state.setGenerationSubtype)
+  const generationSubtype = useMediaGeneratorStore(
+    (state) => state.generationSubtype,
+  )
+  const setGenerationSubtype = useMediaGeneratorStore(
+    (state) => state.setGenerationSubtype,
+  )
 
-  if (generationType !== 'image' && generationType !== 'video' && generationType !== 'audio') {
+  if (
+    generationType !== 'image' &&
+    generationType !== 'video' &&
+    generationType !== 'audio'
+  ) {
     return null
   }
 

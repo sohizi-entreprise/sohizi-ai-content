@@ -4,10 +4,10 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router'
-import { Toaster } from '@/components/ui/sonner'
 import appCss from '../styles.css?url'
 
 import type { QueryClient } from '@tanstack/react-query'
+import { Toaster } from '@/components/ui/sonner'
 
 interface MyRouterContext {
   queryClient: QueryClient
@@ -52,7 +52,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
       {
         rel: 'stylesheet',
-        href: "https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Geist:wght@100..900&display=swap",
+        href: 'https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Geist:wght@100..900&display=swap',
       },
     ],
   }),

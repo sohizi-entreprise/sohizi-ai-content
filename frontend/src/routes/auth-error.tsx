@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useSearch } from '@tanstack/react-router'
+import { Link, createFileRoute, useSearch } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -9,7 +9,10 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
-const ERROR_MESSAGES: Record<string, { title: string; description: string }> = {
+const ERROR_MESSAGES: Record<
+  string,
+  { title: string; description: string } | undefined
+> = {
   account_not_linked: {
     title: 'Account Already Exists',
     description:
@@ -49,8 +52,7 @@ const ERROR_MESSAGES: Record<string, { title: string; description: string }> = {
 
 const DEFAULT_ERROR = {
   title: 'Authentication Error',
-  description:
-    'Something went wrong during sign-in. Please try again.',
+  description: 'Something went wrong during sign-in. Please try again.',
 }
 
 export const Route = createFileRoute('/auth-error')({

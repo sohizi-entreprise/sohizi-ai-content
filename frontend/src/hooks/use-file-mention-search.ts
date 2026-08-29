@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useMentionSearch } from './use-mention-search'
 import { searchFilesByNameQueryOptions } from '@/features/chat/query-mutation'
 import { searchFilesByName } from '@/features/projects/request'
 
@@ -10,34 +10,27 @@ export type FileMentionItem = {
 }
 
 export function useFileMentionSearch(projectId: string) {
-  const queryClient = useQueryClient()
+  const search = useMentionSearch(
+    useCallback(
+      async (query: string, options?: { signal?: AbortSignal }) => {
+        const files = await searchFilesByName(projectId, query, 15, {
+          signal: options?.signal,
+        })
 
-  const search = useCallback(
-    async (
-      query: string,
-      options?: { signal?: AbortSignal },
-    ): Promise<FileMentionItem[]> => {
-      const trimmed = query.trim()
-      if (!trimmed) return []
-
-      const files = await queryClient.fetchQuery({
-        ...searchFilesByNameQueryOptions(projectId, trimmed),
-        queryFn: () =>
-          searchFilesByName(projectId, trimmed, 15, {
-            signal: options?.signal,
-          }),
-        staleTime: 1000 * 60,
-      })
-
-      return files
-        .filter((file) => !file.directory)
-        .map((file) => ({
-          id: file.id,
-          display: file.name,
-          format: file.format ?? 'markdown',
-        }))
-    },
-    [projectId, queryClient],
+        return files
+          .filter((file) => !file.directory)
+          .map((file) => ({
+            id: file.id,
+            display: file.name,
+            format: file.format ?? 'markdown',
+          }))
+      },
+      [projectId],
+    ),
+    useCallback(
+      (query: string) => searchFilesByNameQueryOptions(projectId, query),
+      [projectId],
+    ),
   )
 
   return search

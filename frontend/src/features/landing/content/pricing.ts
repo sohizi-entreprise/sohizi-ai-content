@@ -58,13 +58,13 @@ export type PlanId = (typeof plans)[number]['id']
 
 export type CompareCell = string | boolean
 
-export const comparisonRows: {
+export const comparisonRows: Array<{
   feature: string
   free: CompareCell
   creator: CompareCell
   studio: CompareCell
   pro: CompareCell
-}[] = [
+}> = [
   {
     feature: 'Credits',
     free: '500 (one-time)',

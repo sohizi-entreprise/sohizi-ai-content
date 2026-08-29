@@ -1,8 +1,9 @@
-import { useCallback, useState } from "react"
-import { isAxiosError } from "axios"
-import api from "@/lib/axios"
-import type { FileNode } from "@/features/projects/type"
-import { AssetContent } from "@/features/editor/types"
+import { useCallback, useState } from 'react'
+import { isAxiosError } from 'axios'
+import type { FileNode } from '@/features/projects/type'
+import type { AssetContent } from '@/features/editor/types'
+import api from '@/lib/axios'
+import { formatBytes } from '@/lib/format-bytes'
 
 type UploadUrlResponse = {
   url: string
@@ -12,7 +13,7 @@ type UploadUrlResponse = {
 
 type UploadSuccessResponse = {
   fileNode: FileNode
-  asset: AssetContent & {id: string}
+  asset: AssetContent & { id: string }
 }
 
 export type SaveFileBucketInput = {
@@ -23,7 +24,10 @@ export type SaveFileBucketInput = {
 
 export type SaveFileBucketCallbacks = {
   onStart?: (input: SaveFileBucketInput) => void
-  onSuccess?: (result: UploadSuccessResponse, input: SaveFileBucketInput) => void
+  onSuccess?: (
+    result: UploadSuccessResponse,
+    input: SaveFileBucketInput,
+  ) => void
   onError?: (error: Error, input: SaveFileBucketInput) => void
 }
 
@@ -35,33 +39,38 @@ export async function saveFileToBucket(
   { projectId, folderId, file }: SaveFileBucketInput,
   options: SaveFileBucketOptions = {},
 ): Promise<UploadSuccessResponse> {
-  const contentType = file.type || "application/octet-stream"
+  const contentType = file.type || 'application/octet-stream'
 
-  const uploadUrlResponse = await api.get<UploadUrlResponse>(`/media/${projectId}/upload-url`, {
-    params: {
-      fileName: file.name,
-      contentType,
+  const uploadUrlResponse = await api.get<UploadUrlResponse>(
+    `/media/${projectId}/upload-url`,
+    {
+      params: {
+        fileName: file.name,
+        contentType,
+      },
+      signal: options.signal,
     },
-    signal: options.signal,
-  })
+  )
 
   const { url, storageKey, maxSizeInBytes } = uploadUrlResponse.data
 
   if (file.size > maxSizeInBytes) {
-    throw new Error(`File exceeds the maximum upload size of ${formatBytes(maxSizeInBytes)}.`)
+    throw new Error(
+      `File exceeds the maximum upload size of ${formatBytes(maxSizeInBytes)}.`,
+    )
   }
 
   const uploadResponse = await fetch(url, {
-    method: "PUT",
+    method: 'PUT',
     body: file,
     headers: {
-      "Content-Type": contentType,
+      'Content-Type': contentType,
     },
     signal: options.signal,
   })
 
   if (!uploadResponse.ok) {
-    throw new Error("Failed to upload file to storage.")
+    throw new Error('Failed to upload file to storage.')
   }
 
   const uploadSuccessResponse = await api.post<UploadSuccessResponse>(
@@ -80,7 +89,7 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const {onError, onStart, onSuccess} = callbacks
+  const { onError, onStart, onSuccess } = callbacks
 
   const handleStart = useCallback(
     (input: SaveFileBucketInput, options?: SaveFileBucketOptions) => {
@@ -110,11 +119,11 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
 
   const handleError = useCallback(
     (
-      error: unknown,
+      cause: unknown,
       input: SaveFileBucketInput,
       options?: SaveFileBucketOptions,
     ) => {
-      const normalizedError = normalizeError(error)
+      const normalizedError = normalizeError(cause)
       setError(normalizedError.message)
       options?.onError?.(normalizedError, input)
 
@@ -140,9 +149,9 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
         const result = await saveFileToBucket(input, options)
         handleSuccess(result, input, options)
         return result
-      } catch (error) {
-        handleError(error, input, options)
-        throw error
+      } catch (cause) {
+        handleError(cause, input, options)
+        throw cause
       } finally {
         setIsUploading(false)
       }
@@ -152,9 +161,9 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
 
   const saveFiles = useCallback(
     async (
-      inputs: SaveFileBucketInput[],
+      inputs: Array<SaveFileBucketInput>,
       options?: SaveFileBucketOptions,
-    ): Promise<UploadSuccessResponse[]> => {
+    ): Promise<Array<UploadSuccessResponse>> => {
       setIsUploading(true)
       setError(null)
 
@@ -166,14 +175,12 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
               const result = await saveFileToBucket(input, options)
               handleSuccess(result, input, options)
               return result
-            } catch (error) {
-              handleError(error, input, options)
-              throw error
+            } catch (cause) {
+              handleError(cause, input, options)
+              throw cause
             }
           }),
         )
-      } catch (error) {
-        throw error
       } finally {
         setIsUploading(false)
       }
@@ -196,7 +203,9 @@ export function useSaveFileBucket(callbacks: SaveFileBucketCallbacks = {}) {
 
 function normalizeError(error: unknown) {
   if (isAxiosError(error)) {
-    const data = error.response?.data as { message?: string; error?: string } | undefined
+    const data = error.response?.data as
+      | { message?: string; error?: string }
+      | undefined
     return new Error(data?.message ?? data?.error ?? error.message)
   }
 
@@ -204,15 +213,5 @@ function normalizeError(error: unknown) {
     return error
   }
 
-  return new Error("Failed to upload file.")
-}
-
-function formatBytes(bytes: number) {
-  if (bytes === 0) return "0 Bytes"
-
-  const units = ["Bytes", "KB", "MB", "GB", "TB"]
-  const unitIndex = Math.floor(Math.log(bytes) / Math.log(1024))
-  const value = bytes / Math.pow(1024, unitIndex)
-
-  return `${Number.parseFloat(value.toFixed(2))} ${units[unitIndex]}`
+  return new Error('Failed to upload file.')
 }

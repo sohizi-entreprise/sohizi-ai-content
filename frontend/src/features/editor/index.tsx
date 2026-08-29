@@ -10,7 +10,9 @@ export function VideoProductionEditor() {
     from: '/dashboard/projects/$projectId/editor',
   })
 
-  const { data, isPending, isError } = useQuery(getProjectQueryOptions(projectId))
+  const { data, isPending, isError } = useQuery(
+    getProjectQueryOptions(projectId),
+  )
   const init = useFileTreeStore((s) => s.init)
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export function VideoProductionEditor() {
     )
   }
 
-  if (isError || !data) {
+  if (isError) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">Failed to load project.</p>

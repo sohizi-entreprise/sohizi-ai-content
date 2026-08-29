@@ -1,12 +1,27 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Download, Eye, FilePlus2, Folder, RotateCcw, Trash2, X } from 'lucide-react'
+import { useState } from 'react'
+import {
+  Download,
+  Eye,
+  FilePlus2,
+  Folder,
+  RotateCcw,
+  Trash2,
+  X,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { useAssetMenu } from '../hooks/use-asset-menu'
+import AudioPlayer from './audio-player'
+import { RenderHtml } from './html-asset-preview'
+import { MediaCardMenu } from './media-card-menu'
+import { RequestSettingsDialog } from './request-settings-dialog'
+import type { MediaAsset } from '../requests'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { MediaAsset } from '../requests'
-import { buildOptimizeddImageUrl } from '@/utils/transform-url'
-import { imageUrlTransforms } from '@/utils/transform-url'
+import {
+  buildOptimizeddImageUrl,
+  imageUrlTransforms,
+} from '@/utils/transform-url'
 import {
   Dialog,
   DialogClose,
@@ -17,14 +32,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { useAssetMenu } from '../hooks/use-asset-menu'
-import { toast } from 'sonner'
-import { searchFilesByName } from '@/features/projects/request'
-import AudioPlayer from './audio-player'
-import { RenderHtml } from './html-asset-preview'
+import { useFolderSearch } from '@/hooks/use-folder-search'
 import { Checkbox } from '@/components/ui/checkbox'
-import { MediaCardMenu } from './media-card-menu'
-import { RequestSettingsDialog } from './request-settings-dialog'
 
 type MediaCardProps = {
   item: MediaAsset
@@ -39,9 +48,8 @@ export function MediaCard({
   selected = false,
   onSelectedChange,
 }: MediaCardProps) {
-
   return (
-    <div className='group overflow-hidden rounded-md border aspect-4/3 relative'>
+    <div className="group overflow-hidden rounded-md border aspect-4/3 relative">
       <div
         className={cn(
           'absolute left-1 top-1 z-10 flex size-8 items-center justify-center rounded-full bg-black/50 text-white opacity-0 backdrop-blur transition-opacity hover:bg-black/70',
@@ -51,19 +59,25 @@ export function MediaCard({
       >
         <Checkbox
           checked={selected}
-          onCheckedChange={(checked) => onSelectedChange?.(item.id, checked === true)}
+          onCheckedChange={(checked) =>
+            onSelectedChange?.(item.id, checked === true)
+          }
           onClick={(event) => event.stopPropagation()}
           aria-label={`Select ${item.name}`}
           className="border-white/80 bg-white/10 text-white data-[state=checked]:border-primary data-[state=checked]:bg-primary"
         />
       </div>
       <RouteMediaAsset item={item} />
-      <CardMenu asset={item} projectId={projectId} className='absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 transition-opacity duration-300'/>
+      <CardMenu
+        asset={item}
+        projectId={projectId}
+        className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 transition-opacity duration-300"
+      />
     </div>
   )
 }
 
-function RouteMediaAsset({item}: {item: MediaAsset}) {
+function RouteMediaAsset({ item }: { item: MediaAsset }) {
   switch (item.type) {
     case 'image':
       return <RenderImage item={item} />
@@ -76,30 +90,50 @@ function RouteMediaAsset({item}: {item: MediaAsset}) {
   }
 }
 
-function RenderImage({item}: {item: MediaAsset}) {
-  const previewUrl = buildOptimizeddImageUrl(item.url, imageUrlTransforms.previews.contentCard);
-  const thumbnailUrl = buildOptimizeddImageUrl(item.url, imageUrlTransforms.thumbnails.large);
-  const blurryPlaceholderUrl = buildOptimizeddImageUrl(item.url, imageUrlTransforms.blurryPlaceholder);
+function RenderImage({ item }: { item: MediaAsset }) {
+  const previewUrl = buildOptimizeddImageUrl(
+    item.url,
+    imageUrlTransforms.previews.contentCard,
+  )
+  const thumbnailUrl = buildOptimizeddImageUrl(
+    item.url,
+    imageUrlTransforms.thumbnails.large,
+  )
+  const blurryPlaceholderUrl = buildOptimizeddImageUrl(
+    item.url,
+    imageUrlTransforms.blurryPlaceholder,
+  )
   return (
     <Dialog>
-      <DialogTrigger className='size-full'>
-        <div className="size-full bg-cover bg-center" style={{ backgroundImage: `url(${blurryPlaceholderUrl})` }}>
-          <img className='size-full object-contain'
-                src={thumbnailUrl}
-                alt={item.name}
+      <DialogTrigger className="size-full">
+        <div
+          className="size-full bg-cover bg-center"
+          style={{ backgroundImage: `url(${blurryPlaceholderUrl})` }}
+        >
+          <img
+            className="size-full object-contain"
+            src={thumbnailUrl}
+            alt={item.name}
           />
         </div>
       </DialogTrigger>
-      <DialogContent className='md:max-w-6xl bg-surface/30 backdrop-blur-sm' showCloseButton={false}>
-        <div className='aspect-video w-full'>
-          <img className='size-full object-contain'
-                src={previewUrl}
-                alt={item.name}
+      <DialogContent
+        className="md:max-w-6xl bg-surface/30 backdrop-blur-sm"
+        showCloseButton={false}
+      >
+        <div className="aspect-video w-full">
+          <img
+            className="size-full object-contain"
+            src={previewUrl}
+            alt={item.name}
           />
         </div>
         <DialogClose asChild>
-          <Button size='icon' className='absolute -top-4 -right-4 rounded-full bg-surface border backdrop-blur-sm hover:bg-surface hover:scale-105 transition-all duration-300'>
-            <X className='size-4 text-foreground' />
+          <Button
+            size="icon"
+            className="absolute -top-4 -right-4 rounded-full bg-surface border backdrop-blur-sm hover:bg-surface hover:scale-105 transition-all duration-300"
+          >
+            <X className="size-4 text-foreground" />
           </Button>
         </DialogClose>
       </DialogContent>
@@ -107,20 +141,17 @@ function RenderImage({item}: {item: MediaAsset}) {
   )
 }
 
-function RenderVideo({item}: {item: MediaAsset}) {
+function RenderVideo({ item }: { item: MediaAsset }) {
   return (
-    <div className='size-full'>
-      <video className='size-full object-contain'
-            src={item.url}
-            controls 
-      />
+    <div className="size-full">
+      <video className="size-full object-contain" src={item.url} controls />
     </div>
   )
 }
-function RenderAudio({item}: {item: MediaAsset}) {
+function RenderAudio({ item }: { item: MediaAsset }) {
   return (
-    <div className='size-full flex items-center justify-center'>
-      <AudioPlayer src={item.url} className="size-full"/>
+    <div className="size-full flex items-center justify-center">
+      <AudioPlayer src={item.url} className="size-full" />
     </div>
   )
 }
@@ -136,40 +167,22 @@ function CardMenu({
 }) {
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
-  const [folderQuery, setFolderQuery] = useState('')
-  const [debouncedFolderQuery, setDebouncedFolderQuery] = useState('')
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
-  const { onDelete, onReuseSettings, onDownload, onMoveToFolder } = useAssetMenu(projectId, asset)
-  const trimmedFolderQuery = folderQuery.trim()
-  const trimmedDebouncedFolderQuery = debouncedFolderQuery.trim()
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setDebouncedFolderQuery(trimmedFolderQuery)
-    }, 250)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [trimmedFolderQuery])
-
-  const { data: searchedFiles, isFetching: isSearchingFolders } = useQuery({
-    queryKey: ['project', projectId, 'folder-search', trimmedDebouncedFolderQuery],
-    queryFn: ({ signal }) =>
-      searchFilesByName(projectId, trimmedDebouncedFolderQuery, 25, {
-        signal,
-        directory: true,
-      }),
-    enabled: moveDialogOpen && trimmedDebouncedFolderQuery.length > 0,
-    staleTime: 1000 * 60,
-  })
-  const folderOptions = useMemo(
-    () => searchedFiles ?? [],
-    [searchedFiles],
+  const { onDelete, onReuseSettings, onDownload, onMoveToFolder } =
+    useAssetMenu(projectId, asset)
+  const {
+    folderQuery,
+    setFolderQuery,
+    trimmedDebouncedFolderQuery,
+    folderOptions,
+    isSearchingFolders,
+  } = useFolderSearch(projectId, moveDialogOpen)
+  const selectedFolder = folderOptions.find(
+    (folder) => folder.id === selectedFolderId,
   )
-  const selectedFolder = folderOptions.find((folder) => folder.id === selectedFolderId)
 
   const openMoveDialog = () => {
     setFolderQuery('')
-    setDebouncedFolderQuery('')
     setSelectedFolderId(null)
     setMoveDialogOpen(true)
   }
@@ -262,7 +275,8 @@ function CardMenu({
                     onClick={() => setSelectedFolderId(folder.id)}
                     className={cn(
                       'flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm transition-colors hover:bg-accent',
-                      selectedFolderId === folder.id && 'bg-accent text-accent-foreground',
+                      selectedFolderId === folder.id &&
+                        'bg-accent text-accent-foreground',
                     )}
                   >
                     <Folder className="size-4 text-muted-foreground" />

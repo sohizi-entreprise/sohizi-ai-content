@@ -1,5 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+  deleteAdminContentCategoryMutationOptions,
+  listAdminContentCategoriesQueryOptions,
+} from '../query-mutation'
+import { ContentCategoryFormDialog } from './content-category-form-dialog'
+import type { AdminContentCategory } from '../types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,12 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  deleteAdminContentCategoryMutationOptions,
-  listAdminContentCategoriesQueryOptions,
-} from '../query-mutation'
-import type { AdminContentCategory } from '../types'
-import { ContentCategoryFormDialog } from './content-category-form-dialog'
 
 export function ContentCategoriesPage() {
   const {
@@ -26,7 +26,9 @@ export function ContentCategoriesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<AdminContentCategory | null>(null)
 
-  const deleteMutation = useMutation(deleteAdminContentCategoryMutationOptions())
+  const deleteMutation = useMutation(
+    deleteAdminContentCategoryMutationOptions(),
+  )
 
   const openCreate = () => {
     setEditing(null)
@@ -39,7 +41,12 @@ export function ContentCategoriesPage() {
   }
 
   const handleDelete = (category: AdminContentCategory) => {
-    if (!window.confirm(`Delete category “${category.name}”? This cannot be undone.`)) return
+    if (
+      !window.confirm(
+        `Delete category “${category.name}”? This cannot be undone.`,
+      )
+    )
+      return
     deleteMutation.mutate(category.id)
   }
 
@@ -47,16 +54,23 @@ export function ContentCategoriesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Content categories</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Content categories
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Taxonomy for skills and projects (genre, format, audience, platform).
+            Taxonomy for skills and projects (genre, format, audience,
+            platform).
           </p>
         </div>
         <Button onClick={openCreate}>Add category</Button>
       </div>
 
-      {isLoading ? <p className="text-sm text-muted-foreground">Loading categories…</p> : null}
-      {error ? <p className="text-sm text-destructive">Failed to load categories</p> : null}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading categories…</p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-destructive">Failed to load categories</p>
+      ) : null}
 
       <div className="rounded-xl border">
         <Table>
@@ -74,7 +88,9 @@ export function ContentCategoriesPage() {
             {categories.map((category) => (
               <TableRow key={category.id}>
                 <TableCell className="font-medium">{category.name}</TableCell>
-                <TableCell className="font-mono text-xs">{category.slug}</TableCell>
+                <TableCell className="font-mono text-xs">
+                  {category.slug}
+                </TableCell>
                 <TableCell>
                   <Badge variant="secondary">{category.type}</Badge>
                 </TableCell>
@@ -83,10 +99,18 @@ export function ContentCategoriesPage() {
                   {category.description ?? '—'}
                 </TableCell>
                 <TableCell className="space-x-2 text-right">
-                  <Button size="sm" variant="outline" onClick={() => openEdit(category)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEdit(category)}
+                  >
                     Edit
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDelete(category)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(category)}
+                  >
                     Delete
                   </Button>
                 </TableCell>
@@ -94,7 +118,10 @@ export function ContentCategoriesPage() {
             ))}
             {!isLoading && categories.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="py-8 text-center text-muted-foreground"
+                >
                   No categories yet.
                 </TableCell>
               </TableRow>

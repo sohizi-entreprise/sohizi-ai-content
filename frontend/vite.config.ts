@@ -44,7 +44,7 @@ const config = defineConfig({
   },
   ssr: {
     // Bundle so Vite resolves extensionless relative imports (Node ESM requires .js)
-    noExternal: ['tiptap-pagination-plus', '@cyntler/react-doc-viewer'],
+    noExternal: ['@cyntler/react-doc-viewer'],
   },
   plugins: [
     devtools(),

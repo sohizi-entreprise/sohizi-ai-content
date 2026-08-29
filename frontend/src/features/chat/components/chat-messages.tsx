@@ -1,10 +1,11 @@
-import { useEffect, useRef, useCallback } from 'react'
-import { IconSparkles, IconLoader2 } from '@tabler/icons-react'
-import { StoreConversation, useChatStore } from '../store/chat-store'
-import { listAgentRunsInfiniteQueryOptions } from '../query-mutation'
+import { useCallback, useEffect, useRef } from 'react'
+import { IconLoader2, IconSparkles } from '@tabler/icons-react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useShallow } from 'zustand/shallow'
+import { useChatStore } from '../store/chat-store'
+import { listAgentRunsInfiniteQueryOptions } from '../query-mutation'
 import { ChatRunBlock } from './chat-run-block'
+import type { StoreConversation } from '../store/chat-store'
 import {
   Conversation,
   ConversationContent,
@@ -12,18 +13,35 @@ import {
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation'
 
-export function ChatMessages({ projectId, className }: { projectId: string; className?: string }) {
-  const conversation = useChatStore(useShallow((state) => state.activeConversation))
+export function ChatMessages({
+  projectId,
+  className,
+}: {
+  projectId: string
+  className?: string
+}) {
+  const conversation = useChatStore(
+    useShallow((state) => state.activeConversation),
+  )
 
   if (!conversation) {
     return <RenderEmpty />
   }
 
-  return <RenderAgentRuns conversation={conversation} projectId={projectId} className={className} />
+  return (
+    <RenderAgentRuns
+      conversation={conversation}
+      projectId={projectId}
+      className={className}
+    />
+  )
 }
 
-
-function RenderAgentRuns(props: { conversation: StoreConversation; projectId: string; className?: string }) {
+function RenderAgentRuns(props: {
+  conversation: StoreConversation
+  projectId: string
+  className?: string
+}) {
   const { conversation, projectId, className } = props
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -35,7 +53,9 @@ function RenderAgentRuns(props: { conversation: StoreConversation; projectId: st
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useInfiniteQuery(listAgentRunsInfiniteQueryOptions(projectId, conversation.id, isNew))
+  } = useInfiniteQuery(
+    listAgentRunsInfiniteQueryOptions(projectId, conversation.id, isNew),
+  )
 
   const handleFetchOlder = useCallback(() => {
     if (!hasNextPage || isFetchingNextPage) return
@@ -62,7 +82,9 @@ function RenderAgentRuns(props: { conversation: StoreConversation; projectId: st
   if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <span className="text-sm text-muted-foreground">Loading messages...</span>
+        <span className="text-sm text-muted-foreground">
+          Loading messages...
+        </span>
       </div>
     )
   }

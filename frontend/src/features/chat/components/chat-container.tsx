@@ -1,11 +1,10 @@
-import { RefObject } from 'react'
-import type { Editor } from '@tiptap/react'
-import { cn } from '@/lib/utils'
 import { ChatHeader } from './chat-header'
 import { ChatMessages } from './chat-messages'
 import { ChatInput } from './chat-input'
+import type { RefObject } from 'react'
+import type { Editor } from '@tiptap/react'
 import type { EditorType } from '../types'
-
+import { cn } from '@/lib/utils'
 
 // ============================================================================
 // CHAT CONTAINER
@@ -18,25 +17,19 @@ type ChatContainerProps = {
   className?: string
 }
 
-export function ChatContainer({
-  projectId,
-  className,
-}: ChatContainerProps) {
-
-
+export function ChatContainer({ projectId, className }: ChatContainerProps) {
   return (
-    <div className={cn('flex flex-col h-full bg-card backdrop-blur-md', className)}>
+    <div
+      className={cn('flex flex-col h-full bg-card backdrop-blur-md', className)}
+    >
       {/* Header */}
       <ChatHeader projectId={projectId} />
 
       {/* Messages */}
-      <ChatMessages projectId={projectId} className="flex-1 min-h-0"/>
+      <ChatMessages projectId={projectId} className="flex-1 min-h-0" />
 
       {/* Input */}
       <ChatInput projectId={projectId} />
-
     </div>
   )
 }
-
-

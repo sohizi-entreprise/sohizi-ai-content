@@ -7,36 +7,36 @@ import { useVideoEditorStore } from '../store/editor-store'
 import { CLIP_EFFECT_IDS, selectVisibleClips } from '../store/selectors'
 import { framesToSeconds, secondsToFrames } from '../utils/time'
 import { usePlayerRef } from '../engine/player-ref'
+import {
+  VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE,
+  isPointerOverTimelineDropArea,
+  registerTimelineDropPreviewClear,
+} from '../utils/library-dnd'
+import { ingestFileNodeClip } from '../utils/ingest-file-node-clip'
+import { ingestTextPresetClip } from '../utils/ingest-text-preset-clip'
 import { TrackHeaders } from './track-headers'
 import { VideoBlock } from './renderers/video-block'
 import { AudioBlock } from './renderers/audio-block'
 import { TextBlock } from './renderers/text-block'
 import { ImageBlock } from './renderers/image-block'
-import { getHtmlClipLabel, HtmlBlock } from './renderers/html-block'
+import { HtmlBlock, getHtmlClipLabel } from './renderers/html-block'
 import { CaptionBlock } from './renderers/caption-block'
 import { CLIP_ACCENT, clipSurface } from './renderers/clip-shell'
+import type {
+  LibraryAssetDragItem,
+  TextPresetDragItem,
+} from '../utils/library-dnd'
 import type { ProjectState, TrackType } from '../store/types'
 import type {
   TimelineEditor,
   TimelineState,
 } from '@xzdarcy/react-timeline-editor'
 import type { TimelineEffect } from '@xzdarcy/timeline-engine'
-import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
-import { findNodeById } from '@/features/editor/stores/file-tree-cache'
 import type { FileTreeNode } from '@/features/editor/types'
-import {
-  ARBORIST_NODE_DRAG_TYPE,
-  type ArboristNodeDragItem,
-} from '@/features/editor/utils/arborist-dnd'
-import {
-  isPointerOverTimelineDropArea,
-  registerTimelineDropPreviewClear,
-  VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE,
-  type LibraryAssetDragItem,
-  type TextPresetDragItem,
-} from '../utils/library-dnd'
-import { ingestFileNodeClip } from '../utils/ingest-file-node-clip'
-import { ingestTextPresetClip } from '../utils/ingest-text-preset-clip'
+import type { ArboristNodeDragItem } from '@/features/editor/utils/arborist-dnd'
+import { findNodeById } from '@/features/editor/stores/file-tree-cache'
+import { useFileTreeStore } from '@/features/editor/stores/file-tree-store'
+import { ARBORIST_NODE_DRAG_TYPE } from '@/features/editor/utils/arborist-dnd'
 
 const ROW_HEIGHT = 44
 const HEADERS_WIDTH = 140
@@ -240,12 +240,13 @@ export function VideoTimeline() {
     [selectClip],
   )
 
-  const handleClickRow = useCallback<
-    NonNullable<TimelineEditor['onClickRow']>
-  >((e) => {
-    if (eventOriginatedOnAction(e)) return
-    selectClip(null)
-  }, [selectClip])
+  const handleClickRow = useCallback<NonNullable<TimelineEditor['onClickRow']>>(
+    (e) => {
+      if (eventOriginatedOnAction(e)) return
+      selectClip(null)
+    },
+    [selectClip],
+  )
 
   // Cross-track DnD state. We piggy-back on xzdarcy's horizontal drag and
   // track the pointer's vertical motion ourselves with a window mousemove
@@ -315,7 +316,8 @@ export function VideoTimeline() {
       if (!editArea) return
       const rect = editArea.getBoundingClientRect()
       const live = dragLiveSecRef.current
-      const startSec = live?.start ?? framesToSeconds(clip.startFrame, fpsRef.current)
+      const startSec =
+        live?.start ?? framesToSeconds(clip.startFrame, fpsRef.current)
       const endSec = live?.end ?? framesToSeconds(clip.endFrame, fpsRef.current)
       const pxPerSec = scaleWidthRef.current / SCALE_SECONDS
       const widthLocal = Math.max(8, (endSec - startSec) * pxPerSec)
@@ -413,11 +415,11 @@ export function VideoTimeline() {
       }
 
       if (guide.mode === 'insert') {
-        const target = tracksList[guide.targetIndex]
-        if (!target) {
+        if (guide.targetIndex < 0 || guide.targetIndex >= tracksList.length) {
           if (delta !== 0) moveClip(clip.id, delta)
           return
         }
+        const target = tracksList[guide.targetIndex]
         if (guide.targetIndex === sourceTrackIndex) {
           if (delta !== 0) moveClip(clip.id, delta)
           return
@@ -508,10 +510,7 @@ export function VideoTimeline() {
           <CaptionBlock
             clip={clip}
             selected={selected}
-            durationSec={framesToSeconds(
-              clip.endFrame - clip.startFrame,
-              fps,
-            )}
+            durationSec={framesToSeconds(clip.endFrame - clip.startFrame, fps)}
           />
         )
       }
@@ -653,7 +652,7 @@ export function VideoTimeline() {
       format: MediaClipKind
       url?: string | null
     } | null => {
-      if ('fromLibrary' in item && item.fromLibrary) {
+      if ('fromLibrary' in item) {
         if (!['video', 'audio', 'image'].includes(item.format)) return null
         return {
           id: item.id,
@@ -693,12 +692,7 @@ export function VideoTimeline() {
         const itemType = monitor.getItemType()
         if (itemType === VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE) {
           const preset = item as TextPresetDragItem
-          updateExternalDropPreview(
-            offset.x,
-            offset.y,
-            'text',
-            preset.label,
-          )
+          updateExternalDropPreview(offset.x, offset.y, 'text', preset.label)
           return
         }
 
@@ -709,12 +703,7 @@ export function VideoTimeline() {
           clearExternalDropPreview()
           return
         }
-        updateExternalDropPreview(
-          offset.x,
-          offset.y,
-          media.format,
-          media.name,
-        )
+        updateExternalDropPreview(offset.x, offset.y, media.format, media.name)
       },
       drop(
         item: ArboristNodeDragItem | LibraryAssetDragItem | TextPresetDragItem,
@@ -877,10 +866,10 @@ function eventOriginatedOnAction(
   return Boolean(target.closest('.timeline-editor-action'))
 }
 
-function findClipById<C extends { id: string }>(
-  tracks: ReadonlyArray<{ clips: ReadonlyArray<C> }>,
+function findClipById<TClip extends { id: string }>(
+  tracks: ReadonlyArray<{ clips: ReadonlyArray<TClip> }>,
   clipId: string,
-): C | null {
+): TClip | null {
   for (const t of tracks) {
     for (const c of t.clips) {
       if (c.id === clipId) return c

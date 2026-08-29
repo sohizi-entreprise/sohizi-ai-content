@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
+  createAdminSkillMutationOptions,
+  listAdminContentCategoriesQueryOptions,
+  updateAdminSkillMutationOptions,
+} from '../query-mutation'
+import type {
+  AdminSkill,
+  CreateSkillInput,
+  SkillStatus,
+  SkillVisibility,
+} from '../types'
+import { getErrorMessage } from '@/lib/errors'
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -19,12 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  createAdminSkillMutationOptions,
-  listAdminContentCategoriesQueryOptions,
-  updateAdminSkillMutationOptions,
-} from '../query-mutation'
-import type { AdminSkill, CreateSkillInput, SkillStatus, SkillVisibility } from '../types'
 
 type Props = {
   open: boolean
@@ -38,7 +44,7 @@ const emptyForm = {
   instructions: '',
   status: 'draft' as SkillStatus,
   visibility: 'private' as SkillVisibility,
-  categoryIds: [] as string[],
+  categoryIds: [] as Array<string>,
 }
 
 export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
@@ -46,7 +52,9 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState<string | null>(null)
 
-  const { data: categories = [] } = useQuery(listAdminContentCategoriesQueryOptions())
+  const { data: categories = [] } = useQuery(
+    listAdminContentCategoriesQueryOptions(),
+  )
   const createMutation = useMutation(createAdminSkillMutationOptions())
   const updateMutation = useMutation(updateAdminSkillMutationOptions())
 
@@ -95,10 +103,7 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
       }
       onOpenChange(false)
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        (err instanceof Error ? err.message : 'Failed to save skill')
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to save skill'))
     }
   }
 
@@ -116,7 +121,9 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
             <Input
               id="skill-name"
               value={form.name}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, name: event.target.value }))
+              }
               required
             />
           </div>
@@ -126,7 +133,10 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
               id="skill-description"
               value={form.description}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, description: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  description: event.target.value,
+                }))
               }
               rows={2}
               required
@@ -138,7 +148,10 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
               id="skill-instructions"
               value={form.instructions}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, instructions: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  instructions: event.target.value,
+                }))
               }
               rows={8}
               required
@@ -167,7 +180,10 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
               <Select
                 value={form.visibility}
                 onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, visibility: value as SkillVisibility }))
+                  setForm((prev) => ({
+                    ...prev,
+                    visibility: value as SkillVisibility,
+                  }))
                 }
               >
                 <SelectTrigger>
@@ -184,10 +200,15 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
             <Label>Categories</Label>
             <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
               {categories.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No content categories yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  No content categories yet.
+                </p>
               ) : (
                 categories.map((category) => (
-                  <label key={category.id} className="flex items-center gap-2 text-sm">
+                  <label
+                    key={category.id}
+                    className="flex items-center gap-2 text-sm"
+                  >
                     <Checkbox
                       checked={form.categoryIds.includes(category.id)}
                       onCheckedChange={(checked) =>
@@ -196,7 +217,9 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
                     />
                     <span>
                       {category.name}{' '}
-                      <span className="text-muted-foreground">({category.type})</span>
+                      <span className="text-muted-foreground">
+                        ({category.type})
+                      </span>
                     </span>
                   </label>
                 ))
@@ -205,7 +228,11 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={pending}>

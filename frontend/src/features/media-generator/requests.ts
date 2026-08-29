@@ -1,20 +1,23 @@
-import api from '@/lib/axios'
-import { createParser, type EventSourceMessage } from 'eventsource-parser'
+import type {
+  CursorPaginationOptions,
+  CursorPaginationResult,
+} from '@/lib/pagination'
 import type { ModelParameterBinding } from '@/features/admin/types'
-import type { AiGeneratedMediaRequest, MediaAsset, MediaRunMode, MediaType } from './types'
+import type {
+  AiGeneratedMediaRequest,
+  MediaAsset,
+  MediaRunMode,
+  MediaType,
+} from './types'
+import api from '@/lib/axios'
 
-export type { AiGeneratedMediaRequest, AiGeneratedRequestAsset, MediaAsset, MediaAssetGenerationRequest } from './types'
-
-export type CursorPaginationOptions = {
-  cursor?: string
-  limit?: number
-}
-
-export type CursorPaginationResult<T> = {
-  data: T[]
-  nextCursor: string | null
-  hasMore: boolean
-}
+export type {
+  AiGeneratedMediaRequest,
+  AiGeneratedRequestAsset,
+  MediaAsset,
+  MediaAssetGenerationRequest,
+} from './types'
+export type { CursorPaginationOptions, CursorPaginationResult }
 
 export type AssetRequest = {
   model: string
@@ -38,8 +41,8 @@ export type MediaGenerationRun = {
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'aborted'
   type: 'media-generation'
   request: AssetRequest
-  history: unknown[] | null
-  assets: GenerationRequestAsset[]
+  history: Array<unknown> | null
+  assets: Array<GenerationRequestAsset>
   error: string | null
   createdAt: string
   updatedAt: string
@@ -49,11 +52,6 @@ export type ListAssetsOptions = CursorPaginationOptions & {
   type?: MediaType
 }
 
-export type CancelGenerationResponse = {
-  ok: boolean
-  error: string | null
-}
-
 export type GoogleVoiceDescription = {
   name: string
   gender: 'female' | 'male'
@@ -61,30 +59,19 @@ export type GoogleVoiceDescription = {
   previewUrl: string
 }
 
-export type MediaStreamEvent = {
-  runId: string
-  event: string
-  chunk?: unknown
-  [key: string]: unknown
-}
-
-export const listGoogleVoices = async (): Promise<GoogleVoiceDescription[]> => {
+export const listGoogleVoices = async (): Promise<
+  Array<GoogleVoiceDescription>
+> => {
   const response = await api.get('/models/voices')
   return response.data
 }
 
 export const listCatalogModelParameters = async (
   modelId: string,
-): Promise<ModelParameterBinding[]> => {
-  const response = await api.get(`/models/${encodeURIComponent(modelId)}/parameters`)
-  return response.data
-}
-
-export const listAssetsRequests = async (
-  projectId: string,
-  options?: ListAssetsOptions,
-): Promise<CursorPaginationResult<MediaGenerationRun>> => {
-  const response = await api.get(`/media/${projectId}/assets`, { params: options })
+): Promise<Array<ModelParameterBinding>> => {
+  const response = await api.get(
+    `/models/${encodeURIComponent(modelId)}/parameters`,
+  )
   return response.data
 }
 
@@ -92,7 +79,9 @@ export const listAiGeneratedAssets = async (
   projectId: string,
   options?: ListAssetsOptions,
 ): Promise<CursorPaginationResult<AiGeneratedMediaRequest>> => {
-  const response = await api.get(`/media/${projectId}/ai-assets`, { params: options })
+  const response = await api.get(`/media/${projectId}/ai-assets`, {
+    params: options,
+  })
   return response.data
 }
 
@@ -114,7 +103,9 @@ export const listUploadedAssets = async (
   projectId: string,
   options?: ListAssetsOptions,
 ): Promise<CursorPaginationResult<UploadedAsset>> => {
-  const response = await api.get(`/media/${projectId}/uploaded-assets`, { params: options })
+  const response = await api.get(`/media/${projectId}/uploaded-assets`, {
+    params: options,
+  })
   return response.data
 }
 
@@ -123,14 +114,6 @@ export const startGeneration = async (
   data: AssetRequest,
 ): Promise<MediaGenerationRun> => {
   const response = await api.post(`/media/${projectId}/assets`, data)
-  return response.data
-}
-
-export const cancelGeneration = async (
-  projectId: string,
-  requestId: string,
-): Promise<CancelGenerationResponse> => {
-  const response = await api.delete(`/media/${projectId}/requests/${requestId}`)
   return response.data
 }
 
@@ -146,7 +129,9 @@ export const deleteGenerationRequest = async (
   projectId: string,
   requestId: string,
 ): Promise<{ ok: boolean }> => {
-  const response = await api.delete(`/media/${projectId}/ai-requests/${requestId}`)
+  const response = await api.delete(
+    `/media/${projectId}/ai-requests/${requestId}`,
+  )
   return response.data
 }
 
@@ -155,7 +140,9 @@ export const moveAssetToFolder = async (
   assetId: string,
   folderId: string,
 ): Promise<void> => {
-  await api.post(`/media/${projectId}/assets/${assetId}/move-to-folder`, { folderId })
+  await api.post(`/media/${projectId}/assets/${assetId}/move-to-folder`, {
+    folderId,
+  })
 }
 
 export const updateHtmlAssetValues = async (
@@ -163,15 +150,18 @@ export const updateHtmlAssetValues = async (
   assetId: string,
   values: Record<string, string | number | boolean>,
 ): Promise<MediaAsset> => {
-  const response = await api.patch(`/media/${projectId}/assets/${assetId}/html-values`, {
-    values,
-  })
+  const response = await api.patch(
+    `/media/${projectId}/assets/${assetId}/html-values`,
+    {
+      values,
+    },
+  )
   return response.data
 }
 
 export const bulkMoveAssetsToFolder = async (
   projectId: string,
-  assetIds: string[],
+  assetIds: Array<string>,
   folderId: string,
 ): Promise<void> => {
   await api.post(`/media/${projectId}/assets/bulk/move-to-folder`, {
@@ -182,7 +172,7 @@ export const bulkMoveAssetsToFolder = async (
 
 export const bulkDeleteAssets = async (
   projectId: string,
-  assetIds: string[],
+  assetIds: Array<string>,
 ): Promise<{ ok: boolean; count: number }> => {
   const response = await api.post(`/media/${projectId}/assets/bulk/delete`, {
     assetIds,
@@ -192,7 +182,7 @@ export const bulkDeleteAssets = async (
 
 export const downloadAssetsZip = async (
   projectId: string,
-  assetIds: string[],
+  assetIds: Array<string>,
 ): Promise<Blob> => {
   const response = await api.post(
     `/media/${projectId}/assets/bulk/download-zip`,
@@ -210,69 +200,4 @@ export const getAssetDownloadUrl = async (
     `/media/${projectId}/assets/${assetId}/download-url`,
   )
   return response.data
-}
-
-export async function* getStream(
-  projectId: string,
-  requestId: string,
-  options?: { signal?: AbortSignal },
-): AsyncGenerator<MediaStreamEvent, void, unknown> {
-  const response = await fetch(
-    `${api.defaults.baseURL ?? ''}/media/${projectId}/requests/${requestId}`,
-    {
-      method: 'GET',
-      credentials: 'include',
-      signal: options?.signal,
-    },
-  )
-
-  if (!response.ok) {
-    throw new Error(`Failed to stream media generation: ${response.status}`)
-  }
-
-  if (!response.body) {
-    throw new Error('No response body')
-  }
-
-  for await (const event of parseSseStream(response.body)) {
-    if (!event.data) continue
-    yield JSON.parse(event.data) as MediaStreamEvent
-  }
-}
-
-async function* parseSseStream(stream: ReadableStream<Uint8Array>) {
-  const reader = stream.getReader()
-  const decoder = new TextDecoder()
-  const events: EventSourceMessage[] = []
-  const parser = createParser({
-    onEvent: (event) => {
-      events.push(event)
-    },
-  })
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      parser.feed(decoder.decode(value, { stream: true }))
-
-      while (events.length > 0) {
-        yield events.shift()!
-      }
-    }
-
-    const remaining = decoder.decode()
-    if (remaining) {
-      parser.feed(remaining)
-    }
-
-    parser.reset({ consume: true })
-
-    while (events.length > 0) {
-      yield events.shift()!
-    }
-  } finally {
-    reader.releaseLock()
-  }
 }

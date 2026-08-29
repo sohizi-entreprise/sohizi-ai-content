@@ -1,6 +1,7 @@
-import { Extension, Node, mergeAttributes, type AnyExtension } from '@tiptap/core'
-import type { JSONContent, RenderContext } from '@tiptap/react'
+import { Extension, Node, mergeAttributes } from '@tiptap/core'
 import { MarkdownManager } from '@tiptap/markdown'
+import type { AnyExtension } from '@tiptap/core'
+import type { JSONContent, RenderContext } from '@tiptap/react'
 
 const TEXT_ALIGN_VALUES = new Set(['left', 'center', 'right', 'justify'])
 const EMPTY_PARAGRAPH_MARKDOWN = '&nbsp;'
@@ -10,7 +11,7 @@ type MarkdownTextAlignOptions = {
 }
 
 type MarkdownRenderHelpers = {
-  renderChildren: (nodes: JSONContent[] | JSONContent) => string
+  renderChildren: (nodes: Array<JSONContent> | JSONContent) => string
 }
 
 const MarkdownAlignedParagraph = Node.create({
@@ -40,11 +41,11 @@ const MarkdownAlignedParagraph = Node.create({
     const content = Array.isArray(node.content) ? node.content : []
 
     if (content.length === 0) {
-      const previousContent = Array.isArray(ctx?.previousNode?.content)
+      const previousContent = Array.isArray(ctx.previousNode?.content)
         ? ctx.previousNode.content
         : []
       const previousNodeIsEmptyParagraph =
-        ctx?.previousNode?.type === 'paragraph' && previousContent.length === 0
+        ctx.previousNode?.type === 'paragraph' && previousContent.length === 0
       return previousNodeIsEmptyParagraph ? EMPTY_PARAGRAPH_MARKDOWN : ''
     }
 
@@ -171,13 +172,10 @@ export const MarkdownTextAlign = Extension.create<MarkdownTextAlignOptions>({
 
 export function serializeMarkdownWithTextAlign(
   content: JSONContent,
-  extensions: AnyExtension[],
+  extensions: Array<AnyExtension>,
 ) {
   const manager = new MarkdownManager({
-    extensions: [
-      MarkdownTextAlign,
-      ...extensions,
-    ],
+    extensions: [MarkdownTextAlign, ...extensions],
     markedOptions: {
       gfm: true,
     },
@@ -196,7 +194,7 @@ function getTextAlign(node: JSONContent) {
   return textAlign
 }
 
-function inlineContentToHtml(content: JSONContent[]) {
+function inlineContentToHtml(content: Array<JSONContent>) {
   return content.map((node) => inlineNodeToHtml(node)).join('')
 }
 
@@ -212,12 +210,17 @@ function inlineNodeToHtml(node: JSONContent): string {
   if (node.type === 'fileMention') {
     const label = typeof node.attrs?.label === 'string' ? node.attrs.label : ''
     const id = typeof node.attrs?.id === 'string' ? node.attrs.id : ''
-    const format = typeof node.attrs?.format === 'string' ? node.attrs.format : ''
-    const lines = typeof node.attrs?.lines === 'string' ? node.attrs.lines : null
-    const snippet = typeof node.attrs?.snippet === 'string' ? node.attrs.snippet : null
+    const format =
+      typeof node.attrs?.format === 'string' ? node.attrs.format : ''
+    const lines =
+      typeof node.attrs?.lines === 'string' ? node.attrs.lines : null
+    const snippet =
+      typeof node.attrs?.snippet === 'string' ? node.attrs.snippet : null
     // Emit a span inside aligned HTML so `&` query separators stay attribute-safe.
     const linesAttr = lines ? ` data-lines="${escapeAttribute(lines)}"` : ''
-    const snippetAttr = snippet ? ` data-snippet="${escapeAttribute(snippet)}"` : ''
+    const snippetAttr = snippet
+      ? ` data-snippet="${escapeAttribute(snippet)}"`
+      : ''
     const visible = lines ? `${label} ${lines}` : label
     return `<span data-type="fileMention" data-id="${escapeAttribute(id)}" data-label="${escapeAttribute(label)}" data-format="${escapeAttribute(format)}"${linesAttr}${snippetAttr} class="file-mention">@${escapeHtml(visible)}</span>`
   }
@@ -259,9 +262,10 @@ function renderLink(html: string, attrs?: Record<string, unknown>) {
     return html
   }
 
-  const title = typeof attrs?.title === 'string'
-    ? ` title="${escapeAttribute(attrs.title)}"`
-    : ''
+  const title =
+    typeof attrs?.title === 'string'
+      ? ` title="${escapeAttribute(attrs.title)}"`
+      : ''
 
   return `<a href="${escapeAttribute(href)}"${title}>${html}</a>`
 }

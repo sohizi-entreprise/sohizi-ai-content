@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
-import { Message, MsgToolCallPart, MsgToolResultPart } from '../types'
+import { ChatToolCall } from './chat-tool-call'
+import type { Message, MsgToolCallPart, MsgToolResultPart } from '../types'
+import type { AttachmentData } from '@/components/ai-elements/attachments'
 import {
-  Message as UIMessage,
   MessageContent,
   MessageResponse,
+  Message as UIMessage,
 } from '@/components/ai-elements/message'
 import {
   Reasoning,
@@ -11,12 +13,10 @@ import {
   ReasoningTrigger,
 } from '@/components/ai-elements/reasoning'
 import {
-  Attachments,
   Attachment,
   AttachmentPreview,
-  type AttachmentData,
+  Attachments,
 } from '@/components/ai-elements/attachments'
-import { ChatToolCall } from './chat-tool-call'
 
 type AggregatedAssistant = {
   content: string
@@ -44,7 +44,9 @@ function aggregateAssistant(message: Message): AggregatedAssistant {
         toolCalls.push(part)
         break
       case 'tool-result': {
-        const toolCall = toolCalls.find((item) => item.toolCallId === part.toolCallId)
+        const toolCall = toolCalls.find(
+          (item) => item.toolCallId === part.toolCallId,
+        )
         if (toolCall) {
           toolCall.result = part
         }
@@ -69,15 +71,10 @@ function ChatBuble({ data }: { data: Message }) {
 
 export default ChatBuble
 
-export function StreamingChatBubble({ data }: { data: Message }) {
-  if (data.role !== 'assistant') return null
-  return <RenderAssistantMessage message={data} />
-}
-
 function RenderUserMessage({ message }: { message: Message }) {
   const content = message.content.find((part) => part.type === 'text')
 
-  const attachments = useMemo<AttachmentData[]>(() => {
+  const attachments = useMemo<Array<AttachmentData>>(() => {
     if (message.role !== 'user') return []
     return message.content
       .filter((part) => part.type === 'image' || part.type === 'file')
@@ -100,17 +97,17 @@ function RenderUserMessage({ message }: { message: Message }) {
   }, [message])
 
   return (
-    <UIMessage from="user" className='max-w-full ml-0'>
+    <UIMessage from="user" className="max-w-full ml-0">
       {attachments.length > 0 && (
         <Attachments variant="grid" className="mb-1 ml-0">
           {attachments.map((file) => (
-            <Attachment key={file.id} data={file} className='size-16 border'>
+            <Attachment key={file.id} data={file} className="size-16 border">
               <AttachmentPreview />
             </Attachment>
           ))}
         </Attachments>
       )}
-      <MessageContent className='w-full dark:bg-surface'>
+      <MessageContent className="w-full dark:bg-surface">
         <MessageResponse>{content?.text || ''}</MessageResponse>
       </MessageContent>
     </UIMessage>
@@ -118,7 +115,8 @@ function RenderUserMessage({ message }: { message: Message }) {
 }
 
 function RenderAssistantMessage({ message }: { message: Message }) {
-  const { content, reasoning, reasoningStreaming, toolCalls } = aggregateAssistant(message)
+  const { content, reasoning, reasoningStreaming, toolCalls } =
+    aggregateAssistant(message)
 
   return (
     <UIMessage from="assistant">

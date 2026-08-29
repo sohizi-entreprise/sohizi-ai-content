@@ -17,8 +17,7 @@ export type FileTagParams = {
 }
 
 /** Matches a complete file tag (global). */
-export const FILE_TAG_REGEX =
-  /@\[([^\]]+)\]\(file:([^?)\s]+)\?([^)]+)\)/g
+export const FILE_TAG_REGEX = /@\[([^\]]+)\]\(file:([^?)\s]+)\?([^)]+)\)/g
 
 const FILE_TAG_PATTERN = /^@\[([^\]]+)\]\(file:([^?)\s]+)\?([^)]+)\)$/
 

@@ -10,7 +10,6 @@ export type EditorType = 'synopsis' | 'script' | 'bible' | 'outline'
 
 export type ContextType = 'selection' | 'character' | 'location' | 'scene'
 
-
 // ============================================================================
 // MENTION TYPES
 // ============================================================================
@@ -21,8 +20,8 @@ export type MentionItem = {
 }
 
 export type Mentions = {
-  characters: MentionItem[]
-  locations: MentionItem[]
+  characters: Array<MentionItem>
+  locations: Array<MentionItem>
 }
 
 // ============================================================================
@@ -62,13 +61,15 @@ export type MsgToolCallPart = {
   isStreaming?: boolean
 }
 
-export type ToolResult = {
-  type: 'text'
-  value: string
-} | {
-  type: 'error-text'
-  value: string
-}
+export type ToolResult =
+  | {
+      type: 'text'
+      value: string
+    }
+  | {
+      type: 'error-text'
+      value: string
+    }
 
 export type MsgToolResultPart = {
   type: 'tool-result'
@@ -79,22 +80,33 @@ export type MsgToolResultPart = {
 }
 
 export type MsgContext = {
-  blocks?: string[]
-  selections?: string[]
+  blocks?: Array<string>
+  selections?: Array<string>
 }
 
 export type MsgMetadata = {
-  reasoningText?: string;
-  attachments?: Record<string, unknown>;
-  context?: MsgContext;
+  reasoningText?: string
+  attachments?: Record<string, unknown>
+  context?: MsgContext
 }
 
-export type MsgContent = MsgTextPart | MsgToolCallPart | MsgToolResultPart | ReasoningPart | ImagePart | FilePart
+export type MsgContent =
+  | MsgTextPart
+  | MsgToolCallPart
+  | MsgToolResultPart
+  | ReasoningPart
+  | ImagePart
+  | FilePart
 
-export type Message = {id: string; createdAt: string } & (
-  | { role: 'user'; content: (ImagePart | FilePart | MsgTextPart)[] }
-  | { role: 'assistant'; content: (ReasoningPart | MsgToolCallPart | MsgToolResultPart | MsgTextPart)[] }
-  | { role: 'tool'; content: MsgToolResultPart[] }
+export type Message = { id: string; createdAt: string } & (
+  | { role: 'user'; content: Array<ImagePart | FilePart | MsgTextPart> }
+  | {
+      role: 'assistant'
+      content: Array<
+        ReasoningPart | MsgToolCallPart | MsgToolResultPart | MsgTextPart
+      >
+    }
+  | { role: 'tool'; content: Array<MsgToolResultPart> }
 )
 
 export type AgentRunBlock = {
@@ -102,7 +114,7 @@ export type AgentRunBlock = {
   projectId: string
   conversationId: string
   status: 'pending' | 'running' | 'finished' | 'error'
-  messages: Message[]
+  messages: Array<Message>
   metadata: Record<string, unknown>
   error: string | null
   createdAt: string
@@ -110,13 +122,13 @@ export type AgentRunBlock = {
 }
 
 export type SendMessageInput = {
-  conversationId: string | null;
-  prompt: string;
+  conversationId: string | null
+  prompt: string
   context?: {
-      blocks: string[];
-      selections: string[];
-  };
-  selectedModel?: string;
+    blocks: Array<string>
+    selections: Array<string>
+  }
+  selectedModel?: string
 }
 
 // ============================================================================
@@ -138,14 +150,20 @@ export type Conversation = {
 
 export type ConversationRun = {
   runId: string
-  finishReason:  "error" | "not-finished" | "response" | "tool-calls" | "aborted" | "max-iterations"
+  finishReason:
+    | 'error'
+    | 'not-finished'
+    | 'response'
+    | 'tool-calls'
+    | 'aborted'
+    | 'max-iterations'
   error: string | null
-  messages: Message[]
+  messages: Array<Message>
 }
 
 // TO be deleted
 export type ConversationWithMessages = Conversation & {
-  messages: Message[]
+  messages: Array<Message>
 }
 
 // ============================================================================
@@ -162,7 +180,6 @@ export type VoiceInputState = {
 // ============================================================================
 // TOKEN/CONTEXT WINDOW TYPES
 // ============================================================================
-
 
 export type StreamTokenUsage = {
   input: number
@@ -249,7 +266,7 @@ export type AgentState = {
   runId: string | null
   reasoning: string
   currentTool: AgentToolCall | null
-  toolResults: AgentToolResult[]
+  toolResults: Array<AgentToolResult>
   writerProgress: WriterProgress | null
   subAgentProgress: SubAgentProgress | null
   error: string | null
@@ -268,7 +285,7 @@ export type ScriptBlock = {
 }
 
 export type ScriptContent = {
-  blocks: ScriptBlock[]
+  blocks: Array<ScriptBlock>
   metadata?: {
     title?: string
     format?: string
@@ -301,72 +318,95 @@ export type AttachedSelection = {
 
 export type EditorContext = {
   focusedTab: string | null
-  openTabs: string[]
-  selections: AttachedSelection[]
+  openTabs: Array<string>
+  selections: Array<AttachedSelection>
 }
 
 export type ChatCompletionRequest = {
-  modelId: string;
+  modelId: string
   userPrompt: {
-    role: 'user';
-    content: (ImagePart | FilePart | MsgTextPart)[];
-  };
-  conversationId: string | null;
-  editorContext?: EditorContext;
-  isNew: boolean;
+    role: 'user'
+    content: Array<ImagePart | FilePart | MsgTextPart>
+  }
+  conversationId: string | null
+  editorContext?: EditorContext
+  isNew: boolean
 }
 
 export type ChatCompletionResponse = {
-  conversation: Conversation;
-  run: AgentRunBlock;
+  conversation: Conversation
+  run: AgentRunBlock
 }
 
 export type DeleteOperation = {
-  type: 'delete';
-  fileId: string;
-  fileName: string;
+  type: 'delete'
+  fileId: string
+  fileName: string
 }
 
 export type RefreshOperation = {
-  type: 'refresh';
-  fileId: string;
-  fileName: string;
+  type: 'refresh'
+  fileId: string
+  fileName: string
 }
 
 export type PatchOperation = {
-  type: 'patch';
-  content: string;
-  fileId: string;
-  fileName: string;
+  type: 'patch'
+  content: string
+  fileId: string
+  fileName: string
 }
 
-export type FilePendingOperation = DeleteOperation | PatchOperation | RefreshOperation
+export type FilePendingOperation =
+  | DeleteOperation
+  | PatchOperation
+  | RefreshOperation
 
 export type ChatStreamChunk = {
-  name: string;
-  runId: string;
+  name: string
+  runId: string
 } & (
   | { type: 'text_delta'; text: string }
   | { type: 'reasoning_delta'; text: string }
   | { type: 'usage'; usage: StreamTokenUsage }
   | { type: 'tool_call_delta'; toolCallId: string; input: string }
-  | { type: 'tool_call_start'; toolCallId: string; toolName: string; input: string }
+  | {
+      type: 'tool_call_start'
+      toolCallId: string
+      toolName: string
+      input: string
+    }
   | { type: 'tool_call_end'; toolCallId: string }
   | { type: 'tool_call'; toolCallId: string; toolName: string; input: unknown }
-  | { type: 'tool_result_complete'; toolCallId: string; toolName: string; success: boolean; output: string }
-  | { type: 'complete'; text: string; finishReason: 'error' | 'not-finished' | 'response' | 'tool-calls' | 'aborted' | 'max-iterations'; usage: StreamTokenUsage; error?: string; reasoningText?: string }
+  | {
+      type: 'tool_result_complete'
+      toolCallId: string
+      toolName: string
+      success: boolean
+      output: string
+    }
+  | {
+      type: 'complete'
+      text: string
+      finishReason:
+        | 'error'
+        | 'not-finished'
+        | 'response'
+        | 'tool-calls'
+        | 'aborted'
+        | 'max-iterations'
+      usage: StreamTokenUsage
+      error?: string
+      reasoningText?: string
+    }
   | { type: 'error'; error: string }
   | { type: 'abort' }
-  | { type: 'identifier'; conversationId: string, conversationTitle: string }
+  | { type: 'identifier'; conversationId: string; conversationTitle: string }
   | { type: 'operation'; operation: FilePendingOperation }
 )
 
 export type LlmModel = {
-  id: string;
-  provider: string;
-  name: string;
+  id: string
+  provider: string
+  name: string
 }
-
-
-
-

@@ -1,12 +1,13 @@
 import { useDrag } from 'react-dnd'
-import { cn } from '@/lib/utils'
 import { useEmptyDragPreview } from '../../../hooks/use-empty-drag-preview'
 import {
-  flushTimelineDropPreview,
   VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE,
-  type TextPresetDragItem,
+  flushTimelineDropPreview,
 } from '../../../utils/library-dnd'
-import { TEXT_PRESETS, type TextPreset } from './text-presets'
+import { TEXT_PRESETS } from './text-presets'
+import type { TextPresetDragItem } from '../../../utils/library-dnd'
+import type { TextPreset } from './text-presets'
+import { cn } from '@/lib/utils'
 
 export function TextPresetsPanel() {
   return (

@@ -1,8 +1,17 @@
 import { Download, Folder, ImagePlus, Sparkles, Trash2, X } from 'lucide-react'
 import { useParams } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
-import type { MediaFilter } from '../types'
+import { useEffect, useState } from 'react'
+import { useInfiniteQuery, useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import {
+  bulkDeleteAssetsMutationOptions,
+  bulkMoveAssetsToFolderMutationOptions,
+  downloadAssetsZipMutationOptions,
+  listAiGeneratedAssetsQueryOptions,
+} from '../query-mutations'
 import MediaCardRenderer from './media-card-renderer'
+import MediaComposer from './media-composer'
+import type { MediaFilter } from '../types'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
@@ -11,17 +20,8 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
-import MediaComposer from './media-composer'
-import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
-import {
-  bulkDeleteAssetsMutationOptions,
-  bulkMoveAssetsToFolderMutationOptions,
-  downloadAssetsZipMutationOptions,
-  listAiGeneratedAssetsQueryOptions,
-} from '../query-mutations'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
-import { searchFilesByName } from '@/features/projects/request'
+import { useFolderSearch } from '@/hooks/use-folder-search'
 import {
   Dialog,
   DialogContent,
@@ -61,7 +61,6 @@ export function MediaGenerator() {
   })
 
   const [filter, setFilter] = useState<MediaFilter>('all')
- 
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full w-full">
@@ -89,29 +88,40 @@ export function MediaGenerator() {
       >
         <MediaComposer projectId={projectId} />
       </ResizablePanel>
-
     </ResizablePanelGroup>
   )
 }
 
-function RenderAssets({projectId, filter}: {projectId: string; filter: MediaFilter}){
+function RenderAssets({
+  projectId,
+  filter,
+}: {
+  projectId: string
+  filter: MediaFilter
+}) {
   const listOptions = filter === 'all' ? undefined : { type: filter }
-  const {data: requests, isLoading} = useInfiniteQuery(listAiGeneratedAssetsQueryOptions(projectId, listOptions))
-  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
+  const { data: requests, isLoading } = useInfiniteQuery(
+    listAiGeneratedAssetsQueryOptions(projectId, listOptions),
+  )
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Array<string>>([])
 
   useEffect(() => {
     if (!requests) return
-    const currentAssetIds = new Set(requests.flatMap((request) => request.assets.map((asset) => asset.id)))
-    setSelectedAssetIds((current) => current.filter((assetId) => currentAssetIds.has(assetId)))
+    const currentAssetIds = new Set(
+      requests.flatMap((request) => request.assets.map((asset) => asset.id)),
+    )
+    setSelectedAssetIds((current) =>
+      current.filter((assetId) => currentAssetIds.has(assetId)),
+    )
   }, [requests])
 
-  if(isLoading){
+  if (isLoading) {
     return (
-      <div className='flex-1 flex items-center justify-center'>...loading</div>
+      <div className="flex-1 flex items-center justify-center">...loading</div>
     )
   }
 
-  if(!requests || requests.length === 0){
+  if (!requests || requests.length === 0) {
     return <EmptyMediaState />
   }
 
@@ -127,7 +137,6 @@ function RenderAssets({projectId, filter}: {projectId: string; filter: MediaFilt
   const clearSelection = () => setSelectedAssetIds([])
 
   return (
-
     <div className="py-8">
       <div className="grid gap-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {requests.map((request) => (
@@ -145,11 +154,8 @@ function RenderAssets({projectId, filter}: {projectId: string; filter: MediaFilt
         selectedAssetIds={selectedAssetIds}
         onClearSelection={clearSelection}
       />
-
     </div>
-
   )
-
 }
 
 function RenderHeader(props: {
@@ -201,47 +207,37 @@ function BulkAssetActionBar({
   onClearSelection,
 }: {
   projectId: string
-  selectedAssetIds: string[]
+  selectedAssetIds: Array<string>
   onClearSelection: () => void
 }) {
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
-  const [folderQuery, setFolderQuery] = useState('')
-  const [debouncedFolderQuery, setDebouncedFolderQuery] = useState('')
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const selectedCount = selectedAssetIds.length
-  const trimmedFolderQuery = folderQuery.trim()
-  const trimmedDebouncedFolderQuery = debouncedFolderQuery.trim()
+  const {
+    folderQuery,
+    setFolderQuery,
+    trimmedDebouncedFolderQuery,
+    folderOptions,
+    isSearchingFolders,
+  } = useFolderSearch(projectId, moveDialogOpen)
+  const selectedFolder = folderOptions.find(
+    (folder) => folder.id === selectedFolderId,
+  )
 
-  const moveMutation = useMutation(bulkMoveAssetsToFolderMutationOptions(projectId))
+  const moveMutation = useMutation(
+    bulkMoveAssetsToFolderMutationOptions(projectId),
+  )
   const deleteMutation = useMutation(bulkDeleteAssetsMutationOptions(projectId))
-  const downloadMutation = useMutation(downloadAssetsZipMutationOptions(projectId))
-  const isBusy = moveMutation.isPending || deleteMutation.isPending || downloadMutation.isPending
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setDebouncedFolderQuery(trimmedFolderQuery)
-    }, 250)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [trimmedFolderQuery])
-
-  const { data: searchedFolders, isFetching: isSearchingFolders } = useQuery({
-    queryKey: ['project', projectId, 'folder-search', trimmedDebouncedFolderQuery],
-    queryFn: ({ signal }) =>
-      searchFilesByName(projectId, trimmedDebouncedFolderQuery, 25, {
-        signal,
-        directory: true,
-      }),
-    enabled: moveDialogOpen && trimmedDebouncedFolderQuery.length > 0,
-    staleTime: 1000 * 60,
-  })
-
-  const folderOptions = useMemo(() => searchedFolders ?? [], [searchedFolders])
-  const selectedFolder = folderOptions.find((folder) => folder.id === selectedFolderId)
+  const downloadMutation = useMutation(
+    downloadAssetsZipMutationOptions(projectId),
+  )
+  const isBusy =
+    moveMutation.isPending ||
+    deleteMutation.isPending ||
+    downloadMutation.isPending
 
   const openMoveDialog = () => {
     setFolderQuery('')
-    setDebouncedFolderQuery('')
     setSelectedFolderId(null)
     setMoveDialogOpen(true)
   }
@@ -254,7 +250,9 @@ function BulkAssetActionBar({
         assetIds: selectedAssetIds,
         folderId: selectedFolder.id,
       })
-      toast.success(`Moved ${selectedCount} asset${selectedCount > 1 ? 's' : ''} to ${selectedFolder.name}`)
+      toast.success(
+        `Moved ${selectedCount} asset${selectedCount > 1 ? 's' : ''} to ${selectedFolder.name}`,
+      )
       setMoveDialogOpen(false)
       onClearSelection()
     } catch {
@@ -264,12 +262,16 @@ function BulkAssetActionBar({
 
   const deleteSelectedAssets = async () => {
     if (selectedCount === 0) return
-    const ok = confirm(`Delete ${selectedCount} selected asset${selectedCount > 1 ? 's' : ''}?`)
+    const ok = confirm(
+      `Delete ${selectedCount} selected asset${selectedCount > 1 ? 's' : ''}?`,
+    )
     if (!ok) return
 
     try {
       await deleteMutation.mutateAsync(selectedAssetIds)
-      toast.success(`Deleted ${selectedCount} asset${selectedCount > 1 ? 's' : ''}`)
+      toast.success(
+        `Deleted ${selectedCount} asset${selectedCount > 1 ? 's' : ''}`,
+      )
       onClearSelection()
     } catch {
       toast.error('Failed to delete selected assets')
@@ -282,7 +284,9 @@ function BulkAssetActionBar({
     try {
       const blob = await downloadMutation.mutateAsync(selectedAssetIds)
       downloadBlob(blob, 'generated-assets.zip')
-      toast.success(`Downloading ${selectedCount} asset${selectedCount > 1 ? 's' : ''}`)
+      toast.success(
+        `Downloading ${selectedCount} asset${selectedCount > 1 ? 's' : ''}`,
+      )
     } catch {
       toast.error('Failed to download selected assets')
     }
@@ -298,19 +302,40 @@ function BulkAssetActionBar({
         <span className="px-2 text-sm text-muted-foreground">
           {selectedCount} selected
         </span>
-        <Button size="sm" variant="ghost" onClick={openMoveDialog} disabled={isBusy}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={openMoveDialog}
+          disabled={isBusy}
+        >
           <Folder className="size-4" />
           Move
         </Button>
-        <Button size="sm" variant="ghost" onClick={downloadSelectedAssets} disabled={isBusy}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={downloadSelectedAssets}
+          disabled={isBusy}
+        >
           <Download className="size-4" />
           Download
         </Button>
-        <Button size="sm" variant="ghost" onClick={deleteSelectedAssets} disabled={isBusy}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={deleteSelectedAssets}
+          disabled={isBusy}
+        >
           <Trash2 className="size-4" />
           Delete
         </Button>
-        <Button size="icon-sm" variant="ghost" onClick={onClearSelection} disabled={isBusy} aria-label="Clear selection">
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          onClick={onClearSelection}
+          disabled={isBusy}
+          aria-label="Clear selection"
+        >
           <X className="size-4" />
         </Button>
       </div>
@@ -319,7 +344,8 @@ function BulkAssetActionBar({
           <DialogHeader>
             <DialogTitle>Move selected assets</DialogTitle>
             <DialogDescription>
-              Search for a folder and confirm where the selected assets should be moved.
+              Search for a folder and confirm where the selected assets should
+              be moved.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -348,7 +374,8 @@ function BulkAssetActionBar({
                     onClick={() => setSelectedFolderId(folder.id)}
                     className={cn(
                       'flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm transition-colors hover:bg-accent',
-                      selectedFolderId === folder.id && 'bg-accent text-accent-foreground',
+                      selectedFolderId === folder.id &&
+                        'bg-accent text-accent-foreground',
                     )}
                   >
                     <Folder className="size-4 text-muted-foreground" />
@@ -359,10 +386,17 @@ function BulkAssetActionBar({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMoveDialogOpen(false)} disabled={moveMutation.isPending}>
+            <Button
+              variant="outline"
+              onClick={() => setMoveDialogOpen(false)}
+              disabled={moveMutation.isPending}
+            >
               Cancel
             </Button>
-            <Button disabled={!selectedFolder || moveMutation.isPending} onClick={confirmMove}>
+            <Button
+              disabled={!selectedFolder || moveMutation.isPending}
+              onClick={confirmMove}
+            >
               Confirm move
             </Button>
           </DialogFooter>
