@@ -15,7 +15,10 @@
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "prettier --check . && eslint ."
+    "check": "prettier --check . && eslint .",
+    "docker:build:api": "docker build -f apps/api/Dockerfile -t sohizi-api .",
+    "docker:build:web": "docker build -f apps/web/Dockerfile -t sohizi-web .",
+    "docker:build:site": "docker build -f apps/site/Dockerfile -t sohizi-site ."
   },
   "devDependencies": {
     "@sohizi/eslint-config": "workspace:*",

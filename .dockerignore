@@ -1,0 +1,51 @@
+# Dependencies and package manager stores
+**/node_modules
+**/.pnpm-store
+**/.bun
+
+# Git and editor
+.git
+.gitignore
+.cursor
+.vscode
+.idea
+.agents
+.DS_Store
+
+# Env and secrets
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+
+# Build and cache output
+**/dist
+**/dist-ssr
+**/build
+**/coverage
+**/.turbo
+**/.next
+**/.output
+**/.vinxi
+**/.nitro
+**/.tanstack
+**/.wrangler
+**/*.tsbuildinfo
+
+# Logs and archives
+**/*.log
+**/*.trace
+**/*.zip
+**/*.tar.gz
+**/*.tgz
+**/*.bun
+
+# Repo tooling and docs not needed at build time
+docker
+copy-writes
+*.md
+eslint.config.js
+prettier.config.js
+.prettierignore
+.editorconfig
+skills-lock.json

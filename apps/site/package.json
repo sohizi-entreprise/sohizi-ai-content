@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite dev --port 3001",
     "build": "vite build",
+    "start": "bun .output/server/index.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@sohizi/eslint-config": "workspace:*",
     "eslint": "^9.37.0",
+    "prettier": "^3.5.3",
     "@types/node": "^22.10.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

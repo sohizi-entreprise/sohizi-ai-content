@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
+    "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types",
     "container:build": "docker build --platform linux/amd64 -f Dockerfile -t sohizi-remotion-renderer ../..",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@sohizi/eslint-config": "workspace:*",
     "eslint": "^9.37.0",
+    "prettier": "^3.5.3",
     "@types/node": "^25.9.2",
     "typescript": "^5.5.2",
     "vitest": "~3.2.0",

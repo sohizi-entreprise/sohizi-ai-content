@@ -31,6 +31,7 @@ const config = defineConfig(({ mode }) => {
   const env = loadEnv(mode, rootDir, "")
   process.env.SITE_URL ??= env.SITE_URL
   process.env.MEDIA_CDN_URL ??= env.MEDIA_CDN_URL
+  const apiUrl = env.API_URL || process.env.API_URL || "http://localhost:3030"
 
   return {
     resolve: {
@@ -46,7 +47,7 @@ const config = defineConfig(({ mode }) => {
       },
       proxy: {
         "/api": {
-          target: "http://localhost:3030",
+          target: apiUrl,
           changeOrigin: true,
           rewrite: (proxyPath) =>
             proxyPath.startsWith("/api/auth") ||
@@ -64,11 +65,11 @@ const config = defineConfig(({ mode }) => {
       devtools(),
       nitro({
         routeRules: {
-          "/api/auth": { proxy: "http://localhost:3030/api/auth" },
-          "/api/auth/**": { proxy: "http://localhost:3030/api/auth/**" },
-          "/api/inngest": { proxy: "http://localhost:3030/api/inngest" },
-          "/api/inngest/**": { proxy: "http://localhost:3030/api/inngest/**" },
-          "/api/**": { proxy: "http://localhost:3030/**" },
+          "/api/auth": { proxy: `${apiUrl}/api/auth` },
+          "/api/auth/**": { proxy: `${apiUrl}/api/auth/**` },
+          "/api/inngest": { proxy: `${apiUrl}/api/inngest` },
+          "/api/inngest/**": { proxy: `${apiUrl}/api/inngest/**` },
+          "/api/**": { proxy: `${apiUrl}/**` },
         },
       }),
       // this is the plugin that enables path aliases

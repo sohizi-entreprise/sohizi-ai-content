@@ -1,31 +1,31 @@
-import { Elysia } from 'elysia'
-import { swagger } from '@elysiajs/swagger'
-import * as routes from './features'
-import * as errors from './features/error'
-import { cors } from '@elysiajs/cors'
-import { inngest, functions } from '@/lib/inngest'
-import { serve } from 'inngest/bun'
-import { auth } from '@/lib/auth'
-import { billingService, InsufficientCreditsError } from '@/features/billing'
-import { NameConflictError } from '@/features/skill-market'
+import { Elysia } from "elysia"
+import { swagger } from "@elysiajs/swagger"
+import * as routes from "./features"
+import * as errors from "./features/error"
+import { cors } from "@elysiajs/cors"
+import { inngest, functions } from "@/lib/inngest"
+import { serve } from "inngest/bun"
+import { auth } from "@/lib/auth"
+import { billingService, InsufficientCreditsError } from "@/features/billing"
+import { NameConflictError } from "@/features/skill-market"
 
 // 2. Set the global to false BEFORE importing your AI logic
 globalThis.AI_SDK_LOG_WARNINGS = false
 
 const corsConfig = {
-  origin: ['http://localhost:3000'],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  origin: ["http://localhost:3000"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'Last-Event-ID',
-    'Accept',
-    'Cache-Control',
+    "Content-Type",
+    "Authorization",
+    "Last-Event-ID",
+    "Accept",
+    "Cache-Control",
   ],
   credentials: true,
 }
 
-const betterAuthPlugin = new Elysia({ name: 'better-auth' })
+const betterAuthPlugin = new Elysia({ name: "better-auth" })
   .mount(auth.handler)
   .macro({
     auth: {
@@ -46,7 +46,7 @@ const handler = serve({
 })
 
 const inngestHandler = new Elysia().all(
-  '/api/inngest',
+  "/api/inngest",
   ({ request }: { request: Request }) => handler(request),
 )
 
@@ -57,12 +57,12 @@ const app = new Elysia()
   .onError(({ code, error, request }) => {
     const url = new URL(request.url)
     switch (code) {
-      case 'BadRequest':
-      case 'Conflict':
-      case 'Forbidden':
-      case 'Unauthorized':
-      case 'NotFound':
-      case 'InternalServerError':
+      case "BadRequest":
+      case "Conflict":
+      case "Forbidden":
+      case "Unauthorized":
+      case "NotFound":
+      case "InternalServerError":
         return error instanceof errors.BadRequest ||
           error instanceof errors.Conflict ||
           error instanceof errors.Forbidden ||
@@ -71,17 +71,17 @@ const app = new Elysia()
           error instanceof errors.InternalServerError
           ? error.toResponse()
           : error
-      case 'InsufficientCreditsError':
+      case "InsufficientCreditsError":
         return (error as InsufficientCreditsError).toResponse()
-      case 'NameConflictError':
+      case "NameConflictError":
         return (error as NameConflictError).toResponse()
-      case 'VALIDATION':
+      case "VALIDATION":
         return new errors.BadRequest(error.message)
       default:
         console.error(`[${code}] ${request.method} ${url.pathname}\n`, error)
         return Response.json(
           {
-            error: 'Oops! Something went wrong.',
+            error: "Oops! Something went wrong.",
             code: 500,
           },
           {
@@ -92,15 +92,15 @@ const app = new Elysia()
   })
   .use(
     swagger({
-      path: '/docs',
+      path: "/docs",
       documentation: {
-        info: { title: 'My API', version: '1.0.0' },
-        tags: [{ name: 'greeting', description: 'Greeting endpoints' }],
+        info: { title: "My API", version: "1.0.0" },
+        tags: [{ name: "greeting", description: "Greeting endpoints" }],
       },
     }),
   )
   .use(inngestHandler)
-  .get('/', () => 'Welcome to Sohizi AI content')
+  .get("/", () => "Welcome to Sohizi Labs API")
   .use(routes.projectRoutes)
   .use(routes.fileSystemRoutes)
   .use(routes.chatRoutes)
@@ -112,7 +112,10 @@ const app = new Elysia()
   .use(routes.modelsRoutes)
   .use(routes.skillMarketRoutes)
   .use(routes.adminRoutes)
-  .listen(3030)
+  .listen({
+    port: 3030,
+    hostname: "0.0.0.0",
+  })
 
 billingService.startSweeper()
 
