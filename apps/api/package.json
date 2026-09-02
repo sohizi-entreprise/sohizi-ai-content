@@ -10,7 +10,8 @@
     "auth:generate": "npx auth@latest generate --config src/lib/auth.ts --output src/db/schema/auth.ts --yes",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@ai-sdk/openai": "^4",
