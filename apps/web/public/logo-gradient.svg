@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="96 72 540 480" role="img" aria-labelledby="gradient-title gradient-description">
+  <title id="gradient-title">Sohizi gradient hummingbird</title>
+  <desc id="gradient-description">A hummingbird flowing from teal through green to luminous lemon.</desc>
+  <defs>
+    <linearGradient id="wing-1" gradientUnits="userSpaceOnUse" x1="285" y1="96" x2="381" y2="359">
+      <stop offset="0" stop-color="#B8FF6A" stop-opacity=".18"/>
+      <stop offset=".55" stop-color="#8CFF4A" stop-opacity=".58"/>
+      <stop offset="1" stop-color="#3DCFB0"/>
+    </linearGradient>
+    <linearGradient id="wing-2" gradientUnits="userSpaceOnUse" x1="216" y1="129" x2="381" y2="359">
+      <stop offset="0" stop-color="#B8FF6A" stop-opacity=".18"/>
+      <stop offset=".55" stop-color="#8CFF4A" stop-opacity=".58"/>
+      <stop offset="1" stop-color="#3DCFB0"/>
+    </linearGradient>
+    <linearGradient id="wing-3" gradientUnits="userSpaceOnUse" x1="162" y1="187" x2="381" y2="359">
+      <stop offset="0" stop-color="#B8FF6A" stop-opacity=".18"/>
+      <stop offset=".55" stop-color="#8CFF4A" stop-opacity=".58"/>
+      <stop offset="1" stop-color="#3DCFB0"/>
+    </linearGradient>
+    <linearGradient id="wing-4" gradientUnits="userSpaceOnUse" x1="131" y1="262" x2="381" y2="359">
+      <stop offset="0" stop-color="#B8FF6A" stop-opacity=".18"/>
+      <stop offset=".55" stop-color="#8CFF4A" stop-opacity=".58"/>
+      <stop offset="1" stop-color="#3DCFB0"/>
+    </linearGradient>
+    <linearGradient id="wing-5" gradientUnits="userSpaceOnUse" x1="130" y1="343" x2="381" y2="359">
+      <stop offset="0" stop-color="#B8FF6A" stop-opacity=".18"/>
+      <stop offset=".55" stop-color="#8CFF4A" stop-opacity=".58"/>
+      <stop offset="1" stop-color="#3DCFB0"/>
+    </linearGradient>
+    <linearGradient id="wing-6" gradientUnits="userSpaceOnUse" x1="175" y1="412" x2="381" y2="359">
+      <stop offset="0" stop-color="#B8FF6A" stop-opacity=".18"/>
+      <stop offset=".55" stop-color="#8CFF4A" stop-opacity=".58"/>
+      <stop offset="1" stop-color="#3DCFB0"/>
+    </linearGradient>
+    <linearGradient id="gradient-body" gradientUnits="userSpaceOnUse" x1="381" y1="359" x2="610" y2="281">
+      <stop offset="0" stop-color="#3DCFB0"/>
+      <stop offset=".52" stop-color="#5FE07A"/>
+      <stop offset="1" stop-color="#B8FF6A"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <path fill="url(#wing-1)" d="M403 310L285 96C257 174 265 268 306 343C321 372 340 397 359 408Z"/>
+    <path fill="url(#wing-2)" d="M403 310L216 129C205 207 234 291 291 351C312 374 337 397 359 408Z"/>
+    <path fill="url(#wing-3)" d="M403 310L162 187C176 265 216 330 276 370C302 388 331 402 359 408Z"/>
+    <path fill="url(#wing-4)" d="M403 310L131 262C169 327 230 377 298 398C320 405 341 409 359 408Z"/>
+    <path fill="url(#wing-5)" d="M403 310L130 343C178 389 243 412 307 412C327 412 345 410 359 408Z"/>
+    <path fill="url(#wing-6)" d="M403 310L175 412C226 440 291 439 334 422C345 418 353 412 359 408Z"/>
+  </g>
+  <path fill="url(#gradient-body)" d="M310 519L403 309C421 275 439 257 461 254C479 252 496 257 513 263C544 269 576 275 610 281C570 277 538 275 515 276C489 277 478 287 475 309C472 324 472 346 469 367C464 406 448 438 421 464C394 490 357 508 310 519Z"/>
+</svg>

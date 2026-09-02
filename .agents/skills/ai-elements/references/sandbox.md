@@ -26,9 +26,9 @@ npx ai-elements@latest add sandbox
 The Sandbox component integrates with the AI SDK's tool state to show code generation progress:
 
 ```tsx title="components/code-sandbox.tsx"
-"use client";
+'use client'
 
-import type { ToolUIPart } from "ai";
+import type { ToolUIPart } from 'ai'
 import {
   Sandbox,
   SandboxContent,
@@ -38,22 +38,22 @@ import {
   SandboxTabsBar,
   SandboxTabsList,
   SandboxTabsTrigger,
-} from "@/components/ai-elements/sandbox";
-import { CodeBlock } from "@/components/ai-elements/code-block";
+} from '@/components/ai-elements/sandbox'
+import { CodeBlock } from '@/components/ai-elements/code-block'
 
 type CodeSandboxProps = {
-  toolPart: ToolUIPart;
-};
+  toolPart: ToolUIPart
+}
 
 export const CodeSandbox = ({ toolPart }: CodeSandboxProps) => {
-  const code = toolPart.input?.code ?? "";
-  const output = toolPart.output?.logs ?? "";
+  const code = toolPart.input?.code ?? ''
+  const output = toolPart.output?.logs ?? ''
 
   return (
     <Sandbox>
       <SandboxHeader
         state={toolPart.state}
-        title={toolPart.input?.filename ?? "code.tsx"}
+        title={toolPart.input?.filename ?? 'code.tsx'}
       />
       <SandboxContent>
         <SandboxTabs defaultValue="code">
@@ -72,58 +72,58 @@ export const CodeSandbox = ({ toolPart }: CodeSandboxProps) => {
         </SandboxTabs>
       </SandboxContent>
     </Sandbox>
-  );
-};
+  )
+}
 ```
 
 ## Props
 
 ### `<Sandbox />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof Collapsible>` | - | Any other props are spread to the underlying Collapsible component. |
+| Prop       | Type                                       | Default | Description                                                         |
+| ---------- | ------------------------------------------ | ------- | ------------------------------------------------------------------- |
+| `...props` | `React.ComponentProps<typeof Collapsible>` | -       | Any other props are spread to the underlying Collapsible component. |
 
 ### `<SandboxHeader />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `title` | `string` | `undefined` | The title displayed in the header (e.g., filename). |
-| `state` | `ToolUIPart[` | Required | The current execution state, used to display the appropriate status badge. |
-| `className` | `string` | - | Additional CSS classes for the header. |
+| Prop        | Type          | Default     | Description                                                                |
+| ----------- | ------------- | ----------- | -------------------------------------------------------------------------- |
+| `title`     | `string`      | `undefined` | The title displayed in the header (e.g., filename).                        |
+| `state`     | `ToolUIPart[` | Required    | The current execution state, used to display the appropriate status badge. |
+| `className` | `string`      | -           | Additional CSS classes for the header.                                     |
 
 ### `<SandboxContent />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof CollapsibleContent>` | - | Any other props are spread to the CollapsibleContent. |
+| Prop       | Type                                              | Default | Description                                           |
+| ---------- | ------------------------------------------------- | ------- | ----------------------------------------------------- |
+| `...props` | `React.ComponentProps<typeof CollapsibleContent>` | -       | Any other props are spread to the CollapsibleContent. |
 
 ### `<SandboxTabs />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof Tabs>` | - | Any other props are spread to the underlying Tabs component. |
+| Prop       | Type                                | Default | Description                                                  |
+| ---------- | ----------------------------------- | ------- | ------------------------------------------------------------ |
+| `...props` | `React.ComponentProps<typeof Tabs>` | -       | Any other props are spread to the underlying Tabs component. |
 
 ### `<SandboxTabsBar />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.HTMLAttributes<HTMLDivElement>` | - | Any other props are spread to the container div. |
+| Prop       | Type                                   | Default | Description                                      |
+| ---------- | -------------------------------------- | ------- | ------------------------------------------------ |
+| `...props` | `React.HTMLAttributes<HTMLDivElement>` | -       | Any other props are spread to the container div. |
 
 ### `<SandboxTabsList />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof TabsList>` | - | Any other props are spread to the underlying TabsList component. |
+| Prop       | Type                                    | Default | Description                                                      |
+| ---------- | --------------------------------------- | ------- | ---------------------------------------------------------------- |
+| `...props` | `React.ComponentProps<typeof TabsList>` | -       | Any other props are spread to the underlying TabsList component. |
 
 ### `<SandboxTabsTrigger />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof TabsTrigger>` | - | Any other props are spread to the underlying TabsTrigger component. |
+| Prop       | Type                                       | Default | Description                                                         |
+| ---------- | ------------------------------------------ | ------- | ------------------------------------------------------------------- |
+| `...props` | `React.ComponentProps<typeof TabsTrigger>` | -       | Any other props are spread to the underlying TabsTrigger component. |
 
 ### `<SandboxTabContent />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof TabsContent>` | - | Any other props are spread to the underlying TabsContent component. |
+| Prop       | Type                                       | Default | Description                                                         |
+| ---------- | ------------------------------------------ | ------- | ------------------------------------------------------------------- |
+| `...props` | `React.ComponentProps<typeof TabsContent>` | -       | Any other props are spread to the underlying TabsContent component. |

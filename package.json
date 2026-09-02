@@ -1,1 +1,25 @@
-{}
+{
+  "name": "sohizi-content",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "bun run --filter @sohizi/web dev",
+    "dev:site": "bun run --filter @sohizi/site dev",
+    "dev:api": "bun run --filter @sohizi/api dev",
+    "dev:cloudflare": "bun run --filter @sohizi/cloudflare dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "prettier --check . && eslint ."
+  },
+  "devDependencies": {
+    "@sohizi/eslint-config": "workspace:*",
+    "eslint": "^9.37.0",
+    "prettier": "^3.5.3"
+  }
+}

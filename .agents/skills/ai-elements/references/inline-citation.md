@@ -19,9 +19,9 @@ Build citations for AI-generated content using [`experimental_generateObject`](/
 Add the following component to your frontend:
 
 ```tsx title="app/page.tsx"
-"use client";
+'use client'
 
-import { experimental_useObject as useObject } from "@ai-sdk/react";
+import { experimental_useObject as useObject } from '@ai-sdk/react'
 import {
   InlineCitation,
   InlineCitationText,
@@ -37,32 +37,32 @@ import {
   InlineCitationCarouselNext,
   InlineCitationSource,
   InlineCitationQuote,
-} from "@/components/ai-elements/inline-citation";
-import { Button } from "@/components/ui/button";
-import { citationSchema } from "@/app/api/citation/route";
+} from '@/components/ai-elements/inline-citation'
+import { Button } from '@sohizi/ui/button'
+import { citationSchema } from '@/app/api/citation/route'
 
 const CitationDemo = () => {
   const { object, submit, isLoading } = useObject({
-    api: "/api/citation",
+    api: '/api/citation',
     schema: citationSchema,
-  });
+  })
 
   const handleSubmit = (topic: string) => {
-    submit({ prompt: topic });
-  };
+    submit({ prompt: topic })
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <div className="flex gap-2 mb-6">
         <Button
-          onClick={() => handleSubmit("artificial intelligence")}
+          onClick={() => handleSubmit('artificial intelligence')}
           disabled={isLoading}
           variant="outline"
         >
           Generate AI Content
         </Button>
         <Button
-          onClick={() => handleSubmit("climate change")}
+          onClick={() => handleSubmit('climate change')}
           disabled={isLoading}
           variant="outline"
         >
@@ -80,12 +80,12 @@ const CitationDemo = () => {
         <div className="prose prose-sm max-w-none">
           <p className="leading-relaxed">
             {object.content.split(/(\[\d+\])/).map((part, index) => {
-              const citationMatch = part.match(/\[(\d+)\]/);
+              const citationMatch = part.match(/\[(\d+)\]/)
               if (citationMatch) {
-                const citationNumber = citationMatch[1];
+                const citationNumber = citationMatch[1]
                 const citation = object.citations?.find(
-                  (c: any) => c.number === citationNumber
-                );
+                  (c: any) => c.number === citationNumber,
+                )
 
                 if (citation) {
                   return (
@@ -117,26 +117,26 @@ const CitationDemo = () => {
                         </InlineCitationCardBody>
                       </InlineCitationCard>
                     </InlineCitation>
-                  );
+                  )
                 }
               }
-              return part;
+              return part
             })}
           </p>
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default CitationDemo;
+export default CitationDemo
 ```
 
 Add the following route to your backend:
 
 ```ts title="app/api/citation/route.ts"
-import { streamObject } from "ai";
-import { z } from "zod";
+import { streamObject } from 'ai'
+import { z } from 'zod'
 
 export const citationSchema = z.object({
   content: z.string(),
@@ -147,18 +147,18 @@ export const citationSchema = z.object({
       url: z.string(),
       description: z.string().optional(),
       quote: z.string().optional(),
-    })
+    }),
   ),
-});
+})
 
 // Allow streaming responses up to 30 seconds
-export const maxDuration = 30;
+export const maxDuration = 30
 
 export async function POST(req: Request) {
-  const { prompt } = await req.json();
+  const { prompt } = await req.json()
 
   const result = streamObject({
-    model: "openai/gpt-4o",
+    model: 'openai/gpt-4o',
     schema: citationSchema,
     prompt: `Generate a well-researched paragraph about ${prompt} with proper citations. 
     
@@ -169,9 +169,9 @@ export async function POST(req: Request) {
     - Make the content informative and the sources credible
     
     Format citations as numbered references within the text.`,
-  });
+  })
 
-  return result.toTextStreamResponse();
+  return result.toTextStreamResponse()
 }
 ```
 
@@ -212,88 +212,88 @@ For now, the recommended approach is to use `experimental_useObject` (as shown i
 
 ### `<InlineCitation />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the root span element. |
+| Prop       | Type                    | Default | Description                                          |
+| ---------- | ----------------------- | ------- | ---------------------------------------------------- |
+| `...props` | `React.ComponentProps<` | -       | Any other props are spread to the root span element. |
 
 ### `<InlineCitationText />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the underlying span element. |
+| Prop       | Type                    | Default | Description                                                |
+| ---------- | ----------------------- | ------- | ---------------------------------------------------------- |
+| `...props` | `React.ComponentProps<` | -       | Any other props are spread to the underlying span element. |
 
 ### `<InlineCitationCard />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the HoverCard component. |
+| Prop       | Type                    | Default | Description                                            |
+| ---------- | ----------------------- | ------- | ------------------------------------------------------ |
+| `...props` | `React.ComponentProps<` | -       | Any other props are spread to the HoverCard component. |
 
 ### `<InlineCitationCardTrigger />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `sources` | `string[]` | - | Array of source URLs. The length determines the number displayed in the badge. |
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the underlying button element. |
+| Prop       | Type                    | Default | Description                                                                    |
+| ---------- | ----------------------- | ------- | ------------------------------------------------------------------------------ |
+| `sources`  | `string[]`              | -       | Array of source URLs. The length determines the number displayed in the badge. |
+| `...props` | `React.ComponentProps<` | -       | Any other props are spread to the underlying button element.                   |
 
 ### `<InlineCitationCardBody />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the underlying div. |
+| Prop       | Type                    | Default | Description                                       |
+| ---------- | ----------------------- | ------- | ------------------------------------------------- |
+| `...props` | `React.ComponentProps<` | -       | Any other props are spread to the underlying div. |
 
 ### `<InlineCitationCarousel />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof Carousel>` | - | Any other props are spread to the underlying Carousel component. |
+| Prop       | Type                                    | Default | Description                                                      |
+| ---------- | --------------------------------------- | ------- | ---------------------------------------------------------------- |
+| `...props` | `React.ComponentProps<typeof Carousel>` | -       | Any other props are spread to the underlying Carousel component. |
 
 ### `<InlineCitationCarouselContent />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the underlying CarouselContent component. |
+| Prop       | Type                    | Default | Description                                                             |
+| ---------- | ----------------------- | ------- | ----------------------------------------------------------------------- |
+| `...props` | `React.ComponentProps<` | -       | Any other props are spread to the underlying CarouselContent component. |
 
 ### `<InlineCitationCarouselItem />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the underlying div. |
+| Prop       | Type                    | Default | Description                                       |
+| ---------- | ----------------------- | ------- | ------------------------------------------------- |
+| `...props` | `React.ComponentProps<` | -       | Any other props are spread to the underlying div. |
 
 ### `<InlineCitationCarouselHeader />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the underlying div. |
+| Prop       | Type                    | Default | Description                                       |
+| ---------- | ----------------------- | ------- | ------------------------------------------------- |
+| `...props` | `React.ComponentProps<` | -       | Any other props are spread to the underlying div. |
 
 ### `<InlineCitationCarouselIndex />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the underlying div. Children will override the default index display. |
+| Prop       | Type                    | Default | Description                                                                                         |
+| ---------- | ----------------------- | ------- | --------------------------------------------------------------------------------------------------- |
+| `...props` | `React.ComponentProps<` | -       | Any other props are spread to the underlying div. Children will override the default index display. |
 
 ### `<InlineCitationCarouselPrev />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof CarouselPrevious>` | - | Any other props are spread to the underlying CarouselPrevious component. |
+| Prop       | Type                                            | Default | Description                                                              |
+| ---------- | ----------------------------------------------- | ------- | ------------------------------------------------------------------------ |
+| `...props` | `React.ComponentProps<typeof CarouselPrevious>` | -       | Any other props are spread to the underlying CarouselPrevious component. |
 
 ### `<InlineCitationCarouselNext />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof CarouselNext>` | - | Any other props are spread to the underlying CarouselNext component. |
+| Prop       | Type                                        | Default | Description                                                          |
+| ---------- | ------------------------------------------- | ------- | -------------------------------------------------------------------- |
+| `...props` | `React.ComponentProps<typeof CarouselNext>` | -       | Any other props are spread to the underlying CarouselNext component. |
 
 ### `<InlineCitationSource />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `title` | `string` | - | The title of the source. |
-| `url` | `string` | - | The URL of the source. |
-| `description` | `string` | - | A brief description of the source. |
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the underlying div. |
+| Prop          | Type                    | Default | Description                                       |
+| ------------- | ----------------------- | ------- | ------------------------------------------------- |
+| `title`       | `string`                | -       | The title of the source.                          |
+| `url`         | `string`                | -       | The URL of the source.                            |
+| `description` | `string`                | -       | A brief description of the source.                |
+| `...props`    | `React.ComponentProps<` | -       | Any other props are spread to the underlying div. |
 
 ### `<InlineCitationQuote />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<` | - | Any other props are spread to the underlying blockquote element. |
+| Prop       | Type                    | Default | Description                                                      |
+| ---------- | ----------------------- | ------- | ---------------------------------------------------------------- |
+| `...props` | `React.ComponentProps<` | -       | Any other props are spread to the underlying blockquote element. |

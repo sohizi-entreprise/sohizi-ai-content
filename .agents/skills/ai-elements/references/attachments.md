@@ -17,7 +17,7 @@ npx ai-elements@latest add attachments
 Display user-uploaded files in chat messages or input areas.
 
 ```tsx title="app/page.tsx"
-"use client";
+'use client'
 
 import {
   Attachments,
@@ -25,12 +25,12 @@ import {
   AttachmentPreview,
   AttachmentInfo,
   AttachmentRemove,
-} from "@/components/ai-elements/attachments";
-import type { FileUIPart } from "ai";
+} from '@/components/ai-elements/attachments'
+import type { FileUIPart } from 'ai'
 
 interface MessageProps {
-  attachments: (FileUIPart & { id: string })[];
-  onRemove?: (id: string) => void;
+  attachments: (FileUIPart & { id: string })[]
+  onRemove?: (id: string) => void
 }
 
 const MessageAttachments = ({ attachments, onRemove }: MessageProps) => (
@@ -46,9 +46,9 @@ const MessageAttachments = ({ attachments, onRemove }: MessageProps) => (
       </Attachment>
     ))}
   </Attachments>
-);
+)
 
-export default MessageAttachments;
+export default MessageAttachments
 ```
 
 ## Features
@@ -88,82 +88,82 @@ See `scripts/attachments-list.tsx` for this example.
 
 Container component that sets the layout variant.
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `variant` | `unknown` | - | The display layout variant. |
-| `...props` | `React.HTMLAttributes<HTMLDivElement>` | - | Spread to the underlying div element. |
+| Prop       | Type                                   | Default | Description                           |
+| ---------- | -------------------------------------- | ------- | ------------------------------------- |
+| `variant`  | `unknown`                              | -       | The display layout variant.           |
+| `...props` | `React.HTMLAttributes<HTMLDivElement>` | -       | Spread to the underlying div element. |
 
 ### `<Attachment />`
 
 Individual attachment item wrapper.
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `data` | `unknown` | - | The attachment data (FileUIPart or SourceDocumentUIPart with id). |
-| `onRemove` | `() => void` | - | Callback fired when the remove button is clicked. |
-| `...props` | `React.HTMLAttributes<HTMLDivElement>` | - | Spread to the underlying div element. |
+| Prop       | Type                                   | Default | Description                                                       |
+| ---------- | -------------------------------------- | ------- | ----------------------------------------------------------------- |
+| `data`     | `unknown`                              | -       | The attachment data (FileUIPart or SourceDocumentUIPart with id). |
+| `onRemove` | `() => void`                           | -       | Callback fired when the remove button is clicked.                 |
+| `...props` | `React.HTMLAttributes<HTMLDivElement>` | -       | Spread to the underlying div element.                             |
 
 ### `<AttachmentPreview />`
 
 Displays the media preview (image, video, or icon).
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `fallbackIcon` | `React.ReactNode` | - | Custom icon to display when no preview is available. |
-| `...props` | `React.HTMLAttributes<HTMLDivElement>` | - | Spread to the underlying div element. |
+| Prop           | Type                                   | Default | Description                                          |
+| -------------- | -------------------------------------- | ------- | ---------------------------------------------------- |
+| `fallbackIcon` | `React.ReactNode`                      | -       | Custom icon to display when no preview is available. |
+| `...props`     | `React.HTMLAttributes<HTMLDivElement>` | -       | Spread to the underlying div element.                |
 
 ### `<AttachmentInfo />`
 
 Displays the filename and optional media type.
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `showMediaType` | `boolean` | `false` | Whether to show the media type below the filename. |
-| `...props` | `React.HTMLAttributes<HTMLDivElement>` | - | Spread to the underlying div element. |
+| Prop            | Type                                   | Default | Description                                        |
+| --------------- | -------------------------------------- | ------- | -------------------------------------------------- |
+| `showMediaType` | `boolean`                              | `false` | Whether to show the media type below the filename. |
+| `...props`      | `React.HTMLAttributes<HTMLDivElement>` | -       | Spread to the underlying div element.              |
 
 ### `<AttachmentRemove />`
 
 Remove button that appears on hover.
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `label` | `string` | - | Screen reader label for the button. |
-| `...props` | `React.ComponentProps<typeof Button>` | - | Spread to the underlying Button component. |
+| Prop       | Type                                  | Default | Description                                |
+| ---------- | ------------------------------------- | ------- | ------------------------------------------ |
+| `label`    | `string`                              | -       | Screen reader label for the button.        |
+| `...props` | `React.ComponentProps<typeof Button>` | -       | Spread to the underlying Button component. |
 
 ### `<AttachmentHoverCard />`
 
 Wrapper for hover preview functionality.
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `openDelay` | `number` | `0` | Delay in ms before opening the hover card. |
-| `closeDelay` | `number` | `0` | Delay in ms before closing the hover card. |
-| `...props` | `React.ComponentProps<typeof HoverCard>` | - | Spread to the underlying HoverCard component. |
+| Prop         | Type                                     | Default | Description                                   |
+| ------------ | ---------------------------------------- | ------- | --------------------------------------------- |
+| `openDelay`  | `number`                                 | `0`     | Delay in ms before opening the hover card.    |
+| `closeDelay` | `number`                                 | `0`     | Delay in ms before closing the hover card.    |
+| `...props`   | `React.ComponentProps<typeof HoverCard>` | -       | Spread to the underlying HoverCard component. |
 
 ### `<AttachmentHoverCardTrigger />`
 
 Trigger element for the hover card.
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof HoverCardTrigger>` | - | Spread to the underlying HoverCardTrigger component. |
+| Prop       | Type                                            | Default | Description                                          |
+| ---------- | ----------------------------------------------- | ------- | ---------------------------------------------------- |
+| `...props` | `React.ComponentProps<typeof HoverCardTrigger>` | -       | Spread to the underlying HoverCardTrigger component. |
 
 ### `<AttachmentHoverCardContent />`
 
 Content displayed in the hover card.
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `align` | `unknown` | - | Alignment of the hover card content. |
-| `...props` | `React.ComponentProps<typeof HoverCardContent>` | - | Spread to the underlying HoverCardContent component. |
+| Prop       | Type                                            | Default | Description                                          |
+| ---------- | ----------------------------------------------- | ------- | ---------------------------------------------------- |
+| `align`    | `unknown`                                       | -       | Alignment of the hover card content.                 |
+| `...props` | `React.ComponentProps<typeof HoverCardContent>` | -       | Spread to the underlying HoverCardContent component. |
 
 ### `<AttachmentEmpty />`
 
 Empty state component when no attachments are present.
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.HTMLAttributes<HTMLDivElement>` | - | Spread to the underlying div element. |
+| Prop       | Type                                   | Default | Description                           |
+| ---------- | -------------------------------------- | ------- | ------------------------------------- |
+| `...props` | `React.HTMLAttributes<HTMLDivElement>` | -       | Spread to the underlying div element. |
 
 ## Utility Functions
 
@@ -172,9 +172,9 @@ Empty state component when no attachments are present.
 Returns the media category for an attachment.
 
 ```tsx
-import { getMediaCategory } from "@/components/ai-elements/attachments";
+import { getMediaCategory } from '@/components/ai-elements/attachments'
 
-const category = getMediaCategory(attachment);
+const category = getMediaCategory(attachment)
 // Returns: "image" | "video" | "audio" | "document" | "source" | "unknown"
 ```
 
@@ -183,8 +183,8 @@ const category = getMediaCategory(attachment);
 Returns the display label for an attachment.
 
 ```tsx
-import { getAttachmentLabel } from "@/components/ai-elements/attachments";
+import { getAttachmentLabel } from '@/components/ai-elements/attachments'
 
-const label = getAttachmentLabel(attachment);
+const label = getAttachmentLabel(attachment)
 // Returns filename or fallback like "Image" or "Attachment"
 ```

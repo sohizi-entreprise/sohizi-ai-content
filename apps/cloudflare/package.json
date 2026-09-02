@@ -1,0 +1,35 @@
+{
+  "name": "@sohizi/cloudflare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy:dev": "wrangler deploy --env dev",
+    "deploy:prod": "wrangler deploy --env prod",
+    "dev": "wrangler dev",
+    "dev:remote": "wrangler dev --remote",
+    "start": "wrangler dev",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types",
+    "container:build": "docker build --platform linux/amd64 -f Dockerfile -t sohizi-remotion-renderer ../..",
+    "container:smoke": "./scripts/render-smoke-test.sh",
+    "rollback": "wrangler rollback",
+    "r2-seed": "wrangler r2 object put sohizi-ai-dev/freesound_community.mp3 --file=/Users/sagelokongi/Desktop/freesound_community.mp3"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@sohizi/eslint-config": "workspace:*",
+    "eslint": "^9.37.0",
+    "@types/node": "^25.9.2",
+    "typescript": "^5.5.2",
+    "vitest": "~3.2.0",
+    "wrangler": "^4.98.0"
+  }
+}

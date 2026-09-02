@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "tailwind-rounded-out";
+@import "@sohizi/ui/styles.css";
+
+@source '../../../packages/ui/src';
+
+/* Include Streamdown (AI Elements markdown renderer) styles */
+@source '../../../node_modules/streamdown/dist/index.js';
+@source '../node_modules/streamdown/dist/index.js';
+
+/* Editor */
+.main-editor-content {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 6rem;
+  background: white;
+  min-height: 1100px;
+  outline: none;
+  color: black;
+}
+
+.a4-page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 25.4mm; /* 1 inch margins */
+  background: white;
+  margin: 0 auto;
+}
+
+.screenplay-page {
+  width: 8.5in;
+  min-height: 11in;
+  height: auto;
+  padding: 1in; /* top right bottom left */
+  font-family: "Courier Prime", monospace;
+  background: white;
+  font-size: 12pt;
+  line-height: 1;
+}

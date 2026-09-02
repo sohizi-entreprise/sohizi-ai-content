@@ -25,49 +25,49 @@ npm i v0-sdk
 Add the following component to your frontend:
 
 ```tsx title="app/page.tsx"
-"use client";
+'use client'
 
 import {
   WebPreview,
   WebPreviewBody,
   WebPreviewNavigation,
   WebPreviewUrl,
-} from "@/components/ai-elements/web-preview";
-import { useState } from "react";
+} from '@/components/ai-elements/web-preview'
+import { useState } from 'react'
 import {
   PromptInput,
   type PromptInputMessage,
   PromptInputTextarea,
   PromptInputSubmit,
-} from "@/components/ai-elements/prompt-input";
-import { Spinner } from "@/components/ui/spinner";
+} from '@/components/ai-elements/prompt-input'
+import { Spinner } from '@sohizi/ui/spinner'
 
 const WebPreviewDemo = () => {
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [prompt, setPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [prompt, setPrompt] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const handleSubmit = async (message: PromptInputMessage) => {
-    if (!message.text.trim()) return;
-    setPrompt("");
+    if (!message.text.trim()) return
+    setPrompt('')
 
-    setIsGenerating(true);
+    setIsGenerating(true)
     try {
-      const response = await fetch("/api/v0", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/v0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: message.text }),
-      });
+      })
 
-      const data = await response.json();
-      setPreviewUrl(data.demo || "/");
-      console.log("Generation finished:", data);
+      const data = await response.json()
+      setPreviewUrl(data.demo || '/')
+      console.log('Generation finished:', data)
     } catch (error) {
-      console.error("Generation failed:", error);
+      console.error('Generation failed:', error)
     } finally {
-      setIsGenerating(false);
+      setIsGenerating(false)
     }
-  };
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6 relative size-full rounded-lg border h-[600px]">
@@ -105,41 +105,41 @@ const WebPreviewDemo = () => {
             className="pr-12 min-h-[60px]"
           />
           <PromptInputSubmit
-            status={isGenerating ? "streaming" : "ready"}
+            status={isGenerating ? 'streaming' : 'ready'}
             disabled={!prompt.trim()}
             className="absolute bottom-1 right-1"
           />
         </PromptInput>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default WebPreviewDemo;
+export default WebPreviewDemo
 ```
 
 Add the following route to your backend:
 
 ```ts title="app/api/v0/route.ts"
-import { v0 } from "v0-sdk";
+import { v0 } from 'v0-sdk'
 
 export async function POST(req: Request) {
-  const { prompt }: { prompt: string } = await req.json();
+  const { prompt }: { prompt: string } = await req.json()
 
   const result = await v0.chats.create({
-    system: "You are an expert coder",
+    system: 'You are an expert coder',
     message: prompt,
     modelConfiguration: {
-      modelId: "v0-1.5-sm",
+      modelId: 'v0-1.5-sm',
       imageGenerations: false,
       thinking: false,
     },
-  });
+  })
 
   return Response.json({
     demo: result.demo,
     webUrl: result.webUrl,
-  });
+  })
 }
 ```
 
@@ -160,41 +160,41 @@ export async function POST(req: Request) {
 
 ### `<WebPreview />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `defaultUrl` | `string` | - | The initial URL to load in the preview. |
-| `onUrlChange` | `(url: string) => void` | - | Callback fired when the URL changes. |
-| `...props` | `React.HTMLAttributes<HTMLDivElement>` | - | Any other props are spread to the root div. |
+| Prop          | Type                                   | Default | Description                                 |
+| ------------- | -------------------------------------- | ------- | ------------------------------------------- |
+| `defaultUrl`  | `string`                               | -       | The initial URL to load in the preview.     |
+| `onUrlChange` | `(url: string) => void`                | -       | Callback fired when the URL changes.        |
+| `...props`    | `React.HTMLAttributes<HTMLDivElement>` | -       | Any other props are spread to the root div. |
 
 ### `<WebPreviewNavigation />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.HTMLAttributes<HTMLDivElement>` | - | Any other props are spread to the navigation container. |
+| Prop       | Type                                   | Default | Description                                             |
+| ---------- | -------------------------------------- | ------- | ------------------------------------------------------- |
+| `...props` | `React.HTMLAttributes<HTMLDivElement>` | -       | Any other props are spread to the navigation container. |
 
 ### `<WebPreviewNavigationButton />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `tooltip` | `string` | - | Tooltip text to display on hover. |
-| `...props` | `React.ComponentProps<typeof Button>` | - | Any other props are spread to the underlying shadcn/ui Button component. |
+| Prop       | Type                                  | Default | Description                                                              |
+| ---------- | ------------------------------------- | ------- | ------------------------------------------------------------------------ |
+| `tooltip`  | `string`                              | -       | Tooltip text to display on hover.                                        |
+| `...props` | `React.ComponentProps<typeof Button>` | -       | Any other props are spread to the underlying shadcn/ui Button component. |
 
 ### `<WebPreviewUrl />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `...props` | `React.ComponentProps<typeof Input>` | - | Any other props are spread to the underlying shadcn/ui Input component. |
+| Prop       | Type                                 | Default | Description                                                             |
+| ---------- | ------------------------------------ | ------- | ----------------------------------------------------------------------- |
+| `...props` | `React.ComponentProps<typeof Input>` | -       | Any other props are spread to the underlying shadcn/ui Input component. |
 
 ### `<WebPreviewBody />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `loading` | `React.ReactNode` | - | Optional loading indicator to display over the preview. |
-| `...props` | `React.IframeHTMLAttributes<HTMLIFrameElement>` | - | Any other props are spread to the underlying iframe. |
+| Prop       | Type                                            | Default | Description                                             |
+| ---------- | ----------------------------------------------- | ------- | ------------------------------------------------------- |
+| `loading`  | `React.ReactNode`                               | -       | Optional loading indicator to display over the preview. |
+| `...props` | `React.IframeHTMLAttributes<HTMLIFrameElement>` | -       | Any other props are spread to the underlying iframe.    |
 
 ### `<WebPreviewConsole />`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `logs` | `Array<{ level: ` | - | Console log entries to display in the console panel. |
-| `...props` | `React.HTMLAttributes<HTMLDivElement>` | - | Any other props are spread to the root div. |
+| Prop       | Type                                   | Default | Description                                          |
+| ---------- | -------------------------------------- | ------- | ---------------------------------------------------- |
+| `logs`     | `Array<{ level: `                      | -       | Console log entries to display in the console panel. |
+| `...props` | `React.HTMLAttributes<HTMLDivElement>` | -       | Any other props are spread to the root div.          |

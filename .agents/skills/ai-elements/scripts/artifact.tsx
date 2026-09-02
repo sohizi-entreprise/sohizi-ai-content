@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   Artifact,
@@ -8,35 +8,35 @@ import {
   ArtifactDescription,
   ArtifactHeader,
   ArtifactTitle,
-} from "@/components/ai-elements/artifact";
-import { CodeBlock } from "@/components/ai-elements/code-block";
+} from '@/components/ai-elements/artifact'
+import { CodeBlock } from '@/components/ai-elements/code-block'
 import {
   CopyIcon,
   DownloadIcon,
   PlayIcon,
   RefreshCwIcon,
   ShareIcon,
-} from "lucide-react";
+} from 'lucide-react'
 
 const handleRun = () => {
-  console.log("Run");
-};
+  console.log('Run')
+}
 
 const handleCopy = () => {
-  console.log("Copy");
-};
+  console.log('Copy')
+}
 
 const handleRegenerate = () => {
-  console.log("Regenerate");
-};
+  console.log('Regenerate')
+}
 
 const handleDownload = () => {
-  console.log("Download");
-};
+  console.log('Download')
+}
 
 const handleShare = () => {
-  console.log("Share");
-};
+  console.log('Share')
+}
 
 const code = `# Dijkstra's Algorithm implementation
 import heapq
@@ -69,7 +69,7 @@ def dijkstra(graph, start):
     'D': {'B': 5, 'C': 1}
 }
 
-print(dijkstra(graph, 'A'))`;
+print(dijkstra(graph, 'A'))`
 
 const Example = () => (
   <Artifact>
@@ -122,6 +122,6 @@ const Example = () => (
       />
     </ArtifactContent>
   </Artifact>
-);
+)
 
-export default Example;
+export default Example

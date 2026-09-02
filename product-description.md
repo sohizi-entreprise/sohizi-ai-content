@@ -44,14 +44,14 @@ The issue is not the number of tools alone. It is that each tool operates as a s
 
 This creates several recurring problems:
 
-* Creators lose time moving between disconnected applications and production environments.
-* Assets must be repeatedly exported, downloaded, uploaded, converted, and reorganized.
-* Scripts, prompts, references, generated media, and editing decisions become separated from one another.
-* Each AI tool sees only the prompt or file provided to it, rather than the complete project.
-* Creators must repeatedly explain the same characters, scenes, style, and creative direction.
-* Multiple subscriptions and accounts increase cost and workflow complexity.
-* It becomes difficult to track which files belong to a particular scene, version, or production stage.
-* Creative context is lost as work moves from one system to another.
+- Creators lose time moving between disconnected applications and production environments.
+- Assets must be repeatedly exported, downloaded, uploaded, converted, and reorganized.
+- Scripts, prompts, references, generated media, and editing decisions become separated from one another.
+- Each AI tool sees only the prompt or file provided to it, rather than the complete project.
+- Creators must repeatedly explain the same characters, scenes, style, and creative direction.
+- Multiple subscriptions and accounts increase cost and workflow complexity.
+- It becomes difficult to track which files belong to a particular scene, version, or production stage.
+- Creative context is lost as work moves from one system to another.
 
 The result is a production process that feels disconnected, repetitive, and slower than it should be.
 
@@ -63,16 +63,16 @@ Creators can still work with familiar files, folders, documents, and tabs, but e
 
 Within Sohizi Lab, creators can:
 
-* Develop concepts and write scripts
-* Generate AI images
-* Generate AI video
-* Create voice and speech
-* Generate music and audio
-* Edit images and media
-* Build storyboards
-* Organize scenes, shots, and assets
-* Edit and assemble the final video
-* Work with a context-aware AI assistant
+- Develop concepts and write scripts
+- Generate AI images
+- Generate AI video
+- Create voice and speech
+- Generate music and audio
+- Edit images and media
+- Build storyboards
+- Organize scenes, shots, and assets
+- Edit and assemble the final video
+- Work with a context-aware AI assistant
 
 Because every stage happens within the same project environment, assets and creative decisions remain connected.
 
@@ -86,32 +86,32 @@ Its key differentiator is a shared intelligence layer that understands the relat
 
 The AI can use context from:
 
-* Scripts and documents
-* Project files and folders
-* Storyboards
-* Scenes and shots
-* Characters
-* Visual references
-* Generated images and videos
-* Voice and music assets
-* Editing decisions
-* The video timeline
+- Scripts and documents
+- Project files and folders
+- Storyboards
+- Scenes and shots
+- Characters
+- Visual references
+- Generated images and videos
+- Voice and music assets
+- Editing decisions
+- The video timeline
 
 This enables the AI to provide assistance that reflects the production as a whole rather than treating every request as an isolated prompt.
 
 For example, the AI can help creators:
 
-* Develop an idea into a structured script
-* Turn a script into scenes or a storyboard
-* Generate visual concepts for individual scenes
-* Maintain character and visual consistency
-* Create media that matches the surrounding project context
-* Suggest shots, transitions, pacing, and edits
-* Rewrite or restructure parts of the story
-* Identify missing scenes or production assets
-* Locate and reference relevant project files
-* Adapt content for different formats and platforms
-* Refine the final video without losing the original creative direction
+- Develop an idea into a structured script
+- Turn a script into scenes or a storyboard
+- Generate visual concepts for individual scenes
+- Maintain character and visual consistency
+- Create media that matches the surrounding project context
+- Suggest shots, transitions, pacing, and edits
+- Rewrite or restructure parts of the story
+- Identify missing scenes or production assets
+- Locate and reference relevant project files
+- Adapt content for different formats and platforms
+- Refine the final video without losing the original creative direction
 
 This context-aware approach makes Sohizi Lab more than an all-in-one tool. It becomes an intelligent project environment for video production.
 
@@ -155,16 +155,16 @@ The alpha version of Sohizi Lab is designed as a focused, end-to-end workspace f
 
 It includes:
 
-* A file and folder-based project system
-* A text and script editor
-* AI image generation
-* AI video generation
-* AI speech and voice generation
-* AI music generation
-* Storyboarding tools
-* Scene, shot, and asset organization
-* Video editing
-* A context-aware AI creative assistant
+- A file and folder-based project system
+- A text and script editor
+- AI image generation
+- AI video generation
+- AI speech and voice generation
+- AI music generation
+- Storyboarding tools
+- Scene, shot, and asset organization
+- Video editing
+- A context-aware AI creative assistant
 
 Team collaboration is not included in the alpha release.
 
@@ -174,31 +174,31 @@ The initial experience should focus on helping individual creators complete more
 
 Sohizi Lab is designed for creators producing a wide range of video content, including:
 
-* AI filmmakers
-* Independent video creators
-* YouTube creators
-* Short-form content creators
-* Marketing professionals
-* Social media creators
-* Creative agencies
-* Brand content producers
-* Educators and training-content creators
-* Motion designers
-* Storytellers and visual artists
-* Product and campaign teams creating video content
+- AI filmmakers
+- Independent video creators
+- YouTube creators
+- Short-form content creators
+- Marketing professionals
+- Social media creators
+- Creative agencies
+- Brand content producers
+- Educators and training-content creators
+- Motion designers
+- Storytellers and visual artists
+- Product and campaign teams creating video content
 
 The platform can support many forms of video, including:
 
-* Cinematic stories
-* Advertisements
-* Social media content
-* Product videos
-* Educational videos
-* Music videos
-* Explainers
-* Animated content
-* Branded content
-* Experimental AI productions
+- Cinematic stories
+- Advertisements
+- Social media content
+- Product videos
+- Educational videos
+- Music videos
+- Explainers
+- Animated content
+- Branded content
+- Experimental AI productions
 
 ## Positioning Statement
 
@@ -250,13 +250,13 @@ Your workflow can include many files, folders, documents, and creative tools. Th
 
 ## Alternative Homepage Headlines
 
-* **Create videos from idea to final edit in one connected workspace.**
-* **Your entire AI video project, in one place.**
-* **One project environment for writing, generating, organizing, and editing.**
-* **Keep your scripts, assets, generations, and edits connected.**
-* **An AI creative workspace that understands your entire project.**
-* **Write, generate, organize, and edit with Sohizi Lab.**
-* **From first idea to final cut, without fragmenting your workflow.**
+- **Create videos from idea to final edit in one connected workspace.**
+- **Your entire AI video project, in one place.**
+- **One project environment for writing, generating, organizing, and editing.**
+- **Keep your scripts, assets, generations, and edits connected.**
+- **An AI creative workspace that understands your entire project.**
+- **Write, generate, organize, and edit with Sohizi Lab.**
+- **From first idea to final cut, without fragmenting your workflow.**
 
 ## Concise Website Version
 
@@ -290,8 +290,7 @@ It replaces a fragmented collection of creative products with a connected worksp
 
 By understanding the full project context, Sohizi Lab’s AI helps creators make better decisions, maintain consistency, and move from concept to finished video with less friction.
 
-
 ## sites inspiration
 
 - https://ui.aceternity.com/template-preview/productized-agency-template
-- 
+-

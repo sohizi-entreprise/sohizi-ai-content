@@ -1,0 +1,164 @@
+/**
+ * Sohizi Cloudflare service: MP3 trimming + the Remotion render pipeline.
+ *
+ * Secrets are never stored here. Set them per environment with:
+ *   wrangler secret put RENDER_SERVICE_TOKEN --env dev
+ *   wrangler secret put RENDER_SERVICE_TOKEN --env prod
+ *
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sohizi-cloudflare",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-06",
+  "observability": {
+    "enabled": true,
+  },
+  "upload_source_maps": true,
+  "compatibility_flags": ["nodejs_compat"],
+  "r2_buckets": [
+    {
+      "binding": "R2_BUCKET",
+      "bucket_name": "sohizi-ai-dev",
+    },
+  ],
+  "workflows": [
+    {
+      "binding": "RENDER_WORKFLOW",
+      "name": "sohizi-render",
+      "class_name": "RenderWorkflow",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RENDER_CONTAINER",
+        "class_name": "RemotionRenderContainer",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RemotionRenderContainer"],
+    },
+  ],
+  "containers": [
+    {
+      "class_name": "RemotionRenderContainer",
+      "image": "./Dockerfile",
+      "image_build_context": "../..",
+      // 2 vCPU / 8 GiB / 16 GB disk: Chromium plus an H.264 encode needs the
+      // headroom, and disk holds the intermediate frames.
+      "instance_type": "standard-3",
+      "max_instances": 10,
+      "rollout_step_percentage": [10, 100],
+    },
+  ],
+  "vars": {
+    "MAX_MP3_BYTES": "20971520", // 20 MB
+    // Must cover the API's R2_PUBLIC_URL host, otherwise every render with a
+    // media clip is rejected.
+    "RENDER_ALLOWED_MEDIA_HOSTS": "media-dev.sohizi.com,cdn.sohizi.com,sohizi-ai-dev.r2.dev",
+    "RENDER_CONCURRENCY": "2",
+    "RENDER_POLL_INTERVAL_SECONDS": "5",
+    "RENDER_TIMEOUT_MINUTES": "30",
+  },
+  "env": {
+    "dev": {
+      "name": "sohizi-cloudflare-dev",
+      "r2_buckets": [
+        {
+          "binding": "R2_BUCKET",
+          "bucket_name": "sohizi-ai-dev",
+        },
+      ],
+      "workflows": [
+        {
+          "binding": "RENDER_WORKFLOW",
+          "name": "sohizi-render-dev",
+          "class_name": "RenderWorkflow",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "RENDER_CONTAINER",
+            "class_name": "RemotionRenderContainer",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": ["RemotionRenderContainer"],
+        },
+      ],
+      "containers": [
+        {
+          "class_name": "RemotionRenderContainer",
+          "image": "./Dockerfile",
+          "image_build_context": "../..",
+          "instance_type": "standard-3",
+          "max_instances": 3,
+        },
+      ],
+      "vars": {
+        "MAX_MP3_BYTES": "20971520", // 20 MB
+        "RENDER_ALLOWED_MEDIA_HOSTS": "media-dev.sohizi.com,cdn.sohizi.com,sohizi-ai-dev.r2.dev",
+        "RENDER_CONCURRENCY": "2",
+        "RENDER_POLL_INTERVAL_SECONDS": "5",
+        "RENDER_TIMEOUT_MINUTES": "30",
+      },
+    },
+    "prod": {
+      "name": "sohizi-cloudflare-prod",
+      "r2_buckets": [
+        {
+          "binding": "R2_BUCKET",
+          "bucket_name": "sohizi-ai-prod",
+        },
+      ],
+      "workflows": [
+        {
+          "binding": "RENDER_WORKFLOW",
+          "name": "sohizi-render-prod",
+          "class_name": "RenderWorkflow",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "RENDER_CONTAINER",
+            "class_name": "RemotionRenderContainer",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": ["RemotionRenderContainer"],
+        },
+      ],
+      "containers": [
+        {
+          "class_name": "RemotionRenderContainer",
+          "image": "./Dockerfile",
+          "image_build_context": "../..",
+          "instance_type": "standard-3",
+          "max_instances": 20,
+          "rollout_step_percentage": [10, 100],
+        },
+      ],
+      "vars": {
+        "MAX_MP3_BYTES": "20971520", // 20 MB
+        "RENDER_ALLOWED_MEDIA_HOSTS": "cdn.sohizi.com",
+        "RENDER_CONCURRENCY": "4",
+        "RENDER_POLL_INTERVAL_SECONDS": "5",
+        "RENDER_TIMEOUT_MINUTES": "45",
+      },
+    },
+  },
+}

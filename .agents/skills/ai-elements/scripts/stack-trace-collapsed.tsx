@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   StackTrace,
@@ -11,12 +11,12 @@ import {
   StackTraceExpandButton,
   StackTraceFrames,
   StackTraceHeader,
-} from "@/components/ai-elements/stack-trace";
+} from '@/components/ai-elements/stack-trace'
 
 const errorString = `TypeError: Cannot read properties of undefined (reading 'map')
     at UserList (/app/src/components/UserList.tsx:15:23)
     at renderWithHooks (node_modules/react-dom/cjs/react-dom.development.js:14985:18)
-    at mountIndeterminateComponent (node_modules/react-dom/cjs/react-dom.development.js:17811:13)`;
+    at mountIndeterminateComponent (node_modules/react-dom/cjs/react-dom.development.js:17811:13)`
 
 const Example = () => (
   <StackTrace defaultOpen={false} trace={errorString}>
@@ -34,6 +34,6 @@ const Example = () => (
       <StackTraceFrames />
     </StackTraceContent>
   </StackTrace>
-);
+)
 
-export default Example;
+export default Example

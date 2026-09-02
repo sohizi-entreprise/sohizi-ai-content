@@ -1,0 +1,251 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1776515583987,
+      "tag": "0000_regular_ultimatum",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777184409565,
+      "tag": "0001_damp_daredevil",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777749029179,
+      "tag": "0002_abnormal_cammi",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777818633506,
+      "tag": "0003_rare_wilson_fisk",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778000155679,
+      "tag": "0004_rainy_amphibian",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1778954102634,
+      "tag": "0005_fixed_steve_rogers",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778960000000,
+      "tag": "0006_editable_default_true",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779212983488,
+      "tag": "0007_grey_the_liberteens",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779286234397,
+      "tag": "0008_slippery_mariko_yashida",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779293635372,
+      "tag": "0009_overrated_robin_chapel",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779357150318,
+      "tag": "0010_odd_miss_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779520472638,
+      "tag": "0011_late_kulan_gath",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1779649282638,
+      "tag": "0012_nice_warbound",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779979004985,
+      "tag": "0013_groovy_romulus",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1780237090965,
+      "tag": "0014_conscious_maria_hill",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1780263789813,
+      "tag": "0015_dashing_doorman",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1782069679136,
+      "tag": "0016_add-assets-to-generation-requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1782138209200,
+      "tag": "0017_dazzling_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1782571200000,
+      "tag": "0018_seed_model_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1782571200001,
+      "tag": "0019_whole_jean_grey",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1782660000000,
+      "tag": "0020_assets_agent_run_assets_relation",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1782746400000,
+      "tag": "0021_commands",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782746400001,
+      "tag": "0022_seed_commands",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1784390400000,
+      "tag": "0023_user_type_and_models_options",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1784390400001,
+      "tag": "0024_seed_models_options",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1784390400002,
+      "tag": "0025_commands_visible",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1784390400003,
+      "tag": "0026_add_video_render_jobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1784390400004,
+      "tag": "0027_model_parameters",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1786822347412,
+      "tag": "0028_vendors_and_parameter_options",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786822347413,
+      "tag": "0029_move_model_pricing_to_vendors",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1787062123520,
+      "tag": "0030_drop_assets_agent_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1787310000000,
+      "tag": "0031_llm_models_description",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787750000000,
+      "tag": "0032_model_level_pricing",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1787760000000,
+      "tag": "0033_vendor_routing",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1788031584698,
+      "tag": "0034_steady_scorpion",
+      "breakpoints": true
+    }
+  ]
+}

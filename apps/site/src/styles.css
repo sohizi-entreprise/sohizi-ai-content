@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "tailwind-rounded-out";
+@import "@sohizi/ui/styles.css";
+
+@source '../../../packages/ui/src';

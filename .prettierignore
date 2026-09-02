@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.wrangler
+.output
+.tanstack
+.nitro
+.vinxi
+
+bun.lock
+package-lock.json
+pnpm-lock.yaml
+
+**/routeTree.gen.ts
+apps/cloudflare/worker-configuration.d.ts
+apps/api/src/db/migrations/**

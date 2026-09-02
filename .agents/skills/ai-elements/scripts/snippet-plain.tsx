@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
 import {
   Snippet,
   SnippetAddon,
   SnippetCopyButton,
   SnippetInput,
-} from "@/components/ai-elements/snippet";
+} from '@/components/ai-elements/snippet'
 
 const Example = () => (
   <Snippet code="git clone https://github.com/user/repo">
@@ -14,6 +14,6 @@ const Example = () => (
       <SnippetCopyButton />
     </SnippetAddon>
   </Snippet>
-);
+)
 
-export default Example;
+export default Example

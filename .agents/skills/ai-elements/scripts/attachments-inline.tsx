@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   Attachment,
@@ -11,53 +11,53 @@ import {
   Attachments,
   getAttachmentLabel,
   getMediaCategory,
-} from "@/components/ai-elements/attachments";
-import { nanoid } from "nanoid";
-import { memo, useCallback, useState } from "react";
+} from '@/components/ai-elements/attachments'
+import { nanoid } from 'nanoid'
+import { memo, useCallback, useState } from 'react'
 
 const initialAttachments = [
   {
-    filename: "mountain-landscape.jpg",
+    filename: 'mountain-landscape.jpg',
     id: nanoid(),
-    mediaType: "image/jpeg",
-    type: "file" as const,
-    url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop",
+    mediaType: 'image/jpeg',
+    type: 'file' as const,
+    url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop',
   },
   {
-    filename: "quarterly-report.pdf",
+    filename: 'quarterly-report.pdf',
     id: nanoid(),
-    mediaType: "application/pdf",
-    type: "file" as const,
-    url: "",
+    mediaType: 'application/pdf',
+    type: 'file' as const,
+    url: '',
   },
   {
     id: nanoid(),
-    mediaType: "text/html",
-    title: "React Documentation",
-    type: "source-document" as const,
-    url: "https://react.dev",
+    mediaType: 'text/html',
+    title: 'React Documentation',
+    type: 'source-document' as const,
+    url: 'https://react.dev',
   },
   {
-    filename: "podcast-episode.mp3",
+    filename: 'podcast-episode.mp3',
     id: nanoid(),
-    mediaType: "audio/mp3",
-    type: "file" as const,
-    url: "",
+    mediaType: 'audio/mp3',
+    type: 'file' as const,
+    url: '',
   },
-];
+]
 
 interface AttachmentItemProps {
-  attachment: (typeof initialAttachments)[0];
-  onRemove: (id: string) => void;
+  attachment: (typeof initialAttachments)[0]
+  onRemove: (id: string) => void
 }
 
 const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
   const handleRemove = useCallback(
     () => onRemove(attachment.id),
-    [onRemove, attachment.id]
-  );
-  const mediaCategory = getMediaCategory(attachment);
-  const label = getAttachmentLabel(attachment);
+    [onRemove, attachment.id],
+  )
+  const mediaCategory = getMediaCategory(attachment)
+  const label = getAttachmentLabel(attachment)
 
   return (
     <AttachmentHoverCard key={attachment.id}>
@@ -74,8 +74,8 @@ const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
       </AttachmentHoverCardTrigger>
       <AttachmentHoverCardContent>
         <div className="space-y-3">
-          {mediaCategory === "image" &&
-            attachment.type === "file" &&
+          {mediaCategory === 'image' &&
+            attachment.type === 'file' &&
             attachment.url && (
               <div className="flex max-h-96 w-80 items-center justify-center overflow-hidden rounded-md border">
                 <img
@@ -98,17 +98,17 @@ const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
         </div>
       </AttachmentHoverCardContent>
     </AttachmentHoverCard>
-  );
-});
+  )
+})
 
-AttachmentItem.displayName = "AttachmentItem";
+AttachmentItem.displayName = 'AttachmentItem'
 
 const Example = () => {
-  const [attachments, setAttachments] = useState(initialAttachments);
+  const [attachments, setAttachments] = useState(initialAttachments)
 
   const handleRemove = useCallback((id: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-  }, []);
+    setAttachments((prev) => prev.filter((a) => a.id !== id))
+  }, [])
 
   return (
     <div className="flex items-center justify-center p-8">
@@ -122,7 +122,7 @@ const Example = () => {
         ))}
       </Attachments>
     </div>
-  );
-};
+  )
+}
 
-export default Example;
+export default Example

@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   CodeBlock,
@@ -7,16 +7,16 @@ import {
   CodeBlockFilename,
   CodeBlockHeader,
   CodeBlockTitle,
-} from "@/components/ai-elements/code-block";
-import { FileIcon } from "lucide-react";
+} from '@/components/ai-elements/code-block'
+import { FileIcon } from 'lucide-react'
 
 const handleCopy = () => {
-  console.log("Copied code to clipboard");
-};
+  console.log('Copied code to clipboard')
+}
 
 const handleCopyError = () => {
-  console.error("Failed to copy code to clipboard");
-};
+  console.error('Failed to copy code to clipboard')
+}
 
 const code = `function MyComponent(props) {
   return (
@@ -25,7 +25,7 @@ const code = `function MyComponent(props) {
       <p>This is an example React component.</p>
     </div>
   );
-}`;
+}`
 
 const Example = () => (
   <div className="dark">
@@ -41,6 +41,6 @@ const Example = () => (
       </CodeBlockHeader>
     </CodeBlock>
   </div>
-);
+)
 
-export default Example;
+export default Example

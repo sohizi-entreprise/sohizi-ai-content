@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   AudioPlayer,
@@ -12,7 +12,7 @@ import {
   AudioPlayerTimeDisplay,
   AudioPlayerTimeRange,
   AudioPlayerVolumeRange,
-} from "@/components/ai-elements/audio-player";
+} from '@/components/ai-elements/audio-player'
 
 const Example = () => (
   <div className="flex size-full items-center justify-center">
@@ -30,6 +30,6 @@ const Example = () => (
       </AudioPlayerControlBar>
     </AudioPlayer>
   </div>
-);
+)
 
-export default Example;
+export default Example

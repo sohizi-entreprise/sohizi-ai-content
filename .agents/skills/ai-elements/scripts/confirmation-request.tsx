@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   Confirmation,
@@ -8,17 +8,17 @@ import {
   ConfirmationRejected,
   ConfirmationRequest,
   ConfirmationTitle,
-} from "@/components/ai-elements/confirmation";
-import { CheckIcon, XIcon } from "lucide-react";
-import { nanoid } from "nanoid";
+} from '@/components/ai-elements/confirmation'
+import { CheckIcon, XIcon } from 'lucide-react'
+import { nanoid } from 'nanoid'
 
 const handleReject = () => {
   // In production, call respondToConfirmationRequest with approved: false
-};
+}
 
 const handleApprove = () => {
   // In production, call respondToConfirmationRequest with approved: true
-};
+}
 
 const Example = () => (
   <div className="w-full max-w-2xl">
@@ -49,6 +49,6 @@ const Example = () => (
       </ConfirmationActions>
     </Confirmation>
   </div>
-);
+)
 
-export default Example;
+export default Example

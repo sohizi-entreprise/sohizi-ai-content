@@ -37,17 +37,17 @@ Once an AI Elements component is installed, you can import it and use it in your
 After installing AI Elements components, you can use them in your application like any other React component. For example:
 
 ```tsx title="conversation.tsx"
-"use client";
+'use client'
 
 import {
   Message,
   MessageContent,
   MessageResponse,
-} from "@/components/ai-elements/message";
-import { useChat } from "@ai-sdk/react";
+} from '@/components/ai-elements/message'
+import { useChat } from '@ai-sdk/react'
 
 const Example = () => {
-  const { messages } = useChat();
+  const { messages } = useChat()
 
   return (
     <>
@@ -56,22 +56,22 @@ const Example = () => {
           <MessageContent>
             {parts.map((part, i) => {
               switch (part.type) {
-                case "text":
+                case 'text':
                   return (
                     <MessageResponse key={`${role}-${i}`}>
                       {part.text}
                     </MessageResponse>
-                  );
+                  )
               }
             })}
           </MessageContent>
         </Message>
       ))}
     </>
-  );
-};
+  )
+}
 
-export default Example;
+export default Example
 ```
 
 In the example above, we import the `Message` component from our AI Elements directory and include it in our JSX. Then, we compose the component with the `MessageContent` and `MessageResponse` subcomponents. You can style or configure the component just as you would if you wrote it yourself – since the code lives in your project, you can even open the component file to see how it works or make custom modifications.
@@ -94,15 +94,15 @@ export const MessageContent = ({
 }: MessageContentProps) => (
   <div
     className={cn(
-      "flex flex-col gap-2 text-sm text-foreground",
-      "group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground group-[.is-user]:px-4 group-[.is-user]:py-3",
-      className
+      'flex flex-col gap-2 text-sm text-foreground',
+      'group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground group-[.is-user]:px-4 group-[.is-user]:py-3',
+      className,
     )}
     {...props}
   >
     <div className="is-user:dark">{children}</div>
   </div>
-);
+)
 ```
 
 ## Troubleshooting

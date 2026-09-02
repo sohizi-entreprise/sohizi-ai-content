@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   Test,
@@ -12,11 +12,11 @@ import {
   TestSuite,
   TestSuiteContent,
   TestSuiteName,
-} from "@/components/ai-elements/test-results";
+} from '@/components/ai-elements/test-results'
 
 const stackTrace = `    at Object.<anonymous> (/app/src/api.test.ts:45:12)
     at Module._compile (node:internal/modules/cjs/loader:1369:14)
-    at Module._extensions..js (node:internal/modules/cjs/loader:1427:10)`;
+    at Module._extensions..js (node:internal/modules/cjs/loader:1427:10)`
 
 const Example = () => (
   <TestResults
@@ -46,6 +46,6 @@ const Example = () => (
       </TestSuite>
     </TestResultsContent>
   </TestResults>
-);
+)
 
-export default Example;
+export default Example

@@ -1,16 +1,16 @@
-"use client";
+'use client'
 
 import {
   JSXPreview,
   JSXPreviewContent,
   JSXPreviewError,
-} from "@/components/ai-elements/jsx-preview";
-import { Button } from "@/components/ui/button";
-import { useCallback, useEffect, useRef, useState } from "react";
+} from '@/components/ai-elements/jsx-preview'
+import { Button } from '@sohizi/ui/button'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 const handleError = (error: Error) => {
-  console.log("JSX Parse Error:", error);
-};
+  console.log('JSX Parse Error:', error)
+}
 
 const fullJsx = `<div className="rounded-lg border bg-card p-6 shadow-sm">
   <div className="flex items-center gap-4 mb-4">
@@ -38,44 +38,44 @@ const fullJsx = `<div className="rounded-lg border bg-card p-6 shadow-sm">
       </button>
     </div>
   </div>
-</div>`;
+</div>`
 
 const Example = () => {
-  const [streamedJsx, setStreamedJsx] = useState(fullJsx);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [streamedJsx, setStreamedJsx] = useState(fullJsx)
+  const [isStreaming, setIsStreaming] = useState(false)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const simulateStreaming = useCallback(() => {
-    setIsStreaming(true);
-    setStreamedJsx("");
-    let index = 0;
+    setIsStreaming(true)
+    setStreamedJsx('')
+    let index = 0
 
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearInterval(intervalRef.current)
     }
 
     intervalRef.current = setInterval(() => {
       if (index < fullJsx.length) {
-        setStreamedJsx(fullJsx.slice(0, index + 15));
-        index += 15;
+        setStreamedJsx(fullJsx.slice(0, index + 15))
+        index += 15
       } else {
-        setIsStreaming(false);
+        setIsStreaming(false)
         if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
         }
       }
-    }, 30);
-  }, []);
+    }, 30)
+  }, [])
 
   useEffect(
     () => () => {
       if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+        clearInterval(intervalRef.current)
       }
     },
-    []
-  );
+    [],
+  )
 
   return (
     <div className="space-y-4">
@@ -85,7 +85,7 @@ const Example = () => {
         size="sm"
         variant="outline"
       >
-        {isStreaming ? "Streaming..." : "Simulate Streaming"}
+        {isStreaming ? 'Streaming...' : 'Simulate Streaming'}
       </Button>
 
       <JSXPreview
@@ -98,7 +98,7 @@ const Example = () => {
         <JSXPreviewError className="mt-2" />
       </JSXPreview>
     </div>
-  );
-};
+  )
+}
 
-export default Example;
+export default Example

@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   Plan,
@@ -9,9 +9,9 @@ import {
   PlanHeader,
   PlanTitle,
   PlanTrigger,
-} from "@/components/ai-elements/plan";
-import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+} from '@/components/ai-elements/plan'
+import { Button } from '@sohizi/ui/button'
+import { FileText } from 'lucide-react'
 
 const Example = () => (
   <Plan defaultOpen={false}>
@@ -60,6 +60,6 @@ const Example = () => (
       </PlanAction>
     </PlanFooter>
   </Plan>
-);
+)
 
-export default Example;
+export default Example

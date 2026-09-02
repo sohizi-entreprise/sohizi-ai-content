@@ -11,6 +11,7 @@
 **Eyebrow:** The AI video workspace
 
 **Headline:**
+
 # Make the whole AI video in one tool. Not eight.
 
 **Subheadline:**
@@ -136,6 +137,7 @@ Your next project doesn't have to live in eight places at once. Write it, genera
 ## Appendix — Headline & CTA variants (for A/B testing)
 
 **Hero headline options:**
+
 - Make the whole AI video in one tool. Not eight.
 - Move between creative tools without moving your project.
 - Your entire video project, in one place.
@@ -143,18 +145,20 @@ Your next project doesn't have to live in eight places at once. Write it, genera
 - One project. Every stage. An AI that remembers all of it.
 
 **Subheadline options:**
+
 - Write scripts, generate media, storyboard, and edit video in one AI-assisted workspace that knows the full context of your project.
 - Write scripts, generate images, video, voice, and music, storyboard, and edit — with an AI that understands your whole project.
 - Stop exporting, re-uploading, and re-explaining. Make it all in one place.
 
 **Primary CTA button options:**
+
 - Start creating free
 - Start your first project
 - Make your first video
 - Try Sohizi free
 
 **Friction reducer options:**
+
 - Get free credit. Your first project takes two minutes to start.
 - Free to start. Cancel anytime.
 - Get free credit to try your first project.
-
