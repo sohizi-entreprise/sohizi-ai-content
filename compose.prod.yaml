@@ -1,0 +1,151 @@
+name: sohizi
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  api:
+    image: sohizi/sohizi-lab:api-latest
+    pull_policy: always
+    restart: unless-stopped
+    # ports:
+    #   - "3030:3030"
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      INNGEST_DEV: "0"
+      INNGEST_BASE_URL: http://inngest:8288
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - caddy
+      - private
+
+  web:
+    image: sohizi/sohizi-lab:web-latest
+    pull_policy: always
+    restart: unless-stopped
+    # ports:
+    #   - "3000:3000"
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+    depends_on:
+      api:
+        condition: service_started
+    logging: *default-logging
+    networks:
+      - caddy
+
+  site:
+    image: sohizi/sohizi-lab:site-latest
+    pull_policy: always
+    restart: unless-stopped
+    # ports:
+    #   - "3001:3001"
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3001"
+    logging: *default-logging
+    networks:
+      - caddy
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *default-logging
+    networks:
+      - private
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *default-logging
+    networks:
+      - private
+
+  inngest:
+    image: inngest/inngest:v1.41.1
+    restart: unless-stopped
+    command:
+      - inngest
+      - start
+      - --host
+      - 0.0.0.0
+      - --sdk-url
+      - http://api:3030/api/inngest
+      - --poll-interval
+      - "60"
+      - --json
+    env_file: .env
+    environment:
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
+      INNGEST_POSTGRES_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/inngest
+      INNGEST_REDIS_URI: redis://redis:6379
+      INNGEST_QUEUE_WORKERS: ${INNGEST_QUEUE_WORKERS:-20}
+      LOG_LEVEL: ${INNGEST_LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "inngest", "alpha", "doctor", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    logging: *default-logging
+    networks:
+      - private
+      - caddy
+
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  caddy:
+    external: true
+  private:
