@@ -21,7 +21,9 @@ const manager = new MarkdownManager({
 })
 
 function roundTrip(markdown: string) {
-  return unescapeEmphasisInDiffMarkers(manager.serialize(manager.parse(markdown)))
+  return unescapeEmphasisInDiffMarkers(
+    manager.serialize(manager.parse(markdown)),
+  )
 }
 
 function collectTypes(node: {

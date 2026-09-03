@@ -112,7 +112,10 @@ describe("useVideoExport", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
     })
     useVideoEditorUiStore.setState({ activeRender: null })
     useVideoEditorStore.setState({
