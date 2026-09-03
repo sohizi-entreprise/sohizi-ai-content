@@ -21,6 +21,16 @@ jobs:
       fail-fast: false
       matrix:
         app: [api, web, site]
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,8 +48,14 @@ jobs:
         run: bun run --filter @sohizi/${{ matrix.app }} lint
 
       - name: Test
-        if: matrix.app != 'site'
-        run: bun run --filter @sohizi/${{ matrix.app }} test
+        if: matrix.app == 'web'
+        run: bun run --filter @sohizi/web test
+
+      - name: Test
+        if: matrix.app == 'api'
+        run: bun run --filter @sohizi/api test:ci
+        env:
+          REDIS_URL: redis://127.0.0.1:6379
 
   docker:
     name: Docker ${{ matrix.app }}
