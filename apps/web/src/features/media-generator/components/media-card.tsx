@@ -144,14 +144,21 @@ function RenderImage({ item }: { item: MediaAsset }) {
 function RenderVideo({ item }: { item: MediaAsset }) {
   return (
     <div className="size-full">
-      <video className="size-full object-contain" src={item.url} controls />
+      <video
+        className="size-full object-contain"
+        src={item.url}
+        controls
+      />
     </div>
   )
 }
 function RenderAudio({ item }: { item: MediaAsset }) {
   return (
     <div className="size-full flex items-center justify-center">
-      <AudioPlayer src={item.url} className="size-full" />
+      <AudioPlayer
+        src={item.url}
+        className="size-full"
+      />
     </div>
   )
 }
@@ -235,13 +242,19 @@ function CardMenu({
 
   return (
     <>
-      <MediaCardMenu className={className} options={options} />
+      <MediaCardMenu
+        className={className}
+        options={options}
+      />
       <RequestSettingsDialog
         open={settingsDialogOpen}
         onOpenChange={setSettingsDialogOpen}
         request={asset.generationRequest?.request ?? null}
       />
-      <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
+      <Dialog
+        open={moveDialogOpen}
+        onOpenChange={setMoveDialogOpen}
+      >
         <DialogContent onCloseAutoFocus={(event) => event.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Move to folder</DialogTitle>
@@ -287,10 +300,16 @@ function CardMenu({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMoveDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setMoveDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button disabled={!selectedFolder} onClick={confirmMove}>
+            <Button
+              disabled={!selectedFolder}
+              onClick={confirmMove}
+            >
               Confirm move
             </Button>
           </DialogFooter>

@@ -44,7 +44,12 @@ function ImageViewer({ uri, name }: { uri: string; name: string }) {
 function VideoAndAudioViewer({ url }: { url: string }) {
   return (
     <div className="h-full w-full">
-      <ReactPlayer src={url} controls width="100%" height="100%" />
+      <ReactPlayer
+        src={url}
+        controls
+        width="100%"
+        height="100%"
+      />
     </div>
   )
 }

@@ -18,7 +18,10 @@ interface LayoutProps {
 function ExpandedLayout({ projectId, rootFolderId }: LayoutProps) {
   const showAiPanel = useEditorStore((s) => s.chatOpenByContext["file-system"])
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+    <ResizablePanelGroup
+      direction="horizontal"
+      className="h-full w-full"
+    >
       <ResizablePanel
         id="file-explorer"
         order={1}
@@ -27,7 +30,10 @@ function ExpandedLayout({ projectId, rootFolderId }: LayoutProps) {
         maxSize={25}
         className="rounded-2xl mb-2 bg-card"
       >
-        <FileExplorer projectId={projectId} rootFolderId={rootFolderId} />
+        <FileExplorer
+          projectId={projectId}
+          rootFolderId={rootFolderId}
+        />
       </ResizablePanel>
       <ResizableHandle className="mx-1 bg-transparent" />
       <ResizablePanel
@@ -50,7 +56,10 @@ function ExpandedLayout({ projectId, rootFolderId }: LayoutProps) {
             maxSize={40}
             className="rounded-2xl mb-2"
           >
-            <ChatContainer projectId={projectId} editorType="synopsis" />
+            <ChatContainer
+              projectId={projectId}
+              editorType="synopsis"
+            />
           </ResizablePanel>
         </>
       )}
@@ -61,7 +70,10 @@ function ExpandedLayout({ projectId, rootFolderId }: LayoutProps) {
 function CollapsedLayout({ projectId }: LayoutProps) {
   const showAiPanel = useEditorStore((s) => s.chatOpenByContext["file-system"])
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+    <ResizablePanelGroup
+      direction="horizontal"
+      className="h-full w-full"
+    >
       <ResizablePanel
         id="editor-workspace"
         order={1}
@@ -82,7 +94,10 @@ function CollapsedLayout({ projectId }: LayoutProps) {
             maxSize={40}
             className="rounded-xl mb-2 bg-card"
           >
-            <ChatContainer projectId={projectId} editorType="synopsis" />
+            <ChatContainer
+              projectId={projectId}
+              editorType="synopsis"
+            />
           </ResizablePanel>
         </>
       )}
@@ -97,9 +112,15 @@ export function AppLayout({ projectId, rootFolderId }: LayoutProps) {
     <DndProvider backend={HTML5Backend}>
       <div className="relative h-full min-w-0 flex-1">
         {sidebarCollapsed ? (
-          <CollapsedLayout projectId={projectId} rootFolderId={rootFolderId} />
+          <CollapsedLayout
+            projectId={projectId}
+            rootFolderId={rootFolderId}
+          />
         ) : (
-          <ExpandedLayout projectId={projectId} rootFolderId={rootFolderId} />
+          <ExpandedLayout
+            projectId={projectId}
+            rootFolderId={rootFolderId}
+          />
         )}
       </div>
     </DndProvider>

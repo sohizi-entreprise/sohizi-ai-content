@@ -1,5 +1,5 @@
-import { AbsoluteFill, Html5Audio, Img, OffthreadVideo } from 'remotion'
-import type { AudioClip, ImageClip, TextClip, VideoClip } from './types'
+import { AbsoluteFill, Html5Audio, Img, OffthreadVideo } from "remotion"
+import type { AudioClip, ImageClip, TextClip, VideoClip } from "./types"
 
 interface VideoClipRendererProps {
   clip: VideoClip
@@ -8,18 +8,18 @@ interface VideoClipRendererProps {
 
 export function VideoClipRenderer({ clip, muted }: VideoClipRendererProps) {
   return (
-    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           left: `${clip.xRatio * 100}%`,
           top: `${clip.yRatio * 100}%`,
           width: `${clip.widthRatio * 100}%`,
           height: `${clip.heightRatio * 100}%`,
-          transform: 'translate(-50%, -50%)',
+          transform: "translate(-50%, -50%)",
           opacity: clip.opacity,
           borderRadius: clip.borderRadius,
-          overflow: 'hidden',
+          overflow: "hidden",
         }}
       >
         <OffthreadVideo
@@ -29,9 +29,9 @@ export function VideoClipRenderer({ clip, muted }: VideoClipRendererProps) {
           playbackRate={clip.speed}
           trimBefore={clip.sourceStartFrame}
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
           }}
         />
       </div>
@@ -62,23 +62,23 @@ interface TextClipRendererProps {
 
 export function TextClipRenderer({ clip }: TextClipRendererProps) {
   const justify =
-    clip.align === 'left'
-      ? 'flex-start'
-      : clip.align === 'right'
-        ? 'flex-end'
-        : 'center'
+    clip.align === "left"
+      ? "flex-start"
+      : clip.align === "right"
+        ? "flex-end"
+        : "center"
   return (
-    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           left: `${clip.xRatio * 100}%`,
           top: `${clip.yRatio * 100}%`,
           width: `${clip.widthRatio * 100}%`,
           height: `${clip.heightRatio * 100}%`,
-          transform: 'translate(-50%, -50%)',
-          display: 'flex',
-          alignItems: 'center',
+          transform: "translate(-50%, -50%)",
+          display: "flex",
+          alignItems: "center",
           justifyContent: justify,
           opacity: clip.opacity,
         }}
@@ -90,9 +90,9 @@ export function TextClipRenderer({ clip }: TextClipRendererProps) {
             fontWeight: clip.fontWeight,
             fontFamily: `${clip.fontFamily}, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`,
             textAlign: clip.align,
-            whiteSpace: 'pre-wrap',
+            whiteSpace: "pre-wrap",
             lineHeight: 1.2,
-            width: '100%',
+            width: "100%",
           }}
         >
           {clip.text}
@@ -108,27 +108,27 @@ interface ImageClipRendererProps {
 
 export function ImageClipRenderer({ clip }: ImageClipRendererProps) {
   return (
-    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           left: `${clip.xRatio * 100}%`,
           top: `${clip.yRatio * 100}%`,
           width: `${clip.widthRatio * 100}%`,
           height: `${clip.heightRatio * 100}%`,
-          transform: 'translate(-50%, -50%)',
+          transform: "translate(-50%, -50%)",
           opacity: clip.opacity,
           borderRadius: clip.borderRadius,
-          overflow: 'hidden',
+          overflow: "hidden",
           filter: `blur(${clip.blur}px) brightness(${clip.brightness}%)`,
         }}
       >
         <Img
           src={clip.url}
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
           }}
         />
       </div>

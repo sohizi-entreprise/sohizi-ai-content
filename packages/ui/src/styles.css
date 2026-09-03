@@ -1,7 +1,7 @@
 @custom-variant dark (&:is(.dark:not(.light) *));
 
 /* Disable scroll bouncing on ScrollArea */
-[data-slot='scroll-area-viewport'] {
+[data-slot="scroll-area-viewport"] {
   overscroll-behavior: none;
 }
 
@@ -13,18 +13,18 @@ html {
 body {
   @apply m-0;
   font-family:
-    'Geist',
-    'Space Grotesk',
+    "Geist",
+    "Space Grotesk",
     -apple-system,
     BlinkMacSystemFont,
-    'Segoe UI',
-    'Roboto',
-    'Oxygen',
-    'Ubuntu',
-    'Cantarell',
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
+    "Segoe UI",
+    "Roboto",
+    "Oxygen",
+    "Ubuntu",
+    "Cantarell",
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -33,13 +33,13 @@ body {
 code,
 .font-mono {
   font-family:
-    'JetBrains Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    "JetBrains Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
 
 .font-display {
   font-family:
-    'Space Grotesk',
+    "Space Grotesk",
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;
@@ -48,7 +48,7 @@ code,
 
 .font-space-grotesk {
   font-family:
-    'Space Grotesk',
+    "Space Grotesk",
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;
@@ -112,10 +112,10 @@ code,
   --surface: oklch(0.2819 0.0092 276.79);
 
   /* Typography & Layout */
-  --font-geist: 'Geist', sans-serif;
+  --font-geist: "Geist", sans-serif;
   --font-courier:
-    'JetBrains Mono', 'Fira Code', 'Courier Prime', monospace; /* Modernized */
-  --font-space-grotesk: 'Space Grotesk', sans-serif;
+    "JetBrains Mono", "Fira Code", "Courier Prime", monospace; /* Modernized */
+  --font-space-grotesk: "Space Grotesk", sans-serif;
 
   --header-height: 3rem;
   --shadow-primary: 0 4px 24px oklch(0.77 0.22 148 / 0.15); /* Premium soft green glow */
@@ -443,12 +443,12 @@ code,
   }
 }
 
-input[type='range'] {
+input[type="range"] {
   -webkit-appearance: none;
   width: 100%;
   background: transparent;
 }
-input[type='range']::-webkit-slider-thumb {
+input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   height: 20px;
   width: 20px;
@@ -459,13 +459,13 @@ input[type='range']::-webkit-slider-thumb {
   margin-top: -8px;
   border: 2px solid var(--background);
 }
-input[type='range']::-webkit-slider-runnable-track {
+input[type="range"]::-webkit-slider-runnable-track {
   width: 100%;
   height: 4px;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
 }
-input[type='range']:focus::-webkit-slider-runnable-track {
+input[type="range"]:focus::-webkit-slider-runnable-track {
   background: rgba(255, 255, 255, 0.2);
 }

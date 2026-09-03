@@ -1,21 +1,21 @@
-import { z } from 'zod'
-import { ModelMessage, UserModelMessage } from 'ai'
-import { LlmChunk, streamEvents } from '../utils/llm-response'
-import { BillableLlmInput } from '../utils/llm-client'
-import { TokenUsage } from '@/type'
-import { estimateInputTokens } from '../utils/estimate-token'
-import { extractTextFromUserMessage } from '../utils/message-content'
+import { z } from "zod"
+import { ModelMessage, UserModelMessage } from "ai"
+import { LlmChunk, streamEvents } from "../utils/llm-response"
+import { BillableLlmInput } from "../utils/llm-client"
+import { TokenUsage } from "@/type"
+import { estimateInputTokens } from "../utils/estimate-token"
+import { extractTextFromUserMessage } from "../utils/message-content"
 
 export const stopEvaluationSchema = z.object({
   isDone: z
     .boolean()
     .describe(
-      'True if the agent message is a final response. False if it is an intermediate progress/intent statement.',
+      "True if the agent message is a final response. False if it is an intermediate progress/intent statement.",
     ),
   instruction: z
     .string()
     .describe(
-      'When isDone is false, provide a concise instruction telling the agent to proceed with the action it described. When isDone is true, this can be empty.',
+      "When isDone is false, provide a concise instruction telling the agent to proceed with the action it described. When isDone is true, this can be empty.",
     ),
 })
 
@@ -51,12 +51,12 @@ export function buildEvaluatorInput(input: EvaluatorInput): BillableLlmInput {
   const userText = extractTextFromUserMessage(userMessage)
 
   const evaluatorMessages: ModelMessage[] = [
-    { role: 'system', content: EVALUATOR_SYSTEM_PROMPT },
+    { role: "system", content: EVALUATOR_SYSTEM_PROMPT },
     {
-      role: 'user',
+      role: "user",
       content: [
         {
-          type: 'text',
+          type: "text",
           text: `Original user request:\n\n"${userText}"\n---\nHere is the agent's last message (no tool calls were made in this step):\n\n"${lastAssistantText}"\n---\nDetermine if this is a final response or an intermediate message.`,
         },
       ],
@@ -77,7 +77,7 @@ export function parseEvaluatorResponse(text: string): StopEvaluation {
     const parsed = JSON.parse(text)
     return stopEvaluationSchema.parse(parsed)
   } catch {
-    return { isDone: true, instruction: '' }
+    return { isDone: true, instruction: "" }
   }
 }
 

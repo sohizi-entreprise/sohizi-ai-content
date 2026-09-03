@@ -116,7 +116,7 @@ Displays a formatted microphone label with intelligent device ID parsing. Automa
 A custom hook for managing audio input devices. This hook is used internally by the `MicSelector` component but can also be used independently.
 
 ```tsx
-import { useAudioDevices } from '@repo/elements/mic-selector'
+import { useAudioDevices } from "@repo/elements/mic-selector"
 
 export default function Example() {
   const { devices, loading, error, hasPermission, loadDevices } =

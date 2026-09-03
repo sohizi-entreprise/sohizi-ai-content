@@ -25,7 +25,11 @@ export function MediaCardMenu({ className, options }: MediaCardMenuProps) {
   const [open, setOpen] = useState(false)
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
+    <DropdownMenu
+      open={open}
+      onOpenChange={setOpen}
+      modal={false}
+    >
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"

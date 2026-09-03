@@ -356,7 +356,10 @@ export function SkillEditorView({
   return (
     <div className="relative flex h-full w-full flex-col bg-surface">
       <style>{skillEditorStyles}</style>
-      <EditorTopChrome editor={editor} tabId={tab.id} />
+      <EditorTopChrome
+        editor={editor}
+        tabId={tab.id}
+      />
       <div
         ref={setScrollContainer}
         className="flex-1 overflow-auto overscroll-none"

@@ -58,7 +58,7 @@ export async function uploadStreamToR2(
     }
     await flush(true)
     if (parts.length === 0) {
-      throw new Error('Container returned an empty render')
+      throw new Error("Container returned an empty render")
     }
     await upload.complete(parts)
     return { sizeInBytes: totalBytes }

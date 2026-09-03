@@ -24,7 +24,11 @@ export function ContentRouter({ tab }: ContentRouterProps) {
 
   if (tab.name === "video-editor" || tab.format === "video-editor") {
     return (
-      <VideoEditor projectId={projectId} fileNodeId={tab.id} key={tab.id} />
+      <VideoEditor
+        projectId={projectId}
+        fileNodeId={tab.id}
+        key={tab.id}
+      />
     )
   }
 
@@ -32,7 +36,12 @@ export function ContentRouter({ tab }: ContentRouterProps) {
     return <MediaGenerator />
   }
 
-  return <ServerRenderedContent tab={tab} projectId={projectId} />
+  return (
+    <ServerRenderedContent
+      tab={tab}
+      projectId={projectId}
+    />
+  )
 }
 
 function ServerRenderedContent({

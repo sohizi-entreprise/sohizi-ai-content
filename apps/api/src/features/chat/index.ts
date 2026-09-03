@@ -1,16 +1,16 @@
-import { Elysia } from 'elysia'
-import { z } from 'zod'
-import * as chatService from './service'
-import { assertProjectAccess, assertConversationOwner } from '@/lib/authorize'
-import { authMiddleware } from '@/lib/auth-middleware'
+import { Elysia } from "elysia"
+import { z } from "zod"
+import * as chatService from "./service"
+import { assertProjectAccess, assertConversationOwner } from "@/lib/authorize"
+import { authMiddleware } from "@/lib/auth-middleware"
 
 const projectParams = z.object({
-  projectId: z.uuid('Invalid project id'),
+  projectId: z.uuid("Invalid project id"),
 })
 
 const conversationParams = z.object({
-  projectId: z.uuid('Invalid project id'),
-  conversationId: z.uuid('Invalid conversation id'),
+  projectId: z.uuid("Invalid project id"),
+  conversationId: z.uuid("Invalid conversation id"),
 })
 
 const paginationQuery = z.object({
@@ -19,18 +19,18 @@ const paginationQuery = z.object({
 })
 
 const runParams = z.object({
-  projectId: z.uuid('Invalid project id'),
-  conversationId: z.uuid('Invalid conversation id'),
-  runId: z.uuid('Invalid run id'),
+  projectId: z.uuid("Invalid project id"),
+  conversationId: z.uuid("Invalid conversation id"),
+  runId: z.uuid("Invalid run id"),
 })
 
-export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
+export const chatRoutes = new Elysia({ prefix: "/chats/:projectId" })
   .guard({
     params: projectParams,
   })
   .use(authMiddleware)
   .get(
-    '/conversations',
+    "/conversations",
     async ({ params, query, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return chatService.listConversations(params.projectId, user.id, query)
@@ -40,7 +40,7 @@ export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
     },
   )
   .post(
-    '/conversations',
+    "/conversations",
     async ({ params, body, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return chatService.chatCompletion(user.id, params.projectId, body)
@@ -51,9 +51,9 @@ export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
     },
   )
   .get(
-    '/models',
+    "/models",
     async ({ query }) => {
-      const categories = query.categories.split(',')
+      const categories = query.categories.split(",")
       return chatService.listLlmModels(categories)
     },
     {
@@ -63,7 +63,7 @@ export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
     },
   )
   .get(
-    '/models/:modelId/parameters',
+    "/models/:modelId/parameters",
     async ({ params }) => {
       return chatService.listModelParameters(params.modelId)
     },
@@ -78,7 +78,7 @@ export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
     params: conversationParams,
   })
   .get(
-    '/conversations/:conversationId/messages',
+    "/conversations/:conversationId/messages",
     async ({ params, query, user }) => {
       await assertConversationOwner(user.id, params.conversationId)
       return chatService.listMessages(params.conversationId, query)
@@ -88,7 +88,7 @@ export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
     },
   )
   .get(
-    '/conversations/:conversationId/runs',
+    "/conversations/:conversationId/runs",
     async ({ params, query, user }) => {
       await assertConversationOwner(user.id, params.conversationId)
       return chatService.listConversationAgentRuns(params.conversationId, query)
@@ -97,7 +97,7 @@ export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
       query: paginationQuery,
     },
   )
-  .delete('/conversations/:conversationId', async ({ params, user }) => {
+  .delete("/conversations/:conversationId", async ({ params, user }) => {
     await assertConversationOwner(user.id, params.conversationId)
     return chatService.deleteConversation(params.conversationId)
   })
@@ -105,7 +105,7 @@ export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
     params: runParams,
   })
   .delete(
-    '/conversations/:conversationId/runs/:runId',
+    "/conversations/:conversationId/runs/:runId",
     async ({ params, user }) => {
       await assertConversationOwner(user.id, params.conversationId)
       return chatService.cancelRun(params.runId)
@@ -116,13 +116,13 @@ export const chatRoutes = new Elysia({ prefix: '/chats/:projectId' })
   )
 
   .get(
-    '/conversations/:conversationId/runs/:runId',
+    "/conversations/:conversationId/runs/:runId",
     async function* ({ params, user, set }) {
       await assertConversationOwner(user.id, params.conversationId)
 
-      set.headers['Content-Type'] = 'text/event-stream'
-      set.headers['Cache-Control'] = 'no-cache'
-      set.headers['Connection'] = 'keep-alive'
+      set.headers["Content-Type"] = "text/event-stream"
+      set.headers["Cache-Control"] = "no-cache"
+      set.headers["Connection"] = "keep-alive"
 
       yield* chatService.getStreams(params.runId)
     },

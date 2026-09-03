@@ -96,14 +96,20 @@ function RenderAgentRuns(props: {
   return (
     <Conversation className={className}>
       <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-4 py-6">
-        <div ref={sentinelRef} className="h-1" />
+        <div
+          ref={sentinelRef}
+          className="h-1"
+        />
         {isFetchingNextPage && (
           <div className="flex justify-center py-2">
             <IconLoader2 className="size-4 animate-spin text-muted-foreground" />
           </div>
         )}
         {runs.map((run) => (
-          <ChatRunBlock key={run.id} run={run} />
+          <ChatRunBlock
+            key={run.id}
+            run={run}
+          />
         ))}
       </ConversationContent>
       <ConversationScrollButton />

@@ -1,1 +1,1 @@
-export const DEFAULT_AGENT_VENDOR = 'openrouter'
+export const DEFAULT_AGENT_VENDOR = "openrouter"

@@ -38,7 +38,10 @@ export function TextSettings({ clip }: TextSettingsProps) {
   return (
     <div className="flex flex-col gap-5 pb-2">
       <SettingSection title="Content">
-        <SettingRow label="Text" align="start">
+        <SettingRow
+          label="Text"
+          align="start"
+        >
           <Textarea
             value={clip.text}
             onChange={(e) => updateClip(clip.id, { text: e.target.value })}
@@ -54,12 +57,19 @@ export function TextSettings({ clip }: TextSettingsProps) {
             value={clip.fontFamily}
             onValueChange={(v) => updateClip(clip.id, { fontFamily: v })}
           >
-            <SelectTrigger size="sm" className="h-8 w-full text-xs">
+            <SelectTrigger
+              size="sm"
+              className="h-8 w-full text-xs"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {FONT_FAMILIES.map((f) => (
-                <SelectItem key={f.id} value={f.id} className="text-xs">
+                <SelectItem
+                  key={f.id}
+                  value={f.id}
+                  className="text-xs"
+                >
                   {f.label}
                 </SelectItem>
               ))}
@@ -76,7 +86,10 @@ export function TextSettings({ clip }: TextSettingsProps) {
               })
             }
           >
-            <SelectTrigger size="sm" className="h-8 w-full text-xs">
+            <SelectTrigger
+              size="sm"
+              className="h-8 w-full text-xs"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

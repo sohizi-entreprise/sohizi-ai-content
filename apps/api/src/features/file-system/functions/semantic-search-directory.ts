@@ -1,5 +1,5 @@
-import { EmbedderInterface } from '@/lib/rag'
-import * as fileSystemRepo from '../repo'
+import { EmbedderInterface } from "@/lib/rag"
+import * as fileSystemRepo from "../repo"
 
 export const semanticSearchDirectory = async (
   request: {

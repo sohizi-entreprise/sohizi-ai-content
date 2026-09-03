@@ -1,4 +1,4 @@
-import type { WorkerEnv } from '../src/env'
+import type { WorkerEnv } from "../src/env"
 
 /** Minimal in-memory stand-in for the pieces of R2 the Worker touches. */
 export class FakeR2Bucket {
@@ -39,7 +39,7 @@ export class FakeR2Bucket {
     const chunks: Array<Uint8Array> = []
     return {
       key,
-      uploadId: 'fake-upload',
+      uploadId: "fake-upload",
       uploadPart: async (partNumber: number, value: unknown) => {
         chunks[partNumber - 1] = await toBytes(value)
         record.parts = chunks.filter(Boolean).length
@@ -64,15 +64,15 @@ export class FakeR2Bucket {
 }
 
 async function toBytes(value: unknown): Promise<Uint8Array> {
-  if (typeof value === 'string') return new TextEncoder().encode(value)
+  if (typeof value === "string") return new TextEncoder().encode(value)
   if (value instanceof Uint8Array) return value
   if (value instanceof ArrayBuffer) return new Uint8Array(value)
-  if (value && typeof (value as ReadableStream).getReader === 'function') {
+  if (value && typeof (value as ReadableStream).getReader === "function") {
     return new Uint8Array(
       await new Response(value as ReadableStream).arrayBuffer(),
     )
   }
-  throw new Error('Unsupported value in FakeR2Bucket')
+  throw new Error("Unsupported value in FakeR2Bucket")
 }
 
 export type FakeInstanceStatus = {
@@ -94,7 +94,7 @@ export class FakeWorkflow {
     if (this.instances.has(instanceId)) {
       throw new Error(`instance ${instanceId} already exists`)
     }
-    this.instances.set(instanceId, { status: 'queued' })
+    this.instances.set(instanceId, { status: "queued" })
     this.createdParams.set(instanceId, params)
     return this.instanceStub(instanceId)
   }
@@ -116,7 +116,7 @@ export class FakeWorkflow {
       status: async () => this.instances.get(id) as FakeInstanceStatus,
       terminate: async () => {
         this.terminated.push(id)
-        this.instances.set(id, { status: 'terminated' })
+        this.instances.set(id, { status: "terminated" })
       },
       pause: async () => undefined,
       resume: async () => undefined,
@@ -140,12 +140,12 @@ export function createTestEnv(
     R2_BUCKET: bucket,
     RENDER_WORKFLOW: workflow,
     RENDER_CONTAINER: {},
-    RENDER_SERVICE_TOKEN: 'test-token',
-    RENDER_ALLOWED_MEDIA_HOSTS: 'cdn.sohizi.com',
-    RENDER_CONCURRENCY: '2',
-    RENDER_POLL_INTERVAL_SECONDS: '5',
-    RENDER_TIMEOUT_MINUTES: '30',
-    MAX_MP3_BYTES: '20971520',
+    RENDER_SERVICE_TOKEN: "test-token",
+    RENDER_ALLOWED_MEDIA_HOSTS: "cdn.sohizi.com",
+    RENDER_CONCURRENCY: "2",
+    RENDER_POLL_INTERVAL_SECONDS: "5",
+    RENDER_TIMEOUT_MINUTES: "30",
+    MAX_MP3_BYTES: "20971520",
     ...overrides,
   } as unknown as WorkerEnv
 

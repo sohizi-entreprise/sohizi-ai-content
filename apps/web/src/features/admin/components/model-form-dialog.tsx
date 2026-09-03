@@ -79,12 +79,18 @@ export function ModelFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Add model</DialogTitle>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form
+          className="space-y-4"
+          onSubmit={handleSubmit}
+        >
           <div className="space-y-2">
             <Label htmlFor="model-id">ID</Label>
             <Input
@@ -172,7 +178,10 @@ export function ModelFormDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending}
+            >
               {createMutation.isPending ? "Saving…" : "Create"}
             </Button>
           </DialogFooter>

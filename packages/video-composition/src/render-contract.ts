@@ -1,4 +1,4 @@
-import type { Track } from './types'
+import type { Track } from "./types"
 
 /**
  * Wire contract shared by the editor, the API and the render service.
@@ -8,7 +8,7 @@ import type { Track } from './types'
 export const RENDER_CONTRACT_VERSION = 1
 
 /** Composition id registered in the renderer bundle. */
-export const MAIN_COMPOSITION_ID = 'main'
+export const MAIN_COMPOSITION_ID = "main"
 
 /** Everything the renderer needs to reproduce what the editor previews. */
 export type RenderCompositionInput = {

@@ -12,20 +12,20 @@
  *   so duplicate settle/refund/expire calls become no-ops.
  */
 
-import { db } from '@/db'
+import { db } from "@/db"
 import {
   organizationWallets,
   billingReservations,
   billingLedger,
-} from '@/db/schema'
-import type { BillingReservation, BillingLedgerKind } from '@/db/schema'
-import { sql, eq, and, lt } from 'drizzle-orm'
+} from "@/db/schema"
+import type { BillingReservation, BillingLedgerKind } from "@/db/schema"
+import { sql, eq, and, lt } from "drizzle-orm"
 import {
   InsufficientCreditsError,
   ReservationExpiredError,
   ReservationNotFoundError,
-} from './errors'
-import type { Credits } from './types'
+} from "./errors"
+import type { Credits } from "./types"
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 type Executor = typeof db | Tx
@@ -63,7 +63,7 @@ export async function topup(input: {
   idempotencyKey: string
   metadata?: Record<string, unknown>
 }): Promise<bigint> {
-  if (input.amount <= 0n) throw new Error('topup amount must be positive')
+  if (input.amount <= 0n) throw new Error("topup amount must be positive")
   return db.transaction(async (tx) => {
     await ensureWallet(input.organizationId, tx)
     const updated = await tx
@@ -76,7 +76,7 @@ export async function topup(input: {
       reservationId: null,
       organizationId: input.organizationId,
       delta: input.amount,
-      kind: 'topup',
+      kind: "topup",
       balanceAfter,
       idempotencyKey: input.idempotencyKey,
       metadata: input.metadata ?? null,
@@ -101,7 +101,7 @@ export async function reserve(input: {
   metadata?: Record<string, unknown>
 }): Promise<ReserveRow> {
   if (input.estimatedCredits < 0n)
-    throw new Error('estimatedCredits must be >= 0')
+    throw new Error("estimatedCredits must be >= 0")
   const expiresAt = new Date(Date.now() + input.ttlMs)
 
   return db.transaction(async (tx) => {
@@ -119,7 +119,7 @@ export async function reserve(input: {
         userId: input.userId ?? null,
         operation: input.operation,
         estimatedCredits: input.estimatedCredits,
-        status: 'reserved',
+        status: "reserved",
         expiresAt,
         metadata: input.metadata ?? null,
       })
@@ -134,7 +134,7 @@ export async function reserve(input: {
         .limit(1)
       if (!existing[0]) {
         throw new Error(
-          'Reservation insert returned no row but no existing row found',
+          "Reservation insert returned no row but no existing row found",
         )
       }
       return { ...existing[0], created: false }
@@ -169,9 +169,9 @@ export async function reserve(input: {
         reservationId: reservation.id,
         organizationId: input.organizationId,
         delta: -input.estimatedCredits,
-        kind: 'reserve',
+        kind: "reserve",
         balanceAfter: debited[0].balance,
-        idempotencyKey: ledgerKey(reservation.id, 'reserve'),
+        idempotencyKey: ledgerKey(reservation.id, "reserve"),
         metadata: input.metadata ?? null,
       })
     } else {
@@ -180,9 +180,9 @@ export async function reserve(input: {
         reservationId: reservation.id,
         organizationId: input.organizationId,
         delta: 0n,
-        kind: 'reserve',
+        kind: "reserve",
         balanceAfter: balance,
-        idempotencyKey: ledgerKey(reservation.id, 'reserve'),
+        idempotencyKey: ledgerKey(reservation.id, "reserve"),
         metadata: input.metadata ?? null,
       })
     }
@@ -196,16 +196,16 @@ export async function settle(input: {
   actualCredits: Credits
   metadata?: Record<string, unknown>
 }): Promise<BillingReservation> {
-  if (input.actualCredits < 0n) throw new Error('actualCredits must be >= 0')
+  if (input.actualCredits < 0n) throw new Error("actualCredits must be >= 0")
 
   return db.transaction(async (tx) => {
     const updated = await tx
       .update(billingReservations)
-      .set({ status: 'settled', actualCredits: input.actualCredits })
+      .set({ status: "settled", actualCredits: input.actualCredits })
       .where(
         and(
           eq(billingReservations.id, input.reservationId),
-          eq(billingReservations.status, 'reserved'),
+          eq(billingReservations.status, "reserved"),
         ),
       )
       .returning()
@@ -235,9 +235,9 @@ export async function settle(input: {
         reservationId: reservation.id,
         organizationId: reservation.organizationId,
         delta: diff,
-        kind: 'settle_diff',
+        kind: "settle_diff",
         balanceAfter: credited[0].balance,
-        idempotencyKey: ledgerKey(reservation.id, 'settle_diff'),
+        idempotencyKey: ledgerKey(reservation.id, "settle_diff"),
         metadata: input.metadata ?? null,
       })
     } else if (diff < 0n) {
@@ -258,9 +258,9 @@ export async function settle(input: {
           reservationId: reservation.id,
           organizationId: reservation.organizationId,
           delta: -owed,
-          kind: 'settle_diff',
+          kind: "settle_diff",
           balanceAfter: debited[0].balance,
-          idempotencyKey: ledgerKey(reservation.id, 'settle_diff'),
+          idempotencyKey: ledgerKey(reservation.id, "settle_diff"),
           metadata: input.metadata ?? null,
         })
       } else {
@@ -282,9 +282,9 @@ export async function settle(input: {
             reservationId: reservation.id,
             organizationId: reservation.organizationId,
             delta: -current,
-            kind: 'settle_diff',
+            kind: "settle_diff",
             balanceAfter: drained[0].balance,
-            idempotencyKey: ledgerKey(reservation.id, 'settle_diff'),
+            idempotencyKey: ledgerKey(reservation.id, "settle_diff"),
             metadata: input.metadata ?? null,
           })
         }
@@ -293,9 +293,9 @@ export async function settle(input: {
           reservationId: reservation.id,
           organizationId: reservation.organizationId,
           delta: 0n,
-          kind: 'overage_uncovered',
+          kind: "overage_uncovered",
           balanceAfter: 0n,
-          idempotencyKey: ledgerKey(reservation.id, 'overage_uncovered'),
+          idempotencyKey: ledgerKey(reservation.id, "overage_uncovered"),
           metadata: {
             ...(input.metadata ?? {}),
             uncovered: uncovered.toString(),
@@ -315,11 +315,11 @@ export async function refund(input: {
   return db.transaction(async (tx) => {
     const updated = await tx
       .update(billingReservations)
-      .set({ status: 'refunded' })
+      .set({ status: "refunded" })
       .where(
         and(
           eq(billingReservations.id, input.reservationId),
-          eq(billingReservations.status, 'reserved'),
+          eq(billingReservations.status, "reserved"),
         ),
       )
       .returning()
@@ -341,9 +341,9 @@ export async function refund(input: {
         reservationId: reservation.id,
         organizationId: reservation.organizationId,
         delta: reservation.estimatedCredits,
-        kind: 'refund',
+        kind: "refund",
         balanceAfter: credited[0].balance,
-        idempotencyKey: ledgerKey(reservation.id, 'refund'),
+        idempotencyKey: ledgerKey(reservation.id, "refund"),
         metadata: input.reason ? { reason: input.reason } : null,
       })
     }
@@ -363,7 +363,7 @@ export async function extend(input: {
     .where(
       and(
         eq(billingReservations.id, input.reservationId),
-        eq(billingReservations.status, 'reserved'),
+        eq(billingReservations.status, "reserved"),
       ),
     )
     .returning()
@@ -399,11 +399,11 @@ async function expireOne(reservationId: string): Promise<boolean> {
   return db.transaction(async (tx) => {
     const updated = await tx
       .update(billingReservations)
-      .set({ status: 'expired' })
+      .set({ status: "expired" })
       .where(
         and(
           eq(billingReservations.id, reservationId),
-          eq(billingReservations.status, 'reserved'),
+          eq(billingReservations.status, "reserved"),
         ),
       )
       .returning()
@@ -425,9 +425,9 @@ async function expireOne(reservationId: string): Promise<boolean> {
         reservationId: reservation.id,
         organizationId: reservation.organizationId,
         delta: reservation.estimatedCredits,
-        kind: 'expire',
+        kind: "expire",
         balanceAfter: credited[0].balance,
-        idempotencyKey: ledgerKey(reservation.id, 'expire'),
+        idempotencyKey: ledgerKey(reservation.id, "expire"),
         metadata: null,
       })
     }
@@ -441,7 +441,7 @@ export async function sweepExpired(limit = 100): Promise<number> {
     .from(billingReservations)
     .where(
       and(
-        eq(billingReservations.status, 'reserved'),
+        eq(billingReservations.status, "reserved"),
         lt(billingReservations.expiresAt, new Date()),
       ),
     )
@@ -453,7 +453,7 @@ export async function sweepExpired(limit = 100): Promise<number> {
       const ok = await expireOne(row.id)
       if (ok) processed += 1
     } catch (err) {
-      console.error('[billing.sweepExpired] failed to expire', row.id, err)
+      console.error("[billing.sweepExpired] failed to expire", row.id, err)
     }
   }
   return processed

@@ -109,12 +109,18 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Add parameter</DialogTitle>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form
+          className="space-y-4"
+          onSubmit={handleSubmit}
+        >
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="parameter-key">Key</Label>
@@ -158,7 +164,10 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   {PARAMETER_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
+                    <SelectItem
+                      key={type}
+                      value={type}
+                    >
                       {type}
                     </SelectItem>
                   ))}
@@ -185,7 +194,10 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
                 <SelectContent>
                   <SelectItem value={NONE_VALUE}>None</SelectItem>
                   {UI_COMPONENTS.map((component) => (
-                    <SelectItem key={component} value={component}>
+                    <SelectItem
+                      key={component}
+                      value={component}
+                    >
                       {component}
                     </SelectItem>
                   ))}
@@ -278,7 +290,10 @@ export function ParameterFormDialog({ open, onOpenChange, onCreated }: Props) {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending}
+            >
               {createMutation.isPending ? "Saving…" : "Create"}
             </Button>
           </DialogFooter>

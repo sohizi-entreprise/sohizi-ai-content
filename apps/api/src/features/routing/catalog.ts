@@ -1,15 +1,15 @@
-import { db } from '@/db'
-import { llmModels, llmVendors, llmVendorsAndModels } from '@/db/schema'
-import { and, asc, eq } from 'drizzle-orm'
+import { db } from "@/db"
+import { llmModels, llmVendors, llmVendorsAndModels } from "@/db/schema"
+import { and, asc, eq } from "drizzle-orm"
 import {
   DEFAULT_VENDOR_CIRCUIT_CONFIG,
   DEFAULT_VENDOR_RATE_LIMIT,
-} from '@/type'
+} from "@/type"
 import {
   hasProviderApiKey,
   isRegisteredMediaVendor,
-} from '@/features/media-engine/providers/factory'
-import type { MediaRoute } from './types'
+} from "@/features/media-engine/providers/factory"
+import type { MediaRoute } from "./types"
 
 function burstOf(rpm: number, burst?: number): number {
   return burst && burst > 0 ? burst : rpm
@@ -34,7 +34,7 @@ export async function listMediaRoutes(modelId: string): Promise<MediaRoute[]> {
         eq(llmModels.enabled, true),
         eq(llmVendors.enabled, true),
         eq(llmVendorsAndModels.enabled, true),
-        eq(llmVendors.kind, 'media'),
+        eq(llmVendors.kind, "media"),
       ),
     )
     .orderBy(asc(llmVendorsAndModels.priority), asc(llmVendors.name))

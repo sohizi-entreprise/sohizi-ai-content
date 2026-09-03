@@ -1,13 +1,13 @@
-import { Elysia } from 'elysia'
-import { z } from 'zod'
-import { authMiddleware } from '@/lib/auth-middleware'
-import { assertOrgMember, requireActiveOrganization } from '@/lib/authorize'
-import { billingService } from './service'
+import { Elysia } from "elysia"
+import { z } from "zod"
+import { authMiddleware } from "@/lib/auth-middleware"
+import { assertOrgMember, requireActiveOrganization } from "@/lib/authorize"
+import { billingService } from "./service"
 
-export const billingRoutes = new Elysia({ prefix: '/billing' })
+export const billingRoutes = new Elysia({ prefix: "/billing" })
   .use(authMiddleware)
   .get(
-    '/balance',
+    "/balance",
     async ({ session, user, query }) => {
       const organizationId = requireActiveOrganization(
         session,
@@ -18,7 +18,7 @@ export const billingRoutes = new Elysia({ prefix: '/billing' })
       return {
         organizationId,
         balance: balance.toString(),
-        currency: 'credits' as const,
+        currency: "credits" as const,
       }
     },
     {
@@ -28,15 +28,15 @@ export const billingRoutes = new Elysia({ prefix: '/billing' })
     },
   )
 
-export { billingService, BillingService } from './service'
-export * from './types'
-export * from './errors'
-export * from './constants'
-export * from './credits'
+export { billingService, BillingService } from "./service"
+export * from "./types"
+export * from "./errors"
+export * from "./constants"
+export * from "./credits"
 export {
   withBilling,
   withBillingAsync,
   withBillingStream,
   safeRefund,
-} from './wrapper'
-export type { AsyncReservationHandle, WithBillingCallContext } from './wrapper'
+} from "./wrapper"
+export type { AsyncReservationHandle, WithBillingCallContext } from "./wrapper"

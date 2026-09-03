@@ -1,9 +1,9 @@
-import { Elysia } from 'elysia'
-import * as mediaService from './service'
-import { getUploadUrlSchema, uploadSuccessSchema } from './schema'
-import { assertProjectAccess } from '@/lib/authorize'
-import { authMiddleware } from '@/lib/auth-middleware'
-import z from 'zod'
+import { Elysia } from "elysia"
+import * as mediaService from "./service"
+import { getUploadUrlSchema, uploadSuccessSchema } from "./schema"
+import { assertProjectAccess } from "@/lib/authorize"
+import { authMiddleware } from "@/lib/auth-middleware"
+import z from "zod"
 
 export {
   MediaError,
@@ -13,26 +13,26 @@ export {
   MediaValidationError,
   MediaConfigurationError,
   isMediaError,
-} from './errors'
+} from "./errors"
 
 const bulkAssetIdsSchema = z.object({
   assetIds: z
-    .array(z.uuid('Invalid asset id'))
-    .min(1, 'At least one asset is required')
-    .max(100, 'Too many assets selected'),
+    .array(z.uuid("Invalid asset id"))
+    .min(1, "At least one asset is required")
+    .max(100, "Too many assets selected"),
 })
 
 const bulkMoveAssetsSchema = bulkAssetIdsSchema.extend({
-  folderId: z.uuid('Invalid folder id'),
+  folderId: z.uuid("Invalid folder id"),
 })
 
-export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
+export const mediaEngineRoutes = new Elysia({ prefix: "/media/:projectId" })
   .use(authMiddleware)
   .guard({
-    params: z.object({ projectId: z.uuid('Invalid project id') }),
+    params: z.object({ projectId: z.uuid("Invalid project id") }),
   })
   .post(
-    '/upload-success',
+    "/upload-success",
     async ({ body, user, params }) => {
       await assertProjectAccess(user.id, params.projectId)
       return mediaService.uploadSuccess(params.projectId, body)
@@ -42,7 +42,7 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
     },
   )
   .get(
-    '/upload-url',
+    "/upload-url",
     async ({ query, user, params }) => {
       await assertProjectAccess(user.id, params.projectId)
       return mediaService.getUploadUrl(params.projectId, query)
@@ -52,7 +52,7 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
     },
   )
   .get(
-    '/assets',
+    "/assets",
     async ({ params, user, query }) => {
       await assertProjectAccess(user.id, params.projectId)
       return mediaService.listAssets(params.projectId, query)
@@ -61,12 +61,12 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
       query: z.object({
         cursor: z.string().optional(),
         limit: z.number().optional(),
-        type: z.enum(['image', 'video', 'audio', 'html']).optional(),
+        type: z.enum(["image", "video", "audio", "html"]).optional(),
       }),
     },
   )
   .get(
-    '/ai-assets',
+    "/ai-assets",
     async ({ params, user, query }) => {
       await assertProjectAccess(user.id, params.projectId)
       return mediaService.listAiGeneratedAssets(params.projectId, query)
@@ -75,12 +75,12 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
       query: z.object({
         cursor: z.string().optional(),
         limit: z.number().optional(),
-        type: z.enum(['image', 'video', 'audio', 'html']).optional(),
+        type: z.enum(["image", "video", "audio", "html"]).optional(),
       }),
     },
   )
   .get(
-    '/uploaded-assets',
+    "/uploaded-assets",
     async ({ params, user, query }) => {
       await assertProjectAccess(user.id, params.projectId)
       return mediaService.listUploadedAssets(params.projectId, query)
@@ -89,12 +89,12 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
       query: z.object({
         cursor: z.string().optional(),
         limit: z.number().optional(),
-        type: z.enum(['image', 'video', 'audio']).optional(),
+        type: z.enum(["image", "video", "audio"]).optional(),
       }),
     },
   )
   .post(
-    '/assets',
+    "/assets",
     async ({ params, user, body }) => {
       const { organizationId } = await assertProjectAccess(
         user.id,
@@ -112,7 +112,7 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
     },
   )
   .post(
-    '/assets/bulk/move-to-folder',
+    "/assets/bulk/move-to-folder",
     async ({ params, user, body }) => {
       await assertProjectAccess(user.id, params.projectId)
       return mediaService.attachAssetsToFileNodes(
@@ -126,7 +126,7 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
     },
   )
   .post(
-    '/assets/bulk/delete',
+    "/assets/bulk/delete",
     async ({ params, user, body }) => {
       await assertProjectAccess(user.id, params.projectId)
       return mediaService.deleteAssets(params.projectId, body.assetIds)
@@ -136,7 +136,7 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
     },
   )
   .post(
-    '/assets/bulk/download-zip',
+    "/assets/bulk/download-zip",
     async ({ params, user, body }) => {
       await assertProjectAccess(user.id, params.projectId)
       return mediaService.downloadAssetsZip(params.projectId, body.assetIds)
@@ -147,22 +147,22 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
   )
   .guard({
     params: z.object({
-      projectId: z.uuid('Invalid project id'),
-      requestId: z.uuid('Invalid request id'),
+      projectId: z.uuid("Invalid project id"),
+      requestId: z.uuid("Invalid request id"),
     }),
   })
-  .get('/requests/:requestId', async function* ({ params, user, set }) {
+  .get("/requests/:requestId", async function* ({ params, user, set }) {
     await assertProjectAccess(user.id, params.projectId)
-    set.headers['Content-Type'] = 'text/event-stream'
-    set.headers['Cache-Control'] = 'no-cache'
-    set.headers['Connection'] = 'keep-alive'
+    set.headers["Content-Type"] = "text/event-stream"
+    set.headers["Cache-Control"] = "no-cache"
+    set.headers["Connection"] = "keep-alive"
     yield* mediaService.getRequestStreams(params.requestId)
   })
-  .delete('/requests/:requestId', async ({ params, user }) => {
+  .delete("/requests/:requestId", async ({ params, user }) => {
     await assertProjectAccess(user.id, params.projectId)
     return mediaService.cancelGeneration(params.requestId)
   })
-  .delete('/ai-requests/:requestId', async ({ params, user }) => {
+  .delete("/ai-requests/:requestId", async ({ params, user }) => {
     await assertProjectAccess(user.id, params.projectId)
     return mediaService.deleteGenerationRequest(
       params.projectId,
@@ -171,20 +171,20 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
   })
   .guard({
     params: z.object({
-      projectId: z.uuid('Invalid project id'),
-      assetId: z.uuid('Invalid asset id'),
+      projectId: z.uuid("Invalid project id"),
+      assetId: z.uuid("Invalid asset id"),
     }),
   })
-  .get('/assets/:assetId/download-url', async ({ params, user }) => {
+  .get("/assets/:assetId/download-url", async ({ params, user }) => {
     await assertProjectAccess(user.id, params.projectId)
     return mediaService.getDownloadUrl(params.projectId, params.assetId)
   })
-  .delete('/assets/:assetId', async ({ params, user }) => {
+  .delete("/assets/:assetId", async ({ params, user }) => {
     await assertProjectAccess(user.id, params.projectId)
     return mediaService.deleteAsset(params.assetId)
   })
   .post(
-    '/assets/:assetId/move-to-folder',
+    "/assets/:assetId/move-to-folder",
     async ({ params, user, body }) => {
       await assertProjectAccess(user.id, params.projectId)
       return mediaService.attachAssetToFileNode(
@@ -195,12 +195,12 @@ export const mediaEngineRoutes = new Elysia({ prefix: '/media/:projectId' })
     },
     {
       body: z.object({
-        folderId: z.uuid('Invalid folder id'),
+        folderId: z.uuid("Invalid folder id"),
       }),
     },
   )
   .patch(
-    '/assets/:assetId/html-values',
+    "/assets/:assetId/html-values",
     async ({ params, user, body }) => {
       await assertProjectAccess(user.id, params.projectId)
       return mediaService.updateHtmlAssetValues(

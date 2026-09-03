@@ -117,12 +117,18 @@ export function ContentCategoryFormDialog({
   const pending = createMutation.isPending || updateMutation.isPending
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit category" : "Add category"}</DialogTitle>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form
+          className="space-y-4"
+          onSubmit={handleSubmit}
+        >
           <div className="space-y-2">
             <Label htmlFor="category-name">Name</Label>
             <Input
@@ -167,7 +173,10 @@ export function ContentCategoryFormDialog({
               </SelectTrigger>
               <SelectContent>
                 {CATEGORY_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
+                  <SelectItem
+                    key={type}
+                    value={type}
+                  >
                     {type}
                   </SelectItem>
                 ))}
@@ -211,7 +220,10 @@ export function ContentCategoryFormDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button
+              type="submit"
+              disabled={pending}
+            >
               {pending ? "Saving…" : isEdit ? "Save" : "Create"}
             </Button>
           </DialogFooter>

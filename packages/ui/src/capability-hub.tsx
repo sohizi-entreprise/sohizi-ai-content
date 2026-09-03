@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import { useId } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
-import { cn } from './lib/utils'
+import { useId } from "react"
+import { motion, useReducedMotion } from "motion/react"
+import { cn } from "./lib/utils"
 
 export type Capability = {
   id: string
@@ -20,39 +20,39 @@ export type CapabilityHubProps = {
 }
 
 const DEFAULT_COLORS = [
-  '#38bdf8', // sky
-  '#2dd4bf', // teal
-  '#4ade80', // green
-  '#a3e635', // lime (brand-adjacent)
-  '#fbbf24', // amber
-  '#fb923c', // orange
-  '#f472b6', // pink
-  '#67e8f9', // cyan
+  "#38bdf8", // sky
+  "#2dd4bf", // teal
+  "#4ade80", // green
+  "#a3e635", // lime (brand-adjacent)
+  "#fbbf24", // amber
+  "#fb923c", // orange
+  "#f472b6", // pink
+  "#67e8f9", // cyan
 ] as const
 
 const DEFAULT_CAPABILITIES: Array<Capability> = [
-  { id: 'text-editor', label: 'Text Editor' },
-  { id: 'storyboard', label: 'Storyboard' },
-  { id: 'image-gen', label: 'Image Gen' },
-  { id: 'video-gen', label: 'Video Gen' },
-  { id: 'video-editor', label: 'Video Editor' },
-  { id: 'speech', label: 'Speech' },
-  { id: 'music', label: 'Music' },
-  { id: 'ai-assistant', label: 'AI Assistant' },
+  { id: "text-editor", label: "Text Editor" },
+  { id: "storyboard", label: "Storyboard" },
+  { id: "image-gen", label: "Image Gen" },
+  { id: "video-gen", label: "Video Gen" },
+  { id: "video-editor", label: "Video Editor" },
+  { id: "speech", label: "Speech" },
+  { id: "music", label: "Music" },
+  { id: "ai-assistant", label: "AI Assistant" },
 ]
 
 const VIEW_W = 960
 const VIEW_H = 600
 
 type Anchor =
-  | 'top'
-  | 'bottom'
-  | 'left'
-  | 'right'
-  | 'top-right'
-  | 'bottom-right'
-  | 'bottom-left'
-  | 'top-left'
+  | "top"
+  | "bottom"
+  | "left"
+  | "right"
+  | "top-right"
+  | "bottom-right"
+  | "bottom-left"
+  | "top-left"
 
 type Slot = {
   /** connection point where the trace meets the component pad */
@@ -80,8 +80,8 @@ const SLOTS: Array<Slot> = [
     py: 74,
     hx: 480,
     hy: 260,
-    path: 'M480 74 L480 260',
-    anchor: 'top',
+    path: "M480 74 L480 260",
+    anchor: "top",
   },
   // NE — right then down
   {
@@ -90,8 +90,8 @@ const SLOTS: Array<Slot> = [
     hx: 580,
     hy: 260,
     corner: [580, 138],
-    path: 'M812 138 L580 138 L580 260',
-    anchor: 'right',
+    path: "M812 138 L580 138 L580 260",
+    anchor: "right",
   },
   // E — straight horizontal
   {
@@ -99,8 +99,8 @@ const SLOTS: Array<Slot> = [
     py: 300,
     hx: 580,
     hy: 300,
-    path: 'M852 300 L580 300',
-    anchor: 'right',
+    path: "M852 300 L580 300",
+    anchor: "right",
   },
   // SE — right then up
   {
@@ -109,8 +109,8 @@ const SLOTS: Array<Slot> = [
     hx: 580,
     hy: 340,
     corner: [580, 462],
-    path: 'M812 462 L580 462 L580 340',
-    anchor: 'right',
+    path: "M812 462 L580 462 L580 340",
+    anchor: "right",
   },
   // S — straight vertical
   {
@@ -118,8 +118,8 @@ const SLOTS: Array<Slot> = [
     py: 526,
     hx: 480,
     hy: 340,
-    path: 'M480 526 L480 340',
-    anchor: 'bottom',
+    path: "M480 526 L480 340",
+    anchor: "bottom",
   },
   // SW — left then up
   {
@@ -128,8 +128,8 @@ const SLOTS: Array<Slot> = [
     hx: 380,
     hy: 340,
     corner: [380, 462],
-    path: 'M148 462 L380 462 L380 340',
-    anchor: 'left',
+    path: "M148 462 L380 462 L380 340",
+    anchor: "left",
   },
   // W — straight horizontal
   {
@@ -137,8 +137,8 @@ const SLOTS: Array<Slot> = [
     py: 300,
     hx: 380,
     hy: 300,
-    path: 'M108 300 L380 300',
-    anchor: 'left',
+    path: "M108 300 L380 300",
+    anchor: "left",
   },
   // NW — left then down
   {
@@ -147,8 +147,8 @@ const SLOTS: Array<Slot> = [
     hx: 380,
     hy: 260,
     corner: [380, 138],
-    path: 'M148 138 L380 138 L380 260',
-    anchor: 'left',
+    path: "M148 138 L380 138 L380 260",
+    anchor: "left",
   },
 ]
 
@@ -164,14 +164,14 @@ const HUB_ENTRIES: Array<[number, number]> = [
 ]
 
 const ANCHOR_TRANSFORM: Record<Anchor, string> = {
-  top: 'translate(-50%, -100%)',
-  bottom: 'translate(-50%, 0)',
-  left: 'translate(-100%, -50%)',
-  right: 'translate(0, -50%)',
-  'top-right': 'translate(0, -100%)',
-  'bottom-right': 'translate(0, 0)',
-  'bottom-left': 'translate(-100%, 0)',
-  'top-left': 'translate(-100%, -100%)',
+  top: "translate(-50%, -100%)",
+  bottom: "translate(-50%, 0)",
+  left: "translate(-100%, -50%)",
+  right: "translate(0, -50%)",
+  "top-right": "translate(0, -100%)",
+  "bottom-right": "translate(0, 0)",
+  "bottom-left": "translate(-100%, 0)",
+  "top-left": "translate(-100%, -100%)",
 }
 
 type Node = Slot & {
@@ -205,8 +205,16 @@ function Trace({
           x2={node.hx}
           y2={node.hy}
         >
-          <stop offset="0" stopColor={node.color} stopOpacity="0.28" />
-          <stop offset="1" stopColor={node.color} stopOpacity="1" />
+          <stop
+            offset="0"
+            stopColor={node.color}
+            stopOpacity="0.28"
+          />
+          <stop
+            offset="1"
+            stopColor={node.color}
+            stopOpacity="1"
+          />
         </linearGradient>
       </defs>
 
@@ -234,7 +242,7 @@ function Trace({
           strokeDasharray="7 93"
           initial={{ strokeDashoffset: 100 }}
           animate={{ strokeDashoffset: 0 }}
-          transition={{ duration, repeat: Infinity, ease: 'linear', delay }}
+          transition={{ duration, repeat: Infinity, ease: "linear", delay }}
           style={{ filter: `drop-shadow(0 0 4px ${node.color})` }}
         />
       )}
@@ -271,18 +279,23 @@ function Trace({
         stroke={node.color}
         strokeWidth={1.75}
       />
-      <circle cx={node.px} cy={node.py} r={1.5} fill={node.color} />
+      <circle
+        cx={node.px}
+        cy={node.py}
+        r={1.5}
+        fill={node.color}
+      />
     </g>
   )
 }
 
 export function CapabilityHub({
-  hubLabel = 'Sohizi Lab',
+  hubLabel = "Sohizi Lab",
   capabilities = DEFAULT_CAPABILITIES,
   className,
   showLabels = true,
 }: CapabilityHubProps) {
-  const reactId = useId().replace(/:/g, '')
+  const reactId = useId().replace(/:/g, "")
   const uid = `cap-hub-${reactId}`
   const reduceMotion = useReducedMotion() ?? false
 
@@ -298,9 +311,9 @@ export function CapabilityHub({
 
   return (
     <div
-      className={cn('w-full', className)}
+      className={cn("w-full", className)}
       role="img"
-      aria-label={`${hubLabel} connects ${capabilities.map((c) => c.label).join(', ')}`}
+      aria-label={`${hubLabel} connects ${capabilities.map((c) => c.label).join(", ")}`}
     >
       <div
         className="relative mx-auto w-full max-w-5xl"
@@ -321,13 +334,21 @@ export function CapabilityHub({
               height="220%"
               colorInterpolationFilters="sRGB"
             >
-              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feGaussianBlur
+                stdDeviation="4"
+                result="blur"
+              />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-            <radialGradient id={`${uid}-ambient`} cx="50%" cy="50%" r="50%">
+            <radialGradient
+              id={`${uid}-ambient`}
+              cx="50%"
+              cy="50%"
+              r="50%"
+            >
               <stop
                 offset="0"
                 stopColor="oklch(0.77 0.22 148)"
@@ -412,7 +433,7 @@ export function CapabilityHub({
                   transition={{
                     duration: 3,
                     repeat: Infinity,
-                    ease: 'easeOut',
+                    ease: "easeOut",
                     delay: ring * 1.5,
                   }}
                 />
@@ -428,9 +449,9 @@ export function CapabilityHub({
                       scale: 1,
                       opacity: 1,
                       boxShadow: [
-                        '0 0 20px 0 oklch(0.77 0.22 148 / 0.12)',
-                        '0 0 38px 4px oklch(0.77 0.22 148 / 0.28)',
-                        '0 0 20px 0 oklch(0.77 0.22 148 / 0.12)',
+                        "0 0 20px 0 oklch(0.77 0.22 148 / 0.12)",
+                        "0 0 38px 4px oklch(0.77 0.22 148 / 0.28)",
+                        "0 0 20px 0 oklch(0.77 0.22 148 / 0.12)",
                       ],
                     }
               }
@@ -438,12 +459,12 @@ export function CapabilityHub({
                 reduceMotion
                   ? undefined
                   : {
-                      scale: { duration: 0.5, ease: 'easeOut' },
+                      scale: { duration: 0.5, ease: "easeOut" },
                       opacity: { duration: 0.4 },
                       boxShadow: {
                         duration: 3.2,
                         repeat: Infinity,
-                        ease: 'easeInOut',
+                        ease: "easeInOut",
                       },
                     }
               }

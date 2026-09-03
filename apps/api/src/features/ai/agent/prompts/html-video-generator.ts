@@ -1,4 +1,4 @@
-import { htmlVideoEditingSkill } from '../skills/video-editing'
+import { htmlVideoEditingSkill } from "../skills/video-editing"
 
 export const htmlVideoGeneratorPrompt = `
 <role>

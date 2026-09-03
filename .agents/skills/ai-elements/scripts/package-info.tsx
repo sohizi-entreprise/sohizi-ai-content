@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import {
   PackageInfo,
@@ -10,7 +10,7 @@ import {
   PackageInfoHeader,
   PackageInfoName,
   PackageInfoVersion,
-} from '@/components/ai-elements/package-info'
+} from "@/components/ai-elements/package-info"
 
 const Example = () => (
   <div className="flex flex-col gap-4">
@@ -30,13 +30,22 @@ const Example = () => (
       </PackageInfoDescription>
       <PackageInfoContent>
         <PackageInfoDependencies>
-          <PackageInfoDependency name="react-dom" version="^19.0.0" />
-          <PackageInfoDependency name="scheduler" version="^0.24.0" />
+          <PackageInfoDependency
+            name="react-dom"
+            version="^19.0.0"
+          />
+          <PackageInfoDependency
+            name="scheduler"
+            version="^0.24.0"
+          />
         </PackageInfoDependencies>
       </PackageInfoContent>
     </PackageInfo>
 
-    <PackageInfo changeType="added" name="lodash">
+    <PackageInfo
+      changeType="added"
+      name="lodash"
+    >
       <PackageInfoHeader>
         <PackageInfoName />
         <PackageInfoChangeType />
@@ -44,7 +53,11 @@ const Example = () => (
       <PackageInfoVersion />
     </PackageInfo>
 
-    <PackageInfo changeType="removed" currentVersion="2.29.4" name="moment" />
+    <PackageInfo
+      changeType="removed"
+      currentVersion="2.29.4"
+      name="moment"
+    />
   </div>
 )
 

@@ -1,12 +1,12 @@
-import type { UpdateFileRequest } from '../payload'
-import * as fileSystemRepo from '../repo'
+import type { UpdateFileRequest } from "../payload"
+import * as fileSystemRepo from "../repo"
 import {
   FileSystemConflictError,
   FileSystemInputError,
   FileSystemNotFoundError,
   FileSystemOperationError,
-} from './base'
-import { validateMoveTarget } from './validate-move-target'
+} from "./base"
+import { validateMoveTarget } from "./validate-move-target"
 
 export const updateFileNode = async (
   projectId: string,
@@ -14,7 +14,7 @@ export const updateFileNode = async (
 ) => {
   if (request.anchorId !== undefined && request.position === undefined) {
     throw new FileSystemInputError(
-      'position is required when anchorId is provided.',
+      "position is required when anchorId is provided.",
     )
   }
 
@@ -23,7 +23,7 @@ export const updateFileNode = async (
     request.id,
   )
   if (!currentFileNode) {
-    throw new FileSystemNotFoundError('File not found')
+    throw new FileSystemNotFoundError("File not found")
   }
 
   const nextName = request.name ?? currentFileNode.name
@@ -42,11 +42,11 @@ export const updateFileNode = async (
         name: nextName,
         parentId: nextParentId,
         anchorId: request.anchorId ?? null,
-        position: request.position ?? 'end',
+        position: request.position ?? "end",
       })
 
       if (!updatedFileNode) {
-        throw new FileSystemOperationError('Failed to update file')
+        throw new FileSystemOperationError("Failed to update file")
       }
 
       return updatedFileNode
@@ -59,7 +59,7 @@ export const updateFileNode = async (
     })
 
     if (!updatedFileNode) {
-      throw new FileSystemOperationError('Failed to update file')
+      throw new FileSystemOperationError("Failed to update file")
     }
 
     return updatedFileNode

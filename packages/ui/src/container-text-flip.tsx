@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import React, { useEffect, useId, useState } from 'react'
-import { motion } from 'motion/react'
-import { cn } from './lib/utils'
+import React, { useEffect, useId, useState } from "react"
+import { motion } from "motion/react"
+import { cn } from "./lib/utils"
 
 export interface ContainerTextFlipProps {
   /** Array of words to cycle through in the animation */
@@ -18,7 +18,7 @@ export interface ContainerTextFlipProps {
 }
 
 export function ContainerTextFlip({
-  words = ['better', 'modern', 'beautiful', 'awesome'],
+  words = ["better", "modern", "beautiful", "awesome"],
   interval = 3000,
   className,
   textClassName,
@@ -56,7 +56,7 @@ export function ContainerTextFlip({
       animate={{ width }}
       transition={{ duration: animationDuration / 2000 }}
       className={cn(
-        'relative inline-flex items-center justify-center overflow-hidden rounded-lg px-3 py-0 align-baseline text-4xl font-bold leading-none text-black md:text-7xl dark:text-white',
+        "relative inline-flex items-center justify-center overflow-hidden rounded-lg px-3 py-0 align-baseline text-4xl font-bold leading-none text-black md:text-7xl dark:text-white",
         className,
       )}
       key={words[currentWordIndex]}
@@ -64,30 +64,30 @@ export function ContainerTextFlip({
       <motion.span
         transition={{
           duration: animationDuration / 1000,
-          ease: 'easeInOut',
+          ease: "easeInOut",
         }}
-        className={cn('inline-flex leading-none', textClassName)}
+        className={cn("inline-flex leading-none", textClassName)}
         ref={textRef}
         layoutId={`word-div-${words[currentWordIndex]}-${id}`}
       >
         <motion.span className="inline-flex leading-none">
-          {words[currentWordIndex].split('').map((letter, index) => (
+          {words[currentWordIndex].split("").map((letter, index) => (
             <motion.span
               key={index}
               className="inline-block leading-none"
               initial={{
                 opacity: 0,
-                filter: 'blur(10px)',
+                filter: "blur(10px)",
               }}
               animate={{
                 opacity: 1,
-                filter: 'blur(0px)',
+                filter: "blur(0px)",
               }}
               transition={{
                 delay: index * 0.02,
               }}
             >
-              {letter === ' ' ? '\u00A0' : letter}
+              {letter === " " ? "\u00A0" : letter}
             </motion.span>
           ))}
         </motion.span>

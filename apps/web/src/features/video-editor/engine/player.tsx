@@ -49,7 +49,10 @@ export function VideoEditorPlayer({ className }: VideoEditorPlayerProps) {
   }, [playerRef, setCurrentFrame, setIsPlaying])
 
   return (
-    <div className={className} style={{ width: "100%", height: "100%" }}>
+    <div
+      className={className}
+      style={{ width: "100%", height: "100%" }}
+    >
       <Player
         ref={playerRef}
         component={MainComposition}

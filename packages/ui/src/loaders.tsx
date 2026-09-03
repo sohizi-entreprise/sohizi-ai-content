@@ -1,24 +1,24 @@
-import { motion } from 'motion/react'
-import { cn } from './lib/utils'
+import { motion } from "motion/react"
+import { cn } from "./lib/utils"
 
 export function DotsLoader({ bgColor }: { bgColor?: string }) {
   return (
     <span className="flex gap-1">
       <span
         className={cn(
-          'size-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]',
+          "size-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]",
           bgColor,
         )}
       />
       <span
         className={cn(
-          'size-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]',
+          "size-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]",
           bgColor,
         )}
       />
       <span
         className={cn(
-          'size-1.5 rounded-full bg-muted-foreground animate-bounce',
+          "size-1.5 rounded-full bg-muted-foreground animate-bounce",
           bgColor,
         )}
       />
@@ -40,7 +40,7 @@ export function TextShimmerCss({
   return (
     <span
       className={cn(
-        'inline-block text-sm font-medium text-muted-foreground animate-shimmer',
+        "inline-block text-sm font-medium text-muted-foreground animate-shimmer",
         className,
       )}
     >
@@ -52,7 +52,7 @@ export function TextShimmerCss({
 export const TextShimmer = ({ text }: { text: string }) => {
   return (
     <div className="font-sans font-bold [--shadow-color:var(--color-neutral-500)] dark:[--shadow-color:var(--color-neutral-100)]">
-      {text.split('').map((char, i) => (
+      {text.split("").map((char, i) => (
         <motion.span
           key={i}
           className="inline-block"
@@ -60,22 +60,22 @@ export const TextShimmer = ({ text }: { text: string }) => {
           animate={{
             scale: [1, 1.1, 1],
             textShadow: [
-              '0 0 0 var(--shadow-color)',
-              '0 0 1px var(--shadow-color)',
-              '0 0 0 var(--shadow-color)',
+              "0 0 0 var(--shadow-color)",
+              "0 0 1px var(--shadow-color)",
+              "0 0 0 var(--shadow-color)",
             ],
             opacity: [0.5, 1, 0.5],
           }}
           transition={{
             duration: 0.5,
             repeat: Infinity,
-            repeatType: 'loop',
+            repeatType: "loop",
             delay: i * 0.05,
-            ease: 'easeInOut' as const,
+            ease: "easeInOut" as const,
             repeatDelay: 2,
           }}
         >
-          {char === ' ' ? '\u00A0' : char}
+          {char === " " ? "\u00A0" : char}
         </motion.span>
       ))}
     </div>
@@ -100,27 +100,27 @@ export const SphereLoader = ({
       dur: 2.4,
       delay: 0,
       scaleY: 0.42,
-      color: 'oklch(0.85 0.20 148)',
+      color: "oklch(0.85 0.20 148)",
     },
     {
       tilt: 60,
       dur: 3.1,
       delay: -0.6,
       scaleY: 0.34,
-      color: 'oklch(0.78 0.18 175)',
+      color: "oklch(0.78 0.18 175)",
     },
     {
       tilt: 120,
       dur: 2.8,
       delay: -1.2,
       scaleY: 0.5,
-      color: 'oklch(0.72 0.17 200)',
+      color: "oklch(0.72 0.17 200)",
     },
   ]
 
   return (
     <div
-      className={cn('relative shrink-0', className)}
+      className={cn("relative shrink-0", className)}
       style={{ width: size, height: size }}
     >
       {/* Expanding energy pulses (only while loading) */}
@@ -137,7 +137,7 @@ export const SphereLoader = ({
             transition={{
               duration: 2.4,
               repeat: Infinity,
-              ease: 'easeOut',
+              ease: "easeOut",
               delay: i * 0.8,
             }}
           />
@@ -149,7 +149,7 @@ export const SphereLoader = ({
         style={{
           inset: -size * 0.1,
           background:
-            'radial-gradient(circle, oklch(0.80 0.22 150 / 0.35) 0%, transparent 70%)',
+            "radial-gradient(circle, oklch(0.80 0.22 150 / 0.35) 0%, transparent 70%)",
         }}
         animate={
           isLoading
@@ -158,7 +158,7 @@ export const SphereLoader = ({
         }
         transition={
           isLoading
-            ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
+            ? { duration: 1.6, repeat: Infinity, ease: "easeInOut" }
             : { duration: 0.4 }
         }
       />
@@ -169,7 +169,7 @@ export const SphereLoader = ({
         style={{
           inset: size * 0.22,
           background:
-            'conic-gradient(from 0deg, oklch(0.88 0.22 148), oklch(0.75 0.18 175), oklch(0.66 0.16 205), oklch(0.80 0.21 130), oklch(0.88 0.22 148))',
+            "conic-gradient(from 0deg, oklch(0.88 0.22 148), oklch(0.75 0.18 175), oklch(0.66 0.16 205), oklch(0.80 0.21 130), oklch(0.88 0.22 148))",
           boxShadow: `0 0 ${size * 0.25}px oklch(0.80 0.22 150 / 0.7)`,
         }}
         animate={
@@ -177,24 +177,24 @@ export const SphereLoader = ({
             ? {
                 rotate: 360,
                 borderRadius: [
-                  '42% 58% 63% 37% / 41% 44% 56% 59%',
-                  '63% 37% 42% 58% / 59% 56% 44% 41%',
-                  '42% 58% 63% 37% / 41% 44% 56% 59%',
+                  "42% 58% 63% 37% / 41% 44% 56% 59%",
+                  "63% 37% 42% 58% / 59% 56% 44% 41%",
+                  "42% 58% 63% 37% / 41% 44% 56% 59%",
                 ],
                 scale: [1, 1.08, 1],
               }
-            : { rotate: 0, borderRadius: '50%', scale: 1 }
+            : { rotate: 0, borderRadius: "50%", scale: 1 }
         }
         transition={
           isLoading
             ? {
-                rotate: { duration: 2.2, repeat: Infinity, ease: 'linear' },
+                rotate: { duration: 2.2, repeat: Infinity, ease: "linear" },
                 borderRadius: {
                   duration: 3,
                   repeat: Infinity,
-                  ease: 'easeInOut',
+                  ease: "easeInOut",
                 },
-                scale: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
+                scale: { duration: 1.6, repeat: Infinity, ease: "easeInOut" },
               }
             : { duration: 0.5 }
         }
@@ -209,7 +209,7 @@ export const SphereLoader = ({
           top: size * 0.24,
           left: size * 0.3,
           background:
-            'radial-gradient(ellipse at center, rgba(255,255,255,0.9) 0%, transparent 100%)',
+            "radial-gradient(ellipse at center, rgba(255,255,255,0.9) 0%, transparent 100%)",
           filter: `blur(${size * 0.03}px)`,
         }}
       />
@@ -223,14 +223,14 @@ export const SphereLoader = ({
         >
           <motion.div
             className="absolute inset-0"
-            style={{ transformOrigin: '50% 50%' }}
+            style={{ transformOrigin: "50% 50%" }}
             animate={{ rotate: isLoading ? 360 : 0 }}
             transition={
               isLoading
                 ? {
                     duration: o.dur,
                     repeat: Infinity,
-                    ease: 'linear',
+                    ease: "linear",
                     delay: o.delay,
                   }
                 : { duration: 0.5 }
@@ -260,7 +260,7 @@ export const SphereLoader = ({
                     ? {
                         duration: 1,
                         repeat: Infinity,
-                        ease: 'easeInOut',
+                        ease: "easeInOut",
                       }
                     : { duration: 0.3 }
                 }

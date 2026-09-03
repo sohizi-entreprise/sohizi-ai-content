@@ -1,34 +1,34 @@
-import { z } from 'zod'
-import { buildBaseTool } from './tool-definition'
-import { success, failure } from './utils'
-import * as repo from '@/features/video-editor/repo'
-import type { VideoClipProperties } from '@/type'
-import { getErrorMessage } from '@/utils/get-error-message'
+import { z } from "zod"
+import { buildBaseTool } from "./tool-definition"
+import { success, failure } from "./utils"
+import * as repo from "@/features/video-editor/repo"
+import type { VideoClipProperties } from "@/type"
+import { getErrorMessage } from "@/utils/get-error-message"
 
-const fileNodeId = z.uuid().describe('The file node ID of the video file.')
+const fileNodeId = z.uuid().describe("The file node ID of the video file.")
 
-const trackTypeEnum = z.enum(['video', 'audio', 'text', 'image', 'html'])
+const trackTypeEnum = z.enum(["video", "audio", "text", "image", "html"])
 
 const updateCompositionCommand = z.object({
   cmd: z
-    .literal('update_composition')
+    .literal("update_composition")
     .describe(
-      'Update composition-level settings like fps, aspect ratio, or dimensions.',
+      "Update composition-level settings like fps, aspect ratio, or dimensions.",
     ),
   fileNodeId,
   patch: z
     .object({
       fps: z.number().int().min(1).optional(),
-      aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:5']).optional(),
+      aspectRatio: z.enum(["16:9", "9:16", "1:1", "4:5"]).optional(),
       durationInFrames: z.number().int().min(1).optional(),
       width: z.number().int().min(1).optional(),
       height: z.number().int().min(1).optional(),
     })
-    .describe('Only include fields you want to change.'),
+    .describe("Only include fields you want to change."),
 })
 
 const addTrackCommand = z.object({
-  cmd: z.literal('add_track').describe('Add a new track to the composition.'),
+  cmd: z.literal("add_track").describe("Add a new track to the composition."),
   fileNodeId,
   type: trackTypeEnum,
   name: z.string().max(100),
@@ -37,11 +37,11 @@ const addTrackCommand = z.object({
     .int()
     .min(0)
     .optional()
-    .describe('Z-order position. 0 = bottom. Omit to add on top.'),
+    .describe("Z-order position. 0 = bottom. Omit to add on top."),
 })
 
 const updateTrackCommand = z.object({
-  cmd: z.literal('update_track').describe("Update a track's properties."),
+  cmd: z.literal("update_track").describe("Update a track's properties."),
   trackId: z.uuid(),
   patch: z.object({
     name: z.string().max(100).optional(),
@@ -52,12 +52,12 @@ const updateTrackCommand = z.object({
 })
 
 const removeTrackCommand = z.object({
-  cmd: z.literal('remove_track').describe('Remove a track and all its clips.'),
+  cmd: z.literal("remove_track").describe("Remove a track and all its clips."),
   trackId: z.uuid(),
 })
 
 const addClipCommand = z.object({
-  cmd: z.literal('add_clip').describe('Add a new clip to a track.'),
+  cmd: z.literal("add_clip").describe("Add a new clip to a track."),
   trackId: z.uuid(),
   type: trackTypeEnum,
   startFrame: z.number().int().min(0),
@@ -67,23 +67,23 @@ const addClipCommand = z.object({
   assetId: z
     .uuid()
     .optional()
-    .describe('Reference to an asset. Required for video/audio/image clips.'),
+    .describe("Reference to an asset. Required for video/audio/image clips."),
   properties: z
     .record(z.string(), z.any())
     .describe(
-      'Type-specific properties. For text: {text, fontSize, color, fontFamily, fontWeight, align, opacity, xRatio, yRatio, widthRatio, heightRatio}. For video: {url, fileName, volume, opacity, speed, borderRadius}. For audio: {url, fileName, volume, speed}. For image: {url, fileName, opacity, borderRadius, blur, brightness, xRatio, yRatio, widthRatio, heightRatio}.',
+      "Type-specific properties. For text: {text, fontSize, color, fontFamily, fontWeight, align, opacity, xRatio, yRatio, widthRatio, heightRatio}. For video: {url, fileName, volume, opacity, speed, borderRadius}. For audio: {url, fileName, volume, speed}. For image: {url, fileName, opacity, borderRadius, blur, brightness, xRatio, yRatio, widthRatio, heightRatio}.",
     ),
 })
 
 const updateClipCommand = z.object({
   cmd: z
-    .literal('update_clip')
+    .literal("update_clip")
     .describe(
       "Update a clip's timeline position or properties. Only include fields you want to change.",
     ),
   clipId: z.uuid(),
   patch: z.object({
-    trackId: z.uuid().optional().describe('Move clip to a different track.'),
+    trackId: z.uuid().optional().describe("Move clip to a different track."),
     startFrame: z.number().int().min(0).optional(),
     endFrame: z.number().int().min(1).optional(),
     sourceStartFrame: z.number().int().min(0).optional(),
@@ -91,22 +91,22 @@ const updateClipCommand = z.object({
     properties: z
       .record(z.string(), z.any())
       .optional()
-      .describe('Partial property update. Existing fields are preserved.'),
+      .describe("Partial property update. Existing fields are preserved."),
   }),
 })
 
 const removeClipCommand = z.object({
-  cmd: z.literal('remove_clip').describe('Remove a clip from the timeline.'),
+  cmd: z.literal("remove_clip").describe("Remove a clip from the timeline."),
   clipId: z.uuid(),
 })
 
 const updateCompositionBatchOp = z.object({
   cmd: z
-    .literal('update_composition')
-    .describe('Update composition-level settings.'),
+    .literal("update_composition")
+    .describe("Update composition-level settings."),
   patch: z.object({
     fps: z.number().int().min(1).optional(),
-    aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:5']).optional(),
+    aspectRatio: z.enum(["16:9", "9:16", "1:1", "4:5"]).optional(),
     durationInFrames: z.number().int().min(1).optional(),
     width: z.number().int().min(1).optional(),
     height: z.number().int().min(1).optional(),
@@ -114,13 +114,13 @@ const updateCompositionBatchOp = z.object({
 })
 
 const addTrackBatchOp = z.object({
-  cmd: z.literal('add_track').describe('Add a new track.'),
+  cmd: z.literal("add_track").describe("Add a new track."),
   type: trackTypeEnum,
   name: z.string().max(100),
   position: z.number().int().min(0).optional(),
 })
 
-const batchOpSchema = z.discriminatedUnion('cmd', [
+const batchOpSchema = z.discriminatedUnion("cmd", [
   updateCompositionBatchOp,
   addTrackBatchOp,
   updateTrackCommand,
@@ -132,15 +132,15 @@ const batchOpSchema = z.discriminatedUnion('cmd', [
 
 const batchCommand = z.object({
   cmd: z
-    .literal('batch')
+    .literal("batch")
     .describe(
-      'Execute multiple timeline operations atomically. All succeed or all fail. Use for compound operations like splitting a clip or swapping track positions.',
+      "Execute multiple timeline operations atomically. All succeed or all fail. Use for compound operations like splitting a clip or swapping track positions.",
     ),
   fileNodeId,
   operations: z.array(batchOpSchema).min(1).max(50),
 })
 
-const toolSchema = z.discriminatedUnion('cmd', [
+const toolSchema = z.discriminatedUnion("cmd", [
   updateCompositionCommand,
   addTrackCommand,
   updateTrackCommand,
@@ -152,31 +152,31 @@ const toolSchema = z.discriminatedUnion('cmd', [
 ])
 
 export const timelineEditTool = buildBaseTool({
-  name: 'timelineEdit',
+  name: "timelineEdit",
   description:
     "Modify a video timeline. Supports adding/removing/updating tracks and clips. Use 'batch' for atomic multi-step operations like splitting clips or rearranging tracks.",
   inputSchema: z.object({ command: toolSchema }),
   execute: async (cmd) => {
     const input = cmd.command
     switch (input.cmd) {
-      case 'update_composition':
+      case "update_composition":
         return executeUpdateComposition(input)
-      case 'add_track':
+      case "add_track":
         return executeAddTrack(input)
-      case 'update_track':
+      case "update_track":
         return executeUpdateTrack(input)
-      case 'remove_track':
+      case "remove_track":
         return executeRemoveTrack(input)
-      case 'add_clip':
+      case "add_clip":
         return executeAddClip(input)
-      case 'update_clip':
+      case "update_clip":
         return executeUpdateClip(input)
-      case 'remove_clip':
+      case "remove_clip":
         return executeRemoveClip(input)
-      case 'batch':
+      case "batch":
         return executeBatch(input)
       default:
-        return failure('Unknown command.')
+        return failure("Unknown command.")
     }
   },
 })
@@ -186,11 +186,11 @@ async function executeUpdateComposition(
 ) {
   const composition = await repo.getCompositionByFileNodeId(input.fileNodeId)
   if (!composition) {
-    return failure('Video composition not found for this file.')
+    return failure("Video composition not found for this file.")
   }
   const updated = await repo.updateComposition(composition.id, input.patch)
   if (!updated) {
-    return failure('Failed to update composition.')
+    return failure("Failed to update composition.")
   }
   return success(`Composition updated. Version: ${updated.version}`)
 }
@@ -198,7 +198,7 @@ async function executeUpdateComposition(
 async function executeAddTrack(input: z.infer<typeof addTrackCommand>) {
   const composition = await repo.getCompositionByFileNodeId(input.fileNodeId)
   if (!composition) {
-    return failure('Video composition not found for this file.')
+    return failure("Video composition not found for this file.")
   }
   const position =
     input.position ?? (await repo.getNextTrackPosition(composition.id))
@@ -215,7 +215,7 @@ async function executeAddTrack(input: z.infer<typeof addTrackCommand>) {
 async function executeUpdateTrack(input: z.infer<typeof updateTrackCommand>) {
   const updated = await repo.updateTrack(input.trackId, input.patch)
   if (!updated) {
-    return failure('Track not found.')
+    return failure("Track not found.")
   }
   return success(`Track ${updated.id} updated.`)
 }
@@ -223,7 +223,7 @@ async function executeUpdateTrack(input: z.infer<typeof updateTrackCommand>) {
 async function executeRemoveTrack(input: z.infer<typeof removeTrackCommand>) {
   const deleted = await repo.deleteTrack(input.trackId)
   if (!deleted) {
-    return failure('Track not found.')
+    return failure("Track not found.")
   }
   return success(`Track ${input.trackId} removed (along with its clips).`)
 }
@@ -231,11 +231,11 @@ async function executeRemoveTrack(input: z.infer<typeof removeTrackCommand>) {
 async function executeAddClip(input: z.infer<typeof addClipCommand>) {
   const track = await repo.getTrackById(input.trackId)
   if (!track) {
-    return failure('Track not found.')
+    return failure("Track not found.")
   }
 
   if (input.endFrame <= input.startFrame) {
-    return failure('endFrame must be greater than startFrame.')
+    return failure("endFrame must be greater than startFrame.")
   }
 
   const clip = await repo.createClip({
@@ -257,7 +257,7 @@ async function executeAddClip(input: z.infer<typeof addClipCommand>) {
 async function executeUpdateClip(input: z.infer<typeof updateClipCommand>) {
   const updated = await repo.updateClip(input.clipId, input.patch)
   if (!updated) {
-    return failure('Clip not found.')
+    return failure("Clip not found.")
   }
   return success(`Clip ${updated.id} updated.`)
 }
@@ -265,7 +265,7 @@ async function executeUpdateClip(input: z.infer<typeof updateClipCommand>) {
 async function executeRemoveClip(input: z.infer<typeof removeClipCommand>) {
   const deleted = await repo.deleteClip(input.clipId)
   if (!deleted) {
-    return failure('Clip not found.')
+    return failure("Clip not found.")
   }
   return success(`Clip ${input.clipId} removed.`)
 }
@@ -273,18 +273,18 @@ async function executeRemoveClip(input: z.infer<typeof removeClipCommand>) {
 async function executeBatch(input: z.infer<typeof batchCommand>) {
   const composition = await repo.getCompositionByFileNodeId(input.fileNodeId)
   if (!composition) {
-    return failure('Video composition not found for this file.')
+    return failure("Video composition not found for this file.")
   }
   const compositionId = composition.id
 
   const batchOps: repo.BatchOperation[] = input.operations.map(
     (op): repo.BatchOperation => {
       switch (op.cmd) {
-        case 'update_composition':
-          return { op: 'update_composition', id: compositionId, data: op.patch }
-        case 'add_track':
+        case "update_composition":
+          return { op: "update_composition", id: compositionId, data: op.patch }
+        case "add_track":
           return {
-            op: 'create_track',
+            op: "create_track",
             data: {
               compositionId,
               type: op.type,
@@ -292,13 +292,13 @@ async function executeBatch(input: z.infer<typeof batchCommand>) {
               position: op.position,
             },
           }
-        case 'update_track':
-          return { op: 'update_track', id: op.trackId, data: op.patch }
-        case 'remove_track':
-          return { op: 'delete_track', id: op.trackId }
-        case 'add_clip':
+        case "update_track":
+          return { op: "update_track", id: op.trackId, data: op.patch }
+        case "remove_track":
+          return { op: "delete_track", id: op.trackId }
+        case "add_clip":
           return {
-            op: 'create_clip',
+            op: "create_clip",
             data: {
               trackId: op.trackId,
               compositionId,
@@ -311,10 +311,10 @@ async function executeBatch(input: z.infer<typeof batchCommand>) {
               properties: op.properties as VideoClipProperties,
             },
           }
-        case 'update_clip':
-          return { op: 'update_clip', id: op.clipId, data: op.patch }
-        case 'remove_clip':
-          return { op: 'delete_clip', id: op.clipId }
+        case "update_clip":
+          return { op: "update_clip", id: op.clipId, data: op.patch }
+        case "remove_clip":
+          return { op: "delete_clip", id: op.clipId }
       }
     },
   )

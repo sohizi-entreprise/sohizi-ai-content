@@ -119,7 +119,11 @@ export default function AudioPlayer({
       {/* Soft dark vignette for contrast */}
       <div className="absolute inset-0 bg-linear-to-b from-black/10 via-transparent to-black/30" />
 
-      <audio ref={audioRef} src={src} preload="metadata" />
+      <audio
+        ref={audioRef}
+        src={src}
+        preload="metadata"
+      />
 
       {title && (
         <span className="absolute right-4 top-4 z-10 max-w-[60%] truncate text-sm font-medium tracking-wide text-white/90 drop-shadow">

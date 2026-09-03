@@ -78,7 +78,10 @@ const VariableInput: React.FC<{
         onChange={(e) => onChange(e.target.value)}
       >
         {v.options.map((o) => (
-          <option key={o.value} value={o.value}>
+          <option
+            key={o.value}
+            value={o.value}
+          >
             {o.label}
           </option>
         ))}

@@ -1,24 +1,24 @@
-import { SubmitPayload } from './type'
-import { getVendorParamsMapping } from '../repo'
+import { SubmitPayload } from "./type"
+import { getVendorParamsMapping } from "../repo"
 
 function isMediaUrl(value: string): boolean {
-  if (value.startsWith('data:')) return true
+  if (value.startsWith("data:")) return true
   try {
     const parsed = new URL(value)
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
   } catch {
     return false
   }
 }
 
 function urlsFromValue(value: unknown): string[] {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return isMediaUrl(value) ? [value] : []
   }
   if (Array.isArray(value)) {
     return value.flatMap(urlsFromValue)
   }
-  if (value && typeof value === 'object') {
+  if (value && typeof value === "object") {
     return Object.values(value as Record<string, unknown>).flatMap(
       urlsFromValue,
     )
@@ -42,17 +42,17 @@ export const mapVendorPayload = async (
   const optionMap: Record<string, string> = {}
 
   for (const [key, value] of Object.entries(payload)) {
-    if (key === 'prompt') {
+    if (key === "prompt") {
       continue
     }
     parameters.push(key)
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       values.push(value)
       continue
     }
     if (Array.isArray(value)) {
       for (const item of value) {
-        if (typeof item === 'string') {
+        if (typeof item === "string") {
           values.push(item)
         }
       }
@@ -89,9 +89,9 @@ export const mapVendorPayload = async (
 
     if (Array.isArray(value)) {
       optionMapped = value.map((item) =>
-        typeof item === 'string' ? optionMap[item] || item : item,
+        typeof item === "string" ? optionMap[item] || item : item,
       )
-    } else if (typeof value === 'string') {
+    } else if (typeof value === "string") {
       optionMapped = optionMap[value] || value
     }
 

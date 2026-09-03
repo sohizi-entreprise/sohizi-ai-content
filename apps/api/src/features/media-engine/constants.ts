@@ -1,4 +1,4 @@
-export const LUMEN_BASE_URL = 'https://api.lumenfall.ai/openai/v1'
+export const LUMEN_BASE_URL = "https://api.lumenfall.ai/openai/v1"
 
 export const VIDEO_POLL_INTERVAL_MS = 10_000
 export const MAX_VIDEO_POLL_ATTEMPTS = 60

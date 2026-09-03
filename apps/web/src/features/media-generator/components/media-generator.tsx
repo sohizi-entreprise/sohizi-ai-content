@@ -63,7 +63,10 @@ export function MediaGenerator() {
   const [filter, setFilter] = useState<MediaFilter>("all")
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+    <ResizablePanelGroup
+      direction="horizontal"
+      className="h-full w-full"
+    >
       <ResizablePanel
         id="editor-workspace"
         defaultSize={65}
@@ -71,10 +74,16 @@ export function MediaGenerator() {
         className="bg-card rounded-2xl"
       >
         <div className="flex h-full w-full flex-col">
-          <RenderHeader filter={filter} setFilter={setFilter} />
+          <RenderHeader
+            filter={filter}
+            setFilter={setFilter}
+          />
 
           <ScrollArea className="flex-1 min-h-0 px-4">
-            <RenderAssets projectId={projectId} filter={filter} />
+            <RenderAssets
+              projectId={projectId}
+              filter={filter}
+            />
           </ScrollArea>
         </div>
       </ResizablePanel>
@@ -339,7 +348,10 @@ function BulkAssetActionBar({
           <X className="size-4" />
         </Button>
       </div>
-      <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
+      <Dialog
+        open={moveDialogOpen}
+        onOpenChange={setMoveDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Move selected assets</DialogTitle>

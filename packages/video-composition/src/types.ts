@@ -1,13 +1,13 @@
-import type { CompositionVariable } from './variables'
+import type { CompositionVariable } from "./variables"
 
-export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:5'
+export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:5"
 
 export type TrackType =
-  'video' | 'audio' | 'text' | 'image' | 'html' | 'caption'
+  "video" | "audio" | "text" | "image" | "html" | "caption"
 
-export type TextAlign = 'left' | 'center' | 'right'
+export type TextAlign = "left" | "center" | "right"
 
-export type FontWeight = 'normal' | 'bold' | number
+export type FontWeight = "normal" | "bold" | number
 
 export interface BaseClip {
   id: string
@@ -26,7 +26,7 @@ export interface SpatialLayout {
 }
 
 export interface VideoClip extends BaseClip, SpatialLayout {
-  type: 'video'
+  type: "video"
   url: string
   fileName: string
   width?: number
@@ -38,7 +38,7 @@ export interface VideoClip extends BaseClip, SpatialLayout {
 }
 
 export interface AudioClip extends BaseClip {
-  type: 'audio'
+  type: "audio"
   url: string
   fileName: string
   volume: number
@@ -46,7 +46,7 @@ export interface AudioClip extends BaseClip {
 }
 
 export interface TextClip extends BaseClip, SpatialLayout {
-  type: 'text'
+  type: "text"
   text: string
   fontSize: number
   color: string
@@ -57,7 +57,7 @@ export interface TextClip extends BaseClip, SpatialLayout {
 }
 
 export interface ImageClip extends BaseClip, SpatialLayout {
-  type: 'image'
+  type: "image"
   url: string
   fileName: string
   width?: number
@@ -69,7 +69,7 @@ export interface ImageClip extends BaseClip, SpatialLayout {
 }
 
 export interface HtmlClip extends BaseClip, SpatialLayout {
-  type: 'html'
+  type: "html"
   html: string
   variables: Array<CompositionVariable> // schema — declared once by the AI
   values: Record<string, string | number | boolean> // user-set overrides
@@ -82,7 +82,7 @@ export type ServerCaption = {
 }
 
 export interface CaptionClip extends BaseClip {
-  type: 'caption'
+  type: "caption"
   captions: {
     text: string
     words: Array<ServerCaption>
@@ -109,16 +109,16 @@ export type CanvasEditableClip =
 
 export function isCanvasEditableClip(clip: Clip): clip is CanvasEditableClip {
   return (
-    clip.type === 'text' ||
-    clip.type === 'image' ||
-    clip.type === 'video' ||
-    clip.type === 'html' ||
-    clip.type === 'caption'
+    clip.type === "text" ||
+    clip.type === "image" ||
+    clip.type === "video" ||
+    clip.type === "html" ||
+    clip.type === "caption"
   )
 }
 
 export function getClipLayout(clip: CanvasEditableClip): SpatialLayout {
-  if (clip.type === 'caption') {
+  if (clip.type === "caption") {
     return {
       xRatio: clip.properties.xRatio,
       yRatio: clip.properties.yRatio,
@@ -173,8 +173,8 @@ export const ASPECT_RATIO_DIMENSIONS: Record<
   AspectRatio,
   { width: number; height: number }
 > = {
-  '16:9': { width: 1920, height: 1080 },
-  '9:16': { width: 1080, height: 1920 },
-  '1:1': { width: 1080, height: 1080 },
-  '4:5': { width: 1080, height: 1350 },
+  "16:9": { width: 1920, height: 1080 },
+  "9:16": { width: 1080, height: 1920 },
+  "1:1": { width: 1080, height: 1080 },
+  "4:5": { width: 1080, height: 1350 },
 }

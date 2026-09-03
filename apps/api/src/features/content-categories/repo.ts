@@ -1,7 +1,7 @@
-import { db } from '@/db'
-import { categories } from '@/db/schema'
-import type { CategoryType } from '@/type'
-import { asc, eq, inArray } from 'drizzle-orm'
+import { db } from "@/db"
+import { categories } from "@/db/schema"
+import type { CategoryType } from "@/type"
+import { asc, eq, inArray } from "drizzle-orm"
 
 export type ContentCategory = typeof categories.$inferSelect
 

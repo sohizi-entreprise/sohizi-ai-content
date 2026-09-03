@@ -98,7 +98,10 @@ export function SkillMarketListPage() {
         ) : isError ? (
           <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-destructive/40 p-8">
             <p className="text-sm text-destructive">Failed to load skills</p>
-            <Button variant="outline" onClick={() => void refetch()}>
+            <Button
+              variant="outline"
+              onClick={() => void refetch()}
+            >
               Retry
             </Button>
           </div>
@@ -137,7 +140,10 @@ function SkillMarketListSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
-        <Skeleton key={index} className="h-[220px] w-full rounded-2xl" />
+        <Skeleton
+          key={index}
+          className="h-[220px] w-full rounded-2xl"
+        />
       ))}
     </div>
   )

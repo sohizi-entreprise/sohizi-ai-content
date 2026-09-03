@@ -1,16 +1,16 @@
-import * as error from '../error'
-import * as projectRepo from './repo'
-import { z } from 'zod'
+import * as error from "../error"
+import * as projectRepo from "./repo"
+import { z } from "zod"
 import {
   createProjectSchema,
   createTemplateSchema,
   deleteProjectSchema,
   updateProjectSchema,
-} from './schema'
+} from "./schema"
 
-import { CursorPaginationOptions } from '@/type'
-import { RepositoryError } from '../error'
-import { generateSlug } from '@/utils/slug'
+import { CursorPaginationOptions } from "@/type"
+import { RepositoryError } from "../error"
+import { generateSlug } from "@/utils/slug"
 
 export const startProject = async (
   data: z.infer<typeof createProjectSchema>,
@@ -28,7 +28,7 @@ export const createTemplate = async (
   const slug = generateSlug(name)
   if (!slug) {
     throw new error.BadRequest(
-      'Invalid name. Please use a name between 3 and 150 characters.',
+      "Invalid name. Please use a name between 3 and 150 characters.",
     )
   }
   const templatePayload = {
@@ -44,9 +44,9 @@ export const createTemplate = async (
   } catch (e) {
     if (e instanceof RepositoryError) {
       switch (e.type) {
-        case 'NotFound':
-        case 'Conflict':
-          throw new error.BadRequest('Template with this name already exists')
+        case "NotFound":
+        case "Conflict":
+          throw new error.BadRequest("Template with this name already exists")
         default:
           throw new error.InternalServerError()
       }
@@ -61,7 +61,7 @@ export const getProject = async (id: string) => {
   } catch (e) {
     if (e instanceof RepositoryError) {
       switch (e.type) {
-        case 'NotFound':
+        case "NotFound":
           throw new error.NotFound(e.message)
         default:
           throw new error.InternalServerError()
@@ -77,12 +77,12 @@ export const deleteProject = async (
   const { id, title } = data
   const project = await validateProject(id)
   if (title !== project.title) {
-    throw new error.BadRequest('Title does not match')
+    throw new error.BadRequest("Title does not match")
   }
   const confirm = await projectRepo.deleteProject(id)
   if (!confirm) {
     throw new error.InternalServerError(
-      'Failed to delete project. Try again later.',
+      "Failed to delete project. Try again later.",
     )
   }
   return { confirmed: confirm }
@@ -123,7 +123,7 @@ export const listPublishedTemplates = async (
 async function validateProject(projectId: string) {
   const project = await projectRepo.getProjectById(projectId)
   if (!project) {
-    throw new error.NotFound('Project not found')
+    throw new error.NotFound("Project not found")
   }
   return project
 }

@@ -19,14 +19,14 @@ Build a fully functional chat app using `PromptInput`, [`Conversation`](/compone
 Add the following component to your frontend:
 
 ```tsx title="app/page.tsx"
-'use client'
+"use client"
 
 import {
   Attachment,
   AttachmentPreview,
   AttachmentRemove,
   Attachments,
-} from '@/components/ai-elements/attachments'
+} from "@/components/ai-elements/attachments"
 import {
   PromptInput,
   PromptInputActionAddAttachments,
@@ -48,20 +48,20 @@ import {
   PromptInputFooter,
   PromptInputTools,
   usePromptInputAttachments,
-} from '@/components/ai-elements/prompt-input'
-import { GlobeIcon } from 'lucide-react'
-import { useState } from 'react'
-import { useChat } from '@ai-sdk/react'
+} from "@/components/ai-elements/prompt-input"
+import { GlobeIcon } from "lucide-react"
+import { useState } from "react"
+import { useChat } from "@ai-sdk/react"
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
-} from '@/components/ai-elements/conversation'
+} from "@/components/ai-elements/conversation"
 import {
   Message,
   MessageContent,
   MessageResponse,
-} from '@/components/ai-elements/message'
+} from "@/components/ai-elements/message"
 
 const PromptInputAttachmentsDisplay = () => {
   const attachments = usePromptInputAttachments()
@@ -87,12 +87,12 @@ const PromptInputAttachmentsDisplay = () => {
 }
 
 const models = [
-  { id: 'gpt-4o', name: 'GPT-4o' },
-  { id: 'claude-opus-4-20250514', name: 'Claude 4 Opus' },
+  { id: "gpt-4o", name: "GPT-4o" },
+  { id: "claude-opus-4-20250514", name: "Claude 4 Opus" },
 ]
 
 const InputDemo = () => {
-  const [text, setText] = useState<string>('')
+  const [text, setText] = useState<string>("")
   const [model, setModel] = useState<string>(models[0].id)
   const [useWebSearch, setUseWebSearch] = useState<boolean>(false)
 
@@ -108,7 +108,7 @@ const InputDemo = () => {
 
     sendMessage(
       {
-        text: message.text || 'Sent with attachments',
+        text: message.text || "Sent with attachments",
         files: message.files,
       },
       {
@@ -118,7 +118,7 @@ const InputDemo = () => {
         },
       },
     )
-    setText('')
+    setText("")
   }
 
   return (
@@ -127,11 +127,14 @@ const InputDemo = () => {
         <Conversation>
           <ConversationContent>
             {messages.map((message) => (
-              <Message from={message.role} key={message.id}>
+              <Message
+                from={message.role}
+                key={message.id}
+              >
                 <MessageContent>
                   {message.parts.map((part, i) => {
                     switch (part.type) {
-                      case 'text':
+                      case "text":
                         return (
                           <MessageResponse key={`${message.id}-${i}`}>
                             {part.text}
@@ -174,8 +177,8 @@ const InputDemo = () => {
               </PromptInputActionMenu>
               <PromptInputButton
                 onClick={() => setUseWebSearch(!useWebSearch)}
-                tooltip={{ content: 'Search the web', shortcut: '⌘K' }}
-                variant={useWebSearch ? 'default' : 'ghost'}
+                tooltip={{ content: "Search the web", shortcut: "⌘K" }}
+                variant={useWebSearch ? "default" : "ghost"}
               >
                 <GlobeIcon size={16} />
                 <span>Search</span>
@@ -191,14 +194,20 @@ const InputDemo = () => {
                 </PromptInputSelectTrigger>
                 <PromptInputSelectContent>
                   {models.map((model) => (
-                    <PromptInputSelectItem key={model.id} value={model.id}>
+                    <PromptInputSelectItem
+                      key={model.id}
+                      value={model.id}
+                    >
                       {model.name}
                     </PromptInputSelectItem>
                   ))}
                 </PromptInputSelectContent>
               </PromptInputSelect>
             </PromptInputTools>
-            <PromptInputSubmit disabled={!text && !status} status={status} />
+            <PromptInputSubmit
+              disabled={!text && !status}
+              status={status}
+            />
           </PromptInputFooter>
         </PromptInput>
       </div>
@@ -212,7 +221,7 @@ export default InputDemo
 Add the following route to your backend:
 
 ```ts title="app/api/chat/route.ts"
-import { streamText, UIMessage, convertToModelMessages } from 'ai'
+import { streamText, UIMessage, convertToModelMessages } from "ai"
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30
@@ -229,7 +238,7 @@ export async function POST(req: Request) {
   } = await req.json()
 
   const result = streamText({
-    model: webSearch ? 'perplexity/sonar' : model,
+    model: webSearch ? "perplexity/sonar" : model,
     messages: await convertToModelMessages(messages),
   })
 

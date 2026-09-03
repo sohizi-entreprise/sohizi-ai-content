@@ -4,16 +4,16 @@
  * pollution. Run with `bun test`.
  */
 
-import { describe, expect, test, afterAll } from 'bun:test'
-import { randomUUID } from 'node:crypto'
-import { Elysia } from 'elysia'
-import { db } from '@/db'
+import { describe, expect, test, afterAll } from "bun:test"
+import { randomUUID } from "node:crypto"
+import { Elysia } from "elysia"
+import { db } from "@/db"
 import {
   organization,
   billingLedger,
   type BillingLedgerKind,
-} from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+} from "@/db/schema"
+import { eq, and } from "drizzle-orm"
 import {
   BillingService,
   billingService,
@@ -23,8 +23,8 @@ import {
   ReservationExpiredError,
   BillingTimeoutError,
   BillableConfigError,
-} from '../index'
-import type { Billable, BillableAsync } from '../types'
+} from "../index"
+import type { Billable, BillableAsync } from "../types"
 
 const billing = new BillingService()
 
@@ -80,13 +80,13 @@ const sleep = (ms: number) =>
 // 1. balance & topup
 // ----------------------------------------------------------------------------
 
-describe('BillingService.getBalance / topup', () => {
-  test('new org has zero balance', async () => {
+describe("BillingService.getBalance / topup", () => {
+  test("new org has zero balance", async () => {
     const org = await newOrg()
     expect(await billing.getBalance(org)).toBe(0n)
   })
 
-  test('topup credits the wallet', async () => {
+  test("topup credits the wallet", async () => {
     const org = await newOrg()
     const after = await billing.topup({
       organizationId: org,
@@ -102,29 +102,29 @@ describe('BillingService.getBalance / topup', () => {
 // 2. reserve
 // ----------------------------------------------------------------------------
 
-describe('BillingService.reserve', () => {
-  test('debits estimate atomically', async () => {
+describe("BillingService.reserve", () => {
+  test("debits estimate atomically", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const res = await billing.reserve({
       organizationId: org,
-      operation: 'test.op',
+      operation: "test.op",
       estimatedCredits: 100n,
       ttlMs: 60_000,
       idempotencyKey: `r:${randomUUID()}`,
     })
-    expect(res.status).toBe('reserved')
+    expect(res.status).toBe("reserved")
     expect(res.estimatedCredits).toBe(100n)
     expect(await billing.getBalance(org)).toBe(400n)
   })
 
-  test('throws InsufficientCreditsError when balance < estimate, wallet untouched', async () => {
+  test("throws InsufficientCreditsError when balance < estimate, wallet untouched", async () => {
     const org = await newOrg()
     await seedBalance(org, 50n)
     await expect(
       billing.reserve({
         organizationId: org,
-        operation: 'test.op',
+        operation: "test.op",
         estimatedCredits: 100n,
         ttlMs: 60_000,
         idempotencyKey: `r:${randomUUID()}`,
@@ -133,20 +133,20 @@ describe('BillingService.reserve', () => {
     expect(await billing.getBalance(org)).toBe(50n)
   })
 
-  test('idempotent — same key debits only once', async () => {
+  test("idempotent — same key debits only once", async () => {
     const org = await newOrg()
     await seedBalance(org, 1000n)
     const key = `r:${randomUUID()}`
     const r1 = await billing.reserve({
       organizationId: org,
-      operation: 'test.op',
+      operation: "test.op",
       estimatedCredits: 200n,
       ttlMs: 60_000,
       idempotencyKey: key,
     })
     const r2 = await billing.reserve({
       organizationId: org,
-      operation: 'test.op',
+      operation: "test.op",
       estimatedCredits: 200n,
       ttlMs: 60_000,
       idempotencyKey: key,
@@ -155,7 +155,7 @@ describe('BillingService.reserve', () => {
     expect(await billing.getBalance(org)).toBe(800n)
   })
 
-  test('50 parallel reserves on a balance of 10x estimate succeed exactly 10 times', async () => {
+  test("50 parallel reserves on a balance of 10x estimate succeed exactly 10 times", async () => {
     const org = await newOrg()
     const estimate = 100n
     await seedBalance(org, estimate * 10n)
@@ -164,7 +164,7 @@ describe('BillingService.reserve', () => {
       Array.from({ length: 50 }).map((_, i) =>
         billing.reserve({
           organizationId: org,
-          operation: 'concurrent.test',
+          operation: "concurrent.test",
           estimatedCredits: estimate,
           ttlMs: 60_000,
           idempotencyKey: `concurrent:${org}:${i}`,
@@ -172,13 +172,13 @@ describe('BillingService.reserve', () => {
       ),
     )
 
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length
-    const failed = results.filter((r) => r.status === 'rejected').length
+    const succeeded = results.filter((r) => r.status === "fulfilled").length
+    const failed = results.filter((r) => r.status === "rejected").length
     expect(succeeded).toBe(10)
     expect(failed).toBe(40)
     expect(await billing.getBalance(org)).toBe(0n)
 
-    const debits = await countLedger(org, 'reserve')
+    const debits = await countLedger(org, "reserve")
     // 1 topup + 10 reserves recorded; the reserve-kind count is 10.
     expect(debits).toBe(10)
   })
@@ -188,13 +188,13 @@ describe('BillingService.reserve', () => {
 // 3. settle (under, over with cover, over uncovered)
 // ----------------------------------------------------------------------------
 
-describe('BillingService.settle', () => {
-  test('actual < estimated refunds the difference', async () => {
+describe("BillingService.settle", () => {
+  test("actual < estimated refunds the difference", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const res = await billing.reserve({
       organizationId: org,
-      operation: 'test.under',
+      operation: "test.under",
       estimatedCredits: 200n,
       ttlMs: 60_000,
       idempotencyKey: `r:${randomUUID()}`,
@@ -205,16 +205,16 @@ describe('BillingService.settle', () => {
       reservationId: res.id,
       actualCredits: 70n,
     })
-    expect(settled.status).toBe('settled')
+    expect(settled.status).toBe("settled")
     expect(await billing.getBalance(org)).toBe(430n)
   })
 
-  test('actual > estimated debits the difference when balance covers it', async () => {
+  test("actual > estimated debits the difference when balance covers it", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const res = await billing.reserve({
       organizationId: org,
-      operation: 'test.over',
+      operation: "test.over",
       estimatedCredits: 100n,
       ttlMs: 60_000,
       idempotencyKey: `r:${randomUUID()}`,
@@ -225,12 +225,12 @@ describe('BillingService.settle', () => {
     expect(await billing.getBalance(org)).toBe(250n)
   })
 
-  test('actual > estimated with no remaining balance: drains to 0 and records overage_uncovered', async () => {
+  test("actual > estimated with no remaining balance: drains to 0 and records overage_uncovered", async () => {
     const org = await newOrg()
     await seedBalance(org, 100n)
     const res = await billing.reserve({
       organizationId: org,
-      operation: 'test.overage',
+      operation: "test.overage",
       estimatedCredits: 100n,
       ttlMs: 60_000,
       idempotencyKey: `r:${randomUUID()}`,
@@ -240,15 +240,15 @@ describe('BillingService.settle', () => {
 
     await billing.settle({ reservationId: res.id, actualCredits: 250n })
     expect(await billing.getBalance(org)).toBe(0n) // never goes negative
-    expect(await countLedger(org, 'overage_uncovered')).toBe(1)
+    expect(await countLedger(org, "overage_uncovered")).toBe(1)
   })
 
-  test('double settle is a no-op (status guard)', async () => {
+  test("double settle is a no-op (status guard)", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const res = await billing.reserve({
       organizationId: org,
-      operation: 'test.dbl',
+      operation: "test.dbl",
       estimatedCredits: 100n,
       ttlMs: 60_000,
       idempotencyKey: `r:${randomUUID()}`,
@@ -266,13 +266,13 @@ describe('BillingService.settle', () => {
 // 4. refund
 // ----------------------------------------------------------------------------
 
-describe('BillingService.refund', () => {
-  test('returns full estimate', async () => {
+describe("BillingService.refund", () => {
+  test("returns full estimate", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const res = await billing.reserve({
       organizationId: org,
-      operation: 'test.refund',
+      operation: "test.refund",
       estimatedCredits: 200n,
       ttlMs: 60_000,
       idempotencyKey: `r:${randomUUID()}`,
@@ -282,12 +282,12 @@ describe('BillingService.refund', () => {
     expect(await billing.getBalance(org)).toBe(500n)
   })
 
-  test('second refund is a no-op', async () => {
+  test("second refund is a no-op", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const res = await billing.reserve({
       organizationId: org,
-      operation: 'test.refund',
+      operation: "test.refund",
       estimatedCredits: 200n,
       ttlMs: 60_000,
       idempotencyKey: `r:${randomUUID()}`,
@@ -295,7 +295,7 @@ describe('BillingService.refund', () => {
     await billing.refund(res.id)
     await billing.refund(res.id) // no-op, no throw
     expect(await billing.getBalance(org)).toBe(500n)
-    expect(await countLedger(org, 'refund')).toBe(1)
+    expect(await countLedger(org, "refund")).toBe(1)
   })
 })
 
@@ -305,12 +305,12 @@ describe('BillingService.refund', () => {
 
 function makeBillable<TIn, TOut>(
   overrides: Partial<Billable<TIn, TOut>> & {
-    execute: Billable<TIn, TOut>['execute']
-    estimateCost: Billable<TIn, TOut>['estimateCost']
+    execute: Billable<TIn, TOut>["execute"]
+    estimateCost: Billable<TIn, TOut>["estimateCost"]
   },
 ): Billable<TIn, TOut> {
   return {
-    operation: 'test.billable',
+    operation: "test.billable",
     timeoutMs: 5_000,
     ttlMs: 60_000,
     idempotencyKey: () => `key:${randomUUID()}`,
@@ -318,12 +318,12 @@ function makeBillable<TIn, TOut>(
   }
 }
 
-describe('withBilling', () => {
-  test('happy path: estimate → execute → settle', async () => {
+describe("withBilling", () => {
+  test("happy path: estimate → execute → settle", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const billable = makeBillable<{ value: number }, string>({
-      operation: 'test.happy',
+      operation: "test.happy",
       estimateCost: () => 100n,
       execute: async (input) => ({
         output: `hello-${input.value}`,
@@ -332,17 +332,17 @@ describe('withBilling', () => {
     })
     const callable = withBilling(billable, billing)
     const result = await callable({ value: 42 }, { organizationId: org })
-    expect(result).toBe('hello-42')
+    expect(result).toBe("hello-42")
     // 500 - 100 (reserve) + 20 (refund diff on settle) = 420
     expect(await billing.getBalance(org)).toBe(420n)
   })
 
-  test('refunds and rethrows on execute error', async () => {
+  test("refunds and rethrows on execute error", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
-    const boom = new Error('boom')
+    const boom = new Error("boom")
     const billable = makeBillable<void, void>({
-      operation: 'test.error',
+      operation: "test.error",
       estimateCost: () => 100n,
       execute: async () => {
         throw boom
@@ -355,20 +355,20 @@ describe('withBilling', () => {
     expect(await billing.getBalance(org)).toBe(500n)
   })
 
-  test('refunds and throws BillingTimeoutError on timeout', async () => {
+  test("refunds and throws BillingTimeoutError on timeout", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const billable = makeBillable<void, void>({
-      operation: 'test.timeout',
+      operation: "test.timeout",
       timeoutMs: 50,
       ttlMs: 60_000,
       estimateCost: () => 100n,
       execute: async (_input, ctx) => {
         await new Promise<void>((_, reject) => {
-          const t = setTimeout(() => reject(new Error('should-not-fire')), 500)
-          ctx.signal.addEventListener('abort', () => {
+          const t = setTimeout(() => reject(new Error("should-not-fire")), 500)
+          ctx.signal.addEventListener("abort", () => {
             clearTimeout(t)
-            reject(new Error('aborted'))
+            reject(new Error("aborted"))
           })
         })
         return { output: undefined, actualCredits: 0n }
@@ -386,21 +386,21 @@ describe('withBilling', () => {
 // 6. withBillingAsync + G1 (TTL extension, guardrail)
 // ----------------------------------------------------------------------------
 
-describe('withBillingAsync', () => {
-  test('reserve → submit → settle later transitions reserved → settled', async () => {
+describe("withBillingAsync", () => {
+  test("reserve → submit → settle later transitions reserved → settled", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const billable: BillableAsync<void, { jobId: string }> = {
-      operation: 'test.async',
+      operation: "test.async",
       timeoutMs: 5_000,
       ttlMs: 60_000,
       estimateCost: () => 100n,
       idempotencyKey: () => `async:${randomUUID()}`,
-      submit: async () => ({ jobId: 'job-1' }),
+      submit: async () => ({ jobId: "job-1" }),
     }
     const start = withBillingAsync(billable, billing)
     const handle = await start(undefined as void, { organizationId: org })
-    expect(handle.jobHandle.jobId).toBe('job-1')
+    expect(handle.jobHandle.jobId).toBe("job-1")
     expect(await billing.getBalance(org)).toBe(400n)
 
     await billing.settle({
@@ -410,12 +410,12 @@ describe('withBillingAsync', () => {
     expect(await billing.getBalance(org)).toBe(425n)
   })
 
-  test('async expiry: sweepExpired refunds; subsequent settle throws ReservationExpiredError', async () => {
+  test("async expiry: sweepExpired refunds; subsequent settle throws ReservationExpiredError", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const res = await billing.reserve({
       organizationId: org,
-      operation: 'test.async.expire',
+      operation: "test.async.expire",
       estimatedCredits: 100n,
       ttlMs: 50,
       idempotencyKey: `r:${randomUUID()}`,
@@ -431,17 +431,17 @@ describe('withBillingAsync', () => {
     ).rejects.toBeInstanceOf(ReservationExpiredError)
   })
 
-  test('G1: renewIfNearExpiry keeps a long-running async job alive past the original TTL', async () => {
+  test("G1: renewIfNearExpiry keeps a long-running async job alive past the original TTL", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     // The wrapper requires ttlMs >= timeoutMs * 2.
     const billable: BillableAsync<void, { id: string }> = {
-      operation: 'test.async.renew',
+      operation: "test.async.renew",
       timeoutMs: 100,
       ttlMs: 300,
       estimateCost: () => 100n,
       idempotencyKey: () => `renew:${randomUUID()}`,
-      submit: async () => ({ id: 'job' }),
+      submit: async () => ({ id: "job" }),
     }
     const start = withBillingAsync(billable, billing)
     const handle = await start(undefined as void, { organizationId: org })
@@ -457,17 +457,17 @@ describe('withBillingAsync', () => {
       reservationId: handle.reservationId,
       actualCredits: 90n,
     })
-    expect(settled.status).toBe('settled')
+    expect(settled.status).toBe("settled")
     expect(await billing.getBalance(org)).toBe(410n)
-    expect(await countLedger(org, 'expire')).toBe(0)
-    expect(await countLedger(org, 'refund')).toBe(0)
+    expect(await countLedger(org, "expire")).toBe(0)
+    expect(await countLedger(org, "refund")).toBe(0)
   })
 
-  test('G1 guardrail: ttlMs < timeoutMs * 2 throws BillableConfigError at first call', async () => {
+  test("G1 guardrail: ttlMs < timeoutMs * 2 throws BillableConfigError at first call", async () => {
     const org = await newOrg()
     await seedBalance(org, 500n)
     const badBillable: BillableAsync<void, void> = {
-      operation: 'test.bad-ttl',
+      operation: "test.bad-ttl",
       timeoutMs: 1000,
       ttlMs: 500, // less than 2x timeoutMs
       estimateCost: () => 10n,
@@ -484,13 +484,13 @@ describe('withBillingAsync', () => {
 // 7. balance endpoint
 // ----------------------------------------------------------------------------
 
-describe('GET /billing/balance', () => {
-  test('returns 401 when unauthenticated', async () => {
+describe("GET /billing/balance", () => {
+  test("returns 401 when unauthenticated", async () => {
     // Re-import to avoid the module-scoped singleton starting a sweeper.
-    const { billingRoutes } = await import('../index')
+    const { billingRoutes } = await import("../index")
     const app = new Elysia().use(billingRoutes)
     const res = await app.handle(
-      new Request('http://localhost/billing/balance'),
+      new Request("http://localhost/billing/balance"),
     )
     expect(res.status).toBe(401)
     // Stop sweeper started by the module singleton if any.

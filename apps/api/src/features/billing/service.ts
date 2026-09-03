@@ -5,13 +5,13 @@
  * idempotent via status-guarded UPDATEs in repo.ts.
  */
 
-import * as repo from './repo'
+import * as repo from "./repo"
 import type {
   BillingReservation,
   Credits,
   ReserveInput,
   SettleInput,
-} from './types'
+} from "./types"
 
 export class BillingService {
   /** Sweep in the background; throttled by the caller. */
@@ -84,7 +84,7 @@ export class BillingService {
     thresholdRatio = 0.2,
   ): Promise<void> {
     const current = await this.getReservation(reservationId)
-    if (!current || current.status !== 'reserved') return
+    if (!current || current.status !== "reserved") return
     const remainingMs = current.expiresAt.getTime() - Date.now()
     if (remainingMs > ttlMs * thresholdRatio) return
     await this.extend(reservationId, ttlMs)
@@ -105,14 +105,14 @@ export class BillingService {
     if (this.sweepTimer) return
     this.sweepTimer = setInterval(() => {
       this.sweepExpired(batch).catch((err) => {
-        console.error('[billing] sweep failed', err)
+        console.error("[billing] sweep failed", err)
       })
     }, intervalMs)
     // Don't hold the event loop open.
     if (
-      typeof this.sweepTimer === 'object' &&
+      typeof this.sweepTimer === "object" &&
       this.sweepTimer &&
-      'unref' in this.sweepTimer
+      "unref" in this.sweepTimer
     ) {
       ;(this.sweepTimer as { unref?: () => void }).unref?.()
     }

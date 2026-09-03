@@ -91,32 +91,41 @@ If you still experience crashes (for example, when rendering many Persona instan
 ### Basic Usage
 
 ```tsx
-import { Persona } from '@repo/elements/persona'
+import { Persona } from "@repo/elements/persona"
 
 export default function App() {
-  return <Persona state="listening" variant="opal" />
+  return (
+    <Persona
+      state="listening"
+      variant="opal"
+    />
+  )
 }
 ```
 
 ### With State Management
 
 ```tsx
-import { Persona } from '@repo/elements/persona'
-import { useState } from 'react'
+import { Persona } from "@repo/elements/persona"
+import { useState } from "react"
 
 export default function App() {
   const [state, setState] = useState<
-    'idle' | 'listening' | 'thinking' | 'speaking' | 'asleep'
-  >('idle')
+    "idle" | "listening" | "thinking" | "speaking" | "asleep"
+  >("idle")
 
-  const startListening = () => setState('listening')
-  const startThinking = () => setState('thinking')
-  const startSpeaking = () => setState('speaking')
-  const reset = () => setState('idle')
+  const startListening = () => setState("listening")
+  const startThinking = () => setState("thinking")
+  const startSpeaking = () => setState("speaking")
+  const reset = () => setState("idle")
 
   return (
     <div>
-      <Persona state={state} variant="opal" className="size-32" />
+      <Persona
+        state={state}
+        variant="opal"
+        className="size-32"
+      />
       <div>
         <button onClick={startListening}>Listen</button>
         <button onClick={startThinking}>Think</button>
@@ -131,7 +140,7 @@ export default function App() {
 ### With Custom Styling
 
 ```tsx
-import { Persona } from '@repo/elements/persona'
+import { Persona } from "@repo/elements/persona"
 
 export default function App() {
   return (
@@ -147,19 +156,19 @@ export default function App() {
 ### With Lifecycle Callbacks
 
 ```tsx
-import { Persona } from '@repo/elements/persona'
+import { Persona } from "@repo/elements/persona"
 
 export default function App() {
   return (
     <Persona
       state="listening"
       variant="glint"
-      onReady={() => console.log('Animation ready')}
-      onLoad={() => console.log('Starting to load')}
-      onLoadError={(error) => console.error('Failed to load:', error)}
-      onPlay={() => console.log('Animation playing')}
-      onPause={() => console.log('Animation paused')}
-      onStop={() => console.log('Animation stopped')}
+      onReady={() => console.log("Animation ready")}
+      onLoad={() => console.log("Starting to load")}
+      onLoadError={(error) => console.error("Failed to load:", error)}
+      onPlay={() => console.log("Animation playing")}
+      onPause={() => console.log("Animation paused")}
+      onStop={() => console.log("Animation stopped")}
     />
   )
 }

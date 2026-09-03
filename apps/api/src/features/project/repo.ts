@@ -1,4 +1,4 @@
-import { db } from '@/db'
+import { db } from "@/db"
 import {
   fileNodeContents,
   fileNodes,
@@ -7,15 +7,15 @@ import {
   projects,
   templates,
   videoCompositions,
-} from '@/db/schema'
-import type { CursorPaginationOptions, CursorPaginationResult } from '@/type'
-import { eq, desc, asc, lt, and, isNull, or, gt } from 'drizzle-orm'
-import { createProjectSchema } from './schema'
-import { z } from 'zod'
-import { v4 as uuidv4 } from 'uuid'
-import { ORDER_GAP } from '../file-system/repo'
-import { RepositoryError } from '../error'
-import { DatabaseError } from 'pg'
+} from "@/db/schema"
+import type { CursorPaginationOptions, CursorPaginationResult } from "@/type"
+import { eq, desc, asc, lt, and, isNull, or, gt } from "drizzle-orm"
+import { createProjectSchema } from "./schema"
+import { z } from "zod"
+import { v4 as uuidv4 } from "uuid"
+import { ORDER_GAP } from "../file-system/repo"
+import { RepositoryError } from "../error"
+import { DatabaseError } from "pg"
 // Create the projects, list the project with pagination, delete a project, get a project by id, update a project
 
 const DEFAULT_PROJECTS_PAGE_SIZE = 20
@@ -23,7 +23,7 @@ const DEFAULT_PROJECTS_PAGE_SIZE = 20
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
 const isPgError = (error: unknown) => {
-  return error instanceof DatabaseError && 'code' in error && 'detail' in error
+  return error instanceof DatabaseError && "code" in error && "detail" in error
 }
 
 export const createProject = async (
@@ -103,13 +103,13 @@ export const createTemplate = async (
     return result
   } catch (error) {
     if (isPgError(error)) {
-      if (error.code === '23505') {
+      if (error.code === "23505") {
         throw new RepositoryError(
-          'Template with this slug already exists',
-          'Conflict',
+          "Template with this slug already exists",
+          "Conflict",
         )
       }
-      throw new RepositoryError('Failed to create template', 'DbError')
+      throw new RepositoryError("Failed to create template", "DbError")
     }
     throw error
   }
@@ -151,7 +151,7 @@ export const getProjectWithRootFiles = async (id: string) => {
       .where(eq(projects.id, id))
     const project = firstQuery[0]
     if (!project) {
-      throw new RepositoryError('Project not found', 'NotFound')
+      throw new RepositoryError("Project not found", "NotFound")
     }
 
     const secondQuery = await tx
@@ -163,7 +163,7 @@ export const getProjectWithRootFiles = async (id: string) => {
       .limit(1)
     const rootFolderId = secondQuery[0].id
     if (!rootFolderId) {
-      throw new RepositoryError('Root folder not found', 'NotFound')
+      throw new RepositoryError("Root folder not found", "NotFound")
     }
     const rootFiles = await tx
       .select({
@@ -312,8 +312,8 @@ export const listPublishedTemplates = async (
   const parsedCursor = parsePublishedTemplateCursor(cursor)
 
   const baseConditions = [
-    eq(templates.status, 'published'),
-    eq(templates.visibility, 'public'),
+    eq(templates.status, "published"),
+    eq(templates.visibility, "public"),
   ]
 
   if (parsedCursor) {
@@ -375,7 +375,7 @@ function parsePublishedTemplateCursor(cursor?: string) {
     return null
   }
 
-  const [displayPriority, createdAt] = cursor.split('|', 2)
+  const [displayPriority, createdAt] = cursor.split("|", 2)
   const parsedDisplayPriority = Number(displayPriority)
   const parsedCreatedAt = new Date(createdAt)
 
@@ -396,7 +396,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
   const resp1 = await tx
     .insert(fileNodes)
     .values({
-      name: 'root',
+      name: "root",
       directory: true,
       projectId: projectId,
       parentId: null,
@@ -410,7 +410,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
   const resp2 = await tx
     .insert(fileNodes)
     .values({
-      name: 'core',
+      name: "core",
       directory: true,
       projectId: projectId,
       parentId: rootFolder.id,
@@ -423,7 +423,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
   const resp3 = await tx
     .insert(fileNodes)
     .values({
-      name: 'assets',
+      name: "assets",
       directory: true,
       projectId: projectId,
       parentId: rootFolder.id,
@@ -437,7 +437,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
   const assetsFolder = resp3[0]
 
   await tx.insert(fileNodes).values({
-    name: 'skills',
+    name: "skills",
     directory: true,
     projectId: projectId,
     parentId: coreFolder.id,
@@ -447,7 +447,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
   })
 
   await tx.insert(fileNodes).values({
-    name: 'uploads',
+    name: "uploads",
     directory: true,
     projectId: projectId,
     parentId: assetsFolder.id,
@@ -459,13 +459,13 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
   const resp4 = await tx
     .insert(fileNodes)
     .values({
-      name: 'context',
+      name: "context",
       directory: false,
       projectId: projectId,
       parentId: coreFolder.id,
       position: ORDER_GAP,
       editable: false,
-      format: 'markdown',
+      format: "markdown",
     })
     .returning()
 
@@ -491,7 +491,7 @@ async function createFileFromTemplate(
     .where(eq(templates.id, templateId))
   const template = templateResponse[0]
   if (!template) {
-    throw new RepositoryError('Template not found', 'NotFound')
+    throw new RepositoryError("Template not found", "NotFound")
   }
 
   const templateFiles = await tx
@@ -526,10 +526,10 @@ async function createFileFromTemplate(
     .returning()
 
   const rootFolder = copiedFiles.find(
-    (file) => file.parentId === null && file.directory && file.name === 'root',
+    (file) => file.parentId === null && file.directory && file.name === "root",
   )
   if (!rootFolder) {
-    throw new RepositoryError('Root folder not found', 'NotFound')
+    throw new RepositoryError("Root folder not found", "NotFound")
   }
 
   const templateFileContents = await tx
@@ -561,7 +561,7 @@ async function createSecondaryFiles(
 ) {
   const files = [
     // {name: 'media-generator', format: 'ai-generated', position: ORDER_GAP * 2},
-    { name: 'video-editor', format: 'video-editor', position: ORDER_GAP * 3 },
+    { name: "video-editor", format: "video-editor", position: ORDER_GAP * 3 },
   ] as const
 
   for (const file of files) {
@@ -578,7 +578,7 @@ async function createSecondaryFiles(
       })
       .returning()
     const fileNode = response[0]
-    if (fileNode.format === 'video-editor') {
+    if (fileNode.format === "video-editor") {
       await tx.insert(videoCompositions).values({
         projectId: projectId,
         fileNodeId: fileNode.id,

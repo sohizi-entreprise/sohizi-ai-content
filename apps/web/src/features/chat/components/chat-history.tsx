@@ -37,7 +37,10 @@ export function ChatHistory({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={setOpen}
+    >
       <SheetTrigger asChild>
         <Button
           variant="ghost"
@@ -48,7 +51,11 @@ export function ChatHistory({ projectId }: { projectId: string }) {
           <IconHistory className="size-4" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" showCloseButton={false} className="w-2xl">
+      <SheetContent
+        side="right"
+        showCloseButton={false}
+        className="w-2xl"
+      >
         <SheetHeader className="border-b">
           <SheetTitle>Chat History</SheetTitle>
           <SheetDescription className="sr-only">
@@ -153,7 +160,12 @@ function ConversationItem({
 
 function ConversationLoader() {
   const items = [1, 2, 3, 4]
-  return items.map((item) => <Skeleton className="w-full h-4" key={item} />)
+  return items.map((item) => (
+    <Skeleton
+      className="w-full h-4"
+      key={item}
+    />
+  ))
 }
 
 function ConversationEmpty() {

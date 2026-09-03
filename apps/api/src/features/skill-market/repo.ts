@@ -1,14 +1,14 @@
-import { db } from '@/db'
+import { db } from "@/db"
 import {
   categories,
   fileNodes,
   skillCategories,
   skills,
   type Skill,
-} from '@/db/schema'
-import { and, asc, eq, ilike, sql } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
-import type { MarketCategory, MarketSkill } from './types'
+} from "@/db/schema"
+import { and, asc, eq, ilike, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
+import type { MarketCategory, MarketSkill } from "./types"
 
 const aggregateSkills = (
   rows: Array<{
@@ -54,8 +54,8 @@ const aggregateSkills = (
 }
 
 const catalogBaseWhere = and(
-  eq(skills.status, 'published'),
-  eq(skills.visibility, 'public'),
+  eq(skills.status, "published"),
+  eq(skills.visibility, "public"),
 )
 
 export const listPublicCatalogSkills = async (options?: {
@@ -141,7 +141,7 @@ export const listPublicSkillCategories = async (): Promise<
 }
 
 export const findProjectSkillsFolder = async (projectId: string) => {
-  const coreFolder = alias(fileNodes, 'core_folder')
+  const coreFolder = alias(fileNodes, "core_folder")
 
   const rows = await db
     .select({
@@ -156,10 +156,10 @@ export const findProjectSkillsFolder = async (projectId: string) => {
       and(
         eq(fileNodes.projectId, projectId),
         eq(fileNodes.directory, true),
-        eq(fileNodes.name, 'skills'),
+        eq(fileNodes.name, "skills"),
         eq(coreFolder.projectId, projectId),
         eq(coreFolder.directory, true),
-        eq(coreFolder.name, 'core'),
+        eq(coreFolder.name, "core"),
       ),
     )
     .limit(1)
@@ -180,7 +180,7 @@ export const findProjectSkillByName = async (
     .where(
       and(
         eq(fileNodes.projectId, projectId),
-        eq(fileNodes.format, 'skill'),
+        eq(fileNodes.format, "skill"),
         eq(fileNodes.directory, false),
         eq(fileNodes.name, name),
       ),

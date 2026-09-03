@@ -60,7 +60,10 @@ export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
           Files
         </span>
         <div className="flex items-center gap-0.5">
-          <FileNodeMenu options={menuOptions} onChange={handleOnCreate}>
+          <FileNodeMenu
+            options={menuOptions}
+            onChange={handleOnCreate}
+          >
             <Button
               variant="ghost"
               size="icon"
@@ -72,7 +75,10 @@ export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-1">
-        <FileTree projectId={projectId} rootFolderId={rootFolderId} />
+        <FileTree
+          projectId={projectId}
+          rootFolderId={rootFolderId}
+        />
       </div>
     </div>
   )

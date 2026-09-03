@@ -1,11 +1,11 @@
-import { FileNode, FileNodeContent } from '@/db/schema'
-import { fileFormat } from './constants'
+import { FileNode, FileNodeContent } from "@/db/schema"
+import { fileFormat } from "./constants"
 
 export const normalizeFileName = (name: string) => {
   return name
     .trim()
     .toLowerCase()
-    .replace(/[\W\s]+/g, '-')
+    .replace(/[\W\s]+/g, "-")
 }
 
 export function serializeFileContent(
@@ -16,13 +16,13 @@ export function serializeFileContent(
     case fileFormat.JSON:
       return JSON.stringify(fileContent.jsonContent ?? {}, null, 2)
     default:
-      return fileContent.content ?? ''
+      return fileContent.content ?? ""
   }
 }
 
 export function proseToText(value: unknown): string {
-  if (!value || typeof value !== 'object') {
-    return ''
+  if (!value || typeof value !== "object") {
+    return ""
   }
 
   const node = value as {
@@ -32,7 +32,7 @@ export function proseToText(value: unknown): string {
 
   const textParts: string[] = []
 
-  if (typeof node.text === 'string' && node.text.length > 0) {
+  if (typeof node.text === "string" && node.text.length > 0) {
     textParts.push(node.text)
   }
 
@@ -45,7 +45,7 @@ export function proseToText(value: unknown): string {
     }
   }
 
-  return textParts.join('\n').trim()
+  return textParts.join("\n").trim()
 }
 
 export function formatReadOutput(
@@ -54,19 +54,19 @@ export function formatReadOutput(
   limit?: number,
 ) {
   if (offset !== undefined && offset < 1) {
-    throw new Error('Offset must be greater than or equal to 1.')
+    throw new Error("Offset must be greater than or equal to 1.")
   }
   if (limit !== undefined && limit < 1) {
-    throw new Error('Limit must be greater than or equal to 1.')
+    throw new Error("Limit must be greater than or equal to 1.")
   }
 
   if (offset === undefined && limit === undefined) {
     return text
   }
 
-  const lines = text === '' ? [] : text.split(/\r?\n/)
+  const lines = text === "" ? [] : text.split(/\r?\n/)
   if (lines.length === 0) {
-    return ''
+    return ""
   }
 
   const start = offset ?? 1
@@ -76,13 +76,13 @@ export function formatReadOutput(
       : Math.min(lines.length, start + limit - 1)
 
   if (start > lines.length) {
-    return ''
+    return ""
   }
 
   return lines
     .slice(start - 1, end)
     .map((line, index) => `${start + index} | ${line}`)
-    .join('\n')
+    .join("\n")
 }
 
 export function formatKeywordChunkResults(
@@ -93,17 +93,17 @@ export function formatKeywordChunkResults(
   }>,
 ) {
   if (hits.length === 0) {
-    return 'No matches found.'
+    return "No matches found."
   }
 
   return hits
     .map((hit, index) => {
       return [
-        `${index + 1}. [fileId: ${hit.fileNodeId}] (${hit.totalChunksMatched} chunk${hit.totalChunksMatched === 1 ? '' : 's'} matched)`,
+        `${index + 1}. [fileId: ${hit.fileNodeId}] (${hit.totalChunksMatched} chunk${hit.totalChunksMatched === 1 ? "" : "s"} matched)`,
         hit.snippet,
-      ].join('\n')
+      ].join("\n")
     })
-    .join('\n---\n')
+    .join("\n---\n")
 }
 
 export async function formatChunkResults(
@@ -115,34 +115,34 @@ export async function formatChunkResults(
     rank?: number
     distance?: number
   }>,
-  scoreKey: 'rank' | 'distance',
+  scoreKey: "rank" | "distance",
 ) {
   if (hits.length === 0) {
-    return 'No matches found.'
+    return "No matches found."
   }
 
   return hits
     .map((hit, index) => {
       const score = hit[scoreKey]
       const formattedScore =
-        typeof score === 'number'
-          ? scoreKey === 'distance'
+        typeof score === "number"
+          ? scoreKey === "distance"
             ? score.toFixed(4)
             : score.toFixed(3)
-          : 'n/a'
+          : "n/a"
 
       return [
         `${index + 1}. ${hit.path ?? `/[fileId: ${hit.fileNodeId}]`}`,
         `chunk: ${hit.chunkIndex}`,
         `${scoreKey}: ${formattedScore}`,
         hit.chunkText,
-      ].join('\n')
+      ].join("\n")
     })
-    .join('\n---\n')
+    .join("\n---\n")
 }
 
 export function countLines(text: string) {
-  if (text === '') {
+  if (text === "") {
     return 0
   }
   return text.split(/\r?\n/).length

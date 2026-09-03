@@ -1,13 +1,13 @@
-import { createBlockingRedisClient, redis } from '@/lib'
-import { sse } from 'elysia'
-import { updateGenerationRequest } from './repo'
+import { createBlockingRedisClient, redis } from "@/lib"
+import { sse } from "elysia"
+import { updateGenerationRequest } from "./repo"
 
 const DEFAULT_STREAM_TTL_SECONDS = 300
 const DEFAULT_ACTIVE_STREAM_TTL_SECONDS = 1800
 const ACTIVE_STREAM_GRACE_PERIOD_MS = 15000
 const ACTIVE_STREAM_POLL_MS = 250
-const ACTIVE_STREAM_KEY_PREFIX = 'active-stream'
-const STREAM_COUNTER_KEY_PREFIX = 'stream-counter'
+const ACTIVE_STREAM_KEY_PREFIX = "active-stream"
+const STREAM_COUNTER_KEY_PREFIX = "stream-counter"
 
 type WriteStreamDataOptions = {
   maxLen?: number
@@ -34,7 +34,7 @@ export async function markStreamActive(
   streamKey: string,
   ttlSeconds = DEFAULT_ACTIVE_STREAM_TTL_SECONDS,
 ): Promise<void> {
-  await redis.set(activeStreamKey(streamKey), '1', 'EX', ttlSeconds)
+  await redis.set(activeStreamKey(streamKey), "1", "EX", ttlSeconds)
 }
 
 export async function removeStreamActive(streamKey: string): Promise<void> {
@@ -60,7 +60,7 @@ export async function decrementKey(key: string): Promise<number | null> {
 
 export async function finalizeGenerationRequest(
   requestId: string,
-  status: 'completed' | 'failed',
+  status: "completed" | "failed",
 ): Promise<void> {
   const remaining = await decrementKey(requestId)
   if (remaining === 0) {
@@ -74,7 +74,7 @@ export async function* streamChunksAsSse(streamKey: string) {
     const data = chunk.data as BaseStreamData
     yield sse({
       id: chunk.id,
-      event: data.event || 'chunk',
+      event: data.event || "chunk",
       data: chunk.data,
     })
   }
@@ -91,13 +91,13 @@ export async function writeStreamData<T extends BaseStreamData>(
 
   if (options.maxLen !== undefined) {
     args.push(
-      'MAXLEN',
-      options.approximateMaxLen === false ? '=' : '~',
+      "MAXLEN",
+      options.approximateMaxLen === false ? "=" : "~",
       String(options.maxLen),
     )
   }
 
-  args.push('*', 'data', JSON.stringify(data))
+  args.push("*", "data", JSON.stringify(data))
 
   const id = (await redis.xadd(streamKey, ...args)) as string
   await redis.expire(
@@ -114,15 +114,15 @@ export async function* readStreamChunks<T = unknown>(
   await ensureStreamKeyIsAvailable(streamKey)
 
   const client = createBlockingRedisClient()
-  let cursor = options.fromId ?? '0'
+  let cursor = options.fromId ?? "0"
   let hasSeenActiveStream = await isStreamActive(streamKey)
 
   try {
     while (true) {
       const result = await client.xread(
-        'BLOCK',
+        "BLOCK",
         options.blockMs ?? 5000,
-        'STREAMS',
+        "STREAMS",
         streamKey,
         cursor,
       )
@@ -168,7 +168,7 @@ function createDoneChunk<T>(
   return {
     id: `${lastId}:done`,
     data: {
-      event: 'done',
+      event: "done",
       runId: streamKey,
     } as T,
   }
@@ -213,7 +213,7 @@ function streamCounterKey(streamKey: string): string {
 
 async function ensureStreamKeyIsAvailable(streamKey: string): Promise<void> {
   const type = await redis.type(streamKey)
-  if (type !== 'none' && type !== 'stream') {
+  if (type !== "none" && type !== "stream") {
     await redis.del(streamKey)
   }
 }
@@ -223,9 +223,9 @@ function delay(ms: number): Promise<void> {
 }
 
 function parseStreamData<T>(fields: string[]): T {
-  const dataIndex = fields.findIndex((field) => field === 'data')
+  const dataIndex = fields.findIndex((field) => field === "data")
   if (dataIndex === -1 || dataIndex + 1 >= fields.length) {
-    throw new Error('Redis stream entry is missing a data field')
+    throw new Error("Redis stream entry is missing a data field")
   }
 
   return JSON.parse(fields[dataIndex + 1]) as T

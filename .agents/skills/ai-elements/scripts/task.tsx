@@ -1,15 +1,15 @@
-'use client'
+"use client"
 
-import { SiReact } from '@icons-pack/react-simple-icons'
+import { SiReact } from "@icons-pack/react-simple-icons"
 import {
   Task,
   TaskContent,
   TaskItem,
   TaskItemFile,
   TaskTrigger,
-} from '@/components/ai-elements/task'
-import { nanoid } from 'nanoid'
-import type { ReactNode } from 'react'
+} from "@/components/ai-elements/task"
+import { nanoid } from "nanoid"
+import type { ReactNode } from "react"
 
 const Example = () => {
   const tasks: { key: string; value: ReactNode }[] = [
@@ -17,24 +17,36 @@ const Example = () => {
     {
       key: nanoid(),
       value: (
-        <span className="inline-flex items-center gap-1" key="read-page-tsx">
+        <span
+          className="inline-flex items-center gap-1"
+          key="read-page-tsx"
+        >
           Read
           <TaskItemFile>
-            <SiReact className="size-4" color="#149ECA" />
+            <SiReact
+              className="size-4"
+              color="#149ECA"
+            />
             <span>page.tsx</span>
           </TaskItemFile>
         </span>
       ),
     },
-    { key: nanoid(), value: 'Scanning 52 files' },
-    { key: nanoid(), value: 'Scanning 2 files' },
+    { key: nanoid(), value: "Scanning 52 files" },
+    { key: nanoid(), value: "Scanning 2 files" },
     {
       key: nanoid(),
       value: (
-        <span className="inline-flex items-center gap-1" key="read-layout-tsx">
+        <span
+          className="inline-flex items-center gap-1"
+          key="read-layout-tsx"
+        >
           Reading files
           <TaskItemFile>
-            <SiReact className="size-4" color="#149ECA" />
+            <SiReact
+              className="size-4"
+              color="#149ECA"
+            />
             <span>layout.tsx</span>
           </TaskItemFile>
         </span>
@@ -43,7 +55,7 @@ const Example = () => {
   ]
 
   return (
-    <div style={{ height: '200px' }}>
+    <div style={{ height: "200px" }}>
       <Task className="w-full">
         <TaskTrigger title="Found project files" />
         <TaskContent>

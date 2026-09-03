@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from "zod"
 
 export const getUploadUrlSchema = z.object({
   fileName: z.string().min(1),

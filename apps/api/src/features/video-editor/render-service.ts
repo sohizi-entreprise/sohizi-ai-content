@@ -1,16 +1,16 @@
-import { v4 as uuidv4 } from 'uuid'
-import * as repo from './repo'
+import { v4 as uuidv4 } from "uuid"
+import * as repo from "./repo"
 import {
   cancelRemoteRender,
   createRemoteRender,
   getRemoteRender,
   parseAllowedMediaHosts,
   type RemoteRenderJob,
-} from './render-client'
-import { generateSignedDownloadUrl } from '../media-engine/storage'
-import { BadRequest, Conflict, InternalServerError, NotFound } from '../error'
-import type { CreateRenderInput, RenderComposition } from './render-schema'
-import type { VideoRenderJob } from '@/db/schema'
+} from "./render-client"
+import { generateSignedDownloadUrl } from "../media-engine/storage"
+import { BadRequest, Conflict, InternalServerError, NotFound } from "../error"
+import type { CreateRenderInput, RenderComposition } from "./render-schema"
+import type { VideoRenderJob } from "@/db/schema"
 
 /**
  * Render jobs are owned by the API: the editor never talks to the Cloudflare
@@ -20,7 +20,7 @@ import type { VideoRenderJob } from '@/db/schema'
 
 export type RenderJobView = {
   id: string
-  status: VideoRenderJob['status']
+  status: VideoRenderJob["status"]
   /** Percentage, 0-100. */
   progress: number
   fileName: string
@@ -77,10 +77,10 @@ export const createRender = async (
     })
   } catch (error) {
     await repo.updateRenderJob(jobId, {
-      status: 'failed',
-      failureCode: 'submit_failed',
+      status: "failed",
+      failureCode: "submit_failed",
       failureMessage:
-        error instanceof Error ? error.message : 'Could not start the render',
+        error instanceof Error ? error.message : "Could not start the render",
       finishedAt: new Date(),
     })
     throw error
@@ -111,14 +111,14 @@ export const cancelRender = async (
   projectId: string,
 ): Promise<RenderJobView> => {
   const job = await loadJob(renderJobId, projectId)
-  if (job.status === 'completed') {
-    throw new Conflict('This render already finished')
+  if (job.status === "completed") {
+    throw new Conflict("This render already finished")
   }
   if (!isActive(job)) return toView(job)
 
   await cancelRemoteRender(job.remoteJobId, projectId)
   const cancelled = await repo.updateRenderJob(job.id, {
-    status: 'cancelled',
+    status: "cancelled",
     finishedAt: new Date(),
   })
   return toView(cancelled ?? job)
@@ -130,8 +130,8 @@ export const getRenderDownload = async (
 ): Promise<{ url: string; fileName: string; sizeInBytes: number | null }> => {
   const job = await reconcileRenderJob(await loadJob(renderJobId, projectId))
 
-  if (job.status !== 'completed' || !job.outputKey) {
-    throw new Conflict('This render is not ready to download')
+  if (job.status !== "completed" || !job.outputKey) {
+    throw new Conflict("This render is not ready to download")
   }
 
   const { url } = await generateSignedDownloadUrl(job.outputKey, job.fileName)
@@ -143,7 +143,7 @@ export const getRenderDownload = async (
 // ============================================================================
 
 function isActive(job: VideoRenderJob): boolean {
-  return job.status === 'queued' || job.status === 'rendering'
+  return job.status === "queued" || job.status === "rendering"
 }
 
 /** Pulls the authoritative state from the render service into our own row. */
@@ -156,9 +156,9 @@ async function reconcileRenderJob(
   if (!remote) {
     // The Workflow instance is gone, so no progress will ever arrive.
     return await update(job, {
-      status: 'failed',
-      failureCode: 'render_lost',
-      failureMessage: 'The render service no longer has this job',
+      status: "failed",
+      failureCode: "render_lost",
+      failureMessage: "The render service no longer has this job",
       finishedAt: new Date(),
     })
   }
@@ -172,17 +172,17 @@ async function applyRemoteStatus(
 ): Promise<VideoRenderJob> {
   const progress = toPercent(remote.progress)
 
-  if (remote.status === 'completed') {
+  if (remote.status === "completed") {
     if (!remote.outputKey) {
       return update(job, {
-        status: 'failed',
-        failureCode: 'missing_output',
-        failureMessage: 'The render finished without producing a file',
+        status: "failed",
+        failureCode: "missing_output",
+        failureMessage: "The render finished without producing a file",
         finishedAt: new Date(),
       })
     }
     return update(job, {
-      status: 'completed',
+      status: "completed",
       progress: 100,
       outputKey: remote.outputKey,
       outputSizeInBytes: remote.sizeInBytes ?? null,
@@ -190,31 +190,31 @@ async function applyRemoteStatus(
     })
   }
 
-  if (remote.status === 'failed') {
+  if (remote.status === "failed") {
     return update(job, {
-      status: 'failed',
-      failureCode: remote.error?.code ?? 'render_failed',
-      failureMessage: remote.error?.message ?? 'The render failed',
+      status: "failed",
+      failureCode: remote.error?.code ?? "render_failed",
+      failureMessage: remote.error?.message ?? "The render failed",
       finishedAt: job.finishedAt ?? new Date(),
     })
   }
 
-  if (remote.status === 'cancelled') {
+  if (remote.status === "cancelled") {
     return update(job, {
-      status: 'cancelled',
+      status: "cancelled",
       finishedAt: job.finishedAt ?? new Date(),
     })
   }
 
-  if (remote.status === 'rendering') {
+  if (remote.status === "rendering") {
     return update(job, {
-      status: 'rendering',
+      status: "rendering",
       progress,
       startedAt: job.startedAt ?? new Date(),
     })
   }
 
-  return update(job, { status: 'queued', progress })
+  return update(job, { status: "queued", progress })
 }
 
 /** Skips the write when nothing actually moved, since status is polled often. */
@@ -250,7 +250,7 @@ async function loadJob(
 ): Promise<VideoRenderJob> {
   const job = await repo.getRenderJobById(renderJobId)
   if (!job || job.projectId !== projectId) {
-    throw new NotFound('Render job not found')
+    throw new NotFound("Render job not found")
   }
   return job
 }
@@ -261,7 +261,7 @@ async function assertCompositionAccess(
 ) {
   const composition = await repo.getCompositionById(compositionId)
   if (!composition || composition.projectId !== projectId) {
-    throw new NotFound('Composition not found')
+    throw new NotFound("Composition not found")
   }
   return composition
 }
@@ -269,17 +269,17 @@ async function assertCompositionAccess(
 function assertMediaHostsAllowed(composition: RenderComposition): void {
   const allowed = parseAllowedMediaHosts()
   if (allowed.length === 0) {
-    console.error('RENDER_ALLOWED_MEDIA_HOSTS is not set')
-    throw new InternalServerError('Rendering is not configured')
+    console.error("RENDER_ALLOWED_MEDIA_HOSTS is not set")
+    throw new InternalServerError("Rendering is not configured")
   }
 
   const rejected = new Set<string>()
   for (const track of composition.tracks) {
     for (const clip of track.clips) {
       if (
-        clip.type !== 'video' &&
-        clip.type !== 'audio' &&
-        clip.type !== 'image'
+        clip.type !== "video" &&
+        clip.type !== "audio" &&
+        clip.type !== "image"
       )
         continue
       if (!clip.url) {
@@ -300,7 +300,7 @@ function assertMediaHostsAllowed(composition: RenderComposition): void {
 
   if (rejected.size > 0) {
     throw new BadRequest(
-      `Media host is not allowed for rendering: ${[...rejected].join(', ')}`,
+      `Media host is not allowed for rendering: ${[...rejected].join(", ")}`,
     )
   }
 }
@@ -318,7 +318,7 @@ function toView(job: VideoRenderJob): RenderJobView {
     sizeInBytes: job.outputSizeInBytes,
     error: job.failureMessage
       ? {
-          code: job.failureCode ?? 'render_failed',
+          code: job.failureCode ?? "render_failed",
           message: job.failureMessage,
         }
       : null,

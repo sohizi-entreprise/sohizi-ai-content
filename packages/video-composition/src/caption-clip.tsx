@@ -1,8 +1,8 @@
-import { createTikTokStyleCaptions } from '@remotion/captions'
-import { spring, useCurrentFrame, useVideoConfig } from 'remotion'
-import { useMemo } from 'react'
-import { whisperToCaptions } from './whisper-to-caption'
-import type { CaptionClip } from './types'
+import { createTikTokStyleCaptions } from "@remotion/captions"
+import { spring, useCurrentFrame, useVideoConfig } from "remotion"
+import { useMemo } from "react"
+import { whisperToCaptions } from "./whisper-to-caption"
+import type { CaptionClip } from "./types"
 
 export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
   const frame = useCurrentFrame()
@@ -21,15 +21,15 @@ export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
 
   const {
     fontSize = 48,
-    color = '#ffffff',
-    fontWeight = 'bold',
-    align = 'center',
+    color = "#ffffff",
+    fontWeight = "bold",
+    align = "center",
     opacity = 1,
     xRatio = 0.5,
     yRatio = 0.85,
     widthRatio = 0.7,
     heightRatio = 0.18,
-    hightlightColor = '#FFD700',
+    hightlightColor = "#FFD700",
   } = clip.properties
 
   const currentPage = pages.find(
@@ -39,26 +39,26 @@ export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
   return (
     <div
       style={{
-        position: 'absolute',
+        position: "absolute",
         left: `${xRatio * 100}%`,
         top: `${yRatio * 100}%`,
         width: `${widthRatio * 100}%`,
         height: `${heightRatio * 100}%`,
-        transform: 'translate(-50%, -50%)',
-        display: 'flex',
-        alignItems: 'center',
+        transform: "translate(-50%, -50%)",
+        display: "flex",
+        alignItems: "center",
         justifyContent:
-          align === 'left'
-            ? 'flex-start'
-            : align === 'right'
-              ? 'flex-end'
-              : 'center',
+          align === "left"
+            ? "flex-start"
+            : align === "right"
+              ? "flex-end"
+              : "center",
         fontSize,
         fontWeight,
         textAlign: align,
-        whiteSpace: 'pre',
+        whiteSpace: "pre",
         opacity,
-        pointerEvents: 'none',
+        pointerEvents: "none",
       }}
     >
       {currentPage?.tokens.map((token, i) => {
@@ -74,16 +74,16 @@ export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
           <span
             key={i}
             style={{
-              display: 'inline-block',
+              display: "inline-block",
               transform: `scale(${isActive ? bounce : 1})`,
               color: isActive ? hightlightColor : color,
-              backgroundColor: isActive ? 'rgba(0,0,0,0.8)' : 'transparent',
-              padding: isActive ? '4px 8px' : '0',
-              borderRadius: isActive ? '4px' : '0',
+              backgroundColor: isActive ? "rgba(0,0,0,0.8)" : "transparent",
+              padding: isActive ? "4px 8px" : "0",
+              borderRadius: isActive ? "4px" : "0",
               textShadow: isActive
-                ? '0 0 10px #FFD700, 2px 2px 4px rgba(0,0,0,0.8)'
-                : '2px 2px 4px rgba(0,0,0,0.8)',
-              margin: '0 2px',
+                ? "0 0 10px #FFD700, 2px 2px 4px rgba(0,0,0,0.8)"
+                : "2px 2px 4px rgba(0,0,0,0.8)",
+              margin: "0 2px",
             }}
           >
             {token.text}

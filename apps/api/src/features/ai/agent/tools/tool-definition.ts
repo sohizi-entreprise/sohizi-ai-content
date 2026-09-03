@@ -1,22 +1,22 @@
-import { z, toJSONSchema } from 'zod'
+import { z, toJSONSchema } from "zod"
 import {
   AgenticToolChunk,
   OperationChunk,
   streamEvents,
   ToolCall,
   ToolResultComplete,
-} from '../utils/llm-response'
-import type { AgentChunk } from '../core/agent'
-import { Session } from '../core/session'
-import { FilePendingOperation } from '@/type'
-import { Tool, ModelMessage } from 'ai'
-import { AgentStateManager } from '../core/state-manager'
-import { withBillingStream } from '@/features/billing/wrapper'
-import { createBillableLlmClient, ModelConfig } from '../utils/llm-client'
-import { DEFAULT_AGENT_VENDOR } from '../core/vendor'
-import { billingService } from '@/features/billing'
-import { estimateInputTokens } from '../utils/estimate-token'
-import { getErrorMessage } from '@/utils/get-error-message'
+} from "../utils/llm-response"
+import type { AgentChunk } from "../core/agent"
+import { Session } from "../core/session"
+import { FilePendingOperation } from "@/type"
+import { Tool, ModelMessage } from "ai"
+import { AgentStateManager } from "../core/state-manager"
+import { withBillingStream } from "@/features/billing/wrapper"
+import { createBillableLlmClient, ModelConfig } from "../utils/llm-client"
+import { DEFAULT_AGENT_VENDOR } from "../core/vendor"
+import { billingService } from "@/features/billing"
+import { estimateInputTokens } from "../utils/estimate-token"
+import { getErrorMessage } from "@/utils/get-error-message"
 
 export type ToolResult = {
   success: boolean
@@ -75,7 +75,7 @@ export class BaseTool<T extends z.ZodSchema> {
     try {
       const args = this.validateInput(toolCall.input as z.infer<T>)
       const isGenerator =
-        this.params.execute.constructor.name === 'AsyncGeneratorFunction'
+        this.params.execute.constructor.name === "AsyncGeneratorFunction"
       const result = await this.params.execute(args, options)
       if (isGenerator) {
         for await (const chunk of result as AsyncGenerator<
@@ -98,7 +98,7 @@ export class BaseTool<T extends z.ZodSchema> {
         }
         // yield* (result as AsyncGenerator<AgentChunk, void, unknown>);
       } else {
-        if ('operation' in result && result.operation) {
+        if ("operation" in result && result.operation) {
           const operations = result.operation.map((operation) => ({
             type: streamEvents.operation,
             operation,
@@ -155,7 +155,7 @@ export class BaseTool<T extends z.ZodSchema> {
 
 type LlmToolParams<T extends z.ZodSchema> = Omit<
   BaseToolDefinition<T>,
-  'execute'
+  "execute"
 > & { config: LlmConfig<T> }
 
 export class LlmTool<T extends z.ZodSchema> extends BaseTool<T> {
@@ -176,7 +176,7 @@ export class LlmTool<T extends z.ZodSchema> extends BaseTool<T> {
       toolName: toolCall.toolName,
       toolCallId: toolCall.toolCallId,
       success: false,
-      output: 'An error occurred while executing the tool',
+      output: "An error occurred while executing the tool",
       usage: {
         input: 0,
         output: 0,
@@ -220,25 +220,25 @@ export class LlmTool<T extends z.ZodSchema> extends BaseTool<T> {
       },
     })
     for await (const chunk of billedStream) {
-      if (chunk.type == 'error') {
-        console.error('error', chunk.error)
+      if (chunk.type == "error") {
+        console.error("error", chunk.error)
       }
-      if (chunk.type === 'complete') {
+      if (chunk.type === "complete") {
         switch (chunk.finishReason) {
-          case 'content-filter':
+          case "content-filter":
             result.success = false
             result.output =
-              'Content filter violation stopped the model. The file provided may contain sensitive content.'
+              "Content filter violation stopped the model. The file provided may contain sensitive content."
             break
-          case 'error':
+          case "error":
             result.success = false
             result.output =
               chunk.error ||
-              'An unknown error occurred while executing the tool'
+              "An unknown error occurred while executing the tool"
             break
           default:
             result.success = true
-            result.output = chunk.text || ''
+            result.output = chunk.text || ""
         }
         result.usage = chunk.usage
         break

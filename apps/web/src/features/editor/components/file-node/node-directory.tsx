@@ -241,7 +241,10 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
           </MenubarContent>
         </MenubarMenu>
       </Menubar>
-      <input {...getInputProps()} className="sr-only" />
+      <input
+        {...getInputProps()}
+        className="sr-only"
+      />
     </div>
   )
 }

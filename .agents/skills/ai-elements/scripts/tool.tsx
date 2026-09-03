@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import {
   Confirmation,
@@ -8,17 +8,17 @@ import {
   ConfirmationRejected,
   ConfirmationRequest,
   ConfirmationTitle,
-} from '@/components/ai-elements/confirmation'
+} from "@/components/ai-elements/confirmation"
 import {
   Tool,
   ToolContent,
   ToolHeader,
   ToolInput,
   ToolOutput,
-} from '@/components/ai-elements/tool'
-import type { ToolUIPart } from 'ai'
-import { CheckIcon, XIcon } from 'lucide-react'
-import { nanoid } from 'nanoid'
+} from "@/components/ai-elements/tool"
+import type { ToolUIPart } from "ai"
+import { CheckIcon, XIcon } from "lucide-react"
+import { nanoid } from "nanoid"
 
 const handleReject = () => {
   // In production, call addConfirmationResponse
@@ -31,9 +31,9 @@ const handleAccept = () => {
 const toolCall: ToolUIPart = {
   errorText: undefined,
   input: {
-    database: 'analytics',
-    params: ['2024-01-01'],
-    query: 'SELECT COUNT(*) FROM users WHERE created_at >= ?',
+    database: "analytics",
+    params: ["2024-01-01"],
+    query: "SELECT COUNT(*) FROM users WHERE created_at >= ?",
   },
   output: `| User ID | Name | Email | Created At |
 |---------|------|-------|------------|
@@ -42,13 +42,16 @@ const toolCall: ToolUIPart = {
 | 3 | Bob Wilson | bob@example.com | 2024-02-01 |
 | 4 | Alice Brown | alice@example.com | 2024-02-10 |
 | 5 | Charlie Davis | charlie@example.com | 2024-02-15 |`,
-  state: 'output-available' as const,
+  state: "output-available" as const,
   toolCallId: nanoid(),
-  type: 'tool-database_query' as const,
+  type: "tool-database_query" as const,
 }
 
 const Example = () => (
-  <div className="space-y-4" style={{ minHeight: '1400px' }}>
+  <div
+    className="space-y-4"
+    style={{ minHeight: "1400px" }}
+  >
     {/* 1. input-streaming: Pending */}
     <Tool defaultOpen>
       <ToolHeader
@@ -64,13 +67,16 @@ const Example = () => (
     {/* 2. approval-requested: Awaiting Approval */}
     <Tool>
       <ToolHeader
-        state={'approval-requested' as ToolUIPart['state']}
+        state={"approval-requested" as ToolUIPart["state"]}
         title="database_query"
         type="tool-database_query"
       />
       <ToolContent>
         <ToolInput input={toolCall.input} />
-        <Confirmation approval={{ id: nanoid() }} state="approval-requested">
+        <Confirmation
+          approval={{ id: nanoid() }}
+          state="approval-requested"
+        >
           <ConfirmationTitle>
             <ConfirmationRequest>
               This tool will execute a query on the production database.
@@ -85,10 +91,16 @@ const Example = () => (
             </ConfirmationRejected>
           </ConfirmationTitle>
           <ConfirmationActions>
-            <ConfirmationAction onClick={handleReject} variant="outline">
+            <ConfirmationAction
+              onClick={handleReject}
+              variant="outline"
+            >
               Reject
             </ConfirmationAction>
-            <ConfirmationAction onClick={handleAccept} variant="default">
+            <ConfirmationAction
+              onClick={handleAccept}
+              variant="default"
+            >
               Accept
             </ConfirmationAction>
           </ConfirmationActions>
@@ -99,7 +111,7 @@ const Example = () => (
     {/* 3. approval-responded: Responded */}
     <Tool>
       <ToolHeader
-        state={'approval-responded' as ToolUIPart['state']}
+        state={"approval-responded" as ToolUIPart["state"]}
         title="database_query"
         type="tool-database_query"
       />
@@ -140,7 +152,10 @@ const Example = () => (
 
     {/* 5. output-available: Completed */}
     <Tool>
-      <ToolHeader state={toolCall.state} type={toolCall.type} />
+      <ToolHeader
+        state={toolCall.state}
+        type={toolCall.type}
+      />
       <ToolContent>
         <ToolInput input={toolCall.input} />
         <Confirmation
@@ -161,8 +176,11 @@ const Example = () => (
             </ConfirmationRejected>
           </ConfirmationTitle>
         </Confirmation>
-        {toolCall.state === 'output-available' && (
-          <ToolOutput errorText={toolCall.errorText} output={toolCall.output} />
+        {toolCall.state === "output-available" && (
+          <ToolOutput
+            errorText={toolCall.errorText}
+            output={toolCall.output}
+          />
         )}
       </ToolContent>
     </Tool>
@@ -186,7 +204,7 @@ const Example = () => (
     {/* 7. output-denied: Denied */}
     <Tool>
       <ToolHeader
-        state={'output-denied' as ToolUIPart['state']}
+        state={"output-denied" as ToolUIPart["state"]}
         title="database_query"
         type="tool-database_query"
       />
@@ -196,7 +214,7 @@ const Example = () => (
           approval={{
             approved: false,
             id: nanoid(),
-            reason: 'Query could impact production performance',
+            reason: "Query could impact production performance",
           }}
           state="output-denied"
         >

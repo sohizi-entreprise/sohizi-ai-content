@@ -217,14 +217,14 @@ A button that allows users to preview/play a voice sample before selecting it. S
 A custom hook for accessing the voice selector context. This hook allows you to access and control the voice selection state from any component nested within `VoiceSelector`.
 
 ```tsx
-import { useVoiceSelector } from '@repo/elements/voice-selector'
+import { useVoiceSelector } from "@repo/elements/voice-selector"
 
 export default function CustomVoiceDisplay() {
   const { value, setValue, open, setOpen } = useVoiceSelector()
 
   return (
     <div>
-      <p>Selected voice: {value ?? 'None'}</p>
+      <p>Selected voice: {value ?? "None"}</p>
       <button onClick={() => setOpen(!open)}>Toggle Dialog</button>
     </div>
   )

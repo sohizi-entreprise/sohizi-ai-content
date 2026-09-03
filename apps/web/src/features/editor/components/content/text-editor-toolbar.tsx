@@ -326,7 +326,10 @@ export default function TextEditorToolbar({
       ))}
       {editorState.isInTable && (
         <>
-          <Separator orientation="vertical" className="mx-1.5 h-5!" />
+          <Separator
+            orientation="vertical"
+            className="mx-1.5 h-5!"
+          />
           <UpdateTableOptions
             editor={editor}
             visible={editorState.isInTable}
@@ -428,7 +431,10 @@ function RenderToolbarOption({
           <Icon className="size-4" />
         </ToolbarButton>
         {option.separator && (
-          <Separator orientation="vertical" className="mx-1.5 h-5!" />
+          <Separator
+            orientation="vertical"
+            className="mx-1.5 h-5!"
+          />
         )}
       </React.Fragment>
     )
@@ -452,7 +458,10 @@ function RenderToolbarOption({
         </Button>
       </DropdownMenuTrigger>
       {option.separator && (
-        <Separator orientation="vertical" className="mx-1.5 h-5!" />
+        <Separator
+          orientation="vertical"
+          className="mx-1.5 h-5!"
+        />
       )}
       <DropdownMenuContent {...dropdownContentProps}>
         {option.children.map((child) => (
@@ -500,7 +509,11 @@ function UpdateTableOptions(data: {
   }
 
   return (
-    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
+    <DropdownMenu
+      modal={false}
+      open={open}
+      onOpenChange={setOpen}
+    >
       <DropdownMenuTrigger asChild>
         <Button
           type="button"

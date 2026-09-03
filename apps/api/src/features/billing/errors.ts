@@ -1,4 +1,4 @@
-import { BadRequest } from '@/features/error'
+import { BadRequest } from "@/features/error"
 
 abstract class BillingError extends Error {
   abstract readonly status: number

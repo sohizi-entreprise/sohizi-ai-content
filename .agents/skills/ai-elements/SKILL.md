@@ -37,14 +37,14 @@ Once an AI Elements component is installed, you can import it and use it in your
 After installing AI Elements components, you can use them in your application like any other React component. For example:
 
 ```tsx title="conversation.tsx"
-'use client'
+"use client"
 
 import {
   Message,
   MessageContent,
   MessageResponse,
-} from '@/components/ai-elements/message'
-import { useChat } from '@ai-sdk/react'
+} from "@/components/ai-elements/message"
+import { useChat } from "@ai-sdk/react"
 
 const Example = () => {
   const { messages } = useChat()
@@ -52,11 +52,14 @@ const Example = () => {
   return (
     <>
       {messages.map(({ role, parts }, index) => (
-        <Message from={role} key={index}>
+        <Message
+          from={role}
+          key={index}
+        >
           <MessageContent>
             {parts.map((part, i) => {
               switch (part.type) {
-                case 'text':
+                case "text":
                   return (
                     <MessageResponse key={`${role}-${i}`}>
                       {part.text}
@@ -94,8 +97,8 @@ export const MessageContent = ({
 }: MessageContentProps) => (
   <div
     className={cn(
-      'flex flex-col gap-2 text-sm text-foreground',
-      'group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground group-[.is-user]:px-4 group-[.is-user]:py-3',
+      "flex flex-col gap-2 text-sm text-foreground",
+      "group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground group-[.is-user]:px-4 group-[.is-user]:py-3",
       className,
     )}
     {...props}

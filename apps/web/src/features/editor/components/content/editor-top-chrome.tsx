@@ -11,11 +11,7 @@ import { MAX_CHARACTER_COUNT } from "../../constants"
 import { useEditorStore } from "../../stores/editor-store"
 import type { Editor } from "@tiptap/core"
 import { Button } from "@sohizi/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@sohizi/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"
 import { cn, timeFromNow } from "@/lib/utils"
 
 export function EditorTopChrome({
@@ -88,13 +84,19 @@ export function EditorTopChrome({
               <CharacterUsageDonut percentage={consumedPercent} />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom" className="max-w-56 text-left">
+          <TooltipContent
+            side="bottom"
+            className="max-w-56 text-left"
+          >
             This document allows up to {MAX_CHARACTER_COUNT.toLocaleString()}{" "}
             characters. {remainingPercent}% of the limit remaining.
           </TooltipContent>
         </Tooltip>
 
-        <SaveStatusIndicator status={savingStatus} updatedAt={lastSavedAt} />
+        <SaveStatusIndicator
+          status={savingStatus}
+          updatedAt={lastSavedAt}
+        />
       </div>
     </div>
   )

@@ -16,9 +16,9 @@ import {
   parseNonNegativeNumber,
   parsePositiveNumber,
   skipID3v2Tag,
-} from './mp3'
-import { textResponse } from '../http'
-import type { WorkerEnv } from '../env'
+} from "./mp3"
+import { textResponse } from "../http"
+import type { WorkerEnv } from "../env"
 
 const DEFAULT_MAX_MP3_BYTES = 10 * 1024 * 1024 // 10 MB
 
@@ -30,23 +30,23 @@ export async function handleAudioTrim(
   request: Request,
   env: WorkerEnv,
 ): Promise<Response> {
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    return textResponse('Method not allowed', 405, { Allow: 'GET, HEAD' })
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return textResponse("Method not allowed", 405, { Allow: "GET, HEAD" })
   }
 
   const url = new URL(request.url)
 
-  const key = url.searchParams.get('key')
+  const key = url.searchParams.get("key")
   if (!key) {
     return badRequest('Missing "key" query parameter')
   }
 
-  const offset = parseNonNegativeNumber(url.searchParams.get('offset') ?? '0')
+  const offset = parseNonNegativeNumber(url.searchParams.get("offset") ?? "0")
   if (offset === null) {
     return badRequest('"offset" must be a non-negative number')
   }
 
-  const durationParam = url.searchParams.get('duration')
+  const durationParam = url.searchParams.get("duration")
   const duration =
     durationParam === null ? null : parsePositiveNumber(durationParam)
 
@@ -57,13 +57,13 @@ export async function handleAudioTrim(
   const object = await env.R2_BUCKET?.get(key)
 
   if (!object) {
-    return textResponse('File not found in R2', 404)
+    return textResponse("File not found in R2", 404)
   }
 
   const maxBytes = Number(env.MAX_MP3_BYTES ?? DEFAULT_MAX_MP3_BYTES)
 
   if (object.size > maxBytes) {
-    return textResponse('MP3 too large for in-memory trimming', 413)
+    return textResponse("MP3 too large for in-memory trimming", 413)
   }
 
   const bytes = new Uint8Array(await object.arrayBuffer())
@@ -72,7 +72,7 @@ export async function handleAudioTrim(
   const audioEnd = getAudioEnd(bytes)
 
   if (audioStart >= audioEnd) {
-    return badRequest('No MP3 audio data found')
+    return badRequest("No MP3 audio data found")
   }
 
   let pos = audioStart
@@ -112,7 +112,7 @@ export async function handleAudioTrim(
   }
 
   if (startByte === -1) {
-    return badRequest('Offset exceeds audio duration')
+    return badRequest("Offset exceeds audio duration")
   }
 
   if (endByte === -1) {
@@ -123,13 +123,13 @@ export async function handleAudioTrim(
 
   const headers = new Headers()
 
-  headers.set('Content-Type', 'audio/mpeg')
-  headers.set('Content-Length', String(trimmed.byteLength))
+  headers.set("Content-Type", "audio/mpeg")
+  headers.set("Content-Length", String(trimmed.byteLength))
 
   // Adjust this depending on whether the source files are private/user-specific.
-  headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+  headers.set("Cache-Control", "public, max-age=31536000, immutable")
 
-  if (request.method === 'HEAD') {
+  if (request.method === "HEAD") {
     return new Response(null, { headers })
   }
 

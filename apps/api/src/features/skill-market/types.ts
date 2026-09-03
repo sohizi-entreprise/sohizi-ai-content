@@ -1,4 +1,4 @@
-import type { Skill } from '@/db/schema'
+import type { Skill } from "@/db/schema"
 
 export type MarketSkillCategory = {
   id: string

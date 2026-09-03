@@ -3,7 +3,7 @@ import type {
   BillingLedgerEntry,
   BillingReservationStatus,
   BillingLedgerKind,
-} from '@/db/schema'
+} from "@/db/schema"
 
 export type {
   BillingReservation,

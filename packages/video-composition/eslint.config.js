@@ -1,5 +1,5 @@
-import { defineConfig } from '@sohizi/eslint-config/react'
+import { defineConfig } from "@sohizi/eslint-config/react"
 
 export default defineConfig({
-  ignores: ['eslint.config.js'],
+  ignores: ["eslint.config.js"],
 })

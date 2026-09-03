@@ -1,38 +1,38 @@
-import { ToolSet } from 'ai'
-import { mediaGeneratorPrompt } from '../prompts/media-generator'
-import { editFileTool } from '../tools/file-edit'
-import { exploreFileTool } from '../tools/file-explore'
-import { searchFileTool } from '../tools/file-search'
+import { ToolSet } from "ai"
+import { mediaGeneratorPrompt } from "../prompts/media-generator"
+import { editFileTool } from "../tools/file-edit"
+import { exploreFileTool } from "../tools/file-explore"
+import { searchFileTool } from "../tools/file-search"
 import {
   listModelsTool,
   getModelSchemaTool,
   cancelRequestTool,
   submitRequestTool,
-} from '../tools/submit-media-jobs'
-import { submitHtmlCompositionTool } from '../tools/submit-html-composition'
-import { manageTodoListTool } from '../tools/tasks-manage'
-import { timelineEditTool } from '../tools/timeline-edit'
-import { timelineExploreTool } from '../tools/timeline-explore'
-import { ModelConfig } from '../utils/llm-client'
-import { generateSystemPrompt } from './sys-prompt'
-import { BaseTool } from '../tools/tool-definition'
-import { z } from 'zod'
-import { htmlVideoGeneratorPrompt } from '../prompts/html-video-generator'
+} from "../tools/submit-media-jobs"
+import { submitHtmlCompositionTool } from "../tools/submit-html-composition"
+import { manageTodoListTool } from "../tools/tasks-manage"
+import { timelineEditTool } from "../tools/timeline-edit"
+import { timelineExploreTool } from "../tools/timeline-explore"
+import { ModelConfig } from "../utils/llm-client"
+import { generateSystemPrompt } from "./sys-prompt"
+import { BaseTool } from "../tools/tool-definition"
+import { z } from "zod"
+import { htmlVideoGeneratorPrompt } from "../prompts/html-video-generator"
 import {
   youtubeAnalyzerTool,
   videoAnalyzerTool,
   imageAnalyzerTool,
-} from '../tools/media-analyzer'
-import { generateImageTool } from '../tools/generate-image'
-import { loadSkillTool } from '../tools/load-skill'
-import { DEFAULT_AGENT_VENDOR } from './vendor'
+} from "../tools/media-analyzer"
+import { generateImageTool } from "../tools/generate-image"
+import { loadSkillTool } from "../tools/load-skill"
+import { DEFAULT_AGENT_VENDOR } from "./vendor"
 
 export const supportedAgents = [
-  'media-generator',
-  'main-agent',
-  'explorer',
-  'researcher',
-  'motion-graphic',
+  "media-generator",
+  "main-agent",
+  "explorer",
+  "researcher",
+  "motion-graphic",
 ] as const
 
 export type AgentName = (typeof supportedAgents)[number]
@@ -48,7 +48,7 @@ export type AgentDefinition = {
   contextThreshold?: number // 0-1, defaults to 0.8 in the ContextManager
   summaryModelId: string // dedicated summarizer model
   evaluatorModelId: string // dedicated stop-condition evaluator model
-  evaluatorModelConfig?: Pick<ModelConfig, 'reasoningEffort'>
+  evaluatorModelConfig?: Pick<ModelConfig, "reasoningEffort">
   subAgents: AgentName[]
 }
 
@@ -73,8 +73,8 @@ const registerAgent = (definition: AgentDefinition): void => {
 }
 
 registerAgent({
-  name: 'main-agent',
-  description: 'The main agent for the application.',
+  name: "main-agent",
+  description: "The main agent for the application.",
   baseSystemPrompt: generateSystemPrompt(),
   modelConfig: {
     tools: getSchemas([
@@ -90,22 +90,22 @@ registerAgent({
       loadSkillTool,
       generateImageTool,
     ]),
-    reasoningEffort: 'medium',
-    reasoningSummary: 'auto',
+    reasoningEffort: "medium",
+    reasoningSummary: "auto",
     maxOutputTokens: 3000,
   },
-  modelId: 'openai/gpt-5.1', // This will be overridden by the model passed to the agent
+  modelId: "openai/gpt-5.1", // This will be overridden by the model passed to the agent
   vendor: DEFAULT_AGENT_VENDOR,
   maxContextTokens: 400_000,
   contextThreshold: 0.8,
-  summaryModelId: 'openai/gpt-5-nano',
-  evaluatorModelId: 'openai/gpt-5-nano',
-  subAgents: ['media-generator'],
+  summaryModelId: "openai/gpt-5-nano",
+  evaluatorModelId: "openai/gpt-5-nano",
+  subAgents: ["media-generator"],
 })
 
 registerAgent({
-  name: 'media-generator',
-  description: 'Generate media based on the prompt.',
+  name: "media-generator",
+  description: "Generate media based on the prompt.",
   baseSystemPrompt: mediaGeneratorPrompt,
   modelConfig: {
     tools: getSchemas([
@@ -120,21 +120,21 @@ registerAgent({
       cancelRequestTool,
       submitRequestTool,
     ]),
-    reasoningEffort: 'low',
-    reasoningSummary: 'auto',
+    reasoningEffort: "low",
+    reasoningSummary: "auto",
   },
-  modelId: 'openai/gpt-5.2',
+  modelId: "openai/gpt-5.2",
   vendor: DEFAULT_AGENT_VENDOR,
   maxContextTokens: 400_000,
   contextThreshold: 0.8,
-  summaryModelId: 'openai/gpt-5-nano',
-  evaluatorModelId: 'openai/gpt-5-nano',
+  summaryModelId: "openai/gpt-5-nano",
+  evaluatorModelId: "openai/gpt-5-nano",
   subAgents: [],
 })
 
 registerAgent({
-  name: 'motion-graphic',
-  description: 'Generate standalone HyperFrames HTML video compositions.',
+  name: "motion-graphic",
+  description: "Generate standalone HyperFrames HTML video compositions.",
   baseSystemPrompt: htmlVideoGeneratorPrompt,
   modelConfig: {
     tools: getSchemas([
@@ -142,15 +142,15 @@ registerAgent({
       exploreFileTool,
       searchFileTool,
     ]),
-    reasoningEffort: 'medium',
-    reasoningSummary: 'auto',
+    reasoningEffort: "medium",
+    reasoningSummary: "auto",
     maxOutputTokens: 100_000,
   },
-  modelId: 'openai/gpt-5.2',
+  modelId: "openai/gpt-5.2",
   vendor: DEFAULT_AGENT_VENDOR,
   maxContextTokens: 400_000,
   contextThreshold: 0.8,
-  summaryModelId: 'openai/gpt-5-nano',
-  evaluatorModelId: 'openai/gpt-5-nano',
+  summaryModelId: "openai/gpt-5-nano",
+  evaluatorModelId: "openai/gpt-5-nano",
   subAgents: [],
 })

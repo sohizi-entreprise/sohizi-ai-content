@@ -32,35 +32,35 @@ Build a simple chat UI where the user can copy or regenerate the most recent mes
 Add the following component to your frontend:
 
 ```tsx title="app/page.tsx"
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { MessageActions, MessageAction } from '@/components/ai-elements/message'
-import { Message, MessageContent } from '@/components/ai-elements/message'
+import { useState } from "react"
+import { MessageActions, MessageAction } from "@/components/ai-elements/message"
+import { Message, MessageContent } from "@/components/ai-elements/message"
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
-} from '@/components/ai-elements/conversation'
+} from "@/components/ai-elements/conversation"
 import {
   PromptInput,
   type PromptInputMessage,
   PromptInputTextarea,
   PromptInputSubmit,
-} from '@/components/ai-elements/prompt-input'
-import { MessageResponse } from '@/components/ai-elements/message'
-import { RefreshCcwIcon, CopyIcon } from 'lucide-react'
-import { useChat } from '@ai-sdk/react'
-import { Fragment } from 'react'
+} from "@/components/ai-elements/prompt-input"
+import { MessageResponse } from "@/components/ai-elements/message"
+import { RefreshCcwIcon, CopyIcon } from "lucide-react"
+import { useChat } from "@ai-sdk/react"
+import { Fragment } from "react"
 
 const ActionsDemo = () => {
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState("")
   const { messages, sendMessage, status, regenerate } = useChat()
 
   const handleSubmit = (message: PromptInputMessage) => {
     if (message.text.trim()) {
       sendMessage({ text: message.text })
-      setInput('')
+      setInput("")
     }
   }
 
@@ -73,7 +73,7 @@ const ActionsDemo = () => {
               <Fragment key={message.id}>
                 {message.parts.map((part, i) => {
                   switch (part.type) {
-                    case 'text':
+                    case "text":
                       const isLastMessage = messageIndex === messages.length - 1
 
                       return (
@@ -83,7 +83,7 @@ const ActionsDemo = () => {
                               <MessageResponse>{part.text}</MessageResponse>
                             </MessageContent>
                           </Message>
-                          {message.role === 'assistant' && isLastMessage && (
+                          {message.role === "assistant" && isLastMessage && (
                             <MessageActions>
                               <MessageAction
                                 onClick={() => regenerate()}
@@ -124,7 +124,7 @@ const ActionsDemo = () => {
             className="pr-12"
           />
           <PromptInputSubmit
-            status={status === 'streaming' ? 'streaming' : 'ready'}
+            status={status === "streaming" ? "streaming" : "ready"}
             disabled={!input.trim()}
             className="absolute bottom-1 right-1"
           />

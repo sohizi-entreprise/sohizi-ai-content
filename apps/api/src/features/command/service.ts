@@ -1,11 +1,11 @@
-import * as repo from './repo'
-import { getProjectById } from '../project/repo'
-import { NotFound } from '../error'
+import * as repo from "./repo"
+import { getProjectById } from "../project/repo"
+import { NotFound } from "../error"
 
 const validateProject = async (projectId: string) => {
   const project = await getProjectById(projectId)
   if (!project) {
-    throw new NotFound('Project not found')
+    throw new NotFound("Project not found")
   }
   return project
 }

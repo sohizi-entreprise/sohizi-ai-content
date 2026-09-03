@@ -102,7 +102,10 @@ export function SkillsPage() {
                       <span className="text-sm text-muted-foreground">—</span>
                     ) : (
                       skill.categories.map((category) => (
-                        <Badge key={category.id} variant="secondary">
+                        <Badge
+                          key={category.id}
+                          variant="secondary"
+                        >
                           {category.name}
                         </Badge>
                       ))

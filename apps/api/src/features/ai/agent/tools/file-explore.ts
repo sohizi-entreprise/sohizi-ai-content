@@ -1,16 +1,16 @@
-import { z } from 'zod'
-import { buildBaseTool } from './tool-definition'
+import { z } from "zod"
+import { buildBaseTool } from "./tool-definition"
 import {
   listCommandSchema,
   existsCommandSchema,
   readCommandSchema,
   describeCommandSchema,
-} from './command-schema'
-import { failure, success, formatSkill } from './utils'
-import { FileContentPayload } from '@/features/file-system/objects/file'
-import { Session } from '../core/session'
+} from "./command-schema"
+import { failure, success, formatSkill } from "./utils"
+import { FileContentPayload } from "@/features/file-system/objects/file"
+import { Session } from "../core/session"
 
-const toolSchema = z.discriminatedUnion('cmd', [
+const toolSchema = z.discriminatedUnion("cmd", [
   listCommandSchema,
   existsCommandSchema,
   readCommandSchema,
@@ -18,26 +18,26 @@ const toolSchema = z.discriminatedUnion('cmd', [
 ])
 
 export const exploreFileTool = buildBaseTool({
-  name: 'exploreFile',
+  name: "exploreFile",
   description:
-    'Explore the file system and get information about the files and directories.',
+    "Explore the file system and get information about the files and directories.",
   inputSchema: z.object({
     command: toolSchema,
   }),
   execute: async (cmd, { session }) => {
     const input = cmd.command
     switch (input.cmd) {
-      case 'list':
+      case "list":
         return executeListCommand(input, session)
-      case 'exists':
+      case "exists":
         return executeExistsCommand(input, session)
-      case 'read':
+      case "read":
         return executeReadCommand(input, session)
-      case 'describe':
+      case "describe":
         return executeDescribeCommand(input, session)
       default:
         return failure(
-          'Invalid command received. Valid commands are: list, exists, read, describe.',
+          "Invalid command received. Valid commands are: list, exists, read, describe.",
         )
     }
   },
@@ -62,7 +62,7 @@ async function executeListCommand(
   let output = `Total files: ${children.length}\n---\n`
   for (let i = 0; i < children.length; i++) {
     const file = children[i]
-    output += `${i + 1}. [ID: ${file.id}] - (${file.isDirectory ? 'directory' : 'file'}) - Name: ${file.name} ${file.format ? `- [format: ${file.format}]` : ''}\n`
+    output += `${i + 1}. [ID: ${file.id}] - (${file.isDirectory ? "directory" : "file"}) - Name: ${file.name} ${file.format ? `- [format: ${file.format}]` : ""}\n`
   }
   return success(output)
 }
@@ -76,7 +76,7 @@ async function executeExistsCommand(
     return failure(`Path "${input.filepath}" is not found`)
   }
   return success(
-    `${input.filepath} exists. It's a ${fileObject.isDirectory ? 'directory' : 'file'}. The ID is ${fileObject.id}.`,
+    `${input.filepath} exists. It's a ${fileObject.isDirectory ? "directory" : "file"}. The ID is ${fileObject.id}.`,
   )
 }
 
@@ -98,7 +98,7 @@ async function executeReadCommand(
 
   const content = await fileObject.getFileContent()
   if (!content.ok || content.data === null) {
-    return failure(content.error || 'Failed to get the content of the file.')
+    return failure(content.error || "Failed to get the content of the file.")
   }
 
   const data = content.data
@@ -120,14 +120,14 @@ async function executeDescribeCommand(
 
 function formatFileContent(data: FileContentPayload): string {
   switch (data.type) {
-    case 'markdown':
+    case "markdown":
       return data.data
-    case 'skill':
+    case "skill":
       return formatSkill(data.data)
-    case 'json':
+    case "json":
       return JSON.stringify(data.data, null, 2)
-    case 'ai-generated':
-      return 'Reading the content of ai-generated files is not yet supported.'
+    case "ai-generated":
+      return "Reading the content of ai-generated files is not yet supported."
     default:
       return `File of format: ${data.type} is not supported by this tool.`
   }

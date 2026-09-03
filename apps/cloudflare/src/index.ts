@@ -1,11 +1,11 @@
-import { ContainerProxy } from '@cloudflare/containers'
-import { handleAudioTrim } from './audio/handler'
-import { errorResponse, json } from './http'
-import { handleRenderRoute, isRenderRoute } from './render/routes'
-import type { WorkerEnv } from './env'
+import { ContainerProxy } from "@cloudflare/containers"
+import { handleAudioTrim } from "./audio/handler"
+import { errorResponse, json } from "./http"
+import { handleRenderRoute, isRenderRoute } from "./render/routes"
+import type { WorkerEnv } from "./env"
 
-export { RemotionRenderContainer } from './render/container'
-export { RenderWorkflow } from './render/workflow'
+export { RemotionRenderContainer } from "./render/container"
+export { RenderWorkflow } from "./render/workflow"
 export { ContainerProxy }
 
 export default {
@@ -13,7 +13,7 @@ export default {
     const url = new URL(request.url)
 
     try {
-      if (url.pathname === '/v1/health') {
+      if (url.pathname === "/v1/health") {
         return json({ ok: true })
       }
 

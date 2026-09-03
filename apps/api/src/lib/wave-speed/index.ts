@@ -4,7 +4,7 @@ import {
   deleteJob,
   getInferencePrice,
   WaveSpeedError,
-} from './utils'
+} from "./utils"
 
 export const waveSpeedFuncs = {
   submitJob,

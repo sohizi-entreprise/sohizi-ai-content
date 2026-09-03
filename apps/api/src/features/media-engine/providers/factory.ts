@@ -1,8 +1,8 @@
-import { MediaConfigurationError } from '../errors'
-import type { MediaEngineProvider } from './type'
-import { WaveSpeedProvider } from './wave-speed'
+import { MediaConfigurationError } from "../errors"
+import type { MediaEngineProvider } from "./type"
+import { WaveSpeedProvider } from "./wave-speed"
 
-export const WAVESPEED_VENDOR = 'wavespeed'
+export const WAVESPEED_VENDOR = "wavespeed"
 
 type MediaProviderConstructor = new (apiKey: string) => MediaEngineProvider
 
@@ -11,13 +11,13 @@ const PROVIDER_CLASSES: Record<string, MediaProviderConstructor> = {
 }
 
 const API_KEY_ENV: Record<string, string> = {
-  [WAVESPEED_VENDOR]: 'WAVESPEED_API_KEY',
+  [WAVESPEED_VENDOR]: "WAVESPEED_API_KEY",
 }
 
 function apiKeyEnvName(vendorName: string): string {
   return (
     API_KEY_ENV[vendorName] ??
-    `${vendorName.toUpperCase().replace(/-/g, '_')}_API_KEY`
+    `${vendorName.toUpperCase().replace(/-/g, "_")}_API_KEY`
   )
 }
 

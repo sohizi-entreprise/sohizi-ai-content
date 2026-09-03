@@ -93,7 +93,10 @@ export function RenderHtml({ item }: { item: MediaAsset }) {
         className="flex h-[90vh] max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col overflow-hidden bg-surface/30 p-4 backdrop-blur-sm sm:max-w-5xl md:max-w-6xl"
         showCloseButton={false}
       >
-        <HtmlPreviewDialogBody item={item} metadata={metadata} />
+        <HtmlPreviewDialogBody
+          item={item}
+          metadata={metadata}
+        />
         <DialogClose asChild>
           <Button
             size="icon"
@@ -342,13 +345,19 @@ function VariableField({
         />
       ) : null}
       {isEnumVariable(variable) ? (
-        <Select value={String(value)} onValueChange={onChange}>
+        <Select
+          value={String(value)}
+          onValueChange={onChange}
+        >
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {variable.options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
+              <SelectItem
+                key={option.value}
+                value={option.value}
+              >
                 {option.label}
               </SelectItem>
             ))}

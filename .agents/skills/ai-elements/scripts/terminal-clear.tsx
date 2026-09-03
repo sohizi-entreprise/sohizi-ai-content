@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
-import { Terminal } from '@/components/ai-elements/terminal'
-import { useCallback, useState } from 'react'
+import { Terminal } from "@/components/ai-elements/terminal"
+import { useCallback, useState } from "react"
 
 const initialOutput = `\u001B[36m$\u001B[0m npm run build
 Building project...
@@ -11,9 +11,14 @@ Building project...
 const Example = () => {
   const [output, setOutput] = useState(initialOutput)
 
-  const handleClear = useCallback(() => setOutput(''), [])
+  const handleClear = useCallback(() => setOutput(""), [])
 
-  return <Terminal onClear={handleClear} output={output} />
+  return (
+    <Terminal
+      onClear={handleClear}
+      output={output}
+    />
+  )
 }
 
 export default Example

@@ -4,8 +4,8 @@ import {
   isEnumVariable,
   isNumberVariable,
   isStringVariable,
-} from './variables'
-import type { CompositionVariable } from './variables'
+} from "./variables"
+import type { CompositionVariable } from "./variables"
 
 /** Pinned GSAP build injected into every Hyperframe iframe srcdoc. */
 const GSAP_SCRIPT_TAG = `<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>`
@@ -70,11 +70,11 @@ function htmlIncludesGsapScript(html: string): boolean {
 }
 
 function injectBeforeHeadClose(html: string, injection: string): string {
-  if (html.includes('</head>')) {
-    return html.replace('</head>', `${injection}</head>`)
+  if (html.includes("</head>")) {
+    return html.replace("</head>", `${injection}</head>`)
   }
-  if (html.includes('</body>')) {
-    return html.replace('</body>', `${injection}</body>`)
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${injection}</body>`)
   }
   return `${injection}${html}`
 }
@@ -102,8 +102,8 @@ export function buildVariableOverride(
   }
 
   const style = cssLines.length
-    ? `<style>:root {\n${cssLines.join('\n')}\n}</style>`
-    : ''
+    ? `<style>:root {\n${cssLines.join("\n")}\n}</style>`
+    : ""
 
   const script = `<script>window.__hfConfig = ${JSON.stringify(jsConfig)};</script>`
 
@@ -165,7 +165,7 @@ export function applyLiveHtmlConfig(
       opts?: LiveConfigApplyOptions,
     ) => void
   }
-  if (typeof win.__hfApplyConfig !== 'function') return false
+  if (typeof win.__hfApplyConfig !== "function") return false
   win.__hfApplyConfig(values, getLiveConfigApplyOptions(variables))
   return true
 }
@@ -180,7 +180,7 @@ export function extractVariableSchema(
   const marker = html.search(/data-composition-variables\s*=/)
   if (marker === -1) return []
 
-  const eq = html.indexOf('=', marker)
+  const eq = html.indexOf("=", marker)
   if (eq === -1) return []
 
   const after = html.slice(eq + 1).trimStart()
@@ -188,7 +188,7 @@ export function extractVariableSchema(
   if (jsonStart === -1) return []
 
   const open = after[jsonStart]
-  const close = open === '[' ? ']' : '}'
+  const close = open === "[" ? "]" : "}"
   let depth = 0
   let inString = false
   let escape = false
@@ -199,7 +199,7 @@ export function extractVariableSchema(
       escape = false
       continue
     }
-    if (ch === '\\' && inString) {
+    if (ch === "\\" && inString) {
       escape = true
       continue
     }

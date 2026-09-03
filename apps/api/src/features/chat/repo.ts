@@ -1,11 +1,11 @@
-import { db } from '@/db'
+import { db } from "@/db"
 import {
   conversations,
   messages,
   checkpoints,
   conversationAgentRuns,
-} from '@/db/schema'
-import { eq, desc, and, lt } from 'drizzle-orm'
+} from "@/db/schema"
+import { eq, desc, and, lt } from "drizzle-orm"
 import {
   AgentRunMessage,
   AgentRunMetadata,
@@ -14,8 +14,8 @@ import {
   CursorPaginationOptions,
   CursorPaginationResult,
   MsgContent,
-} from '@/type'
-import { UserModelMessage } from 'ai'
+} from "@/type"
+import { UserModelMessage } from "ai"
 
 // ============================================================================
 // CONVERSATIONS
@@ -24,7 +24,7 @@ import { UserModelMessage } from 'ai'
 export const createConversation = async (
   projectId: string,
   userId: string,
-  title: string = 'New Chat',
+  title: string = "New Chat",
 ) => {
   const result = await db
     .insert(conversations)
@@ -72,7 +72,7 @@ export const createConversationComponents = async (
       .values({
         projectId,
         userId,
-        title: 'New chat',
+        title: "New chat",
       })
       .returning()
     const conversation = convResponse[0]
@@ -102,7 +102,7 @@ export const createConversationComponents = async (
 }
 
 export const createConversationRun = async (
-  payload: Omit<conversationWithAgentRunPayload, 'userId'> & {
+  payload: Omit<conversationWithAgentRunPayload, "userId"> & {
     conversationId: string
   },
 ) => {
@@ -246,7 +246,7 @@ export const getCheckpoint = async (
 // ============================================================================
 
 export type CreateMessageData = {
-  role: 'user' | 'assistant' | 'tool'
+  role: "user" | "assistant" | "tool"
   content: MsgContent
 }
 

@@ -1,9 +1,9 @@
-import type { ModelMessage, UserModelMessage } from 'ai'
+import type { ModelMessage, UserModelMessage } from "ai"
 
 export function extractTextFromContent(
-  content: ModelMessage['content'],
+  content: ModelMessage["content"],
 ): string {
-  if (typeof content === 'string') {
+  if (typeof content === "string") {
     return content
   }
   if (!Array.isArray(content)) {
@@ -11,12 +11,12 @@ export function extractTextFromContent(
   }
   return content
     .map((part) => {
-      if (part.type === 'text' || part.type === 'reasoning') {
+      if (part.type === "text" || part.type === "reasoning") {
         return part.text
       }
       return JSON.stringify(part)
     })
-    .join('\n')
+    .join("\n")
 }
 
 export function extractTextFromUserMessage(message: UserModelMessage): string {

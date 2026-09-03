@@ -1,1 +1,1 @@
-export { type EmbedderInterface } from './embedding'
+export { type EmbedderInterface } from "./embedding"

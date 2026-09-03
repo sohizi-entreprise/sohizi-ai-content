@@ -154,7 +154,10 @@ const durations: Array<DropMenuOption> = [
 function SelectDuration() {
   const { duration, setDuration } = useNewProjectStore()
   return (
-    <DropMenuSettings options={durations} onSelect={(val) => setDuration(val)}>
+    <DropMenuSettings
+      options={durations}
+      onSelect={(val) => setDuration(val)}
+    >
       <div className="flex items-center gap-2 p-2 rounded-lg border border-white/10">
         <Clock className="size-4" />
         <div className="text-sm font-medium">{duration} mins</div>
@@ -174,7 +177,10 @@ const attachments: Array<DropMenuOption> = [
 
 const AddAttachment = () => {
   return (
-    <DropMenuSettings options={attachments} onSelect={() => {}}>
+    <DropMenuSettings
+      options={attachments}
+      onSelect={() => {}}
+    >
       <Button
         variant="outline"
         size="icon"

@@ -70,7 +70,7 @@ interface SchemaParameter {
   type: string
   required?: boolean
   description?: string
-  location?: 'path' | 'query' | 'header'
+  location?: "path" | "query" | "header"
 }
 ```
 

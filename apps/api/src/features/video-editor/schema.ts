@@ -1,13 +1,13 @@
-import { z } from 'zod'
+import { z } from "zod"
 
-const aspectRatios = ['16:9', '9:16', '1:1', '4:5'] as const
+const aspectRatios = ["16:9", "9:16", "1:1", "4:5"] as const
 const trackTypes = [
-  'video',
-  'audio',
-  'text',
-  'image',
-  'html',
-  'caption',
+  "video",
+  "audio",
+  "text",
+  "image",
+  "html",
+  "caption",
 ] as const
 
 // ============================================================================
@@ -18,7 +18,7 @@ export const createCompositionSchema = z.object({
   fileNodeId: z.uuid(),
   fps: z.number().int().min(1).max(120).default(30),
   durationInFrames: z.number().int().min(1).default(900),
-  aspectRatio: z.enum(aspectRatios).default('16:9'),
+  aspectRatio: z.enum(aspectRatios).default("16:9"),
   width: z.number().int().min(1).default(1920),
   height: z.number().int().min(1).default(1080),
 })
@@ -90,44 +90,44 @@ export const clipFilterSchema = z.object({
 // ============================================================================
 
 const batchUpdateComposition = z.object({
-  op: z.literal('update_composition'),
+  op: z.literal("update_composition"),
   compositionId: z.uuid(),
   patch: updateCompositionSchema,
 })
 
 const batchAddTrack = z.object({
-  op: z.literal('add_track'),
+  op: z.literal("add_track"),
   data: addTrackSchema,
 })
 
 const batchUpdateTrack = z.object({
-  op: z.literal('update_track'),
+  op: z.literal("update_track"),
   trackId: z.uuid(),
   patch: updateTrackSchema,
 })
 
 const batchRemoveTrack = z.object({
-  op: z.literal('remove_track'),
+  op: z.literal("remove_track"),
   trackId: z.uuid(),
 })
 
 const batchAddClip = z.object({
-  op: z.literal('add_clip'),
+  op: z.literal("add_clip"),
   data: addClipSchema,
 })
 
 const batchUpdateClip = z.object({
-  op: z.literal('update_clip'),
+  op: z.literal("update_clip"),
   clipId: z.uuid(),
   patch: updateClipSchema,
 })
 
 const batchRemoveClip = z.object({
-  op: z.literal('remove_clip'),
+  op: z.literal("remove_clip"),
   clipId: z.uuid(),
 })
 
-export const batchOperationSchema = z.discriminatedUnion('op', [
+export const batchOperationSchema = z.discriminatedUnion("op", [
   batchUpdateComposition,
   batchAddTrack,
   batchUpdateTrack,

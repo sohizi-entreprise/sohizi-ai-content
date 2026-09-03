@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import {
   Snippet,
@@ -6,16 +6,22 @@ import {
   SnippetCopyButton,
   SnippetInput,
   SnippetText,
-} from '@/components/ai-elements/snippet'
+} from "@/components/ai-elements/snippet"
 
 const Example = () => (
   <div className="flex size-full items-center justify-center p-4">
-    <Snippet className="max-w-sm" code="npx ai-elements add snippet">
+    <Snippet
+      className="max-w-sm"
+      code="npx ai-elements add snippet"
+    >
       <SnippetAddon className="pl-1">
         <SnippetText>$</SnippetText>
       </SnippetAddon>
       <SnippetInput />
-      <SnippetAddon align="inline-end" className="pr-2">
+      <SnippetAddon
+        align="inline-end"
+        className="pr-2"
+      >
         <SnippetCopyButton />
       </SnippetAddon>
     </Snippet>

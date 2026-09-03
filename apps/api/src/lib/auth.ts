@@ -1,9 +1,9 @@
-import { betterAuth } from 'better-auth'
-import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { organization, emailOTP } from 'better-auth/plugins'
-import { db } from '@/db'
-import { Resend } from 'resend'
-import { billingService } from '@/features/billing/service'
+import { betterAuth } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { organization, emailOTP } from "better-auth/plugins"
+import { db } from "@/db"
+import { Resend } from "resend"
+import { billingService } from "@/features/billing/service"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -13,13 +13,13 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins: [process.env.FRONTEND_URL!],
-  database: drizzleAdapter(db, { provider: 'pg' }),
+  database: drizzleAdapter(db, { provider: "pg" }),
   user: {
     additionalFields: {
       type: {
-        type: 'string',
+        type: "string",
         required: true,
-        defaultValue: 'user',
+        defaultValue: "user",
         input: false,
       },
     },
@@ -29,9 +29,9 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
-        from: process.env.EMAIL_FROM || 'noreply@sohizi.com',
+        from: process.env.EMAIL_FROM || "noreply@sohizi.com",
         to: user.email,
-        subject: 'Reset your password',
+        subject: "Reset your password",
         html: `<p>Click the link below to reset your password:</p><a href="${url}">Reset Password</a>`,
       })
     },
@@ -39,9 +39,9 @@ export const auth = betterAuth({
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
       await resend.emails.send({
-        from: process.env.EMAIL_FROM || 'noreply@sohizi.com',
+        from: process.env.EMAIL_FROM || "noreply@sohizi.com",
         to: user.email,
-        subject: 'Verify your email address',
+        subject: "Verify your email address",
         html: `<p>Click the link below to verify your email:</p><a href="${url}">Verify Email</a>`,
       })
     },
@@ -53,7 +53,7 @@ export const auth = betterAuth({
     },
   },
   onAPIError: {
-    errorURL: process.env.FRONTEND_URL + '/auth-error',
+    errorURL: process.env.FRONTEND_URL + "/auth-error",
   },
   plugins: [
     organization({
@@ -64,7 +64,7 @@ export const auth = betterAuth({
               organizationId: organization.id,
               amount: WELCOME_CREDITS,
               idempotencyKey: `org-welcome:${organization.id}`,
-              metadata: { reason: 'welcome_credits' },
+              metadata: { reason: "welcome_credits" },
             })
           } catch (error) {
             console.error(
@@ -79,15 +79,15 @@ export const auth = betterAuth({
       sendVerificationOnSignUp: true,
       async sendVerificationOTP({ email, otp, type }) {
         const subjectMap: Record<string, string> = {
-          'sign-in': 'Your sign-in code',
-          'email-verification': 'Verify your email address',
-          'forget-password': 'Reset your password',
-          'change-email': 'Confirm your new email address',
+          "sign-in": "Your sign-in code",
+          "email-verification": "Verify your email address",
+          "forget-password": "Reset your password",
+          "change-email": "Confirm your new email address",
         }
         await resend.emails.send({
-          from: process.env.EMAIL_FROM || 'noreply@sohizi.com',
+          from: process.env.EMAIL_FROM || "noreply@sohizi.com",
           to: email,
-          subject: subjectMap[type] || 'Your verification code',
+          subject: subjectMap[type] || "Your verification code",
           html: `<div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:24px;">
             <h2 style="margin:0 0 16px;">Your verification code</h2>
             <p style="font-size:32px;font-weight:bold;letter-spacing:8px;text-align:center;margin:24px 0;">${otp}</p>

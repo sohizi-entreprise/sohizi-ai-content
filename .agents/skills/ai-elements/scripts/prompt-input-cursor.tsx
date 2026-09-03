@@ -1,13 +1,13 @@
-'use client'
+"use client"
 
-import type { AttachmentData } from '@/components/ai-elements/attachments'
+import type { AttachmentData } from "@/components/ai-elements/attachments"
 import {
   Attachment,
   AttachmentInfo,
   AttachmentPreview,
   AttachmentRemove,
   Attachments,
-} from '@/components/ai-elements/attachments'
+} from "@/components/ai-elements/attachments"
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -20,8 +20,8 @@ import {
   ModelSelectorLogoGroup,
   ModelSelectorName,
   ModelSelectorTrigger,
-} from '@/components/ai-elements/model-selector'
-import type { PromptInputMessage } from '@/components/ai-elements/prompt-input'
+} from "@/components/ai-elements/model-selector"
+import type { PromptInputMessage } from "@/components/ai-elements/prompt-input"
 import {
   PromptInput,
   PromptInputBody,
@@ -48,9 +48,9 @@ import {
   PromptInputTools,
   usePromptInputAttachments,
   usePromptInputReferencedSources,
-} from '@/components/ai-elements/prompt-input'
-import { Button } from '@sohizi/ui/button'
-import type { SourceDocumentUIPart } from 'ai'
+} from "@/components/ai-elements/prompt-input"
+import { Button } from "@sohizi/ui/button"
+import type { SourceDocumentUIPart } from "ai"
 import {
   AtSignIcon,
   CheckIcon,
@@ -58,44 +58,44 @@ import {
   GlobeIcon,
   ImageIcon,
   RulerIcon,
-} from 'lucide-react'
-import { memo, useCallback, useState } from 'react'
+} from "lucide-react"
+import { memo, useCallback, useState } from "react"
 
 const models = [
   {
-    chef: 'OpenAI',
-    chefSlug: 'openai',
-    id: 'gpt-4o',
-    name: 'GPT-4o',
-    providers: ['openai', 'azure'],
+    chef: "OpenAI",
+    chefSlug: "openai",
+    id: "gpt-4o",
+    name: "GPT-4o",
+    providers: ["openai", "azure"],
   },
   {
-    chef: 'OpenAI',
-    chefSlug: 'openai',
-    id: 'gpt-4o-mini',
-    name: 'GPT-4o Mini',
-    providers: ['openai', 'azure'],
+    chef: "OpenAI",
+    chefSlug: "openai",
+    id: "gpt-4o-mini",
+    name: "GPT-4o Mini",
+    providers: ["openai", "azure"],
   },
   {
-    chef: 'Anthropic',
-    chefSlug: 'anthropic',
-    id: 'claude-opus-4-20250514',
-    name: 'Claude 4 Opus',
-    providers: ['anthropic', 'azure', 'google', 'amazon-bedrock'],
+    chef: "Anthropic",
+    chefSlug: "anthropic",
+    id: "claude-opus-4-20250514",
+    name: "Claude 4 Opus",
+    providers: ["anthropic", "azure", "google", "amazon-bedrock"],
   },
   {
-    chef: 'Anthropic',
-    chefSlug: 'anthropic',
-    id: 'claude-sonnet-4-20250514',
-    name: 'Claude 4 Sonnet',
-    providers: ['anthropic', 'azure', 'google', 'amazon-bedrock'],
+    chef: "Anthropic",
+    chefSlug: "anthropic",
+    id: "claude-sonnet-4-20250514",
+    name: "Claude 4 Sonnet",
+    providers: ["anthropic", "azure", "google", "amazon-bedrock"],
   },
   {
-    chef: 'Google',
-    chefSlug: 'google',
-    id: 'gemini-2.0-flash-exp',
-    name: 'Gemini 2.0 Flash',
-    providers: ['google'],
+    chef: "Google",
+    chefSlug: "google",
+    id: "gemini-2.0-flash-exp",
+    name: "Gemini 2.0 Flash",
+    providers: ["google"],
   },
 ]
 
@@ -113,14 +113,18 @@ const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
     [onRemove, attachment.id],
   )
   return (
-    <Attachment data={attachment} key={attachment.id} onRemove={handleRemove}>
+    <Attachment
+      data={attachment}
+      key={attachment.id}
+      onRemove={handleRemove}
+    >
       <AttachmentPreview />
       <AttachmentRemove />
     </Attachment>
   )
 })
 
-AttachmentItem.displayName = 'AttachmentItem'
+AttachmentItem.displayName = "AttachmentItem"
 
 interface SourceItemProps {
   source: AttachmentData
@@ -133,7 +137,11 @@ const SourceItem = memo(({ source, onRemove }: SourceItemProps) => {
     [onRemove, source.id],
   )
   return (
-    <Attachment data={source} key={source.id} onRemove={handleRemove}>
+    <Attachment
+      data={source}
+      key={source.id}
+      onRemove={handleRemove}
+    >
       <AttachmentPreview />
       <AttachmentInfo />
       <AttachmentRemove />
@@ -141,7 +149,7 @@ const SourceItem = memo(({ source, onRemove }: SourceItemProps) => {
   )
 })
 
-SourceItem.displayName = 'SourceItem'
+SourceItem.displayName = "SourceItem"
 
 interface ModelItemProps {
   m: (typeof models)[0]
@@ -152,12 +160,19 @@ interface ModelItemProps {
 const ModelItem = memo(({ m, selectedModel, onSelect }: ModelItemProps) => {
   const handleSelect = useCallback(() => onSelect(m.id), [onSelect, m.id])
   return (
-    <ModelSelectorItem key={m.id} onSelect={handleSelect} value={m.id}>
+    <ModelSelectorItem
+      key={m.id}
+      onSelect={handleSelect}
+      value={m.id}
+    >
       <ModelSelectorLogo provider={m.chefSlug} />
       <ModelSelectorName>{m.name}</ModelSelectorName>
       <ModelSelectorLogoGroup>
         {m.providers.map((provider) => (
-          <ModelSelectorLogo key={provider} provider={provider} />
+          <ModelSelectorLogo
+            key={provider}
+            provider={provider}
+          />
         ))}
       </ModelSelectorLogoGroup>
       {selectedModel === m.id ? (
@@ -169,7 +184,7 @@ const ModelItem = memo(({ m, selectedModel, onSelect }: ModelItemProps) => {
   )
 })
 
-ModelItem.displayName = 'ModelItem'
+ModelItem.displayName = "ModelItem"
 
 interface SourceCommandItemProps {
   source: SourceDocumentUIPart
@@ -192,41 +207,41 @@ const SourceCommandItem = memo(({ source, onAdd }: SourceCommandItemProps) => {
   )
 })
 
-SourceCommandItem.displayName = 'SourceCommandItem'
+SourceCommandItem.displayName = "SourceCommandItem"
 
 const sampleSources: SourceDocumentUIPart[] = [
   {
-    filename: 'packages/elements/src',
-    mediaType: 'text/plain',
-    sourceId: '1',
-    title: 'prompt-input.tsx',
-    type: 'source-document',
+    filename: "packages/elements/src",
+    mediaType: "text/plain",
+    sourceId: "1",
+    title: "prompt-input.tsx",
+    type: "source-document",
   },
   {
-    filename: 'apps/test/app/examples',
-    mediaType: 'text/plain',
-    sourceId: '2',
-    title: 'queue.tsx',
-    type: 'source-document',
+    filename: "apps/test/app/examples",
+    mediaType: "text/plain",
+    sourceId: "2",
+    title: "queue.tsx",
+    type: "source-document",
   },
   {
-    filename: 'packages/elements/src',
-    mediaType: 'text/plain',
-    sourceId: '3',
-    title: 'queue.tsx',
-    type: 'source-document',
+    filename: "packages/elements/src",
+    mediaType: "text/plain",
+    sourceId: "3",
+    title: "queue.tsx",
+    type: "source-document",
   },
 ]
 
 const sampleTabs = {
-  active: [{ path: 'packages/elements/src/task-queue-panel.tsx' }],
+  active: [{ path: "packages/elements/src/task-queue-panel.tsx" }],
   recents: [
-    { path: 'apps/test/app/examples/task-queue-panel.tsx' },
-    { path: 'apps/test/app/page.tsx' },
-    { path: 'packages/elements/src/task.tsx' },
-    { path: 'apps/test/app/examples/prompt-input.tsx' },
-    { path: 'packages/elements/src/queue.tsx' },
-    { path: 'apps/test/app/examples/queue.tsx' },
+    { path: "apps/test/app/examples/task-queue-panel.tsx" },
+    { path: "apps/test/app/page.tsx" },
+    { path: "packages/elements/src/task.tsx" },
+    { path: "apps/test/app/examples/prompt-input.tsx" },
+    { path: "packages/elements/src/queue.tsx" },
+    { path: "apps/test/app/examples/queue.tsx" },
   ],
 }
 
@@ -329,8 +344,8 @@ const Example = () => {
   const [model, setModel] = useState<string>(models[0].id)
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
   const [status, setStatus] = useState<
-    'submitted' | 'streaming' | 'ready' | 'error'
-  >('ready')
+    "submitted" | "streaming" | "ready" | "error"
+  >("ready")
 
   const selectedModelData = models.find((m) => m.id === model)
 
@@ -347,21 +362,25 @@ const Example = () => {
       return
     }
 
-    setStatus('submitted')
+    setStatus("submitted")
 
     setTimeout(() => {
-      setStatus('streaming')
+      setStatus("streaming")
     }, SUBMITTING_TIMEOUT)
 
     setTimeout(() => {
-      setStatus('ready')
+      setStatus("ready")
     }, STREAMING_TIMEOUT)
   }, [])
 
   return (
     <div className="flex size-full flex-col justify-end">
       <PromptInputProvider>
-        <PromptInput globalDrop multiple onSubmit={handleSubmit}>
+        <PromptInput
+          globalDrop
+          multiple
+          onSubmit={handleSubmit}
+        >
           <PromptInputHeader>
             <PromptInputHoverCard>
               <PromptInputHoverCardTrigger>
@@ -370,7 +389,10 @@ const Example = () => {
                   size="icon-sm"
                   variant="outline"
                 >
-                  <AtSignIcon className="text-muted-foreground" size={12} />
+                  <AtSignIcon
+                    className="text-muted-foreground"
+                    size={12}
+                  />
                 </PromptInputButton>
               </PromptInputHoverCardTrigger>
               <PromptInputHoverCardContent className="w-[400px] p-0">
@@ -379,8 +401,14 @@ const Example = () => {
             </PromptInputHoverCard>
             <PromptInputHoverCard>
               <PromptInputHoverCardTrigger>
-                <PromptInputButton size="sm" variant="outline">
-                  <RulerIcon className="text-muted-foreground" size={12} />
+                <PromptInputButton
+                  size="sm"
+                  variant="outline"
+                >
+                  <RulerIcon
+                    className="text-muted-foreground"
+                    size={12}
+                  />
                   <span>1</span>
                 </PromptInputButton>
               </PromptInputHoverCardTrigger>
@@ -401,8 +429,14 @@ const Example = () => {
             </PromptInputHoverCard>
             <PromptInputHoverCard>
               <PromptInputHoverCardTrigger>
-                <PromptInputButton size="sm" variant="outline">
-                  <FilesIcon className="text-muted-foreground" size={12} />
+                <PromptInputButton
+                  size="sm"
+                  variant="outline"
+                >
+                  <FilesIcon
+                    className="text-muted-foreground"
+                    size={12}
+                  />
                   <span>1 Tab</span>
                 </PromptInputButton>
               </PromptInputHoverCardTrigger>
@@ -412,8 +446,14 @@ const Example = () => {
                   <PromptInputTabBody>
                     {sampleTabs.active.map((tab) => (
                       <PromptInputTabItem key={tab.path}>
-                        <GlobeIcon className="text-primary" size={16} />
-                        <span className="truncate" dir="rtl">
+                        <GlobeIcon
+                          className="text-primary"
+                          size={16}
+                        />
+                        <span
+                          className="truncate"
+                          dir="rtl"
+                        >
                           {tab.path}
                         </span>
                       </PromptInputTabItem>
@@ -425,8 +465,14 @@ const Example = () => {
                   <PromptInputTabBody>
                     {sampleTabs.recents.map((tab) => (
                       <PromptInputTabItem key={tab.path}>
-                        <GlobeIcon className="text-primary" size={16} />
-                        <span className="truncate" dir="rtl">
+                        <GlobeIcon
+                          className="text-primary"
+                          size={16}
+                        />
+                        <span
+                          className="truncate"
+                          dir="rtl"
+                        >
                           {tab.path}
                         </span>
                       </PromptInputTabItem>
@@ -468,8 +514,11 @@ const Example = () => {
                   <ModelSelectorInput placeholder="Search models..." />
                   <ModelSelectorList>
                     <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
-                    {['OpenAI', 'Anthropic', 'Google'].map((chef) => (
-                      <ModelSelectorGroup heading={chef} key={chef}>
+                    {["OpenAI", "Anthropic", "Google"].map((chef) => (
+                      <ModelSelectorGroup
+                        heading={chef}
+                        key={chef}
+                      >
                         {models
                           .filter((m) => m.chef === chef)
                           .map((m) => (
@@ -487,10 +536,19 @@ const Example = () => {
               </ModelSelector>
             </PromptInputTools>
             <div className="flex items-center gap-2">
-              <Button size="icon-sm" variant="ghost">
-                <ImageIcon className="text-muted-foreground" size={16} />
+              <Button
+                size="icon-sm"
+                variant="ghost"
+              >
+                <ImageIcon
+                  className="text-muted-foreground"
+                  size={16}
+                />
               </Button>
-              <PromptInputSubmit className="!h-8" status={status} />
+              <PromptInputSubmit
+                className="!h-8"
+                status={status}
+              />
             </div>
           </PromptInputFooter>
         </PromptInput>

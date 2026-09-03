@@ -1,4 +1,4 @@
-import { TokenizerInterface } from './tokenizer'
+import { TokenizerInterface } from "./tokenizer"
 
 function splitParagraphs(text: string): string[] {
   return text
@@ -40,7 +40,7 @@ async function splitOversizedUnit(
     return [unit]
   }
 
-  return await packUnits(words, maxTokens, 0, tokenizer, ' ')
+  return await packUnits(words, maxTokens, 0, tokenizer, " ")
 }
 
 async function buildOverlapTail(
@@ -73,7 +73,7 @@ async function packUnits(
   targetTokens: number,
   overlapTokens: number,
   tokenizer: TokenizerInterface,
-  joiner = '\n\n',
+  joiner = "\n\n",
 ): Promise<string[]> {
   const chunks: string[] = []
   let currentUnits: string[] = []

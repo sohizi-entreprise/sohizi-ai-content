@@ -76,7 +76,10 @@ function RenderMessages({ messages }: { messages: Array<Message> }) {
   return (
     <div className="flex flex-col gap-4">
       {messages.map((msg) => (
-        <ChatBuble key={msg.id} data={msg} />
+        <ChatBuble
+          key={msg.id}
+          data={msg}
+        />
       ))}
     </div>
   )

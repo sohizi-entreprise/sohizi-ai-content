@@ -1,5 +1,5 @@
-import { CREDIT_RATE, TOKEN_OVERHEAD_RATE } from './constants'
-import { ModelBasePricing, TextTokenUsage } from '@/type'
+import { CREDIT_RATE, TOKEN_OVERHEAD_RATE } from "./constants"
+import { ModelBasePricing, TextTokenUsage } from "@/type"
 
 type PricedModel = {
   name: string
@@ -7,12 +7,12 @@ type PricedModel = {
 }
 
 type BillingUnit =
-  | 'text'
-  | 'image'
-  | 'video/second'
-  | 'audio/minute'
-  | 'audio/1k characters'
-  | 'audio/generation'
+  | "text"
+  | "image"
+  | "video/second"
+  | "audio/minute"
+  | "audio/1k characters"
+  | "audio/generation"
 
 const TOKENS_PER_PRICING_UNIT = 1_000_000
 
@@ -40,9 +40,9 @@ export const applyPriceMultiplier = (
     return pricing
   }
 
-  if (pricing.unit === 'per_1m_tokens') {
+  if (pricing.unit === "per_1m_tokens") {
     return {
-      unit: 'per_1m_tokens',
+      unit: "per_1m_tokens",
       input: pricing.input * multiplier,
       output: pricing.output * multiplier,
       ...(pricing.cached_input != null
@@ -51,7 +51,7 @@ export const applyPriceMultiplier = (
     }
   }
 
-  return { unit: 'per_inference', rate: pricing.rate * multiplier }
+  return { unit: "per_inference", rate: pricing.rate * multiplier }
 }
 
 export const rawProviderCost = (
@@ -60,7 +60,7 @@ export const rawProviderCost = (
   usage: TextTokenUsage,
   priceMultiplier = 1,
 ) => {
-  if (unit !== 'text') {
+  if (unit !== "text") {
     throw new Error(`Unsupported billing unit: ${unit}`)
   }
 
@@ -100,14 +100,14 @@ export const calculateTextProviderCost = (
   usage: TextTokenUsage,
   priceMultiplier = 1,
 ) => {
-  if (pricing.unit !== 'per_1m_tokens') {
+  if (pricing.unit !== "per_1m_tokens") {
     throw new Error(
       `Unsupported pricing unit for text billing: ${pricing.unit}`,
     )
   }
 
   const effective = applyPriceMultiplier(pricing, priceMultiplier)
-  if (effective.unit !== 'per_1m_tokens') {
+  if (effective.unit !== "per_1m_tokens") {
     throw new Error(
       `Unsupported pricing unit for text billing: ${effective.unit}`,
     )
@@ -137,7 +137,7 @@ export const calculateTextCredits = (
 ) => {
   const rawCostUsd = rawProviderCost(
     model,
-    'text',
+    "text",
     usage,
     options.priceMultiplier ?? 1,
   )

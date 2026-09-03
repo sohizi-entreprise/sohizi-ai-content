@@ -1,11 +1,7 @@
 import { Clapperboard, Files, Play, Sparkles } from "lucide-react"
 import { Link, useParams, useRouterState } from "@tanstack/react-router"
 import { cn } from "@/lib/utils"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@sohizi/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"
 import { useEditorStore } from "@/features/editor/stores/editor-store"
 
 const ITEMS = [

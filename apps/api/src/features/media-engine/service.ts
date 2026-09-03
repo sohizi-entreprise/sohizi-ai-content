@@ -1,33 +1,33 @@
-import * as repo from './repo'
-import * as storage from './storage'
-import type { GetUploadUrlInput, uploadSuccessSchema } from './schema'
-import { BadRequest, Forbidden, NotFound } from '../error'
-import { getProjectById } from '../project/repo'
-import z from 'zod'
+import * as repo from "./repo"
+import * as storage from "./storage"
+import type { GetUploadUrlInput, uploadSuccessSchema } from "./schema"
+import { BadRequest, Forbidden, NotFound } from "../error"
+import { getProjectById } from "../project/repo"
+import z from "zod"
 import {
   getFileNodeById,
   listDirectoryFiles,
   ORDER_GAP,
-} from '../file-system/repo'
-import { AssetType, CursorPaginationOptions } from '@/type'
-import { broadcastCancellation } from '../generation-request/abort-manager'
-import { v4 as uuidv4 } from 'uuid'
+} from "../file-system/repo"
+import { AssetType, CursorPaginationOptions } from "@/type"
+import { broadcastCancellation } from "../generation-request/abort-manager"
+import { v4 as uuidv4 } from "uuid"
 import {
   decrementKey,
   incrementKey,
   markStreamActive,
   removeStreamActive,
   streamChunksAsSse,
-} from '../generation-request/stream-handler'
-import { getErrorMessage } from '@/utils/get-error-message'
-import { ZipArchive } from 'archiver'
-import { PassThrough, Readable } from 'node:stream'
-import { inngest } from '@/lib/inngest/client'
+} from "../generation-request/stream-handler"
+import { getErrorMessage } from "@/utils/get-error-message"
+import { ZipArchive } from "archiver"
+import { PassThrough, Readable } from "node:stream"
+import { inngest } from "@/lib/inngest/client"
 
 export async function getUploadUrl(projectId: string, data: GetUploadUrlInput) {
   const project = await getProjectById(projectId)
   if (!project) {
-    throw new NotFound('Project not found')
+    throw new NotFound("Project not found")
   }
 
   try {
@@ -37,27 +37,27 @@ export async function getUploadUrl(projectId: string, data: GetUploadUrlInput) {
     // Check if the file already exists
     const fileExists = await storage.fileExists(storageKey)
     if (fileExists) {
-      throw new BadRequest('File already exists')
+      throw new BadRequest("File already exists")
     }
 
     return { url, storageKey, maxSizeInBytes }
   } catch (error) {
     console.error(error)
-    throw new BadRequest('Failed to generate signed upload url')
+    throw new BadRequest("Failed to generate signed upload url")
   }
 }
 
 export async function getDownloadUrl(projectId: string, assetId: string) {
   const asset = await repo.getAssetById(projectId, assetId)
   if (!asset) {
-    throw new NotFound('Asset not found')
+    throw new NotFound("Asset not found")
   }
 
   try {
     return await storage.generateSignedDownloadUrl(asset.storageKey, asset.name)
   } catch (error) {
     console.error(error)
-    throw new BadRequest('Failed to generate signed download url')
+    throw new BadRequest("Failed to generate signed download url")
   }
 }
 
@@ -69,7 +69,7 @@ export async function uploadSuccess(
   let uploadfolderId = folderId
   const project = await getProjectById(projectId)
   if (!project) {
-    throw new NotFound('Project not found')
+    throw new NotFound("Project not found")
   }
   if (!folderId) {
     const { uploadsFolder } = await repo.getAssetFolder(projectId)
@@ -77,18 +77,18 @@ export async function uploadSuccess(
   } else {
     const folder = await getFileNodeById(projectId, folderId)
     if (!folder || !folder.directory) {
-      throw new BadRequest('Required a folder to upload the file to')
+      throw new BadRequest("Required a folder to upload the file to")
     }
     uploadfolderId = folder.id
   }
 
   if (!uploadfolderId) {
-    throw new NotFound('Folder not found')
+    throw new NotFound("Folder not found")
   }
 
   const fileExists = await storage.fileExists(storageKey)
   if (!fileExists) {
-    throw new NotFound('File not found')
+    throw new NotFound("File not found")
   }
 
   const fileMetadata = await storage.getFileMetadata(data.storageKey)
@@ -97,14 +97,14 @@ export async function uploadSuccess(
     storage.getMaxUploadSizeInBytes(fileMetadata.contentType)
   ) {
     await storage.deleteFile(storageKey)
-    throw new BadRequest('Uploaded file exceeds the maximum allowed size')
+    throw new BadRequest("Uploaded file exceeds the maximum allowed size")
   }
 
   const fileName = getFileName(storageKey)
   const siblingsFiles = await listDirectoryFiles(projectId, uploadfolderId)
   const isOverwrite = siblingsFiles.some((file) => file.name === fileName)
   if (siblingsFiles.length >= 100 && !isOverwrite) {
-    throw new BadRequest('Maximum number of files reached in the folder')
+    throw new BadRequest("Maximum number of files reached in the folder")
   }
 
   // save the asset to the database
@@ -116,7 +116,7 @@ export async function uploadSuccess(
       name: fileName,
       type: storage.classifyContentType(fileMetadata.contentType).assetType,
       url: storage.buildPublicUrl(storageKey),
-      source: 'user-uploaded',
+      source: "user-uploaded",
       folderId: uploadfolderId,
       metadata: fileMetadata,
       storageKey,
@@ -125,16 +125,16 @@ export async function uploadSuccess(
     return response
   } catch (error) {
     console.error(error)
-    throw new BadRequest('Failed to create asset with file node')
+    throw new BadRequest("Failed to create asset with file node")
   }
 }
 
 export const assetRequestSchema = z.object({
   model: z.string(),
-  prompt: z.string().default(''),
+  prompt: z.string().default(""),
   settings: z.record(z.string(), z.any()),
   context: z.record(z.string(), z.any()),
-  runMode: z.enum(['agent', 'direct']).default('direct'),
+  runMode: z.enum(["agent", "direct"]).default("direct"),
 })
 
 export type RunAgentPayload = {
@@ -165,7 +165,7 @@ export const generateAsset = async (payload: RunAgentPayload) => {
 
 export const cancelGeneration = async (requestId: string) => {
   await broadcastCancellation(requestId)
-  await repo.updateAssetRequest(requestId, { status: 'aborted' })
+  await repo.updateAssetRequest(requestId, { status: "aborted" })
   await removeStreamActive(requestId)
   // Cancel any running inngest job
   return { ok: true, error: null }
@@ -177,7 +177,7 @@ export const deleteGenerationRequest = async (
 ) => {
   const deleted = await repo.deleteAssetRequest(projectId, requestId)
   if (!deleted) {
-    throw new NotFound('Generation request not found')
+    throw new NotFound("Generation request not found")
   }
   return { ok: true }
 }
@@ -192,7 +192,7 @@ async function runAiGeneration(payload: RunAgentPayload & { runId: string }) {
     runMode: payload.runMode,
   }
   try {
-    await repo.updateAssetRequest(runId, { status: 'processing', request })
+    await repo.updateAssetRequest(runId, { status: "processing", request })
 
     const jobPayload = {
       ...request.settings,
@@ -200,7 +200,7 @@ async function runAiGeneration(payload: RunAgentPayload & { runId: string }) {
     }
 
     await inngest.send({
-      name: 'media/generate',
+      name: "media/generate",
       data: {
         requestId: runId,
         projectId: projectId,
@@ -217,8 +217,8 @@ async function runAiGeneration(payload: RunAgentPayload & { runId: string }) {
   } catch (error) {
     console.error(error)
     await repo.updateAssetRequest(runId, {
-      status: 'failed',
-      error: getErrorMessage(error, 'Completion failed'),
+      status: "failed",
+      error: getErrorMessage(error, "Completion failed"),
     })
     const remaining = await decrementKey(runId)
     if (remaining === 0) {
@@ -263,10 +263,10 @@ export const updateHtmlAssetValues = async (
 ) => {
   const asset = await repo.getAssetById(projectId, assetId)
   if (!asset) {
-    throw new NotFound('Asset not found')
+    throw new NotFound("Asset not found")
   }
-  if (asset.type !== 'html') {
-    throw new BadRequest('Only HTML assets support composition values')
+  if (asset.type !== "html") {
+    throw new BadRequest("Only HTML assets support composition values")
   }
 
   const updated = await repo.updateAssetMetadataValues(
@@ -275,7 +275,7 @@ export const updateHtmlAssetValues = async (
     values,
   )
   if (!updated) {
-    throw new NotFound('Asset not found')
+    throw new NotFound("Asset not found")
   }
 
   return updated
@@ -289,12 +289,12 @@ export const attachAssetToFileNode = async (
   const asset = await repo.getAssetById(projectId, assetId)
   if (!asset || asset.fileNodeId) {
     throw new Forbidden(
-      'Asset does not exist or already attached to a file node',
+      "Asset does not exist or already attached to a file node",
     )
   }
   const folder = await getFileNodeById(projectId, folderId)
   if (!folder || !folder.directory) {
-    throw new Forbidden('Folder does not exist or is not a directory')
+    throw new Forbidden("Folder does not exist or is not a directory")
   }
 
   return await repo.attachAssetToFileNode({ projectId, assetId, folderId })
@@ -321,13 +321,13 @@ export const attachAssetsToFileNodes = async (
   const attachedAsset = selectedAssets.find((asset) => asset.fileNodeId)
   if (attachedAsset) {
     throw new Forbidden(
-      'One or more assets are already attached to a file node',
+      "One or more assets are already attached to a file node",
     )
   }
 
   const folder = await getFileNodeById(projectId, folderId)
   if (!folder || !folder.directory) {
-    throw new Forbidden('Folder does not exist or is not a directory')
+    throw new Forbidden("Folder does not exist or is not a directory")
   }
 
   return await repo.attachAssetsToFileNodes({
@@ -354,7 +354,7 @@ export const downloadAssetsZip = async (
 
   const archive = new ZipArchive({ zlib: { level: 9 } })
   const output = new PassThrough()
-  archive.on('error', (error: Error) => output.destroy(error))
+  archive.on("error", (error: Error) => output.destroy(error))
   archive.pipe(output)
 
   void (async () => {
@@ -369,21 +369,21 @@ export const downloadAssetsZip = async (
       await archive.finalize()
     } catch (error) {
       output.destroy(
-        error instanceof Error ? error : new Error('Failed to build zip file'),
+        error instanceof Error ? error : new Error("Failed to build zip file"),
       )
     }
   })()
 
   return new Response(Readable.toWeb(output) as unknown as BodyInit, {
     headers: {
-      'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="generated-assets.zip"`,
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="generated-assets.zip"`,
     },
   })
 }
 
 function getFileName(storageKey: string): string {
-  const name = storageKey.split('/').pop() || 'new-asset-file'
+  const name = storageKey.split("/").pop() || "new-asset-file"
   return name
 }
 
@@ -393,19 +393,19 @@ function normalizeAssetIds(assetIds: string[]) {
 
 async function getAssetsForBulkAction(projectId: string, assetIds: string[]) {
   if (assetIds.length === 0) {
-    throw new BadRequest('At least one asset is required')
+    throw new BadRequest("At least one asset is required")
   }
 
   const selectedAssets = await repo.getAssetsByIds(projectId, assetIds)
   if (selectedAssets.length !== assetIds.length) {
-    throw new NotFound('One or more assets were not found')
+    throw new NotFound("One or more assets were not found")
   }
 
   return selectedAssets
 }
 
 function buildZipEntryName(fileName: string, usedNames: Map<string, number>) {
-  const sanitizedName = storage.sanitizeFileName(fileName) || 'asset'
+  const sanitizedName = storage.sanitizeFileName(fileName) || "asset"
   const currentCount = usedNames.get(sanitizedName) ?? 0
   usedNames.set(sanitizedName, currentCount + 1)
 
@@ -413,7 +413,7 @@ function buildZipEntryName(fileName: string, usedNames: Map<string, number>) {
     return sanitizedName
   }
 
-  const extensionIndex = sanitizedName.lastIndexOf('.')
+  const extensionIndex = sanitizedName.lastIndexOf(".")
   if (extensionIndex <= 0) {
     return `${sanitizedName}-${currentCount + 1}`
   }
@@ -423,14 +423,14 @@ function buildZipEntryName(fileName: string, usedNames: Map<string, number>) {
 
 function toProviderMediaType(
   context: Record<string, unknown>,
-): 'image' | 'video' | 'audio' {
+): "image" | "video" | "audio" {
   const mediaType = context.mediaType ?? context.generationType
-  if (mediaType === 'video') return 'video'
+  if (mediaType === "video") return "video"
   if (
-    mediaType === 'audio' ||
-    mediaType === 'music' ||
-    mediaType === 'dialogue'
+    mediaType === "audio" ||
+    mediaType === "music" ||
+    mediaType === "dialogue"
   )
-    return 'audio'
-  return 'image'
+    return "audio"
+  return "image"
 }

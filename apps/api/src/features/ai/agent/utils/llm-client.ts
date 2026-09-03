@@ -7,41 +7,41 @@ import {
   LanguageModelUsage,
   createDownload,
   type Experimental_DownloadFunction,
-} from 'ai'
-import { openai } from '@/lib/llm-providers'
-import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { z } from 'zod'
-import { LlmChunk, LlmCompleteChunk, streamEvents } from './llm-response'
-import { TokenUsage, CompleteReason } from '@/type'
+} from "ai"
+import { openai } from "@/lib/llm-providers"
+import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { z } from "zod"
+import { LlmChunk, LlmCompleteChunk, streamEvents } from "./llm-response"
+import { TokenUsage, CompleteReason } from "@/type"
 import type {
   Billable,
   BillableContext,
   BillableResult,
   BillableStream,
   Credits,
-} from '@/features/billing/types'
-import type { ResolvedVendorModel } from '@/features/models/repo'
+} from "@/features/billing/types"
+import type { ResolvedVendorModel } from "@/features/models/repo"
 import {
   calculateTextCredits,
   loaded_cost_usd,
   retail_price_usd,
   credits_to_charge,
-} from '@/features/billing/credits'
+} from "@/features/billing/credits"
 import {
   TOPUP_TARGET_MARGIN,
   PAYMENT_FEE_RESERVE,
   ESTIMATE_OVERBOOKING_FACTOR,
   TOKEN_OVERHEAD_RATE,
   CREDIT_RATE,
-} from '@/features/billing/constants'
-import { getErrorMessage } from '@/utils/get-error-message'
-import { simpleHash } from '@/utils/simple-hash'
+} from "@/features/billing/constants"
+import { getErrorMessage } from "@/utils/get-error-message"
+import { simpleHash } from "@/utils/simple-hash"
 
 export type ModelConfig = {
   tools?: ToolSet
   temperature?: number
-  reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high'
-  reasoningSummary?: 'auto' | 'none'
+  reasoningEffort?: "minimal" | "low" | "medium" | "high"
+  reasoningSummary?: "auto" | "none"
   maxRetries?: number
   maxOutputTokens?: number
   timeout?: number
@@ -51,12 +51,12 @@ const fetchUnsupportedUrl = createDownload()
 
 /** True for public YouTube hosts Gemini/OpenRouter accept as video_url. */
 function isYoutubeUrl(url: URL): boolean {
-  const host = url.hostname.replace(/^www\./, '').toLowerCase()
+  const host = url.hostname.replace(/^www\./, "").toLowerCase()
   return (
-    host === 'youtu.be' ||
-    host === 'youtube.com' ||
-    host === 'm.youtube.com' ||
-    host === 'music.youtube.com'
+    host === "youtu.be" ||
+    host === "youtube.com" ||
+    host === "m.youtube.com" ||
+    host === "music.youtube.com"
   )
 }
 
@@ -108,7 +108,7 @@ export class LlmClient {
     messages,
     abortSignal,
     outputSchema,
-  }: Omit<InvokeRequest, 'stream'>): AsyncGenerator<LlmChunk, void, unknown> {
+  }: Omit<InvokeRequest, "stream">): AsyncGenerator<LlmChunk, void, unknown> {
     const output =
       outputSchema instanceof z.ZodArray
         ? Output.array({ element: outputSchema.element })
@@ -156,8 +156,8 @@ export class LlmClient {
     } catch (error) {
       yield {
         type: streamEvents.complete,
-        text: '',
-        finishReason: 'error',
+        text: "",
+        finishReason: "error",
         error: getErrorMessage(error),
         usage: {
           input: 0,
@@ -176,7 +176,7 @@ export class LlmClient {
     messages,
     abortSignal,
     outputSchema,
-  }: Omit<InvokeRequest, 'stream'>): AsyncGenerator<LlmChunk, void, unknown> {
+  }: Omit<InvokeRequest, "stream">): AsyncGenerator<LlmChunk, void, unknown> {
     const output =
       outputSchema instanceof z.ZodArray
         ? Output.array({ element: outputSchema.element })
@@ -185,11 +185,11 @@ export class LlmClient {
           : undefined
 
     const modelConfig = this.modelConfig
-    let finishReason: CompleteReason = 'other'
+    let finishReason: CompleteReason = "other"
     let error: string | undefined
-    let text = ''
-    let reasoningText = ''
-    let toolDeltaBuffered = ''
+    let text = ""
+    let reasoningText = ""
+    let toolDeltaBuffered = ""
     let usage: TokenUsage = {
       input: 0,
       output: 0,
@@ -226,14 +226,14 @@ export class LlmClient {
       })
       for await (const chunk of response.stream) {
         switch (chunk.type) {
-          case 'text-delta':
+          case "text-delta":
             text += chunk.text
             yield {
               type: streamEvents.textDelta,
               text,
             }
             break
-          case 'reasoning-delta': {
+          case "reasoning-delta": {
             reasoningText += chunk.text
             yield {
               type: streamEvents.reasoningDelta,
@@ -241,15 +241,15 @@ export class LlmClient {
             }
             break
           }
-          case 'abort': {
-            if (finishReason !== 'error') {
-              finishReason = 'abort'
+          case "abort": {
+            if (finishReason !== "error") {
+              finishReason = "abort"
             }
             break
           }
-          case 'error': {
+          case "error": {
             error = getErrorMessage(chunk.error)
-            finishReason = 'error'
+            finishReason = "error"
             yield {
               type: streamEvents.error,
               error,
@@ -257,17 +257,17 @@ export class LlmClient {
             break
           }
 
-          case 'tool-input-start': {
+          case "tool-input-start": {
             yield {
               type: streamEvents.toolCallStart,
               toolCallId: chunk.id,
               toolName: chunk.toolName,
-              input: '',
+              input: "",
             }
             break
           }
 
-          case 'tool-input-delta': {
+          case "tool-input-delta": {
             toolDeltaBuffered += chunk.delta
             yield {
               type: streamEvents.toolCallDelta,
@@ -277,7 +277,7 @@ export class LlmClient {
             break
           }
 
-          case 'tool-input-end': {
+          case "tool-input-end": {
             yield {
               type: streamEvents.toolCallEnd,
               toolCallId: chunk.id,
@@ -285,7 +285,7 @@ export class LlmClient {
             break
           }
 
-          case 'tool-call': {
+          case "tool-call": {
             yield {
               type: streamEvents.toolCall,
               toolCallId: chunk.toolCallId,
@@ -314,7 +314,7 @@ export class LlmClient {
       }
     } catch (e) {
       error = getErrorMessage(e)
-      finishReason = 'error'
+      finishReason = "error"
       yield {
         type: streamEvents.error,
         error,
@@ -349,7 +349,7 @@ export class LlmClient {
     if (useOpenRouter) {
       const apiKey = process.env.OPENROUTER_API_KEY
       if (!apiKey) {
-        throw new Error('OPENROUTER_API_KEY is not set')
+        throw new Error("OPENROUTER_API_KEY is not set")
       }
       const openrouter = createOpenRouter({
         apiKey: process.env.OPENROUTER_API_KEY,
@@ -368,8 +368,8 @@ function withVideoUrlSupport<
   T extends { supportedUrls?: Record<string, RegExp[]> },
 >(model: T): T {
   const urls = model.supportedUrls ?? (model.supportedUrls = {})
-  if (!urls['video/*']?.length) {
-    urls['video/*'] = [/^https?:\/\/.+/i, /^data:video\//i]
+  if (!urls["video/*"]?.length) {
+    urls["video/*"] = [/^https?:\/\/.+/i, /^data:video\//i]
   }
   return model
 }
@@ -497,7 +497,7 @@ export function createBillableLlmClient(
       }
 
       if (!finalChunk) {
-        throw new Error('LLM invocation did not produce a complete chunk')
+        throw new Error("LLM invocation did not produce a complete chunk")
       }
 
       return {

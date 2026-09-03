@@ -143,7 +143,10 @@ function OrgSetupModal({
             This is your workspace where you'll create and manage projects.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleCreateOrg} className="space-y-4">
+        <form
+          onSubmit={handleCreateOrg}
+          className="space-y-4"
+        >
           <div className="space-y-2">
             <Label htmlFor="org-name">Organization Name</Label>
             <Input

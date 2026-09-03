@@ -3,20 +3,20 @@ import {
   MediaServiceUnavailableError,
   MediaValidationError,
   isMediaError,
-} from '@/features/media-engine/errors'
+} from "@/features/media-engine/errors"
 import {
   createProvider,
   type MediaProviderFactory,
-} from '@/features/media-engine/providers/factory'
+} from "@/features/media-engine/providers/factory"
 import type {
   GetRequestDataResponse,
   SubmitPayload,
-} from '@/features/media-engine/providers/type'
-import { mapVendorPayload } from '@/features/media-engine/providers/utils'
-import { listMediaRoutes } from './catalog'
-import { AllVendorsSaturatedError, NoRouteError } from './errors'
-import { limiter as defaultLimiter, type VendorLimiter } from './limiter'
-import type { RouteDecision, StickyDecision } from './types'
+} from "@/features/media-engine/providers/type"
+import { mapVendorPayload } from "@/features/media-engine/providers/utils"
+import { listMediaRoutes } from "./catalog"
+import { AllVendorsSaturatedError, NoRouteError } from "./errors"
+import { limiter as defaultLimiter, type VendorLimiter } from "./limiter"
+import type { RouteDecision, StickyDecision } from "./types"
 
 const MAX_FAILOVER_ATTEMPTS = 3
 
@@ -118,7 +118,7 @@ export async function submitWithFailover(
         decision.mappedPayload,
       )
       await vendorLimiter.release(decision.vendorName, options.requestId, {
-        outcome: 'submit_ok',
+        outcome: "submit_ok",
         cooldownMs: decision.cooldownMs,
       })
       return {
@@ -129,7 +129,7 @@ export async function submitWithFailover(
       lastError = error
       if (isFailoverError(error)) {
         await vendorLimiter.release(decision.vendorName, options.requestId, {
-          outcome: 'failure',
+          outcome: "failure",
           retryAfterMs: retryAfterMsFrom(error),
           cooldownMs: decision.cooldownMs,
         })
@@ -137,7 +137,7 @@ export async function submitWithFailover(
       }
 
       await vendorLimiter.release(decision.vendorName, options.requestId, {
-        outcome: 'none',
+        outcome: "none",
         cooldownMs: decision.cooldownMs,
       })
 

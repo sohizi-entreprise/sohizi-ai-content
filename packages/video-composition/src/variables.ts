@@ -8,7 +8,7 @@
  */
 
 export type CompositionVariableType =
-  'string' | 'number' | 'color' | 'boolean' | 'enum'
+  "string" | "number" | "color" | "boolean" | "enum"
 
 export interface CompositionVariableBase {
   id: string
@@ -18,14 +18,14 @@ export interface CompositionVariableBase {
 }
 
 export interface StringVariable extends CompositionVariableBase {
-  type: 'string'
+  type: "string"
   default: string
   placeholder?: string
   maxLength?: number
 }
 
 export interface NumberVariable extends CompositionVariableBase {
-  type: 'number'
+  type: "number"
   default: number
   min?: number
   max?: number
@@ -34,17 +34,17 @@ export interface NumberVariable extends CompositionVariableBase {
 }
 
 export interface ColorVariable extends CompositionVariableBase {
-  type: 'color'
+  type: "color"
   default: string
 }
 
 export interface BooleanVariable extends CompositionVariableBase {
-  type: 'boolean'
+  type: "boolean"
   default: boolean
 }
 
 export interface EnumVariable extends CompositionVariableBase {
-  type: 'enum'
+  type: "enum"
   default: string
   options: Array<{ value: string; label: string }>
 }
@@ -59,23 +59,23 @@ export type CompositionVariable =
 export type CompositionVariableValue = string | number | boolean
 
 export function isStringVariable(v: CompositionVariable): v is StringVariable {
-  return v.type === 'string'
+  return v.type === "string"
 }
 
 export function isNumberVariable(v: CompositionVariable): v is NumberVariable {
-  return v.type === 'number'
+  return v.type === "number"
 }
 
 export function isColorVariable(v: CompositionVariable): v is ColorVariable {
-  return v.type === 'color'
+  return v.type === "color"
 }
 
 export function isBooleanVariable(
   v: CompositionVariable,
 ): v is BooleanVariable {
-  return v.type === 'boolean'
+  return v.type === "boolean"
 }
 
 export function isEnumVariable(v: CompositionVariable): v is EnumVariable {
-  return v.type === 'enum'
+  return v.type === "enum"
 }

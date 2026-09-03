@@ -1,40 +1,40 @@
-import { z } from 'zod'
-import { buildLlmTool } from './tool-definition'
+import { z } from "zod"
+import { buildLlmTool } from "./tool-definition"
 
 const MAX_DURATION = 20 * 60 // 20 minutes
 
 export const imageAnalyzerTool = buildLlmTool({
-  name: 'imageAnalyzer',
+  name: "imageAnalyzer",
   description:
-    'Analyze an image by its URL and return a summary based on the instructions provided',
+    "Analyze an image by its URL and return a summary based on the instructions provided",
   inputSchema: z.object({
-    url: z.url().describe('The URL of the image to analyze'),
+    url: z.url().describe("The URL of the image to analyze"),
     instructions: z
       .string()
-      .describe('The instructions for the image analyzer'),
+      .describe("The instructions for the image analyzer"),
   }),
 
   config: {
-    modelId: 'google/gemini-3.1-flash-lite-preview',
+    modelId: "google/gemini-3.1-flash-lite-preview",
     modelConfig: {
       maxOutputTokens: 2000,
-      reasoningEffort: 'low',
+      reasoningEffort: "low",
     },
     buildInput: (data) => {
       return [
         {
-          role: 'system',
-          content: '',
+          role: "system",
+          content: "",
         },
         {
-          role: 'user',
+          role: "user",
           content: [
             {
-              type: 'text',
+              type: "text",
               text: data.instructions,
             },
             {
-              type: 'image',
+              type: "image",
               image: data.url,
             },
           ],
@@ -45,32 +45,32 @@ export const imageAnalyzerTool = buildLlmTool({
 })
 
 export const videoAnalyzerTool = buildLlmTool({
-  name: 'videoAnalyzer',
+  name: "videoAnalyzer",
   description:
-    'Analyze a video file by its URL and return a summary based on the instructions provided',
+    "Analyze a video file by its URL and return a summary based on the instructions provided",
   inputSchema: z.object({
-    url: z.url().describe('The URL of the video file to analyze'),
+    url: z.url().describe("The URL of the video file to analyze"),
     contentType: z
       .string()
-      .describe('The content type of the media file. e.g. video/mp4'),
+      .describe("The content type of the media file. e.g. video/mp4"),
     instructions: z
       .string()
-      .describe('The instructions for the video analyzer'),
+      .describe("The instructions for the video analyzer"),
     startSeconds: z
       .number()
       .optional()
-      .describe('The start time of the video to analyze in seconds'),
+      .describe("The start time of the video to analyze in seconds"),
     endSeconds: z
       .number()
       .optional()
-      .describe('The end time of the video to analyze in seconds'),
+      .describe("The end time of the video to analyze in seconds"),
   }),
 
   config: {
-    modelId: 'google/gemini-3.1-flash-lite-preview',
+    modelId: "google/gemini-3.1-flash-lite-preview",
     modelConfig: {
       maxOutputTokens: 2000,
-      reasoningEffort: 'low',
+      reasoningEffort: "low",
     },
     buildInput: (data) => {
       const startOffset = data.startSeconds ?? 0
@@ -80,19 +80,19 @@ export const videoAnalyzerTool = buildLlmTool({
       )
       return [
         {
-          role: 'system',
+          role: "system",
           content:
-            'Analyze a video file by its URL and return a summary based on the instructions provided',
+            "Analyze a video file by its URL and return a summary based on the instructions provided",
         },
         {
-          role: 'user',
+          role: "user",
           content: [
             {
-              type: 'text',
+              type: "text",
               text: data.instructions,
             },
             {
-              type: 'file',
+              type: "file",
               data: data.url,
               mediaType: data.contentType,
               providerOptions: {
@@ -113,29 +113,29 @@ export const videoAnalyzerTool = buildLlmTool({
 })
 
 export const youtubeAnalyzerTool = buildLlmTool({
-  name: 'youtubeAnalyzer',
+  name: "youtubeAnalyzer",
   description:
-    'Analyze a YouTube video by its URL and return a summary based on the instructions provided',
+    "Analyze a YouTube video by its URL and return a summary based on the instructions provided",
   inputSchema: z.object({
-    url: z.url().describe('The URL of the YouTube video to analyze'),
+    url: z.url().describe("The URL of the YouTube video to analyze"),
     instructions: z
       .string()
-      .describe('The instructions for the YouTube analyzer'),
+      .describe("The instructions for the YouTube analyzer"),
     startSeconds: z
       .number()
       .optional()
-      .describe('The start time of the video to analyze in seconds'),
+      .describe("The start time of the video to analyze in seconds"),
     endSeconds: z
       .number()
       .optional()
-      .describe('The end time of the video to analyze in seconds'),
+      .describe("The end time of the video to analyze in seconds"),
   }),
 
   config: {
-    modelId: 'google/gemini-3.1-flash-lite-preview',
+    modelId: "google/gemini-3.1-flash-lite-preview",
     modelConfig: {
       maxOutputTokens: 2000,
-      reasoningEffort: 'low',
+      reasoningEffort: "low",
     },
     buildInput: (data) => {
       const startOffset = data.startSeconds ?? 0
@@ -145,21 +145,21 @@ export const youtubeAnalyzerTool = buildLlmTool({
       )
       return [
         {
-          role: 'system',
+          role: "system",
           content:
-            'You are a helpful assistant that analyzes YouTube videos and returns a summary based on the instructions provided',
+            "You are a helpful assistant that analyzes YouTube videos and returns a summary based on the instructions provided",
         },
         {
-          role: 'user',
+          role: "user",
           content: [
             {
-              type: 'text',
+              type: "text",
               text: data.instructions, // `<instructions>${data.instructions}</instructions>\n<youtube_url>${data.url}</youtube_url>`
             },
             {
-              type: 'file',
+              type: "file",
               data: cleanYoutubeUrl(data.url),
-              mediaType: 'video/mp4',
+              mediaType: "video/mp4",
               providerOptions: {
                 google: {
                   videoMetadata: {
@@ -178,20 +178,20 @@ export const youtubeAnalyzerTool = buildLlmTool({
 })
 
 function cleanYoutubeUrl(url: string): string {
-  const decoded = url.replaceAll('&amp;', '&')
+  const decoded = url.replaceAll("&amp;", "&")
   try {
     const parsed = new URL(decoded)
-    const host = parsed.hostname.replace(/^www\./, '')
+    const host = parsed.hostname.replace(/^www\./, "")
 
     let videoId: string | null = null
-    if (host === 'youtu.be') {
-      videoId = parsed.pathname.slice(1).split('/')[0] || null
+    if (host === "youtu.be") {
+      videoId = parsed.pathname.slice(1).split("/")[0] || null
     } else if (
-      host === 'youtube.com' ||
-      host === 'm.youtube.com' ||
-      host === 'music.youtube.com'
+      host === "youtube.com" ||
+      host === "m.youtube.com" ||
+      host === "music.youtube.com"
     ) {
-      videoId = parsed.searchParams.get('v')
+      videoId = parsed.searchParams.get("v")
       if (!videoId) {
         const match = parsed.pathname.match(/^\/(embed|shorts|live)\/([^/?]+)/)
         videoId = match?.[2] ?? null

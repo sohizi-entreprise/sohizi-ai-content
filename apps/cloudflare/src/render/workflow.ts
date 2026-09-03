@@ -1,12 +1,12 @@
-import { WorkflowEntrypoint } from 'cloudflare:workers'
-import { NonRetryableError } from 'cloudflare:workflows'
-import { getContainer } from '@cloudflare/containers'
-import { readIntVar } from '../env'
-import { containerRenderStatusSchema } from './contracts'
-import { uploadStreamToR2 } from './r2-upload'
-import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers'
-import type { WorkerEnv } from '../env'
-import type { RenderWorkflowParams } from './contracts'
+import { WorkflowEntrypoint } from "cloudflare:workers"
+import { NonRetryableError } from "cloudflare:workflows"
+import { getContainer } from "@cloudflare/containers"
+import { readIntVar } from "../env"
+import { containerRenderStatusSchema } from "./contracts"
+import { uploadStreamToR2 } from "./r2-upload"
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers"
+import type { WorkerEnv } from "../env"
+import type { RenderWorkflowParams } from "./contracts"
 
 export type RenderWorkflowOutput = {
   outputKey: string
@@ -16,8 +16,8 @@ export type RenderWorkflowOutput = {
 }
 
 const CONTAINER_STEP_RETRIES = {
-  retries: { limit: 3, delay: '15 seconds', backoff: 'exponential' },
-  timeout: '10 minutes',
+  retries: { limit: 3, delay: "15 seconds", backoff: "exponential" },
+  timeout: "10 minutes",
 } as const
 
 /**
@@ -42,12 +42,12 @@ export class RenderWorkflow extends WorkflowEntrypoint<
       // A failed export must not leave its snapshot behind: the input document
       // can be megabytes and nothing reads it once the workflow is done.
       await step
-        .do('cleanup after failure', async () => {
+        .do("cleanup after failure", async () => {
           await this.env.R2_BUCKET.delete([params.inputKey, params.progressKey])
           return { cleaned: true }
         })
         .catch((cleanupError: unknown) => {
-          console.error('[render-workflow] cleanup failed:', cleanupError)
+          console.error("[render-workflow] cleanup failed:", cleanupError)
         })
       throw error
     }
@@ -68,7 +68,7 @@ export class RenderWorkflow extends WorkflowEntrypoint<
     })
     const maxPolls = Math.ceil((timeoutMinutes * 60) / pollIntervalSeconds)
 
-    await step.do('start render', CONTAINER_STEP_RETRIES, async () => {
+    await step.do("start render", CONTAINER_STEP_RETRIES, async () => {
       const input = await this.env.R2_BUCKET.get(params.inputKey)
       if (!input) {
         throw new NonRetryableError(
@@ -81,14 +81,14 @@ export class RenderWorkflow extends WorkflowEntrypoint<
       // which would break this step's retries.
       const snapshot = await input.text()
 
-      const response = await this.containerFetch(params.jobId, '/renders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await this.containerFetch(params.jobId, "/renders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: snapshot,
       })
 
       if (response.status !== 202 && response.status !== 200) {
-        throw await this.toStepError(response, 'Container rejected the render')
+        throw await this.toStepError(response, "Container rejected the render")
       }
       return { started: true }
     })
@@ -103,44 +103,44 @@ export class RenderWorkflow extends WorkflowEntrypoint<
           const response = await this.containerFetch(
             params.jobId,
             `/renders/${params.jobId}`,
-            { method: 'GET' },
+            { method: "GET" },
           )
           if (response.status === 404) {
             // The container was recycled mid-render. Restarting is cheaper than
             // failing the export.
-            throw new Error('Render job is no longer known to the container')
+            throw new Error("Render job is no longer known to the container")
           }
           if (!response.ok) {
             throw await this.toStepError(
               response,
-              'Container status check failed',
+              "Container status check failed",
             )
           }
           return containerRenderStatusSchema.parse(await response.json())
         },
       )
 
-      if (status.state === 'failed') {
+      if (status.state === "failed") {
         const message =
-          status.error?.message ?? 'Render failed inside container'
+          status.error?.message ?? "Render failed inside container"
         if (status.error?.retryable) throw new Error(message)
         throw new NonRetryableError(message)
       }
 
-      if (status.state === 'completed') {
+      if (status.state === "completed") {
         const stored = await step.do(
-          'store output',
+          "store output",
           CONTAINER_STEP_RETRIES,
           async () => {
             const response = await this.containerFetch(
               params.jobId,
               `/renders/${params.jobId}/output`,
-              { method: 'GET' },
+              { method: "GET" },
             )
             if (!response.ok || !response.body) {
               throw await this.toStepError(
                 response,
-                'Container did not return the rendered file',
+                "Container did not return the rendered file",
               )
             }
 
@@ -149,18 +149,18 @@ export class RenderWorkflow extends WorkflowEntrypoint<
               params.outputKey,
               response.body,
               {
-                contentType: 'video/mp4',
-                cacheControl: 'private, max-age=0, no-store',
+                contentType: "video/mp4",
+                cacheControl: "private, max-age=0, no-store",
               },
             )
             return { sizeInBytes }
           },
         )
 
-        await step.do('cleanup', async () => {
+        await step.do("cleanup", async () => {
           await this.env.R2_BUCKET.delete([params.inputKey, params.progressKey])
           await this.containerFetch(params.jobId, `/renders/${params.jobId}`, {
-            method: 'DELETE',
+            method: "DELETE",
           }).catch(() => undefined)
           return { cleaned: true }
         })
@@ -184,7 +184,7 @@ export class RenderWorkflow extends WorkflowEntrypoint<
               frameCount: params.frameCount,
               updatedAt: new Date().toISOString(),
             }),
-            { httpMetadata: { contentType: 'application/json' } },
+            { httpMetadata: { contentType: "application/json" } },
           )
           return { published: true }
         })
@@ -220,7 +220,7 @@ export class RenderWorkflow extends WorkflowEntrypoint<
     response: Response,
     summary: string,
   ): Promise<Error> {
-    const body = await response.text().catch(() => '')
+    const body = await response.text().catch(() => "")
     console.error(`[render-workflow] ${summary} (${response.status}): ${body}`)
     if (response.status >= 400 && response.status < 500) {
       return new NonRetryableError(`${summary} (${response.status})`)

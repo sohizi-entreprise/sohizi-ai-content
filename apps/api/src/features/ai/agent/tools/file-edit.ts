@@ -1,6 +1,6 @@
-import { z } from 'zod'
-import { buildBaseTool } from './tool-definition'
-import type { ToolResult } from './tool-definition'
+import { z } from "zod"
+import { buildBaseTool } from "./tool-definition"
+import type { ToolResult } from "./tool-definition"
 import {
   writeCommandSchema,
   patchCommandSchema,
@@ -9,17 +9,17 @@ import {
   copyCommandSchema,
   createCommandSchema,
   renameCommandSchema,
-} from './command-schema'
-import { FileContentPayload } from '@/features/file-system/objects/file'
-import * as fileSystemRepo from '@/features/file-system/repo'
-import { normalizeFileName } from '@/features/file-system/utils'
-import { failure, success } from './utils'
-import { getErrorMessage } from '@/utils/get-error-message'
-import { PatchOperation, RefreshOperation } from '@/type'
-import { Session } from '../core/session'
-import { FileFormat, fileFormat } from '@/features/file-system/constants'
+} from "./command-schema"
+import { FileContentPayload } from "@/features/file-system/objects/file"
+import * as fileSystemRepo from "@/features/file-system/repo"
+import { normalizeFileName } from "@/features/file-system/utils"
+import { failure, success } from "./utils"
+import { getErrorMessage } from "@/utils/get-error-message"
+import { PatchOperation, RefreshOperation } from "@/type"
+import { Session } from "../core/session"
+import { FileFormat, fileFormat } from "@/features/file-system/constants"
 
-const toolSchema = z.discriminatedUnion('cmd', [
+const toolSchema = z.discriminatedUnion("cmd", [
   writeCommandSchema,
   patchCommandSchema,
   deleteCommandSchema,
@@ -30,28 +30,28 @@ const toolSchema = z.discriminatedUnion('cmd', [
 ])
 
 export const editFileTool = buildBaseTool({
-  name: 'editFile',
+  name: "editFile",
   description:
-    'Performs modifications on the file system such as creating, deleting, moving and renaming file/directory, writing to file, pactching content, copying file content.',
+    "Performs modifications on the file system such as creating, deleting, moving and renaming file/directory, writing to file, pactching content, copying file content.",
   inputSchema: z.object({
     command: toolSchema,
   }),
   execute: async (input, { session }) => {
     const command = input.command
     switch (command.cmd) {
-      case 'write':
+      case "write":
         return executeWriteCommand(command, session)
-      case 'patch':
+      case "patch":
         return executePatchCommand(command, session)
-      case 'delete':
+      case "delete":
         return executeDeleteCommand(command, session)
-      case 'move':
+      case "move":
         return executeMoveCommand(command, session)
-      case 'copy':
+      case "copy":
         return executeCopyCommand(command, session)
-      case 'create-file':
+      case "create-file":
         return executeCreateCommand(command, session)
-      case 'rename':
+      case "rename":
         return executeRenameCommand(command, session)
       default:
         return failure(
@@ -86,21 +86,21 @@ async function executeWriteCommand(
     )
   }
 
-  let finalContent = ''
+  let finalContent = ""
   let newContentPayload: FileContentPayload | undefined
 
   const fileContent = await fileObject.getFileContent()
   if (!fileContent.ok || fileContent.data === null) {
     return failure(
-      fileContent.error || 'Failed to get the content of the file.',
+      fileContent.error || "Failed to get the content of the file.",
     )
   }
 
-  if (fileContent.data.type === 'markdown') {
+  if (fileContent.data.type === "markdown") {
     const currentContent = fileContent.data.data
     finalContent = buildContent(strategy, currentContent, content)
     newContentPayload = {
-      type: 'markdown',
+      type: "markdown",
       data: finalContent,
     }
   } else {
@@ -110,7 +110,7 @@ async function executeWriteCommand(
   }
 
   const operation: PatchOperation = {
-    type: 'patch',
+    type: "patch",
     content: finalContent,
     fileId: fileObject.id,
     fileName: fileObject.name,
@@ -150,11 +150,11 @@ async function executePatchCommand(
   const fileContent = await fileObject.getFileContent()
   if (!fileContent.ok || fileContent.data === null) {
     return failure(
-      fileContent.error || 'Failed to get the content of the file.',
+      fileContent.error || "Failed to get the content of the file.",
     )
   }
 
-  if (fileContent.data.type !== 'markdown') {
+  if (fileContent.data.type !== "markdown") {
     return failure(
       `The file content type ${fileContent.data.type} is not supported for editing.`,
     )
@@ -168,7 +168,7 @@ async function executePatchCommand(
   }
 
   const operation: PatchOperation = {
-    type: 'patch',
+    type: "patch",
     content: finalContent,
     fileName: fileObject.name,
     fileId: fileObject.id,
@@ -182,7 +182,7 @@ async function executePatchCommand(
 
   // We update the file cache to make sure that the next read operation will use the latest content.
   fileObject.updateFileContentCache({
-    type: 'markdown',
+    type: "markdown",
     data: finalContent,
   })
 
@@ -219,7 +219,7 @@ async function executeDeleteCommand(
     )
   }
   const operation: RefreshOperation = {
-    type: 'refresh',
+    type: "refresh",
     fileId: parent.id,
     fileName: parent.name,
   }
@@ -281,12 +281,12 @@ async function executeMoveCommand(
 
   const operation: RefreshOperation[] = [
     {
-      type: 'refresh',
+      type: "refresh",
       fileId: currentParent.id,
       fileName: currentParent.name,
     },
     {
-      type: 'refresh',
+      type: "refresh",
       fileId: newParentRef.id,
       fileName: newParentRef.name,
     },
@@ -323,12 +323,12 @@ async function executeCopyCommand(
 
   const operation: RefreshOperation[] = [
     {
-      type: 'refresh',
+      type: "refresh",
       fileId: sourceFileRef.id,
       fileName: sourceFileRef.name,
     },
     {
-      type: 'refresh',
+      type: "refresh",
       fileId: targetFileRef.id,
       fileName: targetFileRef.name,
     },
@@ -378,7 +378,7 @@ async function executeCreateCommand(
         parentId,
         position: 0,
         editable: true,
-        format: 'markdown',
+        format: "markdown",
       },
       anchorId,
       position.insertMode,
@@ -390,12 +390,12 @@ async function executeCreateCommand(
       )
     }
     const operation: RefreshOperation = {
-      type: 'refresh',
+      type: "refresh",
       fileId: parentFolder.id,
       fileName: parentFolder.name,
     }
 
-    let msg = `Created ${dir ? 'directory' : 'file'} [ID: ${newFileNode.id}]${dir ? '' : ' (format: ' + newFileNode.format + ')'} successfully.`
+    let msg = `Created ${dir ? "directory" : "file"} [ID: ${newFileNode.id}]${dir ? "" : " (format: " + newFileNode.format + ")"} successfully.`
     msg += `\nThe file name has been normalized to '${normalizedName}' to avoid special characters and spaces.`
 
     return success(msg, [operation])
@@ -425,7 +425,7 @@ async function executeRenameCommand(
     )
   }
   const operation: RefreshOperation = {
-    type: 'refresh',
+    type: "refresh",
     fileId: fileRef.id,
     fileName: fileRef.name,
   }
@@ -437,21 +437,21 @@ async function executeRenameCommand(
 function normalizeAndValidateName(name: string) {
   const normalizedName = normalizeFileName(name)
   if (!normalizedName) {
-    throw new Error('Invalid file name')
+    throw new Error("Invalid file name")
   }
 
   return normalizedName
 }
 
 function buildContent(
-  strategy: 'overwrite' | 'append',
+  strategy: "overwrite" | "append",
   currentContent: string,
   newContent: string,
 ): string {
-  if (strategy === 'overwrite') {
+  if (strategy === "overwrite") {
     return newContent
-  } else if (strategy === 'append') {
-    return currentContent + ' ' + newContent
+  } else if (strategy === "append") {
+    return currentContent + " " + newContent
   }
   return currentContent
 }

@@ -115,13 +115,13 @@ To support Firefox and Safari, provide an `onAudioRecorded` callback that sends 
 ```tsx
 const handleAudioRecorded = async (audioBlob: Blob): Promise<string> => {
   const formData = new FormData()
-  formData.append('file', audioBlob, 'audio.webm')
-  formData.append('model', 'whisper-1')
+  formData.append("file", audioBlob, "audio.webm")
+  formData.append("model", "whisper-1")
 
   const response = await fetch(
-    'https://api.openai.com/v1/audio/transcriptions',
+    "https://api.openai.com/v1/audio/transcriptions",
     {
-      method: 'POST',
+      method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },

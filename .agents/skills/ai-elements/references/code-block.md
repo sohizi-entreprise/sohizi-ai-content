@@ -24,11 +24,14 @@ import {
   CodeBlockFilename,
   CodeBlockHeader,
   CodeBlockTitle,
-} from '@/components/ai-elements/code-block'
-import { FileIcon } from 'lucide-react'
+} from "@/components/ai-elements/code-block"
+import { FileIcon } from "lucide-react"
 
 export const Example = () => (
-  <CodeBlock code={code} language="typescript">
+  <CodeBlock
+    code={code}
+    language="typescript"
+  >
     <CodeBlockHeader>
       <CodeBlockTitle>
         <FileIcon size={14} />

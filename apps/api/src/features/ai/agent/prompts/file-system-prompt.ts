@@ -1,17 +1,17 @@
-import { FILE_FORMATS } from '@/features/file-system/constants'
-import { formatFileTag } from '@/lib/file-tag'
+import { FILE_FORMATS } from "@/features/file-system/constants"
+import { formatFileTag } from "@/lib/file-tag"
 
 const fileTagExample = formatFileTag({
-  displayName: 'my-file',
-  fileId: '5p9477a5-3634-44ec-b47d-fa2e63bd74c4',
-  format: 'markdown',
+  displayName: "my-file",
+  fileId: "5p9477a5-3634-44ec-b47d-fa2e63bd74c4",
+  format: "markdown",
 })
 
 const chatCitationExample = formatFileTag({
-  displayName: 'my-file',
-  fileId: '5p9477a5-3634-44ec-b47d-fa2e63bd74c4',
-  format: 'markdown',
-  lines: 'L2-L5',
+  displayName: "my-file",
+  fileId: "5p9477a5-3634-44ec-b47d-fa2e63bd74c4",
+  format: "markdown",
+  lines: "L2-L5",
 })
 
 export const fileSystemPrompt = `
@@ -24,7 +24,7 @@ export const fileSystemPrompt = `
 - Maximum files per directory: 150
 
 ### File Formats
-Files use custom formats: ${FILE_FORMATS.join(', ')}
+Files use custom formats: ${FILE_FORMATS.join(", ")}
 
 | Format | Description | How to Work With It |
 |--------|-------------|---------------------|

@@ -26,9 +26,9 @@ npx ai-elements@latest add sandbox
 The Sandbox component integrates with the AI SDK's tool state to show code generation progress:
 
 ```tsx title="components/code-sandbox.tsx"
-'use client'
+"use client"
 
-import type { ToolUIPart } from 'ai'
+import type { ToolUIPart } from "ai"
 import {
   Sandbox,
   SandboxContent,
@@ -38,22 +38,22 @@ import {
   SandboxTabsBar,
   SandboxTabsList,
   SandboxTabsTrigger,
-} from '@/components/ai-elements/sandbox'
-import { CodeBlock } from '@/components/ai-elements/code-block'
+} from "@/components/ai-elements/sandbox"
+import { CodeBlock } from "@/components/ai-elements/code-block"
 
 type CodeSandboxProps = {
   toolPart: ToolUIPart
 }
 
 export const CodeSandbox = ({ toolPart }: CodeSandboxProps) => {
-  const code = toolPart.input?.code ?? ''
-  const output = toolPart.output?.logs ?? ''
+  const code = toolPart.input?.code ?? ""
+  const output = toolPart.output?.logs ?? ""
 
   return (
     <Sandbox>
       <SandboxHeader
         state={toolPart.state}
-        title={toolPart.input?.filename ?? 'code.tsx'}
+        title={toolPart.input?.filename ?? "code.tsx"}
       />
       <SandboxContent>
         <SandboxTabs defaultValue="code">
@@ -64,10 +64,16 @@ export const CodeSandbox = ({ toolPart }: CodeSandboxProps) => {
             </SandboxTabsList>
           </SandboxTabsBar>
           <SandboxTabContent value="code">
-            <CodeBlock code={code} language="tsx" />
+            <CodeBlock
+              code={code}
+              language="tsx"
+            />
           </SandboxTabContent>
           <SandboxTabContent value="output">
-            <CodeBlock code={output} language="log" />
+            <CodeBlock
+              code={output}
+              language="log"
+            />
           </SandboxTabContent>
         </SandboxTabs>
       </SandboxContent>

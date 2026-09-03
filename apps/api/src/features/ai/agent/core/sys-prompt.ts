@@ -1,6 +1,6 @@
-import { navigateContextPrompt } from '../prompts/navigate-context'
-import { fileSystemPrompt } from '../prompts/file-system-prompt'
-import { videoExplorerPrompt } from '../prompts/video-explorer-prompt'
+import { navigateContextPrompt } from "../prompts/navigate-context"
+import { fileSystemPrompt } from "../prompts/file-system-prompt"
+import { videoExplorerPrompt } from "../prompts/video-explorer-prompt"
 
 export const generateSystemPrompt = () => {
   return `

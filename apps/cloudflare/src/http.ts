@@ -1,11 +1,11 @@
 export type ErrorCode =
-  | 'bad_request'
-  | 'unauthorized'
-  | 'not_found'
-  | 'conflict'
-  | 'payload_too_large'
-  | 'method_not_allowed'
-  | 'internal_error'
+  | "bad_request"
+  | "unauthorized"
+  | "not_found"
+  | "conflict"
+  | "payload_too_large"
+  | "method_not_allowed"
+  | "internal_error"
 
 const STATUS_BY_CODE: Record<ErrorCode, number> = {
   bad_request: 400,
@@ -23,7 +23,7 @@ export class HttpError extends Error {
 
   constructor(code: ErrorCode, message: string, details?: unknown) {
     super(message)
-    this.name = 'HttpError'
+    this.name = "HttpError"
     this.code = code
     this.details = details
   }
@@ -37,7 +37,7 @@ export function json(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
     ...init,
     headers: {
-      'Content-Type': 'application/json; charset=utf-8',
+      "Content-Type": "application/json; charset=utf-8",
       ...init?.headers,
     },
   })
@@ -58,12 +58,12 @@ export function errorResponse(error: unknown): Response {
   }
 
   // Never leak stack traces or upstream messages to callers.
-  console.error('[worker] unhandled error:', error)
+  console.error("[worker] unhandled error:", error)
   return json(
     {
       error: {
-        code: 'internal_error',
-        message: 'Unexpected render service error',
+        code: "internal_error",
+        message: "Unexpected render service error",
       },
     },
     { status: 500 },
@@ -77,6 +77,6 @@ export function textResponse(
 ): Response {
   return new Response(body, {
     status,
-    headers: { 'Content-Type': 'text/plain; charset=utf-8', ...headers },
+    headers: { "Content-Type": "text/plain; charset=utf-8", ...headers },
   })
 }

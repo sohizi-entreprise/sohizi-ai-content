@@ -26,7 +26,10 @@ export function ChatContainer({ projectId, className }: ChatContainerProps) {
       <ChatHeader projectId={projectId} />
 
       {/* Messages */}
-      <ChatMessages projectId={projectId} className="flex-1 min-h-0" />
+      <ChatMessages
+        projectId={projectId}
+        className="flex-1 min-h-0"
+      />
 
       {/* Input */}
       <ChatInput projectId={projectId} />

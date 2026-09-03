@@ -1,6 +1,6 @@
-import { db } from '@/db'
-import { commands, type Command } from '@/db/schema'
-import { and, asc, eq, or, sql } from 'drizzle-orm'
+import { db } from "@/db"
+import { commands, type Command } from "@/db/schema"
+import { and, asc, eq, or, sql } from "drizzle-orm"
 
 const escapeLikePattern = (value: string) => {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`)

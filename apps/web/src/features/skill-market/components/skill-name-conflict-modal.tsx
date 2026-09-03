@@ -72,7 +72,10 @@ export function SkillNameConflictModal({
     !isFetching
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Skill already exists</DialogTitle>

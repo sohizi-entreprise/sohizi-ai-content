@@ -1,5 +1,5 @@
-import type { SubmitPayload } from '@/features/media-engine/providers/type'
-import type { VendorCircuitConfig, VendorRateLimit } from '@/type'
+import type { SubmitPayload } from "@/features/media-engine/providers/type"
+import type { VendorCircuitConfig, VendorRateLimit } from "@/type"
 
 export type MediaRoute = {
   modelId: string
@@ -28,13 +28,13 @@ export type StickyDecision = RouteDecision & {
 }
 
 export type AcquireReason =
-  'ok' | 'circuit_open' | 'concurrency' | 'rpm' | 'unavailable'
+  "ok" | "circuit_open" | "concurrency" | "rpm" | "unavailable"
 
 export type AcquireResult =
-  | { ok: true; reason: 'ok'; retryAfterMs: 0 }
-  | { ok: false; reason: Exclude<AcquireReason, 'ok'>; retryAfterMs: number }
+  | { ok: true; reason: "ok"; retryAfterMs: 0 }
+  | { ok: false; reason: Exclude<AcquireReason, "ok">; retryAfterMs: number }
 
-export type ReleaseOutcome = 'success' | 'failure' | 'none' | 'submit_ok'
+export type ReleaseOutcome = "success" | "failure" | "none" | "submit_ok"
 
 export type VendorLimits = VendorRateLimit &
   VendorCircuitConfig & {

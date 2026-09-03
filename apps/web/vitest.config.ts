@@ -1,12 +1,12 @@
-import { createRequire } from 'node:module'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vitest/config'
-import viteReact from '@vitejs/plugin-react'
-import viteTsConfigPaths from 'vite-tsconfig-paths'
+import { createRequire } from "node:module"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+import { defineConfig } from "vitest/config"
+import viteReact from "@vitejs/plugin-react"
+import viteTsConfigPaths from "vite-tsconfig-paths"
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
-const repoRoot = path.resolve(rootDir, '../..')
+const repoRoot = path.resolve(rootDir, "../..")
 const require = createRequire(import.meta.url)
 
 /**
@@ -17,20 +17,20 @@ const require = createRequire(import.meta.url)
 export default defineConfig({
   resolve: {
     alias: {
-      '@hyperframes/core': path.resolve(
-        path.dirname(require.resolve('@hyperframes/core/package.json')),
-        'dist/core.types.js',
+      "@hyperframes/core": path.resolve(
+        path.dirname(require.resolve("@hyperframes/core/package.json")),
+        "dist/core.types.js",
       ),
-      '@sohizi/video-composition': path.resolve(
+      "@sohizi/video-composition": path.resolve(
         repoRoot,
-        'packages/video-composition/src/index.ts',
+        "packages/video-composition/src/index.ts",
       ),
     },
-    dedupe: ['react', 'react-dom', 'remotion', '@remotion/captions'],
+    dedupe: ["react", "react-dom", "remotion", "@remotion/captions"],
   },
-  plugins: [viteTsConfigPaths({ projects: ['./tsconfig.json'] }), viteReact()],
+  plugins: [viteTsConfigPaths({ projects: ["./tsconfig.json"] }), viteReact()],
   test: {
-    environment: 'jsdom',
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    environment: "jsdom",
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
   },
 })

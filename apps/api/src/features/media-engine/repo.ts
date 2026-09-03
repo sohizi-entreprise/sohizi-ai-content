@@ -1,4 +1,4 @@
-import { db } from '@/db'
+import { db } from "@/db"
 import {
   assets,
   fileNodes,
@@ -13,7 +13,7 @@ import {
   llmModels,
   modelsAndCategories,
   modelCategories,
-} from '@/db/schema'
+} from "@/db/schema"
 import type {
   AssetType,
   AssetSource,
@@ -21,14 +21,14 @@ import type {
   CursorPaginationOptions,
   CursorPaginationResult,
   GenerationRequestStatus,
-} from '@/type'
-import { and, eq, desc, lt, isNull, max, inArray, or, sql } from 'drizzle-orm'
-import { ORDER_GAP } from '../file-system/repo'
+} from "@/type"
+import { and, eq, desc, lt, isNull, max, inArray, or, sql } from "drizzle-orm"
+import { ORDER_GAP } from "../file-system/repo"
 import {
   createGenerationRequest,
   deleteGenerationRequest,
   updateGenerationRequest,
-} from '../generation-request/repo'
+} from "../generation-request/repo"
 
 type CreateAssetPayload = {
   projectId: string
@@ -67,7 +67,7 @@ export const listUploadedAssets = async (
 
   const conditions = [
     eq(assets.projectId, projectId),
-    eq(assets.source, 'user-uploaded'),
+    eq(assets.source, "user-uploaded"),
   ]
   if (type) conditions.push(eq(assets.type, type))
   if (cursor) conditions.push(lt(assets.createdAt, new Date(cursor)))
@@ -120,7 +120,7 @@ export const createAssetWithFileNode = async (
 
     if (existingFileNode) {
       if (existingFileNode.directory) {
-        throw new Error('Cannot overwrite a directory with an asset')
+        throw new Error("Cannot overwrite a directory with an asset")
       }
 
       const updatedFileNodeResponse = await tx
@@ -163,7 +163,7 @@ export const createAssetWithFileNode = async (
         assetResponse[0] ??
         (await tx.insert(assets).values(assetPayload).returning())[0]
       if (!asset) {
-        throw new Error('Failed to upsert asset')
+        throw new Error("Failed to upsert asset")
       }
 
       return { asset, fileNode }
@@ -183,7 +183,7 @@ export const createAssetWithFileNode = async (
       .returning()
     const fileNode = fileNodeResponse[0]
     if (!fileNode) {
-      throw new Error('Failed to create file node')
+      throw new Error("Failed to create file node")
     }
     const assetPayload = {
       projectId,
@@ -201,7 +201,7 @@ export const createAssetWithFileNode = async (
       .returning()
     const asset = assetResponse[0]
     if (!asset) {
-      throw new Error('Failed to create asset')
+      throw new Error("Failed to create asset")
     }
     return { asset, fileNode }
   })
@@ -246,10 +246,10 @@ type ListAiGeneratedAssetsOptions = CursorPaginationOptions & {
 }
 
 const OPEN_GENERATION_STATUSES: GenerationRequestStatus[] = [
-  'pending',
-  'processing',
-  'failed',
-  'aborted',
+  "pending",
+  "processing",
+  "failed",
+  "aborted",
 ]
 
 export const listAiGeneratedAssets = async (
@@ -261,7 +261,7 @@ export const listAiGeneratedAssets = async (
 
   const conditions = [
     eq(generationRequests.projectId, projectId),
-    eq(generationRequests.type, 'media-generation'),
+    eq(generationRequests.type, "media-generation"),
   ]
   if (cursor)
     conditions.push(lt(generationRequests.createdAt, new Date(cursor)))
@@ -341,7 +341,7 @@ export const createAssetRequest = async (
   const result = await createGenerationRequest({
     projectId,
     userId,
-    type: 'media-generation',
+    type: "media-generation",
     request: requestPayload,
   })
 
@@ -402,7 +402,7 @@ export const listAssetRequestAssets = async (
 
   const conditions = [
     eq(generationRequests.projectId, projectId),
-    eq(generationRequests.type, 'media-generation'),
+    eq(generationRequests.type, "media-generation"),
   ]
   if (cursor) {
     conditions.push(lt(generationRequests.createdAt, new Date(cursor)))
@@ -438,7 +438,7 @@ export const getAssetFolder = async (projectId: string) => {
         eq(fileNodes.projectId, projectId),
         isNull(fileNodes.parentId),
         eq(fileNodes.directory, true),
-        eq(fileNodes.name, 'root'),
+        eq(fileNodes.name, "root"),
       ),
     )
   const rootFolder = rootResponse[0]
@@ -456,7 +456,7 @@ export const getAssetFolder = async (projectId: string) => {
         eq(fileNodes.projectId, projectId),
         eq(fileNodes.parentId, rootFolder.id),
         eq(fileNodes.directory, true),
-        eq(fileNodes.name, 'assets'),
+        eq(fileNodes.name, "assets"),
       ),
     )
   const assetsFolder = result[0]
@@ -474,7 +474,7 @@ export const getAssetFolder = async (projectId: string) => {
         eq(fileNodes.projectId, projectId),
         eq(fileNodes.parentId, assetsFolder.id),
         eq(fileNodes.directory, true),
-        eq(fileNodes.name, 'uploads'),
+        eq(fileNodes.name, "uploads"),
       ),
     )
   return {
@@ -568,7 +568,7 @@ export const attachAssetToFileNode = async ({
       .where(and(eq(assets.projectId, projectId), eq(assets.id, assetId)))
     const asset = res1[0]
     if (!asset) {
-      throw new Error('Asset not found')
+      throw new Error("Asset not found")
     }
     const resPos = await tx
       .select({
@@ -595,7 +595,7 @@ export const attachAssetToFileNode = async ({
       .returning()
     const fileNode = res2[0]
     if (!fileNode) {
-      throw new Error('Failed to create file node')
+      throw new Error("Failed to create file node")
     }
 
     await tx
@@ -655,13 +655,13 @@ export const attachAssetsToFileNodes = async ({
       .values(fileNodeRows)
       .returning()
     if (insertedFileNodes.length !== orderedAssets.length) {
-      throw new Error('Failed to create all file nodes')
+      throw new Error("Failed to create all file nodes")
     }
 
     for (const [index, asset] of orderedAssets.entries()) {
       const fileNode = insertedFileNodes[index]
       if (!fileNode) {
-        throw new Error('Failed to create file node')
+        throw new Error("Failed to create file node")
       }
 
       await tx
@@ -779,9 +779,9 @@ export const getModelSchema = async (modelId: string) => {
     string,
     {
       key: string
-      type: (typeof rows)[number]['type']
+      type: (typeof rows)[number]["type"]
       description: string | null
-      constraints: (typeof rows)[number]['constraints']
+      constraints: (typeof rows)[number]["constraints"]
       required: boolean
       options: string[]
     }

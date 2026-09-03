@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   AbsoluteFill,
   continueRender,
   delayRender,
   useCurrentFrame,
   useVideoConfig,
-} from 'remotion'
-import { prepareHtmlDocument } from './html-document'
-import type { HtmlClip } from './types'
+} from "remotion"
+import { prepareHtmlDocument } from "./html-document"
+import type { HtmlClip } from "./types"
 
 export const HyperframeSequence: React.FC<{ clip: HtmlClip }> = ({ clip }) => {
   const frame = useCurrentFrame()
@@ -37,7 +37,7 @@ export const HyperframeSequence: React.FC<{ clip: HtmlClip }> = ({ clip }) => {
         tl.seek(frame / fps)
       }
     } catch (err) {
-      console.warn('Hyperframes sync waiting for iframe:', err)
+      console.warn("Hyperframes sync waiting for iframe:", err)
     }
   }, [frame, fps, clip.id])
 
@@ -47,16 +47,16 @@ export const HyperframeSequence: React.FC<{ clip: HtmlClip }> = ({ clip }) => {
   )
 
   return (
-    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           left: `${clip.xRatio * 100}%`,
           top: `${clip.yRatio * 100}%`,
           width: `${clip.widthRatio * 100}%`,
           height: `${clip.heightRatio * 100}%`,
-          transform: 'translate(-50%, -50%)',
-          overflow: 'hidden',
+          transform: "translate(-50%, -50%)",
+          overflow: "hidden",
         }}
       >
         <iframe
@@ -64,10 +64,10 @@ export const HyperframeSequence: React.FC<{ clip: HtmlClip }> = ({ clip }) => {
           srcDoc={srcDoc}
           onLoad={handleLoad}
           style={{
-            width: '100%',
-            height: '100%',
-            border: 'none',
-            pointerEvents: 'none',
+            width: "100%",
+            height: "100%",
+            border: "none",
+            pointerEvents: "none",
           }}
           sandbox="allow-scripts allow-same-origin"
         />

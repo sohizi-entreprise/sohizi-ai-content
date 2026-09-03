@@ -21,47 +21,47 @@ abstract class BaseError extends Error {
 
 export class NotFound extends BaseError {
   readonly status = 404
-  constructor(message: string = 'Not Found') {
+  constructor(message: string = "Not Found") {
     super(message)
   }
 }
 
 export class BadRequest extends BaseError {
   readonly status = 400
-  constructor(message: string = 'Bad Request') {
+  constructor(message: string = "Bad Request") {
     super(message)
   }
 }
 
 export class Conflict extends BaseError {
   readonly status = 409
-  constructor(message: string = 'Conflict') {
+  constructor(message: string = "Conflict") {
     super(message)
   }
 }
 
 export class Forbidden extends BaseError {
   readonly status = 403
-  constructor(message: string = 'Forbidden') {
+  constructor(message: string = "Forbidden") {
     super(message)
   }
 }
 
 export class Unauthorized extends BaseError {
   readonly status = 401
-  constructor(message: string = 'Unauthorized') {
+  constructor(message: string = "Unauthorized") {
     super(message)
   }
 }
 
 export class InternalServerError extends BaseError {
   readonly status = 500
-  constructor(message: string = 'Internal Server Error') {
+  constructor(message: string = "Internal Server Error") {
     super(message)
   }
 }
 
-type RepositoryErrorType = 'NotFound' | 'DbError' | 'Conflict'
+type RepositoryErrorType = "NotFound" | "DbError" | "Conflict"
 
 export class RepositoryError extends Error {
   constructor(

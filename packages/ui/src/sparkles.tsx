@@ -1,14 +1,14 @@
-'use client'
+"use client"
 
-import { useId, useMemo } from 'react'
+import { useId, useMemo } from "react"
 import Particles, {
   ParticlesProvider,
   useParticlesProvider,
-} from '@tsparticles/react'
-import { loadSlim } from '@tsparticles/slim'
-import { motion, useAnimation } from 'motion/react'
-import { cn } from './lib/utils'
-import type { Container, Engine, ISourceOptions } from '@tsparticles/engine'
+} from "@tsparticles/react"
+import { loadSlim } from "@tsparticles/slim"
+import { motion, useAnimation } from "motion/react"
+import { cn } from "./lib/utils"
+import type { Container, Engine, ISourceOptions } from "@tsparticles/engine"
 
 type SparklesProps = {
   id?: string
@@ -55,7 +55,7 @@ function SparklesCanvas({
     () => ({
       background: {
         color: {
-          value: background || '#0d47a1',
+          value: background || "#0d47a1",
         },
       },
       fullScreen: {
@@ -67,11 +67,11 @@ function SparklesCanvas({
         events: {
           onClick: {
             enable: true,
-            mode: 'push',
+            mode: "push",
           },
           onHover: {
             enable: false,
-            mode: 'repulse',
+            mode: "repulse",
           },
           resize: {
             enable: true,
@@ -89,13 +89,13 @@ function SparklesCanvas({
       },
       particles: {
         color: {
-          value: particleColor || '#ffffff',
+          value: particleColor || "#ffffff",
         },
         move: {
-          direction: 'none',
+          direction: "none",
           enable: true,
           outModes: {
-            default: 'out',
+            default: "out",
           },
           random: false,
           speed: {
@@ -121,11 +121,11 @@ function SparklesCanvas({
             enable: true,
             speed: speed || 4,
             sync: false,
-            startValue: 'random',
+            startValue: "random",
           },
         },
         shape: {
-          type: 'circle',
+          type: "circle",
         },
         size: {
           value: {
@@ -140,7 +140,10 @@ function SparklesCanvas({
   )
 
   return (
-    <motion.div animate={controls} className={cn('opacity-0', className)}>
+    <motion.div
+      animate={controls}
+      className={cn("opacity-0", className)}
+    >
       {loaded && (
         <Particles
           id={id || generatedId}

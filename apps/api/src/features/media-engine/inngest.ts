@@ -1,53 +1,53 @@
-import { NonRetriableError } from 'inngest'
-import { inngest } from '@/lib/inngest/client'
-import * as repo from './repo'
-import * as storage from './storage'
-import { v4 as uuidv4 } from 'uuid'
-import { Asset } from '@/db/schema'
-import { billingService, safeRefund } from '@/features/billing'
-import { isMediaError } from './errors'
+import { NonRetriableError } from "inngest"
+import { inngest } from "@/lib/inngest/client"
+import * as repo from "./repo"
+import * as storage from "./storage"
+import { v4 as uuidv4 } from "uuid"
+import { Asset } from "@/db/schema"
+import { billingService, safeRefund } from "@/features/billing"
+import { isMediaError } from "./errors"
 import {
   finalizeGenerationRequest,
   writeStreamData,
-} from '../generation-request/stream-handler'
-import { appendRequestAssets } from '../generation-request/repo'
-import type { GenerationRequestAsset } from '@/type'
-import { createProvider } from './providers/factory'
-import { extractOutputUrls } from './providers/utils'
-import type { SubmitPayload } from './providers/type'
+} from "../generation-request/stream-handler"
+import { appendRequestAssets } from "../generation-request/repo"
+import type { GenerationRequestAsset } from "@/type"
+import { createProvider } from "./providers/factory"
+import { extractOutputUrls } from "./providers/utils"
+import type { SubmitPayload } from "./providers/type"
 import {
   AUDIO_OVERHEAD_RATE,
   IMAGE_OVERHEAD_RATE,
   VIDEO_OVERHEAD_RATE,
-} from '@/features/billing/constants'
+} from "@/features/billing/constants"
 import {
   providerCostToActualCredits,
   providerCostToCredits,
-} from './generators/cost-utils'
-import { createCancellableController } from '../generation-request/abort-manager'
-import { Session } from '../ai/agent/core/session'
-import { MediaGenerationPersistence } from '../ai/agent/core/persistence'
-import { createAgentFromDefinition } from '../ai/agent/core/agent-factory'
-import { UserModelMessage } from 'ai'
-import { getErrorMessage } from '@/utils/get-error-message'
+} from "./generators/cost-utils"
+import { createCancellableController } from "../generation-request/abort-manager"
+import { Session } from "../ai/agent/core/session"
+import { MediaGenerationPersistence } from "../ai/agent/core/persistence"
+import { createAgentFromDefinition } from "../ai/agent/core/agent-factory"
+import { UserModelMessage } from "ai"
+import { getErrorMessage } from "@/utils/get-error-message"
 import {
   limiter,
   pollWithSticky,
   resolveAndAcquire,
   submitWithFailover,
   type StickyDecision,
-} from '@/features/routing'
-import { MediaRateLimitError, MediaServiceUnavailableError } from './errors'
-import { SubmitRequestInput } from '../ai/agent/tools/submit-media-jobs'
-import { MAX_MEDIA_POLL_ATTEMPTS, VIDEO_POLL_INTERVAL } from './constants'
+} from "@/features/routing"
+import { MediaRateLimitError, MediaServiceUnavailableError } from "./errors"
+import { SubmitRequestInput } from "../ai/agent/tools/submit-media-jobs"
+import { MAX_MEDIA_POLL_ATTEMPTS, VIDEO_POLL_INTERVAL } from "./constants"
 
-const MEDIA_POLL_INTERVAL = '5s'
+const MEDIA_POLL_INTERVAL = "5s"
 const SYNC_RESERVATION_TTL_MS = 30 * 60 * 1000
 const VIDEO_RESERVATION_TTL_MS = 60 * 60 * 1000
 
-type ProviderMediaType = 'image' | 'video' | 'audio'
+type ProviderMediaType = "image" | "video" | "audio"
 
-type ReferenceFile = { url: string; type: 'image' | 'video' | 'audio' }
+type ReferenceFile = { url: string; type: "image" | "video" | "audio" }
 
 type ProviderMediaEventData = {
   requestId: string
@@ -58,32 +58,32 @@ type ProviderMediaEventData = {
   payload: SubmitPayload
   referenceFiles: ReferenceFile[]
   mediaType: ProviderMediaType
-  runMode: 'agent' | 'direct'
+  runMode: "agent" | "direct"
   _reservationId: string
 }
 
 function mediaOverheadRate(mediaType: ProviderMediaType): number {
-  if (mediaType === 'video') return VIDEO_OVERHEAD_RATE
-  if (mediaType === 'audio') return AUDIO_OVERHEAD_RATE
+  if (mediaType === "video") return VIDEO_OVERHEAD_RATE
+  if (mediaType === "audio") return AUDIO_OVERHEAD_RATE
   return IMAGE_OVERHEAD_RATE
 }
 
 function mediaReservationTtlMs(mediaType: ProviderMediaType): number {
-  return mediaType === 'video'
+  return mediaType === "video"
     ? VIDEO_RESERVATION_TTL_MS
     : SYNC_RESERVATION_TTL_MS
 }
 
 function mediaPollInterval(mediaType: ProviderMediaType) {
-  return mediaType === 'video' ? VIDEO_POLL_INTERVAL : MEDIA_POLL_INTERVAL
+  return mediaType === "video" ? VIDEO_POLL_INTERVAL : MEDIA_POLL_INTERVAL
 }
 
 function isTerminalFailureStatus(status: string): boolean {
   return (
-    status === 'error' ||
-    status === 'failed' ||
-    status === 'cancelled' ||
-    status === 'timeout'
+    status === "error" ||
+    status === "failed" ||
+    status === "cancelled" ||
+    status === "timeout"
   )
 }
 
@@ -107,10 +107,10 @@ function wrapNonRetryable(error: unknown): never {
 
 function toRequestAsset(asset: Asset): GenerationRequestAsset | null {
   if (
-    asset.type === 'image' ||
-    asset.type === 'video' ||
-    asset.type === 'audio' ||
-    asset.type === 'html'
+    asset.type === "image" ||
+    asset.type === "video" ||
+    asset.type === "audio" ||
+    asset.type === "html"
   ) {
     return {
       assetId: asset.id,
@@ -126,19 +126,19 @@ function toRequestAsset(asset: Asset): GenerationRequestAsset | null {
 
 export const handleMediaGeneration = inngest.createFunction(
   {
-    id: 'media-generate',
+    id: "media-generate",
     retries: 0,
-    triggers: [{ event: 'media/generate' }],
+    triggers: [{ event: "media/generate" }],
     onFailure: async ({ event }) => {
       const data = event.data.event.data as ProviderMediaEventData
       await safeRefund(
         billingService,
         data._reservationId,
-        'media-generation-failed',
+        "media-generation-failed",
       )
       if (data.requestId) {
-        await limiter.releaseByRequestId(data.requestId, { outcome: 'none' })
-        await finalizeGenerationRequest(data.requestId, 'failed')
+        await limiter.releaseByRequestId(data.requestId, { outcome: "none" })
+        await finalizeGenerationRequest(data.requestId, "failed")
       }
     },
   },
@@ -157,8 +157,8 @@ export const handleMediaGeneration = inngest.createFunction(
     const reservationTtlMs = mediaReservationTtlMs(mediaType)
     const pollInterval = mediaPollInterval(mediaType)
 
-    const requestPayload = await step.run('run-agent', async () => {
-      if (data.runMode === 'agent') {
+    const requestPayload = await step.run("run-agent", async () => {
+      if (data.runMode === "agent") {
         const output = await runAgent({
           userId,
           projectId,
@@ -179,7 +179,7 @@ export const handleMediaGeneration = inngest.createFunction(
       }
     })
 
-    const decision = await step.run('resolve-route', async () => {
+    const decision = await step.run("resolve-route", async () => {
       try {
         const { modelId, ...payload } = requestPayload
         return await resolveAndAcquire({
@@ -195,7 +195,7 @@ export const handleMediaGeneration = inngest.createFunction(
 
     let sticky: StickyDecision | undefined
     try {
-      const reservation = await step.run('reserve-credits', async () => {
+      const reservation = await step.run("reserve-credits", async () => {
         try {
           const provider = createProvider(decision.vendorName)
           const estimate = await provider.estimateRequestPrice(
@@ -235,7 +235,7 @@ export const handleMediaGeneration = inngest.createFunction(
       })
 
       try {
-        sticky = await step.run('submit-job', async () => {
+        sticky = await step.run("submit-job", async () => {
           try {
             const provider = createProvider(decision.vendorName)
             const submitted = await provider.submitRequest(
@@ -243,7 +243,7 @@ export const handleMediaGeneration = inngest.createFunction(
               decision.mappedPayload,
             )
             await limiter.release(decision.vendorName, requestId, {
-              outcome: 'submit_ok',
+              outcome: "submit_ok",
               cooldownMs: decision.cooldownMs,
             })
             const result: StickyDecision = {
@@ -262,7 +262,7 @@ export const handleMediaGeneration = inngest.createFunction(
               error instanceof MediaServiceUnavailableError
             ) {
               await limiter.release(decision.vendorName, requestId, {
-                outcome: 'failure',
+                outcome: "failure",
                 retryAfterMs:
                   error instanceof MediaRateLimitError
                     ? error.retryAfterMs
@@ -284,15 +284,15 @@ export const handleMediaGeneration = inngest.createFunction(
               return result
             }
             await limiter.release(decision.vendorName, requestId, {
-              outcome: 'none',
+              outcome: "none",
               cooldownMs: decision.cooldownMs,
             })
             wrapNonRetryable(error)
           }
         })
       } catch (error) {
-        await step.run('refund-on-submit-error', () =>
-          safeRefund(billingService, reservation.id, 'media-submit-error'),
+        await step.run("refund-on-submit-error", () =>
+          safeRefund(billingService, reservation.id, "media-submit-error"),
         )
         throw error
       }
@@ -317,38 +317,38 @@ export const handleMediaGeneration = inngest.createFunction(
           }
         })
 
-        if (pollResult.status === 'completed') {
-          resultData = 'data' in pollResult ? pollResult.data : null
+        if (pollResult.status === "completed") {
+          resultData = "data" in pollResult ? pollResult.data : null
           break
         }
 
         if (isTerminalFailureStatus(String(pollResult.status))) {
-          await step.run('refund-on-provider-failure', () =>
-            safeRefund(billingService, reservation.id, 'media-provider-failed'),
+          await step.run("refund-on-provider-failure", () =>
+            safeRefund(billingService, reservation.id, "media-provider-failed"),
           )
-          await step.run('mark-error-on-provider-failure', () =>
-            finalizeGenerationRequest(requestId, 'failed'),
+          await step.run("mark-error-on-provider-failure", () =>
+            finalizeGenerationRequest(requestId, "failed"),
           )
-          return { requestId, status: 'failed' as const }
+          return { requestId, status: "failed" as const }
         }
       }
 
       const outputUrls = extractOutputUrls(resultData)
       if (outputUrls.length === 0) {
-        await step.run('refund-on-timeout-or-empty', () =>
+        await step.run("refund-on-timeout-or-empty", () =>
           safeRefund(
             billingService,
             reservation.id,
-            resultData ? 'media-no-valid-urls' : 'media-poll-timeout',
+            resultData ? "media-no-valid-urls" : "media-poll-timeout",
           ),
         )
-        await step.run('mark-error-on-timeout-or-empty', () =>
-          finalizeGenerationRequest(requestId, 'failed'),
+        await step.run("mark-error-on-timeout-or-empty", () =>
+          finalizeGenerationRequest(requestId, "failed"),
         )
-        return { requestId, status: 'failed' as const }
+        return { requestId, status: "failed" as const }
       }
 
-      const uploads = await step.run('upload-to-r2', async () => {
+      const uploads = await step.run("upload-to-r2", async () => {
         const uploaded = []
         for (const sourceUrl of outputUrls) {
           uploaded.push(await storage.uploadGeneratedMedia(sourceUrl))
@@ -356,7 +356,7 @@ export const handleMediaGeneration = inngest.createFunction(
         return uploaded
       })
 
-      await step.run('settle-credits', () =>
+      await step.run("settle-credits", () =>
         billingService.settle({
           reservationId: reservation.id,
           actualCredits: providerCostToActualCredits(reservation.priceUSD, {
@@ -370,26 +370,26 @@ export const handleMediaGeneration = inngest.createFunction(
         }),
       )
 
-      const assets = await step.run('save-assets', async () => {
+      const assets = await step.run("save-assets", async () => {
         const newAssets: Asset[] = []
         for (const upload of uploads) {
           const fileMetadata = await storage.getFileMetadata(upload.storageKey)
           const assetName =
-            upload.storageKey.split('/').pop() ??
+            upload.storageKey.split("/").pop() ??
             `${upload.type}-${uuidv4().slice(0, 8)}`
           const asset = await repo.createAsset({
             projectId,
             name: assetName,
             type: upload.type,
             url: upload.url,
-            source: 'ai-generated',
+            source: "ai-generated",
             generationRequestId: requestId,
             metadata: fileMetadata,
             storageKey: upload.storageKey,
           })
           await writeStreamData(requestId, {
             runId: requestId,
-            event: 'asset',
+            event: "asset",
             data: asset,
           })
           newAssets.push(asset)
@@ -402,20 +402,20 @@ export const handleMediaGeneration = inngest.createFunction(
           await appendRequestAssets(requestId, requestAssets)
         }
 
-        await finalizeGenerationRequest(requestId, 'completed')
+        await finalizeGenerationRequest(requestId, "completed")
         return newAssets
       })
 
       return { requestId, assets, reservationId: reservation.id }
     } finally {
-      await step.run('release-slot', async () => {
+      await step.run("release-slot", async () => {
         if (sticky) {
           await limiter.release(sticky.vendorName, requestId, {
-            outcome: 'none',
+            outcome: "none",
           })
           return
         }
-        await limiter.releaseByRequestId(requestId, { outcome: 'none' })
+        await limiter.releaseByRequestId(requestId, { outcome: "none" })
       })
     }
   },
@@ -455,7 +455,7 @@ async function runAgent(payload: AgentPayload) {
 
   let response: AgentResponse = {
     ok: false,
-    error: 'Unknown error occurred',
+    error: "Unknown error occurred",
   }
 
   try {
@@ -468,7 +468,7 @@ async function runAgent(payload: AgentPayload) {
     })
     const persistence = new MediaGenerationPersistence(requestId)
     const agent = await createAgentFromDefinition({
-      agentName: 'media-generator',
+      agentName: "media-generator",
       session,
       persistence,
       buildSystemPrompt: (baseSystemPrompt) =>
@@ -484,14 +484,14 @@ async function runAgent(payload: AgentPayload) {
     for await (const chunk of chunks) {
       await writeStreamData(requestId, {
         runId: requestId,
-        event: 'chunk',
+        event: "chunk",
         chunk,
       })
     }
 
-    const submitRequest = agent.artifacts.get('submitRequest') as
-      { status: 'ready' | 'cancelled'; input: SubmitRequestInput } | undefined
-    if (submitRequest?.status === 'ready') {
+    const submitRequest = agent.artifacts.get("submitRequest") as
+      { status: "ready" | "cancelled"; input: SubmitRequestInput } | undefined
+    if (submitRequest?.status === "ready") {
       response = {
         ok: true,
         request: {
@@ -503,11 +503,11 @@ async function runAgent(payload: AgentPayload) {
     } else {
       response = {
         ok: false,
-        error: 'Request cancelled',
+        error: "Request cancelled",
       }
     }
   } catch (error) {
-    const errorMessage = getErrorMessage(error, 'Completion failed')
+    const errorMessage = getErrorMessage(error, "Completion failed")
     console.error(error)
     response = {
       ok: false,
@@ -525,11 +525,11 @@ function buildUserPrompt(
   referenceFiles: ReferenceFile[] = [],
 ): UserModelMessage {
   const userMsg: UserModelMessage = {
-    role: 'user',
+    role: "user",
     content: [
-      { type: 'text', text: prompt },
+      { type: "text", text: prompt },
       ...referenceFiles.map((file) => ({
-        type: 'image' as const,
+        type: "image" as const,
         image: file.url,
       })),
     ],
@@ -550,7 +550,7 @@ Here are the files referenced by the user:
 ${JSON.stringify(referenceFiles)}
 </reference_files>
 `
-    : ''
+    : ""
 }
 `.trim()
 }

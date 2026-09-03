@@ -27,8 +27,8 @@ export function formatFileTag({
   snippet,
 }: FileTagParams): string {
   const params = new URLSearchParams()
-  params.set('format', format)
-  if (lines) params.set('lines', lines)
-  if (snippet) params.set('snippet', snippet)
+  params.set("format", format)
+  if (lines) params.set("lines", lines)
+  if (snippet) params.set("snippet", snippet)
   return `@[${displayName}](file:${fileId}?${params.toString()})`
 }

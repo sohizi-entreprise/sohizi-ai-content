@@ -1,6 +1,6 @@
-import { BadRequest, Conflict, InternalServerError, NotFound } from '../error'
-import * as projectRepo from '../project/repo'
-import { FileFormat, fileFormat } from './constants'
+import { BadRequest, Conflict, InternalServerError, NotFound } from "../error"
+import * as projectRepo from "../project/repo"
+import { FileFormat, fileFormat } from "./constants"
 import {
   FileSystemConflictError,
   FileSystemInputError,
@@ -12,21 +12,21 @@ import {
   semanticSearchDirectory as semanticSearchDirectoryFn,
   updateFileContent as updateFileContentFn,
   updateFileNode as updateFileNodeFn,
-} from './functions'
+} from "./functions"
 import {
   FileCreationRequest,
   UpdateFileRequest,
   UpdateSkillRequest,
   UpdateTextFileContentRequest,
-} from './payload'
-import * as fileSystemRepo from './repo'
-import * as mediaRepo from '../media-engine/repo'
-import { E5SmallLocalEmbedder } from '@/lib/rag/local-embedder'
-import { ingestFileContentChunks } from './ingest-file-content-chunks'
-import { Asset } from '@/db/schema'
-import * as storage from '../media-engine/storage'
-import { CursorPaginationOptions } from '@/type'
-import * as videoEditorRepo from '../video-editor/repo'
+} from "./payload"
+import * as fileSystemRepo from "./repo"
+import * as mediaRepo from "../media-engine/repo"
+import { E5SmallLocalEmbedder } from "@/lib/rag/local-embedder"
+import { ingestFileContentChunks } from "./ingest-file-content-chunks"
+import { Asset } from "@/db/schema"
+import * as storage from "../media-engine/storage"
+import { CursorPaginationOptions } from "@/type"
+import * as videoEditorRepo from "../video-editor/repo"
 
 // List file trees -> ok
 // rename file
@@ -43,7 +43,7 @@ export const createFileNode = async (data: FileCreationRequest) => {
       await ingestFileContentChunks({
         projectId: data.projectId,
         fileNodeId: fileNode.id,
-        content: '',
+        content: "",
       })
     }
     return fileNode
@@ -55,7 +55,7 @@ export const createFileNode = async (data: FileCreationRequest) => {
       throw new BadRequest(error.message)
     }
     console.error(error)
-    throw new InternalServerError('Something went wrong')
+    throw new InternalServerError("Something went wrong")
   }
 }
 
@@ -63,10 +63,10 @@ export const deleteFileNode = async (projectId: string, fileId: string) => {
   try {
     const fileNode = await fileSystemRepo.getFileNodeById(projectId, fileId)
     if (!fileNode) {
-      throw new NotFound('File not found')
+      throw new NotFound("File not found")
     }
     if (!fileNode.editable) {
-      throw new BadRequest('Cannot delete a built-in file')
+      throw new BadRequest("Cannot delete a built-in file")
     }
     const assetFormats: Partial<FileFormat>[] = [
       fileFormat.AUDIO,
@@ -82,7 +82,7 @@ export const deleteFileNode = async (projectId: string, fileId: string) => {
     }
     const isDeleted = await fileSystemRepo.deleteFileNode(projectId, fileId)
     if (!isDeleted) {
-      throw new InternalServerError('Failed to delete file. Try again later.')
+      throw new InternalServerError("Failed to delete file. Try again later.")
     }
     if (asset) {
       // The asset will be deleted by the cascade delete of the file node
@@ -95,7 +95,7 @@ export const deleteFileNode = async (projectId: string, fileId: string) => {
       throw new BadRequest(error.message)
     }
     console.error(error)
-    throw new InternalServerError('Something went wrong')
+    throw new InternalServerError("Something went wrong")
   }
 }
 
@@ -122,14 +122,14 @@ export const updateFileContent = async (
 
       if (baseRevision === undefined) {
         throw new FileSystemInputError(
-          'baseRevision is required when diff is provided',
+          "baseRevision is required when diff is provided",
         )
       }
       if (fileContent.revision !== baseRevision) {
-        throw new Conflict('File content changed before diff could be applied')
+        throw new Conflict("File content changed before diff could be applied")
       }
 
-      const content = applyCompactTextDiff(fileContent.content ?? '', data.diff)
+      const content = applyCompactTextDiff(fileContent.content ?? "", data.diff)
       const updated = await fileSystemRepo.updateFileContentAtRevision(
         projectId,
         fileNodeId,
@@ -138,7 +138,7 @@ export const updateFileContent = async (
       )
 
       if (!updated) {
-        throw new Conflict('File content changed before diff could be applied')
+        throw new Conflict("File content changed before diff could be applied")
       }
 
       await ingestFileContentChunks({
@@ -153,7 +153,7 @@ export const updateFileContent = async (
     const updatedFileContent = await updateFileContentFn(
       projectId,
       fileNodeId,
-      { content: data.content ?? '' },
+      { content: data.content ?? "" },
     )
     if (data.diffApplied) {
       await fileSystemRepo.markPendingFileOperationDiffApplied(fileNodeId)
@@ -170,17 +170,17 @@ export const updateFileContent = async (
       throw new InternalServerError(error.message)
     }
     console.error(error)
-    throw new InternalServerError('Something went wrong')
+    throw new InternalServerError("Something went wrong")
   }
 }
 
 function applyCompactTextDiff(content: string, diff: CompactTextDiff) {
   if (diff.version !== 1) {
-    throw new FileSystemInputError('Unsupported diff version')
+    throw new FileSystemInputError("Unsupported diff version")
   }
   if (content.length !== diff.baseLength) {
     throw new FileSystemInputError(
-      'File content changed before diff could be applied',
+      "File content changed before diff could be applied",
     )
   }
 
@@ -190,7 +190,7 @@ function applyCompactTextDiff(content: string, diff: CompactTextDiff) {
     const end = edit.start + edit.deleteCount
 
     if (edit.start > nextContent.length || end > nextContent.length) {
-      throw new FileSystemInputError('Diff edit is out of bounds')
+      throw new FileSystemInputError("Diff edit is out of bounds")
     }
 
     nextContent = `${nextContent.slice(0, edit.start)}${edit.insert}${nextContent.slice(end)}`
@@ -198,7 +198,7 @@ function applyCompactTextDiff(content: string, diff: CompactTextDiff) {
 
   if (nextContent.length !== diff.targetLength) {
     throw new FileSystemInputError(
-      'Diff target length does not match applied content',
+      "Diff target length does not match applied content",
     )
   }
 
@@ -211,10 +211,10 @@ export const listFileTreePerLevel = async (
 ) => {
   const fileNode = await fileSystemRepo.getFileNodeById(projectId, parentId)
   if (!fileNode) {
-    throw new NotFound('File not found')
+    throw new NotFound("File not found")
   }
   if (!fileNode.directory) {
-    throw new BadRequest('Parent is not a directory')
+    throw new BadRequest("Parent is not a directory")
   }
   return fileSystemRepo.listDirectoryFiles(projectId, parentId)
 }
@@ -226,10 +226,10 @@ export const getFileContent = async (
 ) => {
   const fileNode = await fileSystemRepo.getFileNodeById(projectId, fileNodeId)
   if (!fileNode) {
-    throw new NotFound('File not found')
+    throw new NotFound("File not found")
   }
   if (fileNode.directory) {
-    throw new BadRequest('File is a directory')
+    throw new BadRequest("File is a directory")
   }
 
   switch (fileNode.format) {
@@ -239,10 +239,10 @@ export const getFileContent = async (
         fileNodeId,
       )
       if (!textContent) {
-        throw new NotFound('File content not found')
+        throw new NotFound("File content not found")
       }
       return {
-        type: 'markdown',
+        type: "markdown",
         content: textContent.content,
         revision: textContent.revision,
         updatedAt: textContent.updatedAt,
@@ -267,7 +267,7 @@ export const getFileContent = async (
         paginationOptions,
       )
       return {
-        type: 'ai-generated-assets',
+        type: "ai-generated-assets",
         data: aiGeneratedAssets.data,
         nextCursor: aiGeneratedAssets.nextCursor,
         hasMore: aiGeneratedAssets.hasMore,
@@ -276,20 +276,20 @@ export const getFileContent = async (
     case fileFormat.SKILL: {
       const skill = await fileSystemRepo.getSkillByFileID(fileNodeId)
       if (!skill) {
-        throw new NotFound('Skill not found')
+        throw new NotFound("Skill not found")
       }
-      return { type: 'skill', data: skill }
+      return { type: "skill", data: skill }
     }
     case fileFormat.VIDEO_EDITOR: {
       const videoEditor =
         await videoEditorRepo.getFullCompositionByFileNodeId(fileNodeId)
       if (!videoEditor) {
-        throw new NotFound('Video editor not found')
+        throw new NotFound("Video editor not found")
       }
-      return { type: 'video-editor', data: videoEditor }
+      return { type: "video-editor", data: videoEditor }
     }
     default:
-      throw new BadRequest('Unsupported file format')
+      throw new BadRequest("Unsupported file format")
   }
 }
 
@@ -355,10 +355,10 @@ export const listFolderMedia = async (
   await validateProject(projectId)
   const folder = await fileSystemRepo.getFileNodeById(projectId, folderId)
   if (!folder) {
-    throw new NotFound('Folder not found')
+    throw new NotFound("Folder not found")
   }
   if (!folder.directory) {
-    throw new BadRequest('Required a folder to list media from')
+    throw new BadRequest("Required a folder to list media from")
   }
   return fileSystemRepo.listFolderMedia(projectId, folderId, options)
 }
@@ -417,7 +417,7 @@ export const getSkillByFileID = async (projectId: string, fileId: string) => {
 
   const skill = await fileSystemRepo.getSkillByFileID(fileId)
   if (!skill) {
-    throw new NotFound('Skill not found')
+    throw new NotFound("Skill not found")
   }
   return skill
 }
@@ -430,7 +430,7 @@ export const updateSkill = async (
   await validateProject(projectId)
   const skill = await fileSystemRepo.updateSkill(fileId, request)
   if (!skill) {
-    throw new NotFound('Skill not found')
+    throw new NotFound("Skill not found")
   }
   return skill
 }
@@ -468,7 +468,7 @@ export const deletePendingFileOperation = async (
 async function validateProject(projectId: string) {
   const project = await projectRepo.getProjectById(projectId)
   if (!project) {
-    throw new NotFound('Project not found')
+    throw new NotFound("Project not found")
   }
   return project
 }

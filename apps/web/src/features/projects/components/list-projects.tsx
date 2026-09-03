@@ -72,7 +72,10 @@ export const ListProjectsSkeleton = () => {
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, index) => (
-        <Skeleton key={index} className="h-[280px] w-full" />
+        <Skeleton
+          key={index}
+          className="h-[280px] w-full"
+        />
       ))}
     </div>
   )
@@ -88,7 +91,10 @@ export const ListProjectsError = ({
   return (
     <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-red-500 p-4">
       <h3>{msg}</h3>
-      <button className="cursor-pointer" onClick={reset}>
+      <button
+        className="cursor-pointer"
+        onClick={reset}
+      >
         Retry
       </button>
     </div>

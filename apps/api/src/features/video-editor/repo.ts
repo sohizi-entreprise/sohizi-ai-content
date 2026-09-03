@@ -1,13 +1,13 @@
-import { db } from '@/db'
+import { db } from "@/db"
 import {
   videoCompositions,
   videoTracks,
   videoClips,
   videoRenderJobs,
-} from '@/db/schema'
-import { eq, and, lte, gt, asc, desc, sql, inArray, gte } from 'drizzle-orm'
-import type { VideoTrackType, VideoClipProperties, AspectRatio } from '@/type'
-import type { VideoRenderJobStatus } from '@/db/schema'
+} from "@/db/schema"
+import { eq, and, lte, gt, asc, desc, sql, inArray, gte } from "drizzle-orm"
+import type { VideoTrackType, VideoClipProperties, AspectRatio } from "@/type"
+import type { VideoRenderJobStatus } from "@/db/schema"
 
 // ============================================================================
 // COMPOSITIONS
@@ -312,8 +312,8 @@ export const getFullCompositionByFileNodeId = async (fileNodeId: string) => {
 // ============================================================================
 
 const ACTIVE_RENDER_STATUSES = [
-  'queued',
-  'rendering',
+  "queued",
+  "rendering",
 ] as const satisfies readonly VideoRenderJobStatus[]
 
 export type CreateRenderJobData = {
@@ -400,15 +400,15 @@ export const updateRenderJob = async (
 // ============================================================================
 
 export type BatchOperation =
-  | { op: 'create_track'; data: CreateTrackData }
-  | { op: 'update_track'; id: string; data: UpdateTrackData }
-  | { op: 'delete_track'; id: string }
-  | { op: 'create_clip'; data: CreateClipData }
-  | { op: 'update_clip'; id: string; data: UpdateClipData }
-  | { op: 'delete_clip'; id: string }
-  | { op: 'update_composition'; id: string; data: UpdateCompositionData }
+  | { op: "create_track"; data: CreateTrackData }
+  | { op: "update_track"; id: string; data: UpdateTrackData }
+  | { op: "delete_track"; id: string }
+  | { op: "create_clip"; data: CreateClipData }
+  | { op: "update_clip"; id: string; data: UpdateClipData }
+  | { op: "delete_clip"; id: string }
+  | { op: "update_composition"; id: string; data: UpdateCompositionData }
 
-const OP_ORDER: Record<BatchOperation['op'], number> = {
+const OP_ORDER: Record<BatchOperation["op"], number> = {
   create_track: 0,
   update_composition: 1,
   update_clip: 2,
@@ -426,36 +426,36 @@ export const executeBatch = async (operations: BatchOperation[]) => {
 
     for (const operation of sorted) {
       switch (operation.op) {
-        case 'create_track': {
+        case "create_track": {
           const r = await tx
             .insert(videoTracks)
             .values(operation.data)
             .returning()
-          results.push({ op: 'create_track', id: r[0].id })
+          results.push({ op: "create_track", id: r[0].id })
           break
         }
-        case 'update_track': {
+        case "update_track": {
           await tx
             .update(videoTracks)
             .set(operation.data)
             .where(eq(videoTracks.id, operation.id))
-          results.push({ op: 'update_track', id: operation.id })
+          results.push({ op: "update_track", id: operation.id })
           break
         }
-        case 'delete_track': {
+        case "delete_track": {
           await tx.delete(videoTracks).where(eq(videoTracks.id, operation.id))
-          results.push({ op: 'delete_track', id: operation.id })
+          results.push({ op: "delete_track", id: operation.id })
           break
         }
-        case 'create_clip': {
+        case "create_clip": {
           const r = await tx
             .insert(videoClips)
             .values(operation.data)
             .returning()
-          results.push({ op: 'create_clip', id: r[0].id })
+          results.push({ op: "create_clip", id: r[0].id })
           break
         }
-        case 'update_clip': {
+        case "update_clip": {
           const { properties, ...scalarFields } = operation.data
           const setClause: Record<string, unknown> = { ...scalarFields }
           if (properties) {
@@ -465,15 +465,15 @@ export const executeBatch = async (operations: BatchOperation[]) => {
             .update(videoClips)
             .set(setClause)
             .where(eq(videoClips.id, operation.id))
-          results.push({ op: 'update_clip', id: operation.id })
+          results.push({ op: "update_clip", id: operation.id })
           break
         }
-        case 'delete_clip': {
+        case "delete_clip": {
           await tx.delete(videoClips).where(eq(videoClips.id, operation.id))
-          results.push({ op: 'delete_clip', id: operation.id })
+          results.push({ op: "delete_clip", id: operation.id })
           break
         }
-        case 'update_composition': {
+        case "update_composition": {
           await tx
             .update(videoCompositions)
             .set({
@@ -481,7 +481,7 @@ export const executeBatch = async (operations: BatchOperation[]) => {
               version: sql`${videoCompositions.version} + 1`,
             })
             .where(eq(videoCompositions.id, operation.id))
-          results.push({ op: 'update_composition', id: operation.id })
+          results.push({ op: "update_composition", id: operation.id })
           break
         }
       }

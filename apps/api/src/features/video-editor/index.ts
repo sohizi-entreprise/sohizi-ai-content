@@ -1,7 +1,7 @@
-import { Elysia } from 'elysia'
-import { z } from 'zod'
-import * as videoEditorService from './service'
-import * as renderService from './render-service'
+import { Elysia } from "elysia"
+import { z } from "zod"
+import * as videoEditorService from "./service"
+import * as renderService from "./render-service"
 import {
   createCompositionSchema,
   updateCompositionSchema,
@@ -11,49 +11,49 @@ import {
   updateClipSchema,
   clipFilterSchema,
   batchRequestSchema,
-} from './schema'
-import { createRenderSchema } from './render-schema'
-import { assertProjectAccess } from '@/lib/authorize'
-import { authMiddleware } from '@/lib/auth-middleware'
+} from "./schema"
+import { createRenderSchema } from "./render-schema"
+import { assertProjectAccess } from "@/lib/authorize"
+import { authMiddleware } from "@/lib/auth-middleware"
 
 const projectParams = z.object({
-  projectId: z.uuid('Invalid project id'),
+  projectId: z.uuid("Invalid project id"),
 })
 
 const compositionParams = z.object({
-  projectId: z.uuid('Invalid project id'),
-  compositionId: z.uuid('Invalid composition id'),
+  projectId: z.uuid("Invalid project id"),
+  compositionId: z.uuid("Invalid composition id"),
 })
 
 const fileNodeParams = z.object({
-  projectId: z.uuid('Invalid project id'),
-  fileNodeId: z.uuid('Invalid file node id'),
+  projectId: z.uuid("Invalid project id"),
+  fileNodeId: z.uuid("Invalid file node id"),
 })
 
 const trackParams = z.object({
-  projectId: z.uuid('Invalid project id'),
-  trackId: z.uuid('Invalid track id'),
+  projectId: z.uuid("Invalid project id"),
+  trackId: z.uuid("Invalid track id"),
 })
 
 const clipParams = z.object({
-  projectId: z.uuid('Invalid project id'),
-  clipId: z.uuid('Invalid clip id'),
+  projectId: z.uuid("Invalid project id"),
+  clipId: z.uuid("Invalid clip id"),
 })
 
 const renderParams = z.object({
-  projectId: z.uuid('Invalid project id'),
-  renderJobId: z.uuid('Invalid render job id'),
+  projectId: z.uuid("Invalid project id"),
+  renderJobId: z.uuid("Invalid render job id"),
 })
 
 export const videoEditorRoutes = new Elysia({
-  prefix: '/video-editor/:projectId',
+  prefix: "/video-editor/:projectId",
 })
   .use(authMiddleware)
 
   // ======================== COMPOSITIONS ========================
 
   .get(
-    '/file-nodes/:fileNodeId/composition',
+    "/file-nodes/:fileNodeId/composition",
     async ({ params, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.loadComposition(
@@ -67,7 +67,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .post(
-    '/compositions',
+    "/compositions",
     async ({ params, body, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.createComposition(params.projectId, body)
@@ -79,7 +79,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .patch(
-    '/compositions/:compositionId',
+    "/compositions/:compositionId",
     async ({ params, body, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.updateComposition(
@@ -97,7 +97,7 @@ export const videoEditorRoutes = new Elysia({
   // ======================== TRACKS ========================
 
   .get(
-    '/compositions/:compositionId/tracks',
+    "/compositions/:compositionId/tracks",
     async ({ params, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.listTracks(
@@ -111,7 +111,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .post(
-    '/compositions/:compositionId/tracks',
+    "/compositions/:compositionId/tracks",
     async ({ params, body, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.addTrack(
@@ -127,7 +127,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .patch(
-    '/tracks/:trackId',
+    "/tracks/:trackId",
     async ({ params, body, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.updateTrack(
@@ -143,7 +143,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .post(
-    '/tracks/:trackId/captions',
+    "/tracks/:trackId/captions",
     async ({ params, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.addCaption(
@@ -158,7 +158,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .delete(
-    '/tracks/:trackId',
+    "/tracks/:trackId",
     async ({ params, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.removeTrack(params.trackId, params.projectId)
@@ -171,7 +171,7 @@ export const videoEditorRoutes = new Elysia({
   // ======================== CLIPS ========================
 
   .get(
-    '/compositions/:compositionId/clips',
+    "/compositions/:compositionId/clips",
     async ({ params, query, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.listClips(
@@ -187,7 +187,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .post(
-    '/compositions/:compositionId/clips',
+    "/compositions/:compositionId/clips",
     async ({ params, body, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.addClip(
@@ -203,7 +203,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .patch(
-    '/clips/:clipId',
+    "/clips/:clipId",
     async ({ params, body, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.updateClip(
@@ -219,7 +219,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .delete(
-    '/clips/:clipId',
+    "/clips/:clipId",
     async ({ params, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.removeClip(params.clipId, params.projectId)
@@ -232,7 +232,7 @@ export const videoEditorRoutes = new Elysia({
   // ======================== RENDERS ========================
 
   .post(
-    '/compositions/:compositionId/renders',
+    "/compositions/:compositionId/renders",
     async ({ params, body, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return renderService.createRender(
@@ -249,7 +249,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .get(
-    '/compositions/:compositionId/renders',
+    "/compositions/:compositionId/renders",
     async ({ params, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return renderService.listRenders(params.compositionId, params.projectId)
@@ -260,7 +260,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .get(
-    '/renders/:renderJobId',
+    "/renders/:renderJobId",
     async ({ params, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return renderService.getRender(params.renderJobId, params.projectId)
@@ -271,7 +271,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .delete(
-    '/renders/:renderJobId',
+    "/renders/:renderJobId",
     async ({ params, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return renderService.cancelRender(params.renderJobId, params.projectId)
@@ -282,7 +282,7 @@ export const videoEditorRoutes = new Elysia({
   )
 
   .get(
-    '/renders/:renderJobId/download',
+    "/renders/:renderJobId/download",
     async ({ params, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return renderService.getRenderDownload(
@@ -298,7 +298,7 @@ export const videoEditorRoutes = new Elysia({
   // ======================== BATCH ========================
 
   .post(
-    '/compositions/:compositionId/batch',
+    "/compositions/:compositionId/batch",
     async ({ params, body, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.batchEdit(

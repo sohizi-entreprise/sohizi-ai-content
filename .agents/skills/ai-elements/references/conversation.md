@@ -19,7 +19,7 @@ Build a simple conversational UI with `Conversation` and [`PromptInput`](/compon
 Add the following component to your frontend:
 
 ```tsx title="app/page.tsx"
-'use client'
+"use client"
 
 import {
   Conversation,
@@ -27,30 +27,30 @@ import {
   ConversationDownload,
   ConversationEmptyState,
   ConversationScrollButton,
-} from '@/components/ai-elements/conversation'
+} from "@/components/ai-elements/conversation"
 import {
   Message,
   MessageContent,
   MessageResponse,
-} from '@/components/ai-elements/message'
+} from "@/components/ai-elements/message"
 import {
   PromptInput,
   type PromptInputMessage,
   PromptInputTextarea,
   PromptInputSubmit,
-} from '@/components/ai-elements/prompt-input'
-import { MessageSquare } from 'lucide-react'
-import { useState } from 'react'
-import { useChat } from '@ai-sdk/react'
+} from "@/components/ai-elements/prompt-input"
+import { MessageSquare } from "lucide-react"
+import { useState } from "react"
+import { useChat } from "@ai-sdk/react"
 
 const ConversationDemo = () => {
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState("")
   const { messages, sendMessage, status } = useChat()
 
   const handleSubmit = (message: PromptInputMessage) => {
     if (message.text.trim()) {
       sendMessage({ text: message.text })
-      setInput('')
+      setInput("")
     }
   }
 
@@ -67,11 +67,14 @@ const ConversationDemo = () => {
               />
             ) : (
               messages.map((message) => (
-                <Message from={message.role} key={message.id}>
+                <Message
+                  from={message.role}
+                  key={message.id}
+                >
                   <MessageContent>
                     {message.parts.map((part, i) => {
                       switch (part.type) {
-                        case 'text': // we don't use any reasoning or tool calls in this example
+                        case "text": // we don't use any reasoning or tool calls in this example
                           return (
                             <MessageResponse key={`${message.id}-${i}`}>
                               {part.text}
@@ -101,7 +104,7 @@ const ConversationDemo = () => {
             className="pr-12"
           />
           <PromptInputSubmit
-            status={status === 'streaming' ? 'streaming' : 'ready'}
+            status={status === "streaming" ? "streaming" : "ready"}
             disabled={!input.trim()}
             className="absolute bottom-1 right-1"
           />
@@ -117,7 +120,7 @@ export default ConversationDemo
 Add the following route to your backend:
 
 ```tsx title="api/chat/route.ts"
-import { streamText, UIMessage, convertToModelMessages } from 'ai'
+import { streamText, UIMessage, convertToModelMessages } from "ai"
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30
@@ -126,7 +129,7 @@ export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json()
 
   const result = streamText({
-    model: 'openai/gpt-4o',
+    model: "openai/gpt-4o",
     messages: await convertToModelMessages(messages),
   })
 
@@ -208,7 +211,7 @@ import { ConversationDownload } from "@/components/ai-elements/conversation";
 A utility function to convert messages to Markdown format. Useful for custom download implementations.
 
 ```tsx
-import { messagesToMarkdown } from '@/components/ai-elements/conversation'
+import { messagesToMarkdown } from "@/components/ai-elements/conversation"
 
 const markdown = messagesToMarkdown(messages)
 
@@ -217,8 +220,8 @@ const customMarkdown = messagesToMarkdown(
   messages,
   (msg, i) =>
     `[${msg.role}]: ${msg.parts
-      .filter((p) => p.type === 'text')
+      .filter((p) => p.type === "text")
       .map((p) => p.text)
-      .join('')}`,
+      .join("")}`,
 )
 ```

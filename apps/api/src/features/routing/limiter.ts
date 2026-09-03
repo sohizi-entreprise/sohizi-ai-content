@@ -1,20 +1,20 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import type Redis from 'ioredis'
-import { redis as defaultRedis } from '@/lib/redis'
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+import type Redis from "ioredis"
+import { redis as defaultRedis } from "@/lib/redis"
 import {
   DEFAULT_VENDOR_CIRCUIT_CONFIG,
   DEFAULT_VENDOR_RATE_LIMIT,
-} from '@/type'
-import type { AcquireResult, ReleaseOutcome } from './types'
+} from "@/type"
+import type { AcquireResult, ReleaseOutcome } from "./types"
 
 const ACQUIRE_LUA = readFileSync(
-  join(import.meta.dir, 'lua/acquire.lua'),
-  'utf8',
+  join(import.meta.dir, "lua/acquire.lua"),
+  "utf8",
 )
 const RELEASE_LUA = readFileSync(
-  join(import.meta.dir, 'lua/release.lua'),
-  'utf8',
+  join(import.meta.dir, "lua/release.lua"),
+  "utf8",
 )
 
 const INFLIGHT_KEY_TTL_MS = 24 * 60 * 60 * 1000
@@ -49,19 +49,19 @@ export type VendorLimiterKeys = {
 function parseEvalTuple(raw: unknown): AcquireResult {
   const row = raw as Array<string | number>
   const ok = Number(row[0]) === 1
-  const reason = String(row[1] ?? 'unavailable')
+  const reason = String(row[1] ?? "unavailable")
   const retryAfterMs = Math.max(Number(row[2] ?? 0), 0)
   if (ok) {
-    return { ok: true, reason: 'ok', retryAfterMs: 0 }
+    return { ok: true, reason: "ok", retryAfterMs: 0 }
   }
   if (
-    reason === 'circuit_open' ||
-    reason === 'concurrency' ||
-    reason === 'rpm'
+    reason === "circuit_open" ||
+    reason === "concurrency" ||
+    reason === "rpm"
   ) {
     return { ok: false, reason, retryAfterMs }
   }
-  return { ok: false, reason: 'unavailable', retryAfterMs }
+  return { ok: false, reason: "unavailable", retryAfterMs }
 }
 
 export class VendorLimiter {
@@ -71,7 +71,7 @@ export class VendorLimiter {
 
   constructor(options: LimiterOptions = {}) {
     this.redis = options.redis ?? defaultRedis
-    this.keyPrefix = options.keyPrefix ?? ''
+    this.keyPrefix = options.keyPrefix ?? ""
     this.acquireTimeoutMs =
       options.acquireTimeoutMs ?? DEFAULT_ACQUIRE_TIMEOUT_MS
   }
@@ -118,21 +118,21 @@ export class VendorLimiter {
       })
       const raw = await Promise.race([evalPromise, timeout])
       if (raw === null) {
-        return { ok: false, reason: 'unavailable', retryAfterMs: 0 }
+        return { ok: false, reason: "unavailable", retryAfterMs: 0 }
       }
       const parsed = parseEvalTuple(raw)
       if (parsed.ok) {
         await this.redis.set(
           this.ownerKey(requestId),
           vendorName,
-          'PX',
+          "PX",
           limits.leaseTtlMs,
         )
       }
       return parsed
     } catch (error) {
-      console.error('[routing] acquire failed', vendorName, error)
-      return { ok: false, reason: 'unavailable', retryAfterMs: 0 }
+      console.error("[routing] acquire failed", vendorName, error)
+      return { ok: false, reason: "unavailable", retryAfterMs: 0 }
     }
   }
 
@@ -156,11 +156,11 @@ export class VendorLimiter {
         String(retryAfterMs),
         String(cooldownMs),
       )
-      if (options.outcome !== 'submit_ok') {
+      if (options.outcome !== "submit_ok") {
         await this.redis.del(this.ownerKey(requestId))
       }
     } catch (error) {
-      console.error('[routing] release failed', vendorName, requestId, error)
+      console.error("[routing] release failed", vendorName, requestId, error)
     }
   }
 
@@ -182,8 +182,8 @@ export class VendorLimiter {
   ): Promise<{ tokens: number | null; ts: number | null }> {
     const [tokens, ts] = await this.redis.hmget(
       this.keys(vendorName).tb,
-      'tokens',
-      'ts',
+      "tokens",
+      "ts",
     )
     return {
       tokens: tokens == null ? null : Number(tokens),

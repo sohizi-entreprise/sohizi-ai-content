@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import worker from '../src/index'
-import { createTestEnv } from './fakes'
+import { describe, expect, it } from "vitest"
+import worker from "../src/index"
+import { createTestEnv } from "./fakes"
 
 /** 128 kbps, 44.1 kHz MPEG-1 Layer III frame: 417 bytes, ~26.1 ms. */
 const FRAME_SIZE = 417
@@ -23,18 +23,18 @@ function trimRequest(params: Record<string, string>): Request {
   return new Request(`https://worker.test/?${search}`)
 }
 
-describe('audio trim route', () => {
-  it('returns whole frames for the requested window', async () => {
+describe("audio trim route", () => {
+  it("returns whole frames for the requested window", async () => {
     const { bucket, env } = createTestEnv()
-    bucket.objects.set('audio/example.mp3', buildMp3(40))
+    bucket.objects.set("audio/example.mp3", buildMp3(40))
 
     const response = await worker.fetch(
-      trimRequest({ key: 'audio/example.mp3', offset: '0.2', duration: '0.3' }),
+      trimRequest({ key: "audio/example.mp3", offset: "0.2", duration: "0.3" }),
       env,
     )
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Type')).toBe('audio/mpeg')
+    expect(response.headers.get("Content-Type")).toBe("audio/mpeg")
 
     const body = new Uint8Array(await response.arrayBuffer())
     expect(body.byteLength % FRAME_SIZE).toBe(0)
@@ -48,79 +48,79 @@ describe('audio trim route', () => {
     expect(body[0]).toBe(0xff)
   })
 
-  it('keeps serving the legacy root path used by the API', async () => {
+  it("keeps serving the legacy root path used by the API", async () => {
     const { bucket, env } = createTestEnv()
-    bucket.objects.set('audio/example.mp3', buildMp3(10))
+    bucket.objects.set("audio/example.mp3", buildMp3(10))
 
     const response = await worker.fetch(
-      new Request('https://worker.test/trim?key=audio/example.mp3'),
+      new Request("https://worker.test/trim?key=audio/example.mp3"),
       env,
     )
 
     expect(response.status).toBe(200)
   })
 
-  it('answers HEAD without a body', async () => {
+  it("answers HEAD without a body", async () => {
     const { bucket, env } = createTestEnv()
-    bucket.objects.set('audio/example.mp3', buildMp3(10))
+    bucket.objects.set("audio/example.mp3", buildMp3(10))
 
     const response = await worker.fetch(
-      new Request('https://worker.test/?key=audio/example.mp3', {
-        method: 'HEAD',
+      new Request("https://worker.test/?key=audio/example.mp3", {
+        method: "HEAD",
       }),
       env,
     )
 
     expect(response.status).toBe(200)
-    expect(Number(response.headers.get('Content-Length'))).toBeGreaterThan(0)
-    expect(await response.text()).toBe('')
+    expect(Number(response.headers.get("Content-Length"))).toBeGreaterThan(0)
+    expect(await response.text()).toBe("")
   })
 
-  it('rejects a missing key', async () => {
+  it("rejects a missing key", async () => {
     const { env } = createTestEnv()
     const response = await worker.fetch(
-      new Request('https://worker.test/'),
+      new Request("https://worker.test/"),
       env,
     )
     expect(response.status).toBe(400)
   })
 
-  it('rejects a negative offset', async () => {
+  it("rejects a negative offset", async () => {
     const { bucket, env } = createTestEnv()
-    bucket.objects.set('audio/example.mp3', buildMp3(4))
+    bucket.objects.set("audio/example.mp3", buildMp3(4))
     const response = await worker.fetch(
-      trimRequest({ key: 'audio/example.mp3', offset: '-1' }),
+      trimRequest({ key: "audio/example.mp3", offset: "-1" }),
       env,
     )
     expect(response.status).toBe(400)
   })
 
-  it('404s when the object is absent', async () => {
+  it("404s when the object is absent", async () => {
     const { env } = createTestEnv()
     const response = await worker.fetch(
-      trimRequest({ key: 'audio/missing.mp3' }),
+      trimRequest({ key: "audio/missing.mp3" }),
       env,
     )
     expect(response.status).toBe(404)
   })
 
-  it('refuses files above the memory budget', async () => {
-    const { bucket, env } = createTestEnv({ MAX_MP3_BYTES: '100' })
-    bucket.objects.set('audio/example.mp3', buildMp3(10))
+  it("refuses files above the memory budget", async () => {
+    const { bucket, env } = createTestEnv({ MAX_MP3_BYTES: "100" })
+    bucket.objects.set("audio/example.mp3", buildMp3(10))
     const response = await worker.fetch(
-      trimRequest({ key: 'audio/example.mp3' }),
+      trimRequest({ key: "audio/example.mp3" }),
       env,
     )
     expect(response.status).toBe(413)
   })
 
-  it('rejects write methods', async () => {
+  it("rejects write methods", async () => {
     const { env } = createTestEnv()
     const response = await worker.fetch(
-      new Request('https://worker.test/?key=a.mp3', { method: 'POST' }),
+      new Request("https://worker.test/?key=a.mp3", { method: "POST" }),
       env,
     )
     expect(response.status).toBe(405)
-    expect(response.headers.get('Allow')).toBe('GET, HEAD')
+    expect(response.headers.get("Allow")).toBe("GET, HEAD")
   })
 })

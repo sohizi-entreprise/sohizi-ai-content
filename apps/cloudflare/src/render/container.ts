@@ -1,6 +1,6 @@
-import { Container } from '@cloudflare/containers'
-import { readIntVar } from '../env'
-import type { WorkerEnv } from '../env'
+import { Container } from "@cloudflare/containers"
+import { readIntVar } from "../env"
+import type { WorkerEnv } from "../env"
 
 type ContainerState = ConstructorParameters<typeof Container>[0]
 
@@ -18,13 +18,13 @@ export class RemotionRenderContainer extends Container<WorkerEnv> {
    * Long enough to survive the gap between Workflow polls, short enough that a
    * finished job stops billing quickly.
    */
-  sleepAfter = '3m'
+  sleepAfter = "3m"
   enableInternet = true
 
   constructor(ctx: ContainerState, env: WorkerEnv) {
     super(ctx, env)
     this.envVars = {
-      NODE_ENV: 'production',
+      NODE_ENV: "production",
       RENDER_CONCURRENCY: String(
         readIntVar(env.RENDER_CONCURRENCY, 2, { min: 1, max: 8 }),
       ),

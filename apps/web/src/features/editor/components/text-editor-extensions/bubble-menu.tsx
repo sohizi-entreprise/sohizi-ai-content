@@ -124,7 +124,10 @@ export default function TextEditorBubbleMenu({
               <AtSign className="size-3.5" />
               Add to context
             </Button>
-            <Separator orientation="vertical" className="mx-0.5 h-5!" />
+            <Separator
+              orientation="vertical"
+              className="mx-0.5 h-5!"
+            />
           </>
         )}
         <TextEditorToolbar

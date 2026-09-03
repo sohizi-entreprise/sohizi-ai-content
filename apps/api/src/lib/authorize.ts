@@ -1,7 +1,7 @@
-import { db } from '@/db'
-import { projects, member, conversations, type UserType } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
-import { BadRequest, Forbidden, NotFound } from '@/features/error'
+import { db } from "@/db"
+import { projects, member, conversations, type UserType } from "@/db/schema"
+import { eq, and } from "drizzle-orm"
+import { BadRequest, Forbidden, NotFound } from "@/features/error"
 
 export function requireActiveOrganization(
   session: { activeOrganizationId?: string | null },
@@ -10,15 +10,15 @@ export function requireActiveOrganization(
   const organizationId = override ?? session.activeOrganizationId
   if (!organizationId) {
     throw new BadRequest(
-      'No active organization. Please select an organization first.',
+      "No active organization. Please select an organization first.",
     )
   }
   return organizationId
 }
 
 export function assertAdmin(user: { type?: UserType | string | null }) {
-  if (user.type !== 'admin') {
-    throw new Forbidden('Admin access required')
+  if (user.type !== "admin") {
+    throw new Forbidden("Admin access required")
   }
 }
 
@@ -32,7 +32,7 @@ export async function assertOrgMember(userId: string, organizationId: string) {
     .limit(1)
 
   if (membership.length === 0) {
-    throw new Forbidden('Not a member of this organization')
+    throw new Forbidden("Not a member of this organization")
   }
 }
 
@@ -44,7 +44,7 @@ export async function assertProjectAccess(userId: string, projectId: string) {
     .limit(1)
 
   if (!project[0]) {
-    throw new NotFound('Project not found')
+    throw new NotFound("Project not found")
   }
 
   await assertOrgMember(userId, project[0].organizationId)
@@ -62,10 +62,10 @@ export async function assertConversationOwner(
     .limit(1)
 
   if (!conversation[0]) {
-    throw new NotFound('Conversation not found')
+    throw new NotFound("Conversation not found")
   }
 
   if (conversation[0].userId !== userId) {
-    throw new Forbidden('You do not own this conversation')
+    throw new Forbidden("You do not own this conversation")
   }
 }

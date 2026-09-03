@@ -1,6 +1,6 @@
-import { E5SmallLocalEmbedder } from '@/lib/rag/local-embedder'
-import * as fileSystemRepo from './repo'
-import { countWords } from './utils'
+import { E5SmallLocalEmbedder } from "@/lib/rag/local-embedder"
+import * as fileSystemRepo from "./repo"
+import { countWords } from "./utils"
 
 export type IngestFileContentChunksParams = {
   projectId: string

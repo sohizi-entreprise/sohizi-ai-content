@@ -97,11 +97,21 @@ function RenderUserMessage({ message }: { message: Message }) {
   }, [message])
 
   return (
-    <UIMessage from="user" className="max-w-full ml-0">
+    <UIMessage
+      from="user"
+      className="max-w-full ml-0"
+    >
       {attachments.length > 0 && (
-        <Attachments variant="grid" className="mb-1 ml-0">
+        <Attachments
+          variant="grid"
+          className="mb-1 ml-0"
+        >
           {attachments.map((file) => (
-            <Attachment key={file.id} data={file} className="size-16 border">
+            <Attachment
+              key={file.id}
+              data={file}
+              className="size-16 border"
+            >
               <AttachmentPreview />
             </Attachment>
           ))}

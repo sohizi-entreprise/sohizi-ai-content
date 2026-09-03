@@ -25,13 +25,13 @@ npx ai-elements@latest add jsx-preview
 The JSXPreview component integrates with the AI SDK to render generated UI in real-time:
 
 ```tsx title="components/generated-ui.tsx"
-'use client'
+"use client"
 
 import {
   JSXPreview,
   JSXPreviewContent,
   JSXPreviewError,
-} from '@/components/ai-elements/jsx-preview'
+} from "@/components/ai-elements/jsx-preview"
 
 type GeneratedUIProps = {
   jsx: string
@@ -42,7 +42,7 @@ export const GeneratedUI = ({ jsx, isStreaming }: GeneratedUIProps) => (
   <JSXPreview
     jsx={jsx}
     isStreaming={isStreaming}
-    onError={(error) => console.error('JSX Parse Error:', error)}
+    onError={(error) => console.error("JSX Parse Error:", error)}
   >
     <JSXPreviewContent />
     <JSXPreviewError />
@@ -55,14 +55,14 @@ export const GeneratedUI = ({ jsx, isStreaming }: GeneratedUIProps) => (
 You can inject custom components to be used within the rendered JSX:
 
 ```tsx title="components/generated-ui-with-components.tsx"
-'use client'
+"use client"
 
 import {
   JSXPreview,
   JSXPreviewContent,
-} from '@/components/ai-elements/jsx-preview'
-import { Button } from '@sohizi/ui/button'
-import { Card } from '@sohizi/ui/card'
+} from "@/components/ai-elements/jsx-preview"
+import { Button } from "@sohizi/ui/button"
+import { Card } from "@sohizi/ui/card"
 
 const customComponents = {
   Button,
@@ -70,7 +70,10 @@ const customComponents = {
 }
 
 export const GeneratedUIWithComponents = ({ jsx }: { jsx: string }) => (
-  <JSXPreview jsx={jsx} components={customComponents}>
+  <JSXPreview
+    jsx={jsx}
+    components={customComponents}
+  >
     <JSXPreviewContent />
   </JSXPreview>
 )

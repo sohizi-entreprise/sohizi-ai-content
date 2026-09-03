@@ -1,4 +1,4 @@
-import { db } from '@/db'
+import { db } from "@/db"
 import {
   llmModels,
   llmVendors,
@@ -11,22 +11,22 @@ import {
   modelsAndParameterOptions,
   modelsAndParameters,
   parameterOptions,
-} from '@/db/schema'
-import { and, count, eq, inArray, sql } from 'drizzle-orm'
+} from "@/db/schema"
+import { and, count, eq, inArray, sql } from "drizzle-orm"
 import type {
   ModelBasePricing,
   ModelParameterConstraint,
   VendorCircuitConfig,
   VendorRateLimit,
-} from '@/type'
-import { DEFAULT_VENDOR_RATE_LIMIT } from '@/type'
+} from "@/type"
+import { DEFAULT_VENDOR_RATE_LIMIT } from "@/type"
 
 const isCompleteListing = (pricing: ModelBasePricing | null | undefined) => {
   if (!pricing) return false
-  if (pricing.unit === 'per_1m_tokens') {
+  if (pricing.unit === "per_1m_tokens") {
     return Number.isFinite(pricing.input) && Number.isFinite(pricing.output)
   }
-  return pricing.unit === 'per_inference' && Number.isFinite(pricing.rate)
+  return pricing.unit === "per_inference" && Number.isFinite(pricing.rate)
 }
 
 type ParameterOptionRow = {
@@ -288,13 +288,13 @@ export const listModelParameterBindings = async (modelId: string) => {
       parameterId: string
       key: string
       label: string
-      type: (typeof rows)[number]['type']
+      type: (typeof rows)[number]["type"]
       description: string | null
-      xUiComponent: (typeof rows)[number]['xUiComponent']
+      xUiComponent: (typeof rows)[number]["xUiComponent"]
       required: boolean
       sortOrder: number
       defaultValue: string | null
-      constraints: (typeof rows)[number]['constraints']
+      constraints: (typeof rows)[number]["constraints"]
       options: ParameterOptionRow[]
     }
   >()
@@ -938,7 +938,7 @@ export const replaceModelParameters = async (
         ownershipRows.map((row) => row.parameterId),
       )
       if (foundParameterIds.size !== parameterIds.length) {
-        return { error: 'missing-parameters' as const }
+        return { error: "missing-parameters" as const }
       }
 
       const foundPairs = new Set(
@@ -952,7 +952,7 @@ export const replaceModelParameters = async (
         ),
       )
       if (requestedPairs.some((pair) => !foundPairs.has(pair))) {
-        return { error: 'invalid-options' as const }
+        return { error: "invalid-options" as const }
       }
     }
 
@@ -1019,7 +1019,7 @@ export const listVendors = async () => {
 
 export const createVendor = async (data: {
   name: string
-  kind?: 'media' | 'llm'
+  kind?: "media" | "llm"
   enabled?: boolean
   rateLimit?: VendorRateLimit
   circuitConfig?: VendorCircuitConfig | null
@@ -1028,7 +1028,7 @@ export const createVendor = async (data: {
     .insert(llmVendors)
     .values({
       name: data.name,
-      kind: data.kind ?? 'llm',
+      kind: data.kind ?? "llm",
       enabled: data.enabled ?? true,
       rateLimit: data.rateLimit ?? DEFAULT_VENDOR_RATE_LIMIT,
       circuitConfig: data.circuitConfig ?? null,
@@ -1041,7 +1041,7 @@ export const updateVendor = async (
   id: string,
   data: Partial<{
     name: string
-    kind: 'media' | 'llm'
+    kind: "media" | "llm"
     enabled: boolean
     rateLimit: VendorRateLimit
     circuitConfig: VendorCircuitConfig | null

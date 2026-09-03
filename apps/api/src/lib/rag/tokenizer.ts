@@ -1,4 +1,4 @@
-import { AutoTokenizer, PreTrainedTokenizer } from '@huggingface/transformers'
+import { AutoTokenizer, PreTrainedTokenizer } from "@huggingface/transformers"
 
 export interface TokenizerInterface {
   tokenLength(text: string): Promise<number>
@@ -9,7 +9,7 @@ export class HuggingFaceTokenizer implements TokenizerInterface {
   private model: string
   private prefix: string
 
-  constructor(model: string, prefix: string = '') {
+  constructor(model: string, prefix: string = "") {
     this.model = model
     this.prefix = prefix
   }

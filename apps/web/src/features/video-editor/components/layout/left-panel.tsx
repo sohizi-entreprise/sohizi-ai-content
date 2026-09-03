@@ -215,7 +215,10 @@ function AssetsLibrary({ projectId }: LeftPanelProps) {
 function TextLibrary() {
   return (
     <>
-      <SectionHeader title="Text" description="Drag a style to the timeline" />
+      <SectionHeader
+        title="Text"
+        description="Drag a style to the timeline"
+      />
       <div className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-3.5">
         <TextPresetsPanel />
       </div>

@@ -1,19 +1,19 @@
-import { CompleteReason, FilePendingOperation, TokenUsage } from '@/type'
+import { CompleteReason, FilePendingOperation, TokenUsage } from "@/type"
 
 export const streamEvents = {
-  textDelta: 'text_delta',
-  reasoningDelta: 'reasoning_delta',
-  complete: 'complete',
-  usage: 'usage',
-  error: 'error',
-  abort: 'abort',
-  toolCall: 'tool_call',
-  toolCallStart: 'tool_call_start',
-  toolCallDelta: 'tool_call_delta',
-  toolCallEnd: 'tool_call_end',
-  toolResultDelta: 'tool_result_delta',
-  toolResultComplete: 'tool_result_complete',
-  operation: 'operation',
+  textDelta: "text_delta",
+  reasoningDelta: "reasoning_delta",
+  complete: "complete",
+  usage: "usage",
+  error: "error",
+  abort: "abort",
+  toolCall: "tool_call",
+  toolCallStart: "tool_call_start",
+  toolCallDelta: "tool_call_delta",
+  toolCallEnd: "tool_call_end",
+  toolResultDelta: "tool_result_delta",
+  toolResultComplete: "tool_result_complete",
+  operation: "operation",
 } as const
 
 export type ToolResultDelta = {
@@ -29,7 +29,7 @@ export type ToolResultComplete = {
   toolCallId: string
   success: boolean
   output: string
-  usage: Omit<TokenUsage, 'modelId'>
+  usage: Omit<TokenUsage, "modelId">
   metadata?: Record<string, unknown>
 }
 
@@ -38,7 +38,7 @@ export type AgenticToolChunk = {
   type: typeof streamEvents.toolResultComplete
   success: boolean
   output: string
-  usage: Omit<TokenUsage, 'modelId'>
+  usage: Omit<TokenUsage, "modelId">
   metadata?: Record<string, unknown>
 }
 

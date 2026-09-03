@@ -1,29 +1,29 @@
-import { ModelMessage, UserModelMessage } from 'ai'
-import { billingService, withBillingStream } from '@/features/billing'
+import { ModelMessage, UserModelMessage } from "ai"
+import { billingService, withBillingStream } from "@/features/billing"
 import {
   BillableLlmInput,
   createBillableLlmClient,
   type ModelConfig,
-} from '../utils/llm-client'
-import { LlmChunk } from '../utils/llm-response'
-import { estimateInputTokens } from '../utils/estimate-token'
+} from "../utils/llm-client"
+import { LlmChunk } from "../utils/llm-response"
+import { estimateInputTokens } from "../utils/estimate-token"
 import {
   buildEvaluatorInput,
   DEFAULT_EVALUATOR_OUTPUT_TOKENS,
   drainStreamForComplete,
   parseEvaluatorResponse,
   StopEvaluation,
-} from './stop-evaluator'
-import { Session } from './session'
-import { AgentStateManager } from './state-manager'
-import { extractTextFromContent } from '../utils/message-content'
+} from "./stop-evaluator"
+import { Session } from "./session"
+import { AgentStateManager } from "./state-manager"
+import { extractTextFromContent } from "../utils/message-content"
 
 export type ContextManagerConfig = {
   maxContextTokens: number
   session: Session
   summaryModelId: string
   evaluatorModelId: string
-  evaluatorModelConfig?: Pick<ModelConfig, 'reasoningEffort'>
+  evaluatorModelConfig?: Pick<ModelConfig, "reasoningEffort">
   vendor: string
   threshold?: number
   pruneMaxLength?: number
@@ -55,7 +55,7 @@ const DEFAULT_KEEP_FIRST = 5
 const DEFAULT_KEEP_LAST = 10
 const DEFAULT_SUMMARY_OUTPUT_TOKENS = 2048
 
-const TRUNCATION_MARKER = '...[CONCANATED]'
+const TRUNCATION_MARKER = "...[CONCANATED]"
 
 const SUMMARY_SYSTEM_PROMPT = `You are a conversation summarizer for an autonomous AI agent operating in a tool-calling loop.
 
@@ -79,7 +79,7 @@ export class ContextManager {
   private readonly summaryModelId: string
   private readonly evaluatorModelId: string
   private readonly evaluatorModelConfig:
-    Pick<ModelConfig, 'reasoningEffort'> | undefined
+    Pick<ModelConfig, "reasoningEffort"> | undefined
   private readonly vendor: string
   private summaryStream: BilledLlmStream | null | undefined
   private evaluatorStream: BilledLlmStream | null | undefined
@@ -150,7 +150,7 @@ export class ContextManager {
     try {
       const evaluatorStream = await this.getEvaluatorStream()
       if (!evaluatorStream) {
-        return { isDone: true, instruction: '' }
+        return { isDone: true, instruction: "" }
       }
 
       const evaluatorInput = buildEvaluatorInput({
@@ -170,13 +170,13 @@ export class ContextManager {
 
       const result = await drainStreamForComplete(billedStream)
       if (!result) {
-        return { isDone: true, instruction: '' }
+        return { isDone: true, instruction: "" }
       }
 
       stateManager.incrementUsage(result.usage)
       return parseEvaluatorResponse(result.text)
     } catch {
-      return { isDone: true, instruction: '' }
+      return { isDone: true, instruction: "" }
     }
   }
 
@@ -198,18 +198,18 @@ export class ContextManager {
    */
   pruneMessages(messages: ModelMessage[]): ModelMessage[] {
     return messages.map((message) => {
-      if (message.role !== 'tool' || !Array.isArray(message.content)) {
+      if (message.role !== "tool" || !Array.isArray(message.content)) {
         return message
       }
 
       const content = message.content.map((part) => {
-        if (part.type !== 'tool-result') {
+        if (part.type !== "tool-result") {
           return part
         }
         const output = part.output
         if (
-          (output.type === 'text' || output.type === 'error-text') &&
-          typeof output.value === 'string' &&
+          (output.type === "text" || output.type === "error-text") &&
+          typeof output.value === "string" &&
           output.value.length > this.pruneMaxLength
         ) {
           return {
@@ -240,9 +240,9 @@ export class ContextManager {
     summarizeFn: SummarizeFn,
   ): Promise<ModelMessage[]> {
     const systemMessages = messages.filter(
-      (message) => message.role === 'system',
+      (message) => message.role === "system",
     )
-    const conversation = messages.filter((message) => message.role !== 'system')
+    const conversation = messages.filter((message) => message.role !== "system")
 
     // Not enough to summarize — nothing in the middle to condense.
     if (conversation.length <= this.keepFirst + this.keepLast) {
@@ -271,10 +271,10 @@ export class ContextManager {
     })
 
     const summaryMessage: ModelMessage = {
-      role: 'user',
+      role: "user",
       content: [
         {
-          type: 'text',
+          type: "text",
           text: `Summary of the earlier conversation (older messages were condensed to save context):\n\n${summary}`,
         },
       ],
@@ -300,26 +300,26 @@ export class ContextManager {
     const summarized = await this.summarizeMessages(pruned, summarizeFn)
 
     const explain: ModelMessage = {
-      role: 'user',
+      role: "user",
       content: [
         {
-          type: 'text',
-          text: 'The earlier messages in this conversation have been summarized to save context.',
+          type: "text",
+          text: "The earlier messages in this conversation have been summarized to save context.",
         },
       ],
     }
     const acknowledge: ModelMessage = {
-      role: 'assistant',
+      role: "assistant",
       content: [
         {
-          type: 'text',
-          text: 'Acknowledged — I have the summarized context and the retained messages.',
+          type: "text",
+          text: "Acknowledged — I have the summarized context and the retained messages.",
         },
       ],
     }
     const cont: ModelMessage = {
-      role: 'user',
-      content: [{ type: 'text', text: 'Please continue with the task.' }],
+      role: "user",
+      content: [{ type: "text", text: "Please continue with the task." }],
     }
 
     return [...summarized, explain, acknowledge, cont]
@@ -334,7 +334,7 @@ export class ContextManager {
     boundary: number,
   ): number {
     let end = Math.min(boundary, conversation.length)
-    while (end < conversation.length && conversation[end].role === 'tool') {
+    while (end < conversation.length && conversation[end].role === "tool") {
       end++
     }
     return end
@@ -349,7 +349,7 @@ export class ContextManager {
     boundary: number,
   ): number {
     let start = Math.max(boundary, 0)
-    while (start > 0 && conversation[start].role === 'tool') {
+    while (start > 0 && conversation[start].role === "tool") {
       start--
     }
     return start
@@ -359,25 +359,25 @@ export class ContextManager {
     return messages
       .map((message) => {
         switch (message.role) {
-          case 'user':
+          case "user":
             return `[User]\n${this.extractText(message.content)}`
-          case 'assistant':
+          case "assistant":
             return `[Assistant]\n${this.extractAssistantText(message.content)}`
-          case 'tool':
+          case "tool":
             return `[Tool Result]\n${this.extractToolText(message.content)}`
           default:
             return `[${message.role}]\n${this.extractText(message.content)}`
         }
       })
-      .join('\n\n')
+      .join("\n\n")
   }
 
-  private extractText(content: ModelMessage['content']): string {
+  private extractText(content: ModelMessage["content"]): string {
     return extractTextFromContent(content)
   }
 
-  private extractAssistantText(content: ModelMessage['content']): string {
-    if (typeof content === 'string') {
+  private extractAssistantText(content: ModelMessage["content"]): string {
+    if (typeof content === "string") {
       return content
     }
     if (!Array.isArray(content)) {
@@ -385,19 +385,19 @@ export class ContextManager {
     }
     return content
       .map((part) => {
-        if (part.type === 'text' || part.type === 'reasoning') {
+        if (part.type === "text" || part.type === "reasoning") {
           return part.text
         }
-        if (part.type === 'tool-call') {
+        if (part.type === "tool-call") {
           return `(tool-call ${part.toolName}: ${JSON.stringify(part.input)})`
         }
         return JSON.stringify(part)
       })
-      .join('\n')
+      .join("\n")
   }
 
-  private extractToolText(content: ModelMessage['content']): string {
-    if (typeof content === 'string') {
+  private extractToolText(content: ModelMessage["content"]): string {
+    if (typeof content === "string") {
       return content
     }
     if (!Array.isArray(content)) {
@@ -405,18 +405,18 @@ export class ContextManager {
     }
     return content
       .map((part) => {
-        if (part.type === 'tool-result') {
+        if (part.type === "tool-result") {
           const value =
-            part.output && 'value' in part.output
+            part.output && "value" in part.output
               ? part.output.value
               : part.output
           const rendered =
-            typeof value === 'string' ? value : JSON.stringify(value)
+            typeof value === "string" ? value : JSON.stringify(value)
           return `(${part.toolName}) ${rendered}`
         }
         return JSON.stringify(part)
       })
-      .join('\n')
+      .join("\n")
   }
 
   private buildSummarizeFn(
@@ -427,8 +427,8 @@ export class ContextManager {
   ): SummarizeFn {
     return async ({ systemPrompt, transcript }) => {
       const messages: ModelMessage[] = [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: [{ type: 'text', text: transcript }] },
+        { role: "system", content: systemPrompt },
+        { role: "user", content: [{ type: "text", text: transcript }] },
       ]
       const input: BillableLlmInput = {
         messages,
@@ -449,7 +449,7 @@ export class ContextManager {
 
       const result = await drainStreamForComplete(stream)
       if (!result) {
-        return ''
+        return ""
       }
       stateManager.incrementUsage(result.usage)
       return result.text
@@ -473,7 +473,7 @@ export class ContextManager {
     const summaryClient = createBillableLlmClient({
       model,
       modelConfig: {
-        reasoningEffort: 'low',
+        reasoningEffort: "low",
         maxOutputTokens: DEFAULT_SUMMARY_OUTPUT_TOKENS,
       },
     })
@@ -498,7 +498,7 @@ export class ContextManager {
     const evaluatorClient = createBillableLlmClient({
       model,
       modelConfig: {
-        reasoningEffort: this.evaluatorModelConfig?.reasoningEffort ?? 'low',
+        reasoningEffort: this.evaluatorModelConfig?.reasoningEffort ?? "low",
         maxOutputTokens: DEFAULT_EVALUATOR_OUTPUT_TOKENS,
       },
     })

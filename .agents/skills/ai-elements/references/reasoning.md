@@ -21,33 +21,33 @@ Some models (like GPT with high reasoning effort) return multiple reasoning part
 Add the following component to your frontend:
 
 ```tsx title="app/page.tsx"
-'use client'
+"use client"
 
 import {
   Reasoning,
   ReasoningContent,
   ReasoningTrigger,
-} from '@/components/ai-elements/reasoning'
+} from "@/components/ai-elements/reasoning"
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
-} from '@/components/ai-elements/conversation'
+} from "@/components/ai-elements/conversation"
 import {
   PromptInput,
   type PromptInputMessage,
   PromptInputTextarea,
   PromptInputSubmit,
-} from '@/components/ai-elements/prompt-input'
-import { Spinner } from '@sohizi/ui/spinner'
+} from "@/components/ai-elements/prompt-input"
+import { Spinner } from "@sohizi/ui/spinner"
 import {
   Message,
   MessageContent,
   MessageResponse,
-} from '@/components/ai-elements/message'
-import { useState } from 'react'
-import { useChat } from '@ai-sdk/react'
-import type { UIMessage } from 'ai'
+} from "@/components/ai-elements/message"
+import { useState } from "react"
+import { useChat } from "@ai-sdk/react"
+import type { UIMessage } from "ai"
 
 const MessageParts = ({
   message,
@@ -60,26 +60,29 @@ const MessageParts = ({
 }) => {
   // Consolidate all reasoning parts into one block
   const reasoningParts = message.parts.filter(
-    (part) => part.type === 'reasoning',
+    (part) => part.type === "reasoning",
   )
-  const reasoningText = reasoningParts.map((part) => part.text).join('\n\n')
+  const reasoningText = reasoningParts.map((part) => part.text).join("\n\n")
   const hasReasoning = reasoningParts.length > 0
 
   // Check if reasoning is still streaming (last part is reasoning on last message)
   const lastPart = message.parts.at(-1)
   const isReasoningStreaming =
-    isLastMessage && isStreaming && lastPart?.type === 'reasoning'
+    isLastMessage && isStreaming && lastPart?.type === "reasoning"
 
   return (
     <>
       {hasReasoning && (
-        <Reasoning className="w-full" isStreaming={isReasoningStreaming}>
+        <Reasoning
+          className="w-full"
+          isStreaming={isReasoningStreaming}
+        >
           <ReasoningTrigger />
           <ReasoningContent>{reasoningText}</ReasoningContent>
         </Reasoning>
       )}
       {message.parts.map((part, i) => {
-        if (part.type === 'text') {
+        if (part.type === "text") {
           return (
             <MessageResponse key={`${message.id}-${i}`}>
               {part.text}
@@ -93,16 +96,16 @@ const MessageParts = ({
 }
 
 const ReasoningDemo = () => {
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState("")
 
   const { messages, sendMessage, status } = useChat()
 
   const handleSubmit = (message: PromptInputMessage) => {
     sendMessage({ text: message.text })
-    setInput('')
+    setInput("")
   }
 
-  const isStreaming = status === 'streaming'
+  const isStreaming = status === "streaming"
 
   return (
     <div className="max-w-4xl mx-auto p-6 relative size-full rounded-lg border h-[600px]">
@@ -110,7 +113,10 @@ const ReasoningDemo = () => {
         <Conversation>
           <ConversationContent>
             {messages.map((message, index) => (
-              <Message from={message.role} key={message.id}>
+              <Message
+                from={message.role}
+                key={message.id}
+              >
                 <MessageContent>
                   <MessageParts
                     message={message}
@@ -120,7 +126,7 @@ const ReasoningDemo = () => {
                 </MessageContent>
               </Message>
             ))}
-            {status === 'submitted' && <Spinner />}
+            {status === "submitted" && <Spinner />}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
@@ -136,7 +142,7 @@ const ReasoningDemo = () => {
             className="pr-12"
           />
           <PromptInputSubmit
-            status={isStreaming ? 'streaming' : 'ready'}
+            status={isStreaming ? "streaming" : "ready"}
             disabled={!input.trim()}
             className="absolute bottom-1 right-1"
           />
@@ -152,7 +158,7 @@ export default ReasoningDemo
 Add the following route to your backend:
 
 ```ts title="app/api/chat/route.ts"
-import { streamText, UIMessage, convertToModelMessages } from 'ai'
+import { streamText, UIMessage, convertToModelMessages } from "ai"
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30
@@ -162,7 +168,7 @@ export async function POST(req: Request) {
     await req.json()
 
   const result = streamText({
-    model: 'deepseek/deepseek-r1',
+    model: "deepseek/deepseek-r1",
     messages: await convertToModelMessages(messages),
   })
 

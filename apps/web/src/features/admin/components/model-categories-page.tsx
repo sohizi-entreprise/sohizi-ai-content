@@ -107,7 +107,10 @@ export function ModelCategoriesPage() {
         </Table>
       </div>
 
-      <CategoryFormDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <CategoryFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </div>
   )
 }

@@ -1,10 +1,10 @@
-import { ModelMessage } from 'ai'
-import { createBillableLlmClient } from './llm-client'
-import { getModelWithVendorBinding } from '@/features/models/repo'
-import { DEFAULT_AGENT_VENDOR } from '../core/vendor'
-import { billingService, withBilling } from '@/features/billing'
-import { estimateInputTokens } from './estimate-token'
-import { v4 as uuidv4 } from 'uuid'
+import { ModelMessage } from "ai"
+import { createBillableLlmClient } from "./llm-client"
+import { getModelWithVendorBinding } from "@/features/models/repo"
+import { DEFAULT_AGENT_VENDOR } from "../core/vendor"
+import { billingService, withBilling } from "@/features/billing"
+import { estimateInputTokens } from "./estimate-token"
+import { v4 as uuidv4 } from "uuid"
 
 type GenerateTitleResult = {
   title: string
@@ -25,12 +25,12 @@ export async function generateTitle(
   try {
     const model = await getModelWithVendorBinding(modelId, DEFAULT_AGENT_VENDOR)
     if (!model) {
-      throw new Error('Model not found')
+      throw new Error("Model not found")
     }
     const client = createBillableLlmClient({
       model,
       modelConfig: {
-        reasoningEffort: 'minimal',
+        reasoningEffort: "minimal",
         maxOutputTokens: 32,
       },
     })
@@ -38,11 +38,11 @@ export async function generateTitle(
 
     const titleMessages: ModelMessage[] = [
       {
-        role: 'system',
+        role: "system",
         content: getSystemPrompt(),
       },
       {
-        role: 'user',
+        role: "user",
         content: `Give me a title based on this message:\n${message}`,
       },
     ]
@@ -66,10 +66,10 @@ export async function generateTitle(
     title = output.text.trim()
 
     if (output.error) {
-      console.error('Title generation failed: ', output.error)
+      console.error("Title generation failed: ", output.error)
     }
   } catch (error) {
-    console.error('Title generation failed: ', error)
+    console.error("Title generation failed: ", error)
   }
 
   return { title }
@@ -104,8 +104,8 @@ Video Game Development Insights
 
 function derivedTitle(firstMsg: string) {
   const title = firstMsg
-    .replace(/[^a-zA-Z0-9\s]/g, '')
-    .replace(/\s+/g, ' ')
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
     .trim()
     .slice(0, 15)
     .toLowerCase()

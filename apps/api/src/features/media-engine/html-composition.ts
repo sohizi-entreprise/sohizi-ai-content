@@ -1,5 +1,5 @@
-import type { CompositionVariable } from '@/type'
-import type { SubmitHtmlCompositionDoneInput } from '@/features/ai/agent/tools/submit-html-composition'
+import type { CompositionVariable } from "@/type"
+import type { SubmitHtmlCompositionDoneInput } from "@/features/ai/agent/tools/submit-html-composition"
 
 export type HtmlCompositionSubmission = {
   html: string
@@ -13,8 +13,8 @@ export type HtmlCompositionSubmission = {
 }
 
 export type HtmlCompositionHandoff =
-  | { status: 'done'; submission: HtmlCompositionSubmission }
-  | { status: 'blocked'; message: string }
+  | { status: "done"; submission: HtmlCompositionSubmission }
+  | { status: "blocked"; message: string }
 
 /** In-process handoff from submitHtmlComposition → Inngest step (same process). */
 const handoffsByRunId = new Map<string, HtmlCompositionHandoff>()
@@ -27,7 +27,7 @@ export function extractVariableSchema(html: string): CompositionVariable[] {
   const marker = html.search(/data-composition-variables\s*=/)
   if (marker === -1) return []
 
-  const eq = html.indexOf('=', marker)
+  const eq = html.indexOf("=", marker)
   if (eq === -1) return []
 
   const after = html.slice(eq + 1).trimStart()
@@ -35,7 +35,7 @@ export function extractVariableSchema(html: string): CompositionVariable[] {
   if (jsonStart === -1) return []
 
   const open = after[jsonStart]
-  const close = open === '[' ? ']' : '}'
+  const close = open === "[" ? "]" : "}"
   let depth = 0
   let inString = false
   let escape = false
@@ -46,7 +46,7 @@ export function extractVariableSchema(html: string): CompositionVariable[] {
       escape = false
       continue
     }
-    if (ch === '\\' && inString) {
+    if (ch === "\\" && inString) {
       escape = true
       continue
     }
@@ -105,14 +105,14 @@ export function setHtmlCompositionSubmission(
   runId: string,
   submission: HtmlCompositionSubmission,
 ): void {
-  handoffsByRunId.set(runId, { status: 'done', submission })
+  handoffsByRunId.set(runId, { status: "done", submission })
 }
 
 export function setHtmlCompositionBlocked(
   runId: string,
   message: string,
 ): void {
-  handoffsByRunId.set(runId, { status: 'blocked', message })
+  handoffsByRunId.set(runId, { status: "blocked", message })
 }
 
 /** Read and clear the handoff for a run. */

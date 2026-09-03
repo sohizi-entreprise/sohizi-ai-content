@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import {
   Test,
@@ -9,7 +9,7 @@ import {
   TestSuite,
   TestSuiteContent,
   TestSuiteName,
-} from '@/components/ai-elements/test-results'
+} from "@/components/ai-elements/test-results"
 
 const Example = () => (
   <TestResults
@@ -25,12 +25,27 @@ const Example = () => (
       <TestResultsSummary />
     </TestResultsHeader>
     <TestResultsContent>
-      <TestSuite name="Auth" status="passed">
+      <TestSuite
+        name="Auth"
+        status="passed"
+      >
         <TestSuiteName />
         <TestSuiteContent>
-          <Test duration={45} name="should login" status="passed" />
-          <Test duration={32} name="should logout" status="passed" />
-          <Test duration={73} name="should refresh token" status="passed" />
+          <Test
+            duration={45}
+            name="should login"
+            status="passed"
+          />
+          <Test
+            duration={32}
+            name="should logout"
+            status="passed"
+          />
+          <Test
+            duration={73}
+            name="should refresh token"
+            status="passed"
+          />
         </TestSuiteContent>
       </TestSuite>
     </TestResultsContent>

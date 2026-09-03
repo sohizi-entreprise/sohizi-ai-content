@@ -13,9 +13,9 @@ import type {
   BillableResult,
   BillableStream,
   Credits,
-} from './types'
-import { BillingService } from './service'
-import { BillableConfigError, BillingTimeoutError } from './errors'
+} from "./types"
+import { BillingService } from "./service"
+import { BillableConfigError, BillingTimeoutError } from "./errors"
 
 const THIRTY_MINUTES_MS = 30 * 60 * 1000
 
@@ -56,7 +56,7 @@ function combineSignals(
   if (
     typeof (
       AbortSignal as unknown as { any?: (sigs: AbortSignal[]) => AbortSignal }
-    ).any === 'function'
+    ).any === "function"
   ) {
     const any = (
       AbortSignal as unknown as { any: (sigs: AbortSignal[]) => AbortSignal }
@@ -67,14 +67,14 @@ function combineSignals(
   const controller = new AbortController()
   const onAbort = () => controller.abort()
   if (external.aborted) controller.abort()
-  else external.addEventListener('abort', onAbort, { once: true })
+  else external.addEventListener("abort", onAbort, { once: true })
   if (timeoutSignal.aborted) controller.abort()
-  else timeoutSignal.addEventListener('abort', onAbort, { once: true })
+  else timeoutSignal.addEventListener("abort", onAbort, { once: true })
   return {
     signal: controller.signal,
     cleanup: () => {
-      external.removeEventListener('abort', onAbort)
-      timeoutSignal.removeEventListener('abort', onAbort)
+      external.removeEventListener("abort", onAbort)
+      timeoutSignal.removeEventListener("abort", onAbort)
     },
   }
 }
@@ -124,7 +124,7 @@ export function withBilling<TInput, TOutput>(
       metadata: ctx.metadata,
     })
 
-    if (reservation.status !== 'reserved') {
+    if (reservation.status !== "reserved") {
       throw new BillableConfigError(
         `Idempotency replay: reservation ${reservation.id} is already ${reservation.status}`,
       )
@@ -155,7 +155,7 @@ export function withBilling<TInput, TOutput>(
       await safeRefund(
         billing,
         reservation.id,
-        timedOut ? 'timeout' : 'execute-error',
+        timedOut ? "timeout" : "execute-error",
       )
       if (timedOut) {
         throw new BillingTimeoutError(billable.operation, billable.timeoutMs)
@@ -209,7 +209,7 @@ export function withBillingAsync<TInput, TJobHandle>(
       metadata: ctx.metadata,
     })
 
-    if (reservation.status !== 'reserved') {
+    if (reservation.status !== "reserved") {
       throw new BillableConfigError(
         `Idempotency replay: reservation ${reservation.id} is already ${reservation.status}`,
       )
@@ -240,7 +240,7 @@ export function withBillingAsync<TInput, TJobHandle>(
       await safeRefund(
         billing,
         reservation.id,
-        timedOut ? 'submit-timeout' : 'submit-error',
+        timedOut ? "submit-timeout" : "submit-error",
       )
       if (timedOut)
         throw new BillingTimeoutError(billable.operation, billable.timeoutMs)
@@ -297,7 +297,7 @@ export function withBillingStream<TInput, TChunk>(
       metadata: ctx.metadata,
     })
 
-    if (reservation.status !== 'reserved') {
+    if (reservation.status !== "reserved") {
       throw new BillableConfigError(
         `Idempotency replay: reservation ${reservation.id} is already ${reservation.status}`,
       )
@@ -328,14 +328,14 @@ export function withBillingStream<TInput, TChunk>(
       if (!settled) {
         // Stream ended without a terminal chunk -- release the reservation
         // immediately rather than waiting for the sweeper.
-        await safeRefund(billing, reservation.id, 'stream-no-terminal-chunk')
+        await safeRefund(billing, reservation.id, "stream-no-terminal-chunk")
       }
     } catch (err) {
       if (!settled) {
         await safeRefund(
           billing,
           reservation.id,
-          timedOut ? 'stream-timeout' : 'stream-error',
+          timedOut ? "stream-timeout" : "stream-error",
         )
       }
       if (timedOut) {
@@ -359,7 +359,7 @@ export async function safeRefund(
     await billing.refund(reservationId, reason)
   } catch (err) {
     console.error(
-      '[billing] refund after failure also failed',
+      "[billing] refund after failure also failed",
       reservationId,
       err,
     )

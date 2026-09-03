@@ -23,7 +23,10 @@ export default function ChatFilesPreview({ className, onRemoveFile }: Props) {
   return (
     <div className={cn("grid grid-cols-5 gap-4 w-full", className)}>
       {attachedFiles.map((file) => (
-        <div key={file.id} className="aspect-3/4 rounded relative">
+        <div
+          key={file.id}
+          className="aspect-3/4 rounded relative"
+        >
           <RenderFileType file={file} />
           {file.status === "pending" && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">

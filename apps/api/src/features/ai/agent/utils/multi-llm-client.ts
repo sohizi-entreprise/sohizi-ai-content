@@ -1,40 +1,40 @@
-import { OpenRouter } from '@openrouter/sdk'
-import type { TranscriptionWord } from 'openai/resources/audio/transcriptions'
+import { OpenRouter } from "@openrouter/sdk"
+import type { TranscriptionWord } from "openai/resources/audio/transcriptions"
 import type {
   Billable,
   BillableContext,
   BillableResult,
   Credits,
-} from '@/features/billing/types'
+} from "@/features/billing/types"
 import {
   AUDIO_OVERHEAD_RATE,
   IMAGE_OVERHEAD_RATE,
   VIDEO_OVERHEAD_RATE,
-} from '@/features/billing/constants'
+} from "@/features/billing/constants"
 import {
   type ImageSizePreset,
   openRouterImagePresetMap,
-} from '@/constants/media'
-import openAIClient from '@/lib/open-ai-client'
-import { getErrorMessage } from '@/utils/get-error-message'
-import { simpleHash } from '@/utils/simple-hash'
+} from "@/constants/media"
+import openAIClient from "@/lib/open-ai-client"
+import { getErrorMessage } from "@/utils/get-error-message"
+import { simpleHash } from "@/utils/simple-hash"
 import {
   lumenDryRun,
   microsToDollars,
   providerCostToActualCredits,
   providerCostToCredits,
-} from '@/features/media-engine/generators/cost-utils'
+} from "@/features/media-engine/generators/cost-utils"
 import {
   LUMEN_BASE_URL,
   MAX_VIDEO_POLL_ATTEMPTS,
   VIDEO_POLL_INTERVAL_MS,
-} from '@/features/media-engine/constants'
+} from "@/features/media-engine/constants"
 
-const DEFAULT_TTS_MODEL = 'google/gemini-3.1-flash-tts-preview'
-const DEFAULT_STT_MODEL = 'openai/whisper-large-v3'
-const DEFAULT_CAPTION_MODEL = 'whisper-1'
-const DEFAULT_MUSIC_MODEL = 'google/lyria-3-clip-preview'
-const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+const DEFAULT_TTS_MODEL = "google/gemini-3.1-flash-tts-preview"
+const DEFAULT_STT_MODEL = "openai/whisper-large-v3"
+const DEFAULT_CAPTION_MODEL = "whisper-1"
+const DEFAULT_MUSIC_MODEL = "google/lyria-3-clip-preview"
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 const FALLBACK_USD_PER_IMAGE = 0.1
 const FALLBACK_USD_PER_VIDEO_SECOND = 0.2
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000
@@ -49,7 +49,7 @@ export type GoogleSpeechOptions = {
   /** Prebuilt voice name (e.g. Kore, Puck, Aoede). */
   voice: string
   /** Gemini TTS only supports `pcm` (default). Other providers may accept `mp3`. */
-  responseFormat?: 'mp3' | 'pcm'
+  responseFormat?: "mp3" | "pcm"
   speed?: number
   /** Style / director notes — forwarded via provider.options.googleAiStudio. */
   instructions?: string
@@ -96,7 +96,7 @@ export type GenerateImageRequest = {
   model: string
   /** UI preset (auto/square/…) or raw OpenRouter aspect ratio. */
   aspectRatio?: ImageSizePreset | string
-  resolution?: '512' | '1K' | '2K' | '4K'
+  resolution?: "512" | "1K" | "2K" | "4K"
   n?: number
   referenceUrls?: string[]
   abortSignal?: AbortSignal
@@ -106,8 +106,8 @@ export type GenerateVideoRequest = {
   prompt: string
   model: string
   duration: number
-  aspectRatio?: '16:9' | '9:16' | '1:1'
-  resolution?: '720p' | '1080p'
+  aspectRatio?: "16:9" | "9:16" | "1:1"
+  resolution?: "720p" | "1080p"
   referenceUrl?: string
   numVariations?: number
   idempotencyKey?: string
@@ -121,7 +121,7 @@ export type VideoSubmissionResult = {
 
 export type VideoPollResult = {
   url: string
-  status: 'completed' | 'failed' | 'queued'
+  status: "completed" | "failed" | "queued"
   cost: { cost: number; currency: string }
 }
 
@@ -171,13 +171,13 @@ export class MultiModalClient {
 
     // Gemini TTS only accepts pcm (24 kHz / 16-bit mono). We wrap it as
     // WAV so callers can store/play a normal audio file.
-    const responseFormat = options.responseFormat ?? 'pcm'
+    const responseFormat = options.responseFormat ?? "pcm"
     const apiKey = this.requireApiKey()
     const response = await fetch(`${OPENROUTER_BASE_URL}/audio/speech`, {
-      method: 'POST',
+      method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model,
@@ -187,7 +187,7 @@ export class MultiModalClient {
         ...(options.speed !== undefined ? { speed: options.speed } : {}),
         provider: {
           options: {
-            'google-ai-studio': googleOptions,
+            "google-ai-studio": googleOptions,
           },
         },
       }),
@@ -195,7 +195,7 @@ export class MultiModalClient {
     })
 
     if (!response.ok) {
-      const errBody = await response.text().catch(() => '')
+      const errBody = await response.text().catch(() => "")
       throw new Error(
         `OpenRouter TTS failed (${response.status}): ${errBody.slice(0, 300)}`,
       )
@@ -203,15 +203,15 @@ export class MultiModalClient {
 
     const rawAudio = await response.arrayBuffer()
     const audio =
-      responseFormat === 'pcm'
+      responseFormat === "pcm"
         ? pcmToWav(
             rawAudio,
-            parsePcmSampleRate(response.headers.get('Content-Type')),
+            parsePcmSampleRate(response.headers.get("Content-Type")),
           )
         : rawAudio
     const generationId =
-      response.headers.get('X-Generation-Id') ??
-      response.headers.get('x-generation-id') ??
+      response.headers.get("X-Generation-Id") ??
+      response.headers.get("x-generation-id") ??
       undefined
 
     const costUsd = generationId
@@ -240,19 +240,19 @@ export class MultiModalClient {
     const model = request.model ?? DEFAULT_CAPTION_MODEL
     const file = await fetchAudioAsFile(request.url)
     if (!file) {
-      throw new Error('Failed to fetch audio for caption transcription')
+      throw new Error("Failed to fetch audio for caption transcription")
     }
 
     const transcript = await openAIClient.audio.transcriptions.create({
       model,
       file,
-      response_format: 'verbose_json',
-      timestamp_granularities: ['word'],
+      response_format: "verbose_json",
+      timestamp_granularities: ["word"],
     })
 
     const words = transcript.words
     if (!words) {
-      throw new Error('No words found in caption transcript')
+      throw new Error("No words found in caption transcript")
     }
 
     const seconds = transcript.usage?.seconds ?? 0
@@ -275,11 +275,11 @@ export class MultiModalClient {
           stream: true,
           messages: [
             {
-              role: 'user',
+              role: "user",
               content: request.prompt,
             },
           ],
-          modalities: ['audio'],
+          modalities: ["audio"],
         },
       },
       request.abortSignal ? { signal: request.abortSignal } : undefined,
@@ -299,10 +299,10 @@ export class MultiModalClient {
     }
 
     if (audioChunks.length === 0) {
-      throw new Error('No audio found in music generation response')
+      throw new Error("No audio found in music generation response")
     }
 
-    const buffer = Buffer.from(audioChunks.join(''), 'base64')
+    const buffer = Buffer.from(audioChunks.join(""), "base64")
     const arrayBuffer = buffer.buffer.slice(
       buffer.byteOffset,
       buffer.byteOffset + buffer.byteLength,
@@ -332,23 +332,23 @@ export class MultiModalClient {
     }
     if (request.referenceUrls?.length) {
       body.input_references = request.referenceUrls.map((url) => ({
-        type: 'image_url',
+        type: "image_url",
         image_url: { url },
       }))
     }
 
     const response = await fetch(`${OPENROUTER_BASE_URL}/images`, {
-      method: 'POST',
+      method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
       signal: request.abortSignal,
     })
 
     if (!response.ok) {
-      const errBody = await response.text().catch(() => '')
+      const errBody = await response.text().catch(() => "")
       throw new Error(
         `OpenRouter image generation failed (${response.status}): ${errBody.slice(0, 300)}`,
       )
@@ -364,7 +364,7 @@ export class MultiModalClient {
       .filter((url): url is string => Boolean(url))
 
     if (urls.length === 0) {
-      throw new Error('OpenRouter image generation returned no images')
+      throw new Error("OpenRouter image generation returned no images")
     }
 
     return {
@@ -380,7 +380,7 @@ export class MultiModalClient {
 
     for (let attempt = 0; attempt < MAX_VIDEO_POLL_ATTEMPTS; attempt++) {
       if (request.abortSignal?.aborted) {
-        throw new Error('Video generation aborted')
+        throw new Error("Video generation aborted")
       }
 
       if (attempt > 0) {
@@ -388,18 +388,18 @@ export class MultiModalClient {
       }
 
       const poll = await this.pollVideoGeneration(submission.id)
-      if (poll.status === 'completed') {
+      if (poll.status === "completed") {
         return {
           result: { url: poll.url },
           costUsd: poll.cost.cost || submission.costEstimate.cost || 0,
         }
       }
-      if (poll.status === 'failed') {
-        throw new Error('Video generation failed')
+      if (poll.status === "failed") {
+        throw new Error("Video generation failed")
       }
     }
 
-    throw new Error('Video generation timed out while polling')
+    throw new Error("Video generation timed out while polling")
   }
 
   async submitVideoGeneration(
@@ -412,22 +412,22 @@ export class MultiModalClient {
       referenceUrl,
       numVariations = 1,
       idempotencyKey,
-      resolution = '1080p',
-      aspectRatio = '16:9',
+      resolution = "1080p",
+      aspectRatio = "16:9",
     } = request
 
     const apiKey = process.env.LUMEN_API_KEY
     if (!apiKey) {
-      throw new Error('LUMEN_API_KEY is not set')
+      throw new Error("LUMEN_API_KEY is not set")
     }
 
     let submitRes: Response
     try {
       submitRes = await fetch(`${LUMEN_BASE_URL}/videos`, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           model,
@@ -466,7 +466,7 @@ export class MultiModalClient {
   async pollVideoGeneration(videoId: string): Promise<VideoPollResult> {
     const apiKey = process.env.LUMEN_API_KEY
     if (!apiKey) {
-      throw new Error('LUMEN_API_KEY is not set')
+      throw new Error("LUMEN_API_KEY is not set")
     }
 
     let pollRes: Response
@@ -485,35 +485,35 @@ export class MultiModalClient {
     }
 
     const result = await pollRes.json()
-    if (result.status === 'completed') {
+    if (result.status === "completed") {
       return {
         url: result.output.url,
-        status: 'completed',
+        status: "completed",
         cost: {
           cost: result.metadata.cost || 0,
-          currency: result.metadata.cost_currency || 'USD',
+          currency: result.metadata.cost_currency || "USD",
         },
       }
     }
-    if (result.status === 'failed') {
+    if (result.status === "failed") {
       return {
-        url: '',
-        status: 'failed',
+        url: "",
+        status: "failed",
         cost: {
           cost: result.metadata.cost || result.metadata.cost_estimate || 0,
           currency:
             result.metadata.cost_currency ||
             result.metadata.cost_currency_estimate ||
-            'USD',
+            "USD",
         },
       }
     }
     return {
-      url: '',
-      status: 'queued',
+      url: "",
+      status: "queued",
       cost: {
         cost: result.metadata.cost_estimate || 0,
-        currency: result.metadata.cost_currency_estimate || 'USD',
+        currency: result.metadata.cost_currency_estimate || "USD",
       },
     }
   }
@@ -566,15 +566,15 @@ export class MultiModalClient {
         const generation = await this.getClient().generations.getGeneration({
           id: generationId,
         })
-        console.log('generation', generation, '\n----------\n')
+        console.log("generation", generation, "\n----------\n")
         const reported = generation.data.usage ?? generation.data.totalCost
-        if (typeof reported === 'number' && reported > 0) {
+        if (typeof reported === "number" && reported > 0) {
           return reported
         }
         // Metadata present but cost not set yet — keep retrying.
       } catch (error) {
         const statusCode =
-          error && typeof error === 'object' && 'statusCode' in error
+          error && typeof error === "object" && "statusCode" in error
             ? Number((error as { statusCode: unknown }).statusCode)
             : undefined
 
@@ -606,7 +606,7 @@ export class MultiModalClient {
   private requireApiKey(): string {
     const apiKey = process.env.OPENROUTER_API_KEY
     if (!apiKey) {
-      throw new Error('OPENROUTER_API_KEY is not set')
+      throw new Error("OPENROUTER_API_KEY is not set")
     }
     return apiKey
   }
@@ -618,65 +618,65 @@ export class MultiModalClient {
 
 export type BillableMultiModalInput =
   | {
-      kind: 'tts'
+      kind: "tts"
       text: string
       model?: string
       options: GoogleSpeechOptions
       estimatedChars?: number
     }
   | {
-      kind: 'stt'
+      kind: "stt"
       url: string
       model?: string
       language?: string
       estimatedDurationSeconds: number
     }
   | {
-      kind: 'caption'
+      kind: "caption"
       url: string
       model?: string
       language?: string
       estimatedDurationSeconds: number
     }
   | {
-      kind: 'music'
+      kind: "music"
       prompt: string
       model?: string
       estimatedCostUsd?: number
     }
   | {
-      kind: 'image'
+      kind: "image"
       prompt: string
       model: string
       aspectRatio?: ImageSizePreset | string
-      resolution?: '512' | '1K' | '2K' | '4K'
+      resolution?: "512" | "1K" | "2K" | "4K"
       n?: number
       referenceUrls?: string[]
     }
   | {
-      kind: 'video'
+      kind: "video"
       prompt: string
       model: string
       duration: number
-      aspectRatio?: '16:9' | '9:16' | '1:1'
-      resolution?: '720p' | '1080p'
+      aspectRatio?: "16:9" | "9:16" | "1:1"
+      resolution?: "720p" | "1080p"
       referenceUrl?: string
       numVariations?: number
       idempotencyKey?: string
     }
 
 export type BillableMultiModalOutput =
-  | { kind: 'tts'; audio: ArrayBuffer; costUsd: number }
-  | { kind: 'stt'; text: string; costUsd: number }
+  | { kind: "tts"; audio: ArrayBuffer; costUsd: number }
+  | { kind: "stt"; text: string; costUsd: number }
   | {
-      kind: 'caption'
+      kind: "caption"
       text: string
       words: TranscriptionWord[]
       costUsd: number
     }
-  | { kind: 'music'; audio: ArrayBuffer; costUsd: number }
-  | { kind: 'image'; urls: string[]; costUsd: number }
-  | { kind: 'video'; url: string; costUsd: number }
+  | { kind: "music"; audio: ArrayBuffer; costUsd: number }
+  | { kind: "image"; urls: string[]; costUsd: number }
+  | { kind: "video"; url: string; costUsd: number }
 
 export type BillableMultiModalConfig = {
   timeoutMs?: number
@@ -695,40 +695,40 @@ export function createBillableMultiModalClient(
   const client = new MultiModalClient()
 
   return {
-    operation: 'media:multimodal',
+    operation: "media:multimodal",
     timeoutMs,
     ttlMs,
 
     async estimateCost(input: BillableMultiModalInput): Promise<Credits> {
       switch (input.kind) {
-        case 'tts': {
+        case "tts": {
           const chars = input.estimatedChars ?? input.text.length
           const costUsd = (chars / 1_000_000) * 0.6
           return providerCostToCredits(costUsd, {
             overheadRate: AUDIO_OVERHEAD_RATE,
           })
         }
-        case 'stt':
-        case 'caption': {
+        case "stt":
+        case "caption": {
           const costUsd = getTranscriptionCost(input.estimatedDurationSeconds)
           return providerCostToCredits(costUsd, {
             overheadRate: AUDIO_OVERHEAD_RATE,
           })
         }
-        case 'music': {
+        case "music": {
           const costUsd = input.estimatedCostUsd ?? getMusicCost()
           return providerCostToCredits(costUsd, {
             overheadRate: AUDIO_OVERHEAD_RATE,
           })
         }
-        case 'image': {
+        case "image": {
           const n = input.n ?? 1
           const costUsd = FALLBACK_USD_PER_IMAGE * n
           return providerCostToCredits(costUsd, {
             overheadRate: IMAGE_OVERHEAD_RATE,
           })
         }
-        case 'video': {
+        case "video": {
           const costUsd = await estimateVideoCostUsd(input)
           return providerCostToCredits(costUsd, {
             overheadRate: VIDEO_OVERHEAD_RATE,
@@ -742,7 +742,7 @@ export function createBillableMultiModalClient(
       ctx: BillableContext,
     ): Promise<BillableResult<BillableMultiModalOutput>> {
       switch (input.kind) {
-        case 'tts': {
+        case "tts": {
           const { result, costUsd } = await client.textToSpeech({
             text: input.text,
             model: input.model,
@@ -750,11 +750,11 @@ export function createBillableMultiModalClient(
             abortSignal: ctx.signal,
           })
           return {
-            output: { kind: 'tts', audio: result, costUsd },
+            output: { kind: "tts", audio: result, costUsd },
             actualCredits: creditsFromCostUsd(costUsd, AUDIO_OVERHEAD_RATE),
           }
         }
-        case 'stt': {
+        case "stt": {
           const { result, costUsd } = await client.speechToText({
             url: input.url,
             model: input.model,
@@ -762,11 +762,11 @@ export function createBillableMultiModalClient(
             abortSignal: ctx.signal,
           })
           return {
-            output: { kind: 'stt', text: result, costUsd },
+            output: { kind: "stt", text: result, costUsd },
             actualCredits: creditsFromCostUsd(costUsd, AUDIO_OVERHEAD_RATE),
           }
         }
-        case 'caption': {
+        case "caption": {
           const { result, costUsd } = await client.transcribeCaption({
             url: input.url,
             model: input.model,
@@ -775,7 +775,7 @@ export function createBillableMultiModalClient(
           })
           return {
             output: {
-              kind: 'caption',
+              kind: "caption",
               text: result.text,
               words: result.words,
               costUsd,
@@ -783,18 +783,18 @@ export function createBillableMultiModalClient(
             actualCredits: creditsFromCostUsd(costUsd, AUDIO_OVERHEAD_RATE),
           }
         }
-        case 'music': {
+        case "music": {
           const { result, costUsd } = await client.generateMusic({
             prompt: input.prompt,
             model: input.model,
             abortSignal: ctx.signal,
           })
           return {
-            output: { kind: 'music', audio: result, costUsd },
+            output: { kind: "music", audio: result, costUsd },
             actualCredits: creditsFromCostUsd(costUsd, AUDIO_OVERHEAD_RATE),
           }
         }
-        case 'image': {
+        case "image": {
           const { result, costUsd } = await client.generateImage({
             prompt: input.prompt,
             model: input.model,
@@ -805,11 +805,11 @@ export function createBillableMultiModalClient(
             abortSignal: ctx.signal,
           })
           return {
-            output: { kind: 'image', urls: result, costUsd },
+            output: { kind: "image", urls: result, costUsd },
             actualCredits: creditsFromCostUsd(costUsd, IMAGE_OVERHEAD_RATE),
           }
         }
-        case 'video': {
+        case "video": {
           const { result, costUsd } = await client.generateVideo({
             prompt: input.prompt,
             model: input.model,
@@ -822,7 +822,7 @@ export function createBillableMultiModalClient(
             abortSignal: ctx.signal,
           })
           return {
-            output: { kind: 'video', url: result.url, costUsd },
+            output: { kind: "video", url: result.url, costUsd },
             actualCredits: creditsFromCostUsd(costUsd, VIDEO_OVERHEAD_RATE),
           }
         }
@@ -846,8 +846,8 @@ export function createBillableMultiModalClient(
 
 function mapImageSizeParams(
   aspectRatio?: string,
-  resolution?: '512' | '1K' | '2K' | '4K',
-): { aspectRatio?: string; resolution?: '512' | '1K' | '2K' | '4K' } {
+  resolution?: "512" | "1K" | "2K" | "4K",
+): { aspectRatio?: string; resolution?: "512" | "1K" | "2K" | "4K" } {
   if (aspectRatio && aspectRatio in openRouterImagePresetMap) {
     const mapped = openRouterImagePresetMap[aspectRatio as ImageSizePreset]
     return {
@@ -864,11 +864,11 @@ function creditsFromCostUsd(costUsd: number, overheadRate: number): Credits {
 }
 
 async function estimateVideoCostUsd(
-  input: Extract<BillableMultiModalInput, { kind: 'video' }>,
+  input: Extract<BillableMultiModalInput, { kind: "video" }>,
 ): Promise<number> {
   const numVariations = input.numVariations ?? 1
-  const aspectRatio = input.aspectRatio ?? '16:9'
-  const resolution = input.resolution ?? '1080p'
+  const aspectRatio = input.aspectRatio ?? "16:9"
+  const resolution = input.resolution ?? "1080p"
 
   const dryRunBody: Record<string, unknown> = {
     model: input.model,
@@ -882,7 +882,7 @@ async function estimateVideoCostUsd(
     dryRunBody.input_reference = { image_url: input.referenceUrl }
   }
 
-  const dryRun = await lumenDryRun('/videos', dryRunBody)
+  const dryRun = await lumenDryRun("/videos", dryRunBody)
   if (dryRun) {
     return microsToDollars(dryRun.total_cost_micros)
   }
@@ -891,7 +891,7 @@ async function estimateVideoCostUsd(
 
 function stableInputKey(input: BillableMultiModalInput): string {
   switch (input.kind) {
-    case 'tts':
+    case "tts":
       return JSON.stringify({
         kind: input.kind,
         text: input.text,
@@ -900,21 +900,21 @@ function stableInputKey(input: BillableMultiModalInput): string {
         speakers: input.options.speakers,
         instructions: input.options.instructions,
       })
-    case 'stt':
-    case 'caption':
+    case "stt":
+    case "caption":
       return JSON.stringify({
         kind: input.kind,
         url: input.url,
         model: input.model,
         language: input.language,
       })
-    case 'music':
+    case "music":
       return JSON.stringify({
         kind: input.kind,
         prompt: input.prompt,
         model: input.model,
       })
-    case 'image':
+    case "image":
       return JSON.stringify({
         kind: input.kind,
         prompt: input.prompt,
@@ -924,7 +924,7 @@ function stableInputKey(input: BillableMultiModalInput): string {
         n: input.n,
         referenceUrls: input.referenceUrls,
       })
-    case 'video':
+    case "video":
       return (
         input.idempotencyKey ??
         JSON.stringify({
@@ -950,9 +950,9 @@ async function fetchAudioAsBase64(
     )
   }
   const arrayBuffer = await response.arrayBuffer()
-  const contentType = response.headers.get('content-type') ?? 'audio/mpeg'
+  const contentType = response.headers.get("content-type") ?? "audio/mpeg"
   return {
-    data: Buffer.from(arrayBuffer).toString('base64'),
+    data: Buffer.from(arrayBuffer).toString("base64"),
     format: mimeToAudioFormat(contentType),
   }
 }
@@ -964,8 +964,8 @@ async function fetchAudioAsFile(url: string): Promise<File | null> {
       return null
     }
     const blob = await response.blob()
-    const type = blob.type || 'audio/mpeg'
-    return new File([blob], 'audio.mp3', { type })
+    const type = blob.type || "audio/mpeg"
+    return new File([blob], "audio.mp3", { type })
   } catch {
     return null
   }
@@ -992,10 +992,10 @@ function pcmToWav(
   const byteRate = sampleRate * blockAlign
   const header = Buffer.alloc(44)
 
-  header.write('RIFF', 0)
+  header.write("RIFF", 0)
   header.writeUInt32LE(36 + pcmBytes.length, 4)
-  header.write('WAVE', 8)
-  header.write('fmt ', 12)
+  header.write("WAVE", 8)
+  header.write("fmt ", 12)
   header.writeUInt32LE(16, 16)
   header.writeUInt16LE(1, 20)
   header.writeUInt16LE(channels, 22)
@@ -1003,44 +1003,44 @@ function pcmToWav(
   header.writeUInt32LE(byteRate, 28)
   header.writeUInt16LE(blockAlign, 32)
   header.writeUInt16LE(bitsPerSample, 34)
-  header.write('data', 36)
+  header.write("data", 36)
   header.writeUInt32LE(pcmBytes.length, 40)
 
   return Buffer.concat([header, pcmBytes]).buffer
 }
 
 function mimeToAudioFormat(contentType: string): string {
-  const mime = contentType.split(';')[0]?.trim().toLowerCase() ?? ''
+  const mime = contentType.split(";")[0]?.trim().toLowerCase() ?? ""
   const map: Record<string, string> = {
-    'audio/mpeg': 'mp3',
-    'audio/mp3': 'mp3',
-    'audio/wav': 'wav',
-    'audio/x-wav': 'wav',
-    'audio/wave': 'wav',
-    'audio/flac': 'flac',
-    'audio/mp4': 'm4a',
-    'audio/m4a': 'm4a',
-    'audio/ogg': 'ogg',
-    'audio/webm': 'webm',
-    'audio/aac': 'aac',
+    "audio/mpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/wave": "wav",
+    "audio/flac": "flac",
+    "audio/mp4": "m4a",
+    "audio/m4a": "m4a",
+    "audio/ogg": "ogg",
+    "audio/webm": "webm",
+    "audio/aac": "aac",
   }
-  return map[mime] ?? 'mp3'
+  return map[mime] ?? "mp3"
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
-      reject(new Error('Aborted'))
+      reject(new Error("Aborted"))
       return
     }
     const timer = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort)
+      signal?.removeEventListener("abort", onAbort)
       resolve()
     }, ms)
     const onAbort = () => {
       clearTimeout(timer)
-      reject(new Error('Aborted'))
+      reject(new Error("Aborted"))
     }
-    signal?.addEventListener('abort', onAbort, { once: true })
+    signal?.addEventListener("abort", onAbort, { once: true })
   })
 }

@@ -1,7 +1,7 @@
-import { db } from '@/db'
-import { categories, skillCategories, skills, type Skill } from '@/db/schema'
-import type { TemplateAndSkillStatus, TemplateAndSkillVisibility } from '@/type'
-import { asc, eq } from 'drizzle-orm'
+import { db } from "@/db"
+import { categories, skillCategories, skills, type Skill } from "@/db/schema"
+import type { TemplateAndSkillStatus, TemplateAndSkillVisibility } from "@/type"
+import { asc, eq } from "drizzle-orm"
 
 export type AdminSkill = Skill & {
   categoryIds: string[]
@@ -99,8 +99,8 @@ export const createSkill = async (input: {
       name: input.name,
       description: input.description,
       instructions: input.instructions,
-      status: input.status ?? 'draft',
-      visibility: input.visibility ?? 'private',
+      status: input.status ?? "draft",
+      visibility: input.visibility ?? "private",
       fileNodeId: null,
     })
     .returning()

@@ -21,7 +21,7 @@ export function buildInvokedCommandsPrompt(
   commands: Array<{ name: string; action: string }>,
 ): string {
   if (commands.length === 0) {
-    return ''
+    return ""
   }
 
   const lines = commands.map(
@@ -31,7 +31,7 @@ export function buildInvokedCommandsPrompt(
   return `
 <invoked-commands>
 The user invoked these slash commands. Follow their instructions:
-${lines.join('\n')}
+${lines.join("\n")}
 </invoked-commands>
 `.trim()
 }

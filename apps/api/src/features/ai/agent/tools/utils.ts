@@ -1,8 +1,8 @@
-import type { ToolResult } from './tool-definition'
-import { validate as validateUuid } from 'uuid'
-import { FileObject } from '@/features/file-system/objects/file'
-import { PathObject } from '@/features/file-system/objects/path'
-import { FilePendingOperation } from '@/type'
+import type { ToolResult } from "./tool-definition"
+import { validate as validateUuid } from "uuid"
+import { FileObject } from "@/features/file-system/objects/file"
+import { PathObject } from "@/features/file-system/objects/path"
+import { FilePendingOperation } from "@/type"
 
 export function success(
   output: string,
@@ -30,13 +30,13 @@ export async function resolveFileByPathOrId(
   projectId: string,
 ): Promise<FileObjectResolved> {
   if (!filePathOrId) {
-    return { success: false, error: 'Either filepath or fileId is required.' }
+    return { success: false, error: "Either filepath or fileId is required." }
   }
-  const filePath = filePathOrId.startsWith('/') ? filePathOrId : undefined
+  const filePath = filePathOrId.startsWith("/") ? filePathOrId : undefined
   const fileId = validateUuid(filePathOrId) ? filePathOrId : undefined
 
   if (!filePath && !fileId) {
-    return { success: false, error: 'Invalid filepath or fileId provided.' }
+    return { success: false, error: "Invalid filepath or fileId provided." }
   }
 
   let fileObjectRef: FileObject | null = null
@@ -49,7 +49,7 @@ export async function resolveFileByPathOrId(
     fileObjectRef = fileObject
   }
   if (!fileObjectRef) {
-    return { success: false, error: 'File not found' }
+    return { success: false, error: "File not found" }
   }
   return { success: true, file: fileObjectRef }
 }

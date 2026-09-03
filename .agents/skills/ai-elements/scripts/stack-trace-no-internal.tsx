@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import {
   StackTrace,
@@ -11,7 +11,7 @@ import {
   StackTraceExpandButton,
   StackTraceFrames,
   StackTraceHeader,
-} from '@/components/ai-elements/stack-trace'
+} from "@/components/ai-elements/stack-trace"
 
 const errorString = `TypeError: Cannot read properties of undefined (reading 'map')
     at UserList (/app/src/components/UserList.tsx:15:23)
@@ -21,7 +21,10 @@ const errorString = `TypeError: Cannot read properties of undefined (reading 'ma
     at beginWork (node_modules/react-dom/cjs/react-dom.development.js:19049:16)`
 
 const Example = () => (
-  <StackTrace defaultOpen trace={errorString}>
+  <StackTrace
+    defaultOpen
+    trace={errorString}
+  >
     <StackTraceHeader>
       <StackTraceError>
         <StackTraceErrorType />

@@ -1,11 +1,11 @@
-import { db } from '@/db'
-import { generationRequests } from '@/db/schema'
+import { db } from "@/db"
+import { generationRequests } from "@/db/schema"
 import type {
   GenerationRequestStatus,
   GenerationRequestType,
   GenerationRequestAsset,
-} from '@/type'
-import { and, eq, inArray, desc, sql } from 'drizzle-orm'
+} from "@/type"
+import { and, eq, inArray, desc, sql } from "drizzle-orm"
 
 type CreateGenerationRequestPayload = {
   projectId: string
@@ -93,7 +93,7 @@ export const getPendingRequests = async (projectId: string, userId: string) => {
       and(
         eq(generationRequests.projectId, projectId),
         eq(generationRequests.userId, userId),
-        inArray(generationRequests.status, ['pending', 'processing']),
+        inArray(generationRequests.status, ["pending", "processing"]),
       ),
     )
     .orderBy(desc(generationRequests.createdAt))

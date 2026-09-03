@@ -1,69 +1,69 @@
-import { z, toJSONSchema } from 'zod'
-import { buildBaseTool } from './tool-definition'
-import { success, failure } from './utils'
-import * as repo from '@/features/video-editor/repo'
-import type { VideoClip } from '@/db/schema'
-import { clipPropertiesSchemaByType } from '@/type'
+import { z, toJSONSchema } from "zod"
+import { buildBaseTool } from "./tool-definition"
+import { success, failure } from "./utils"
+import * as repo from "@/features/video-editor/repo"
+import type { VideoClip } from "@/db/schema"
+import { clipPropertiesSchemaByType } from "@/type"
 
-const fileNodeId = z.uuid().describe('The file node ID of the video file.')
-const clipId = z.uuid().describe('The clip ID.')
-const trackId = z.uuid().describe('The track ID.')
+const fileNodeId = z.uuid().describe("The file node ID of the video file.")
+const clipId = z.uuid().describe("The clip ID.")
+const trackId = z.uuid().describe("The track ID.")
 
 const overviewCommand = z.object({
   cmd: z
-    .literal('overview')
+    .literal("overview")
     .describe(
-      'Returns a lightweight summary of the entire composition: canvas settings, track list, and clip counts. Use this first to understand the timeline before drilling into specifics.',
+      "Returns a lightweight summary of the entire composition: canvas settings, track list, and clip counts. Use this first to understand the timeline before drilling into specifics.",
     ),
   fileNodeId,
 })
 
 const listClipsCommand = z.object({
   cmd: z
-    .literal('list_clips')
+    .literal("list_clips")
     .describe(
-      'List clips with optional filters. Returns: id, type, startFrame, endFrame, and a short label for each clip.',
+      "List clips with optional filters. Returns: id, type, startFrame, endFrame, and a short label for each clip.",
     ),
   fileNodeId,
-  trackId: trackId.optional().describe('Filter to a specific track.'),
+  trackId: trackId.optional().describe("Filter to a specific track."),
   type: z
-    .enum(['video', 'audio', 'text', 'image', 'html'])
+    .enum(["video", "audio", "text", "image", "html"])
     .optional()
-    .describe('Filter by clip type.'),
+    .describe("Filter by clip type."),
   fromFrame: z
     .number()
     .int()
     .optional()
-    .describe('Only return clips that overlap with this frame or later.'),
+    .describe("Only return clips that overlap with this frame or later."),
   toFrame: z
     .number()
     .int()
     .optional()
-    .describe('Only return clips that overlap with this frame or earlier.'),
+    .describe("Only return clips that overlap with this frame or earlier."),
 })
 
 const viewClipCommand = z.object({
   cmd: z
-    .literal('view_clip')
+    .literal("view_clip")
     .describe(
-      'Returns the full details of a specific clip, including all properties.',
+      "Returns the full details of a specific clip, including all properties.",
     ),
   clipId,
 })
 
 const atFrameCommand = z.object({
   cmd: z
-    .literal('at_frame')
+    .literal("at_frame")
     .describe(
       "Returns all clips that are visible/active at the given frame number. Useful for understanding what's on screen at a specific time.",
     ),
   fileNodeId,
-  frame: z.number().int().min(0).describe('The frame number to query.'),
+  frame: z.number().int().min(0).describe("The frame number to query."),
 })
 
 const viewTrackCommand = z.object({
   cmd: z
-    .literal('view_track')
+    .literal("view_track")
     .describe(
       "Returns a track's properties and a summary list of all its clips.",
     ),
@@ -72,14 +72,14 @@ const viewTrackCommand = z.object({
 
 const viewClipPropertiesSchema = z.object({
   cmd: z
-    .literal('view_clip_schema')
+    .literal("view_clip_schema")
     .describe(
-      'Returns the full schema of the properties of a specific clip type. Use this to understand the properties of a clip type before editing it.',
+      "Returns the full schema of the properties of a specific clip type. Use this to understand the properties of a clip type before editing it.",
     ),
-  clipType: z.enum(['video', 'audio', 'text', 'image', 'html']),
+  clipType: z.enum(["video", "audio", "text", "image", "html"]),
 })
 
-const toolSchema = z.discriminatedUnion('cmd', [
+const toolSchema = z.discriminatedUnion("cmd", [
   overviewCommand,
   listClipsCommand,
   viewClipCommand,
@@ -89,28 +89,28 @@ const toolSchema = z.discriminatedUnion('cmd', [
 ])
 
 export const timelineExploreTool = buildBaseTool({
-  name: 'timelineExplore',
+  name: "timelineExplore",
   description:
     "Explore a video timeline. Use 'overview' first to understand the structure, then drill into specific tracks or clips. Use 'at_frame' to see what's visible at a given time.",
   inputSchema: z.object({ command: toolSchema }),
   execute: async (cmd) => {
     const input = cmd.command
     switch (input.cmd) {
-      case 'overview':
+      case "overview":
         return executeOverview(input.fileNodeId)
-      case 'list_clips':
+      case "list_clips":
         return executeListClips(input)
-      case 'view_clip':
+      case "view_clip":
         return executeViewClip(input.clipId)
-      case 'at_frame':
+      case "at_frame":
         return executeAtFrame(input.fileNodeId, input.frame)
-      case 'view_track':
+      case "view_track":
         return executeViewTrack(input.trackId)
-      case 'view_clip_schema':
+      case "view_clip_schema":
         return executeViewClipSchema(input.clipType)
       default:
         return failure(
-          'Unknown command. Valid commands are: overview, list_clips, view_clip, at_frame, view_track, view_clip_schema.',
+          "Unknown command. Valid commands are: overview, list_clips, view_clip, at_frame, view_track, view_clip_schema.",
         )
     }
   },
@@ -119,7 +119,7 @@ export const timelineExploreTool = buildBaseTool({
 async function executeOverview(fileNodeId: string) {
   const result = await repo.getFullCompositionByFileNodeId(fileNodeId)
   if (!result) {
-    return failure('Video composition not found for this file.')
+    return failure("Video composition not found for this file.")
   }
 
   const { composition: comp, tracks, clips } = result
@@ -137,7 +137,7 @@ async function executeOverview(fileNodeId: string) {
   output += `Version: ${comp.version}\n\n`
 
   if (tracks.length === 0) {
-    output += 'Tracks: (none)\n'
+    output += "Tracks: (none)\n"
   } else {
     output += `Tracks (${tracks.length}):\n`
     for (const track of tracks) {
@@ -145,9 +145,9 @@ async function executeOverview(fileNodeId: string) {
       const span =
         trackClips.length > 0
           ? `${Math.min(...trackClips.map((c) => c.startFrame))}–${Math.max(...trackClips.map((c) => c.endFrame))}`
-          : 'empty'
-      const mutedLabel = track.muted ? ' (muted)' : ''
-      const hiddenLabel = track.hidden ? ' (hidden)' : ''
+          : "empty"
+      const mutedLabel = track.muted ? " (muted)" : ""
+      const hiddenLabel = track.hidden ? " (hidden)" : ""
       output += `  ${track.position + 1}. [${track.type}] — ${trackClips.length} clips, span: ${span}${mutedLabel}${hiddenLabel}\n`
     }
   }
@@ -158,7 +158,7 @@ async function executeOverview(fileNodeId: string) {
 async function executeListClips(input: z.infer<typeof listClipsCommand>) {
   const composition = await repo.getCompositionByFileNodeId(input.fileNodeId)
   if (!composition) {
-    return failure('Video composition not found for this file.')
+    return failure("Video composition not found for this file.")
   }
 
   const clips = await repo.getClipsByFilters(composition.id, {
@@ -169,7 +169,7 @@ async function executeListClips(input: z.infer<typeof listClipsCommand>) {
   })
 
   if (clips.length === 0) {
-    return success('No clips found matching the filters.')
+    return success("No clips found matching the filters.")
   }
 
   let output = `Clips (${clips.length}):\n`
@@ -184,7 +184,7 @@ async function executeListClips(input: z.infer<typeof listClipsCommand>) {
 async function executeViewClip(clipId: string) {
   const clip = await repo.getClipById(clipId)
   if (!clip) {
-    return failure('Clip not found.')
+    return failure("Clip not found.")
   }
 
   const output = JSON.stringify(
@@ -209,7 +209,7 @@ async function executeViewClip(clipId: string) {
 async function executeAtFrame(fileNodeId: string, frame: number) {
   const comp = await repo.getCompositionByFileNodeId(fileNodeId)
   if (!comp) {
-    return failure('Video composition not found for this file.')
+    return failure("Video composition not found for this file.")
   }
 
   const clips = await repo.getClipsAtFrame(comp.id, frame)
@@ -231,7 +231,7 @@ async function executeAtFrame(fileNodeId: string, frame: number) {
 async function executeViewTrack(trackId: string) {
   const track = await repo.getTrackById(trackId)
   if (!track) {
-    return failure('Track not found.')
+    return failure("Track not found.")
   }
 
   const clips = await repo.getClipsByTrackId(trackId)
@@ -241,7 +241,7 @@ async function executeViewTrack(trackId: string) {
   output += `  Composition: ${track.compositionId}\n\n`
 
   if (clips.length === 0) {
-    output += 'Clips: (none)\n'
+    output += "Clips: (none)\n"
   } else {
     output += `Clips (${clips.length}):\n`
     for (const clip of clips) {
@@ -254,12 +254,12 @@ async function executeViewTrack(trackId: string) {
 }
 
 function executeViewClipSchema(
-  clipType: 'video' | 'audio' | 'text' | 'image' | 'html',
+  clipType: "video" | "audio" | "text" | "image" | "html",
 ) {
   const zodSchema = clipPropertiesSchemaByType[clipType]
   if (!zodSchema) {
     return failure(
-      'Unknown clip type. Valid types are: video, audio, text, image, html.',
+      "Unknown clip type. Valid types are: video, audio, text, image, html.",
     )
   }
   const schema = toJSONSchema(zodSchema)
@@ -268,9 +268,9 @@ function executeViewClipSchema(
 
 function getClipLabel(clip: VideoClip): string {
   const props = clip.properties as Record<string, unknown>
-  if (clip.type === 'text') {
-    const text = String(props.text ?? '')
-    return `"${text.length > 30 ? text.slice(0, 30) + '…' : text}"`
+  if (clip.type === "text") {
+    const text = String(props.text ?? "")
+    return `"${text.length > 30 ? text.slice(0, 30) + "…" : text}"`
   }
-  return String(props.fileName ?? clip.assetId ?? 'unknown')
+  return String(props.fileName ?? clip.assetId ?? "unknown")
 }

@@ -1,5 +1,5 @@
-import { FILE_FORMATS } from '@/features/file-system/constants'
-import { z } from 'zod'
+import { FILE_FORMATS } from "@/features/file-system/constants"
+import { z } from "zod"
 /*
 USE this repo: https://github.com/forscht/PGFs/blob/main/fs.sql
 
@@ -52,19 +52,19 @@ const filePath = z
   .string()
   .min(1)
   .describe(
-    'Absolute file or directory path. Use /root for the root directory.',
+    "Absolute file or directory path. Use /root for the root directory.",
   )
 const positiveInt = z.number().int().min(1)
 
 export const listCommandSchema = z
   .object({
     cmd: z
-      .literal('list')
-      .describe('lists the files and directories under a directory'),
+      .literal("list")
+      .describe("lists the files and directories under a directory"),
     filePathOrId: z
       .string()
       .describe(
-        'Absolute file path or file ID (uuid) of the directory to list.',
+        "Absolute file path or file ID (uuid) of the directory to list.",
       ),
   })
   .describe(
@@ -78,11 +78,11 @@ export const listCommandSchema = z
 export const describeCommandSchema = z
   .object({
     cmd: z
-      .literal('describe')
+      .literal("describe")
       .describe(
-        'Returns information about a file or directory by filepath or file ID. For a file it returns its format and other metadata. For a directory it returns the number of files and directories inside it.',
+        "Returns information about a file or directory by filepath or file ID. For a file it returns its format and other metadata. For a directory it returns the number of files and directories inside it.",
       ),
-    filePathOrId: z.string().describe('Absolute file path or file ID (uuid).'),
+    filePathOrId: z.string().describe("Absolute file path or file ID (uuid)."),
   })
   .describe(
     `
@@ -94,32 +94,32 @@ export const describeCommandSchema = z
 
 export const createCommandSchema = z
   .object({
-    cmd: z.literal('create-file').describe('Creates a new file or directory'),
+    cmd: z.literal("create-file").describe("Creates a new file or directory"),
     parentPathOrId: z
       .string()
       .describe(
-        'Absolute file path or file ID (uuid) of the parent directory.',
+        "Absolute file path or file ID (uuid) of the parent directory.",
       ),
     dir: z
       .boolean()
       .default(false)
-      .describe('Whether to create a directory or a file'),
+      .describe("Whether to create a directory or a file"),
     name: z
       .string()
       .min(1)
       .describe(
-        'The file/directory name in lowercase separated by underscores for multiple words.',
+        "The file/directory name in lowercase separated by underscores for multiple words.",
       ),
     position: z.object({
       anchorFilePathOrId: z
         .string()
         .optional()
         .describe(
-          'Absolute file path or file ID (uuid) to anchor the new file to. Only required if insertMode is after or before',
+          "Absolute file path or file ID (uuid) to anchor the new file to. Only required if insertMode is after or before",
         ),
       insertMode: z
-        .enum(['end', 'start', 'after', 'before'])
-        .describe('Determines where this new content is placed'),
+        .enum(["end", "start", "after", "before"])
+        .describe("Determines where this new content is placed"),
     }),
   })
   .describe(
@@ -133,19 +133,19 @@ export const createCommandSchema = z
 export const writeCommandSchema = z
   .object({
     cmd: z
-      .literal('write')
+      .literal("write")
       .describe(
-        'writes to an existing file. This overwrites the entire file content. Use it carefully and only when you are sure you want to overwrite the entire file.',
+        "writes to an existing file. This overwrites the entire file content. Use it carefully and only when you are sure you want to overwrite the entire file.",
       ),
     filePathOrId: z
       .string()
-      .describe('Absolute file path or file ID (uuid) to write to.'),
-    content: z.string().describe('The content to write to the file.'),
+      .describe("Absolute file path or file ID (uuid) to write to."),
+    content: z.string().describe("The content to write to the file."),
     strategy: z
-      .enum(['overwrite', 'append'])
-      .default('overwrite')
+      .enum(["overwrite", "append"])
+      .default("overwrite")
       .describe(
-        'The strategy to use to write to the file. overwrite: overwrites the entire file. append: appends the content to the end of the file.',
+        "The strategy to use to write to the file. overwrite: overwrites the entire file. append: appends the content to the end of the file.",
       ),
   })
   .describe(
@@ -158,35 +158,35 @@ export const writeCommandSchema = z
 
 export const deleteCommandSchema = z.object({
   cmd: z
-    .literal('delete')
-    .describe('Delete a file or directory recursively, Equivalent to rm -rf'),
+    .literal("delete")
+    .describe("Delete a file or directory recursively, Equivalent to rm -rf"),
   filePathOrId: z
     .string()
-    .describe('Absolute file path or file ID (uuid) to delete.'),
+    .describe("Absolute file path or file ID (uuid) to delete."),
 })
 
 export const patchCommandSchema = z
   .object({
     cmd: z
-      .literal('patch')
+      .literal("patch")
       .describe(
-        'replaces a unique text snippet inside a file without rewriting the entire file manually.',
+        "replaces a unique text snippet inside a file without rewriting the entire file manually.",
       ),
     filePathOrId: z
       .string()
-      .describe('Absolute file path or file ID (uuid) to patch.'),
+      .describe("Absolute file path or file ID (uuid) to patch."),
     oldText: z
       .string()
       .min(1)
       .describe(
-        'Exact existing text to replace. It should uniquely identify one location if replaceAll is false, otherwise it should be the entire text to replace.',
+        "Exact existing text to replace. It should uniquely identify one location if replaceAll is false, otherwise it should be the entire text to replace.",
       ),
-    newText: z.string().describe('The new text.'),
+    newText: z.string().describe("The new text."),
     replaceAll: z
       .boolean()
       .default(false)
       .describe(
-        'Replace every occurrence instead of only the first matching one.',
+        "Replace every occurrence instead of only the first matching one.",
       ),
   })
   .describe(
@@ -200,19 +200,19 @@ export const patchCommandSchema = z
 export const readCommandSchema = z
   .object({
     cmd: z
-      .literal('read')
+      .literal("read")
       .describe(
-        'Reads file content with optional line windowing for large files.',
+        "Reads file content with optional line windowing for large files.",
       ),
-    filePathOrId: z.string().describe('Absolute file path or file ID (uuid).'),
+    filePathOrId: z.string().describe("Absolute file path or file ID (uuid)."),
     offset: z
       .number()
       .int()
       .optional()
-      .describe('Optional 1-based starting line number.'),
+      .describe("Optional 1-based starting line number."),
     limit: positiveInt
       .optional()
-      .describe('Optional maximum number of lines to return.'),
+      .describe("Optional maximum number of lines to return."),
   })
   .describe(
     `
@@ -224,30 +224,30 @@ export const readCommandSchema = z
 
 export const moveCommandSchema = z
   .object({
-    cmd: z.literal('move').describe('Moves or renames a file or directory.'),
+    cmd: z.literal("move").describe("Moves or renames a file or directory."),
     fileIdOrPath: z
       .string()
-      .describe('File ID (uuid) or absolute file path to move.'),
+      .describe("File ID (uuid) or absolute file path to move."),
     newParentPathOrId: z
       .string()
       .describe(
-        'Absolute file path or file ID (uuid) of the new parent directory.',
+        "Absolute file path or file ID (uuid) of the new parent directory.",
       ),
     position: z.object({
       anchorFilePathOrId: z
         .string()
         .optional()
         .describe(
-          'Absolute file path or file ID (uuid) to anchor the new file to. Only required if insertMode is after or before',
+          "Absolute file path or file ID (uuid) to anchor the new file to. Only required if insertMode is after or before",
         ),
       insertMode: z
-        .enum(['end', 'start', 'after', 'before'])
-        .describe('Determines where this new content is placed'),
+        .enum(["end", "start", "after", "before"])
+        .describe("Determines where this new content is placed"),
     }),
     newName: z
       .string()
       .optional()
-      .describe('Optional new name of the file or directory.'),
+      .describe("Optional new name of the file or directory."),
   })
   .describe(
     `  Returns: confirmation message.
@@ -259,19 +259,19 @@ export const moveCommandSchema = z
 export const copyCommandSchema = z
   .object({
     cmd: z
-      .literal('copy')
+      .literal("copy")
       .describe(
-        'Copy the content of a file to another file. It overwrites the existing content of the target file.',
+        "Copy the content of a file to another file. It overwrites the existing content of the target file.",
       ),
     fromPathOrId: z
       .string()
       .describe(
-        'Absolute file path or file ID (uuid) from which to copy the content.',
+        "Absolute file path or file ID (uuid) from which to copy the content.",
       ),
     toPathOrId: z
       .string()
       .describe(
-        'Absolute file path or file ID (uuid) to which to copy the content.',
+        "Absolute file path or file ID (uuid) to which to copy the content.",
       ),
   })
   .describe(
@@ -285,15 +285,15 @@ export const copyCommandSchema = z
 export const searchCommandSchema = z
   .object({
     cmd: z
-      .literal('search')
+      .literal("search")
       .describe(
-        'Perform keyword search using PostgreSQL `websearch_to_tsquery` syntax.',
+        "Perform keyword search using PostgreSQL `websearch_to_tsquery` syntax.",
       ),
     keyword: z
       .string()
       .min(1)
       .describe(
-        'Search expression. Plain words are AND-ed. Use double quotes for phrases, OR, - to exclude terms.',
+        "Search expression. Plain words are AND-ed. Use double quotes for phrases, OR, - to exclude terms.",
       ),
   })
   .describe(
@@ -309,24 +309,24 @@ export const searchCommandSchema = z
 export const findCommandSchema = z
   .object({
     cmd: z
-      .literal('find')
+      .literal("find")
       .describe(
-        'Help find a file or directory by name or by format. By format is only supported for files.',
+        "Help find a file or directory by name or by format. By format is only supported for files.",
       ),
     name: z
       .string()
       .optional()
-      .describe('The name of the file or directory to search for.'),
+      .describe("The name of the file or directory to search for."),
     format: z
       .enum(FILE_FORMATS)
       .optional()
-      .describe('The format of the file to search for.'),
+      .describe("The format of the file to search for."),
     limit: z
       .number()
       .int()
       .optional()
       .default(15)
-      .describe('Optional maximum number of files and directories to return.'),
+      .describe("Optional maximum number of files and directories to return."),
   })
   .describe(
     `
@@ -338,7 +338,7 @@ export const findCommandSchema = z
 
 export const existsCommandSchema = z
   .object({
-    cmd: z.literal('exists').describe('Check if a file or directory exists.'),
+    cmd: z.literal("exists").describe("Check if a file or directory exists."),
     filepath: filePath,
   })
   .describe(
@@ -350,14 +350,14 @@ export const existsCommandSchema = z
 
 export const renameCommandSchema = z
   .object({
-    cmd: z.literal('rename').describe('Renames a file or directory.'),
+    cmd: z.literal("rename").describe("Renames a file or directory."),
     filePathOrId: z
       .string()
-      .describe('Absolute file path or file ID (uuid) to rename.'),
+      .describe("Absolute file path or file ID (uuid) to rename."),
     newName: z
       .string()
       .describe(
-        'The new name of the file or directory. lowercase separated by underscores for multiple words.',
+        "The new name of the file or directory. lowercase separated by underscores for multiple words.",
       ),
   })
   .describe(

@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import {
   CodeBlock,
@@ -7,15 +7,15 @@ import {
   CodeBlockFilename,
   CodeBlockHeader,
   CodeBlockTitle,
-} from '@/components/ai-elements/code-block'
-import { FileIcon } from 'lucide-react'
+} from "@/components/ai-elements/code-block"
+import { FileIcon } from "lucide-react"
 
 const handleCopy = () => {
-  console.log('Copied code to clipboard')
+  console.log("Copied code to clipboard")
 }
 
 const handleCopyError = () => {
-  console.error('Failed to copy code to clipboard')
+  console.error("Failed to copy code to clipboard")
 }
 
 const code = `function MyComponent(props) {
@@ -29,14 +29,20 @@ const code = `function MyComponent(props) {
 
 const Example = () => (
   <div className="dark">
-    <CodeBlock code={code} language="jsx">
+    <CodeBlock
+      code={code}
+      language="jsx"
+    >
       <CodeBlockHeader>
         <CodeBlockTitle>
           <FileIcon size={14} />
           <CodeBlockFilename>MyComponent.jsx</CodeBlockFilename>
         </CodeBlockTitle>
         <CodeBlockActions>
-          <CodeBlockCopyButton onCopy={handleCopy} onError={handleCopyError} />
+          <CodeBlockCopyButton
+            onCopy={handleCopy}
+            onError={handleCopyError}
+          />
         </CodeBlockActions>
       </CodeBlockHeader>
     </CodeBlock>

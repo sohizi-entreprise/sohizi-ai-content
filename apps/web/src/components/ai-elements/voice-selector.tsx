@@ -91,7 +91,11 @@ export const VoiceSelector = ({
 
   return (
     <VoiceSelectorContext.Provider value={voiceSelectorContext}>
-      <Dialog onOpenChange={setOpen} open={open} {...props}>
+      <Dialog
+        onOpenChange={setOpen}
+        open={open}
+        {...props}
+      >
         {children}
       </Dialog>
     </VoiceSelectorContext.Provider>
@@ -138,7 +142,10 @@ export const VoiceSelectorInput = ({
   className,
   ...props
 }: VoiceSelectorInputProps) => (
-  <CommandInput className={cn("h-auto py-3.5", className)} {...props} />
+  <CommandInput
+    className={cn("h-auto py-3.5", className)}
+    {...props}
+  />
 )
 
 export type VoiceSelectorListProps = ComponentProps<typeof CommandList>
@@ -165,7 +172,10 @@ export const VoiceSelectorItem = ({
   className,
   ...props
 }: VoiceSelectorItemProps) => (
-  <CommandItem className={cn("px-4 py-2", className)} {...props} />
+  <CommandItem
+    className={cn("px-4 py-2", className)}
+    {...props}
+  />
 )
 
 export type VoiceSelectorShortcutProps = ComponentProps<typeof CommandShortcut>
@@ -226,7 +236,10 @@ export const VoiceSelectorGender = ({
   }
 
   return (
-    <span className={cn("text-muted-foreground text-xs", className)} {...props}>
+    <span
+      className={cn("text-muted-foreground text-xs", className)}
+      {...props}
+    >
       {children ?? icon}
     </span>
   )
@@ -402,7 +415,10 @@ export const VoiceSelectorAccent = ({
   }
 
   return (
-    <span className={cn("text-muted-foreground text-xs", className)} {...props}>
+    <span
+      className={cn("text-muted-foreground text-xs", className)}
+      {...props}
+    >
       {children ?? emoji}
     </span>
   )
@@ -438,7 +454,10 @@ export const VoiceSelectorDescription = ({
   className,
   ...props
 }: VoiceSelectorDescriptionProps) => (
-  <span className={cn("text-muted-foreground text-xs", className)} {...props} />
+  <span
+    className={cn("text-muted-foreground text-xs", className)}
+    {...props}
+  />
 )
 
 export type VoiceSelectorAttributesProps = ComponentProps<"div">
@@ -448,7 +467,10 @@ export const VoiceSelectorAttributes = ({
   children,
   ...props
 }: VoiceSelectorAttributesProps) => (
-  <div className={cn("flex items-center text-xs", className)} {...props}>
+  <div
+    className={cn("flex items-center text-xs", className)}
+    {...props}
+  >
     {children}
   </div>
 )

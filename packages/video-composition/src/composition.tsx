@@ -1,13 +1,13 @@
-import { AbsoluteFill, Sequence } from 'remotion'
+import { AbsoluteFill, Sequence } from "remotion"
 import {
   AudioClipRenderer,
   ImageClipRenderer,
   TextClipRenderer,
   VideoClipRenderer,
-} from './clips'
-import { HyperframeSequence } from './html-clip'
-import { CaptionsRenderer } from './caption-clip'
-import type { Clip, Track } from './types'
+} from "./clips"
+import { HyperframeSequence } from "./html-clip"
+import { CaptionsRenderer } from "./caption-clip"
+import type { Clip, Track } from "./types"
 
 export type MainCompositionProps = {
   tracks: Array<Track>
@@ -22,7 +22,7 @@ export function MainComposition({ tracks }: MainCompositionProps) {
   // camera in the composition. Audio is unaffected (it always mixes).
   const orderedTracks = [...tracks].reverse()
   return (
-    <AbsoluteFill style={{ backgroundColor: 'black' }}>
+    <AbsoluteFill style={{ backgroundColor: "black" }}>
       {orderedTracks.map((track) => {
         if (track.hidden) return null
         return (
@@ -39,7 +39,10 @@ export function MainComposition({ tracks }: MainCompositionProps) {
                   durationInFrames={durationInFrames}
                   layout="absolute-fill"
                 >
-                  <ClipRouter clip={clip} track={track} />
+                  <ClipRouter
+                    clip={clip}
+                    track={track}
+                  />
                 </Sequence>
               )
             })}
@@ -52,17 +55,27 @@ export function MainComposition({ tracks }: MainCompositionProps) {
 
 function ClipRouter({ clip, track }: { clip: Clip; track: Track }) {
   switch (clip.type) {
-    case 'video':
-      return <VideoClipRenderer clip={clip} muted={track.muted} />
-    case 'audio':
-      return <AudioClipRenderer clip={clip} muted={track.muted} />
-    case 'image':
+    case "video":
+      return (
+        <VideoClipRenderer
+          clip={clip}
+          muted={track.muted}
+        />
+      )
+    case "audio":
+      return (
+        <AudioClipRenderer
+          clip={clip}
+          muted={track.muted}
+        />
+      )
+    case "image":
       return <ImageClipRenderer clip={clip} />
-    case 'text':
+    case "text":
       return <TextClipRenderer clip={clip} />
-    case 'html':
+    case "html":
       return <HyperframeSequence clip={clip} />
-    case 'caption':
+    case "caption":
       return <CaptionsRenderer clip={clip} />
     default:
       return null

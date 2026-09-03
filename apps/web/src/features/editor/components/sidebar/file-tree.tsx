@@ -254,7 +254,10 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   const nodeRenderer = useCallback(
     (props: NodeRendererProps<FileTreeNode>) => (
       <div>
-        <Node {...props} onCreateFile={createFileNode} />
+        <Node
+          {...props}
+          onCreateFile={createFileNode}
+        />
       </div>
     ),
     [createFileNode],
@@ -282,7 +285,10 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   if (!storeRootFolderId) return null
 
   return (
-    <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden">
+    <div
+      ref={containerRef}
+      className="min-h-0 flex-1 overflow-hidden"
+    >
       <Tree<FileTreeNode>
         ref={setTree}
         dndManager={dndManager}

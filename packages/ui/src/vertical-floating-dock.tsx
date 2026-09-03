@@ -1,15 +1,15 @@
-import { IconLayoutNavbarCollapse } from '@tabler/icons-react'
+import { IconLayoutNavbarCollapse } from "@tabler/icons-react"
 import {
   AnimatePresence,
   motion,
   useMotionValue,
   useSpring,
   useTransform,
-} from 'motion/react'
+} from "motion/react"
 
-import { useRef, useState } from 'react'
-import { cn } from './lib/utils'
-import type { MotionValue } from 'motion/react'
+import { useRef, useState } from "react"
+import { cn } from "./lib/utils"
+import type { MotionValue } from "motion/react"
 
 export const VerticalFloatingDock = ({
   items,
@@ -22,8 +22,14 @@ export const VerticalFloatingDock = ({
 }) => {
   return (
     <>
-      <FloatingDockDesktop items={items} className={desktopClassName} />
-      <FloatingDockMobile items={items} className={mobileClassName} />
+      <FloatingDockDesktop
+        items={items}
+        className={desktopClassName}
+      />
+      <FloatingDockMobile
+        items={items}
+        className={mobileClassName}
+      />
     </>
   )
 }
@@ -37,7 +43,7 @@ const FloatingDockMobile = ({
 }) => {
   const [open, setOpen] = useState(false)
   return (
-    <div className={cn('relative block md:hidden', className)}>
+    <div className={cn("relative block md:hidden", className)}>
       <AnimatePresence>
         {open && (
           <motion.div
@@ -96,12 +102,16 @@ const FloatingDockDesktop = ({
       onMouseMove={(e) => mouseY.set(e.pageY)}
       onMouseLeave={() => mouseY.set(Infinity)}
       className={cn(
-        'my-auto hidden w-16 flex-col  gap-4 rounded-2xl bg-white/5 py-4 px-3 md:flex',
+        "my-auto hidden w-16 flex-col  gap-4 rounded-2xl bg-white/5 py-4 px-3 md:flex",
         className,
       )}
     >
       {items.map((item) => (
-        <IconContainer mouseY={mouseY} key={item.title} {...item} />
+        <IconContainer
+          mouseY={mouseY}
+          key={item.title}
+          {...item}
+        />
       ))}
     </motion.div>
   )
@@ -176,9 +186,9 @@ function IconContainer({
         <AnimatePresence>
           {hovered && (
             <motion.div
-              initial={{ opacity: 0, x: -10, y: '-50%' }}
-              animate={{ opacity: 1, x: 0, y: '-50%' }}
-              exit={{ opacity: 0, x: -2, y: '-50%' }}
+              initial={{ opacity: 0, x: -10, y: "-50%" }}
+              animate={{ opacity: 1, x: 0, y: "-50%" }}
+              exit={{ opacity: 0, x: -2, y: "-50%" }}
               className="absolute left-full ml-2 top-1/2 w-fit rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs whitespace-pre text-neutral-700 dark:border-neutral-900 dark:bg-neutral-800 dark:text-white"
             >
               {title}

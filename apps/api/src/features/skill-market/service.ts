@@ -1,22 +1,22 @@
-import { BadRequest, InternalServerError, NotFound } from '@/features/error'
+import { BadRequest, InternalServerError, NotFound } from "@/features/error"
 import {
   FileSystemConflictError,
   FileSystemInputError,
   createFileNode as createFileNodeFn,
-} from '@/features/file-system/functions'
-import * as fileSystemRepo from '@/features/file-system/repo'
-import { normalizeFileName } from '@/features/file-system/utils'
-import { NameConflictError } from './errors'
-import * as repo from './repo'
-import type { InstallSkillInput } from './schema'
+} from "@/features/file-system/functions"
+import * as fileSystemRepo from "@/features/file-system/repo"
+import { normalizeFileName } from "@/features/file-system/utils"
+import { NameConflictError } from "./errors"
+import * as repo from "./repo"
+import type { InstallSkillInput } from "./schema"
 
 function resolveSkillFileName(name: string) {
   const normalized = normalizeFileName(name)
   if (!normalized) {
-    throw new BadRequest('Invalid skill name')
+    throw new BadRequest("Invalid skill name")
   }
   if (normalized.length > 50) {
-    throw new BadRequest('Skill name must be 50 characters or less')
+    throw new BadRequest("Skill name must be 50 characters or less")
   }
   return normalized
 }
@@ -31,7 +31,7 @@ export const listMarketSkills = async (query: {
 export const getMarketSkill = async (id: string) => {
   const skill = await repo.getPublicCatalogSkillById(id)
   if (!skill) {
-    throw new NotFound('Skill not found')
+    throw new NotFound("Skill not found")
   }
   return skill
 }
@@ -55,29 +55,29 @@ export const installSkill = async (
 ) => {
   const catalogSkill = await repo.getPublicCatalogSkillById(input.skillId)
   if (!catalogSkill) {
-    throw new NotFound('Skill not found')
+    throw new NotFound("Skill not found")
   }
 
   const skillsFolder = await repo.findProjectSkillsFolder(projectId)
   if (!skillsFolder) {
-    throw new InternalServerError('Project skills folder not found')
+    throw new InternalServerError("Project skills folder not found")
   }
 
-  const mode = input.mode ?? 'create'
+  const mode = input.mode ?? "create"
   const catalogFileName = resolveSkillFileName(catalogSkill.name)
   const targetName =
-    mode === 'rename' ? resolveSkillFileName(input.name!) : catalogFileName
+    mode === "rename" ? resolveSkillFileName(input.name!) : catalogFileName
 
   const existing = await repo.findProjectSkillByName(projectId, targetName)
 
-  if (mode === 'create') {
+  if (mode === "create") {
     if (existing) {
       throw new NameConflictError(existing.id)
     }
     return createSkillFile(projectId, skillsFolder.id, targetName, catalogSkill)
   }
 
-  if (mode === 'replace') {
+  if (mode === "replace") {
     const existingByCatalogName = await repo.findProjectSkillByName(
       projectId,
       catalogFileName,
@@ -96,13 +96,13 @@ export const installSkill = async (
       instructions: catalogSkill.instructions,
     })
     if (!updated) {
-      throw new InternalServerError('Failed to replace skill')
+      throw new InternalServerError("Failed to replace skill")
     }
 
     return {
       fileNodeId: existingByCatalogName.id,
       name: existingByCatalogName.name,
-      mode: 'replace' as const,
+      mode: "replace" as const,
     }
   }
 
@@ -128,13 +128,13 @@ async function createSkillFile(
         directory: false,
         parentId,
         position: 0,
-        format: 'skill',
+        format: "skill",
         editable: true,
       },
       {
-        content: '',
+        content: "",
         jsonContent: {},
-        proseContent: { type: 'doc', content: [] },
+        proseContent: { type: "doc", content: [] },
       },
       {
         skill: {
@@ -147,7 +147,7 @@ async function createSkillFile(
     return {
       fileNodeId: fileNode.id,
       name: fileNode.name,
-      mode: 'create' as const,
+      mode: "create" as const,
     }
   } catch (error) {
     if (
@@ -157,6 +157,6 @@ async function createSkillFile(
       throw new BadRequest(error.message)
     }
     console.error(error)
-    throw new InternalServerError('Failed to install skill')
+    throw new InternalServerError("Failed to install skill")
   }
 }

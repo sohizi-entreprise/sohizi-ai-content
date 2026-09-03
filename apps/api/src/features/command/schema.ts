@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from "zod"
 
 export const commandResponseSchema = z.object({
   id: z.uuid(),
@@ -21,7 +21,7 @@ export const createCommandSchema = z.object({
     .max(100)
     .regex(
       /^[a-z0-9][a-z0-9-_]*$/i,
-      'Name must be slash-friendly (letters, numbers, - or _)',
+      "Name must be slash-friendly (letters, numbers, - or _)",
     ),
   action: z.string().trim().min(1),
   visible: z.boolean().optional().default(false),

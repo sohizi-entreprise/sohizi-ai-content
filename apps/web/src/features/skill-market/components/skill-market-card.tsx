@@ -47,7 +47,10 @@ export function SkillMarketCard({ skill }: SkillMarketCardProps) {
               </Badge>
             ))}
             {skill.categories.length > 3 ? (
-              <Badge variant="outline" className="text-[10px]">
+              <Badge
+                variant="outline"
+                className="text-[10px]"
+              >
                 +{skill.categories.length - 3}
               </Badge>
             ) : null}

@@ -21,7 +21,10 @@ function RouteComponent() {
       <ProjectHeader />
       <ErrorBoundary
         fallbackRender={({ resetErrorBoundary, error }) => (
-          <ListProjectsError msg={error.message} reset={resetErrorBoundary} />
+          <ListProjectsError
+            msg={error.message}
+            reset={resetErrorBoundary}
+          />
         )}
       >
         <Suspense fallback={<ListProjectsSkeleton />}>

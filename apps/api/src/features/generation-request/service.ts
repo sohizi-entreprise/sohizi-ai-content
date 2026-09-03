@@ -1,18 +1,18 @@
-import { sse } from 'elysia'
-import { getConversationById } from '../chat/repo'
-import { getModelById } from '../models/repo'
-import { BadRequest, NotFound } from '../error'
-import { ChatCompletionRequest } from './schema'
-import { broadcastCancellation } from './abort-manager'
-import { getProjectById } from '../project/repo'
-import { inngest } from '@/lib/inngest/client'
+import { sse } from "elysia"
+import { getConversationById } from "../chat/repo"
+import { getModelById } from "../models/repo"
+import { BadRequest, NotFound } from "../error"
+import { ChatCompletionRequest } from "./schema"
+import { broadcastCancellation } from "./abort-manager"
+import { getProjectById } from "../project/repo"
+import { inngest } from "@/lib/inngest/client"
 import {
   getGenerationRequestById,
   updateGenerationRequest,
   createGenerationRequest,
   getGenerationRequestsByIds,
   getPendingRequests,
-} from './repo'
+} from "./repo"
 
 type BaseContextEventData = {
   requestId: string
@@ -30,17 +30,17 @@ export async function handleChatCompletionRequest(
 
   const project = await getProjectById(projectId)
   if (!project) {
-    throw new BadRequest('Project not found')
+    throw new BadRequest("Project not found")
   }
   const model = await getModelById(modelId)
   if (!model) {
-    throw new BadRequest('Model not found')
+    throw new BadRequest("Model not found")
   }
 
   if (conversationId) {
     const conversation = await getConversationById(conversationId)
     if (!conversation) {
-      throw new BadRequest('Conversation not found')
+      throw new BadRequest("Conversation not found")
     }
   }
 
@@ -59,7 +59,7 @@ export async function handleChatCompletionRequest(
   }
 
   await inngest.send({
-    name: 'stream/chat.completion',
+    name: "stream/chat.completion",
     data: {
       request,
       context,
@@ -76,12 +76,12 @@ export const cancelRequest = async (
 ) => {
   const genRequest = await getGenerationRequestById(projectId, requestId)
   if (!genRequest) {
-    throw new BadRequest('Generation request not found')
+    throw new BadRequest("Generation request not found")
   }
 
   await broadcastCancellation(requestId)
 
-  await updateGenerationRequest(requestId, { status: 'aborted' })
+  await updateGenerationRequest(requestId, { status: "aborted" })
 
   return {}
 }
@@ -89,7 +89,7 @@ export const cancelRequest = async (
 export async function listPendingRequests(projectId: string, userId: string) {
   const project = await getProjectById(projectId)
   if (!project) {
-    throw new NotFound('Project not found')
+    throw new NotFound("Project not found")
   }
   return getPendingRequests(projectId, userId)
 }
@@ -100,7 +100,7 @@ export async function getRequestStatuses(
 ) {
   const project = await getProjectById(projectId)
   if (!project) {
-    throw new NotFound('Project not found')
+    throw new NotFound("Project not found")
   }
   return getGenerationRequestsByIds(projectId, data.requestIds)
 }
@@ -109,5 +109,5 @@ export async function* streamActiveRequestsSSE(
   _userId: string,
   _lastEventIds?: Record<string, string>,
 ) {
-  yield sse({ event: 'ready', data: '' })
+  yield sse({ event: "ready", data: "" })
 }

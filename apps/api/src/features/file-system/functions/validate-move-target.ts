@@ -1,9 +1,9 @@
-import type { FileNode } from '@/db/schema'
-import { MAX_FILE_DEPTH, MAX_FILE_IN_DIRECTORY } from '../constants'
-import * as fileSystemRepo from '../repo'
-import { listDirectoryFiles } from './list-directory-files'
-import { FileSystemInputError } from './base'
-import { wouldCreateFileNodeCycle } from './would-create-file-node-cycle'
+import type { FileNode } from "@/db/schema"
+import { MAX_FILE_DEPTH, MAX_FILE_IN_DIRECTORY } from "../constants"
+import * as fileSystemRepo from "../repo"
+import { listDirectoryFiles } from "./list-directory-files"
+import { FileSystemInputError } from "./base"
+import { wouldCreateFileNodeCycle } from "./would-create-file-node-cycle"
 
 export async function validateMoveTarget(
   projectId: string,
@@ -16,7 +16,7 @@ export async function validateMoveTarget(
       parentId,
     )
     if (!destinationParent || !destinationParent.directory) {
-      throw new FileSystemInputError('Invalid parent directory')
+      throw new FileSystemInputError("Invalid parent directory")
     }
   }
 
@@ -49,7 +49,7 @@ export async function validateMoveTarget(
       : await fileSystemRepo.getFileNodeDepthById(projectId, parentId)
 
   if (parentDepth === null) {
-    throw new FileSystemInputError('Invalid parent directory')
+    throw new FileSystemInputError("Invalid parent directory")
   }
 
   const nextDepth = parentDepth + 1 + (subtreeHeight ?? 0)

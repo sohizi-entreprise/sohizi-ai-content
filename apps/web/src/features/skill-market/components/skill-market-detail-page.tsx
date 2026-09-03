@@ -93,10 +93,16 @@ export function SkillMarketDetailPage() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 p-8">
         <p className="text-sm text-destructive">Failed to load skill</p>
-        <Button variant="outline" onClick={() => void refetch()}>
+        <Button
+          variant="outline"
+          onClick={() => void refetch()}
+        >
           Retry
         </Button>
-        <Button variant="ghost" asChild>
+        <Button
+          variant="ghost"
+          asChild
+        >
           <Link
             to="/dashboard/projects/$projectId/skill-market"
             params={{ projectId }}

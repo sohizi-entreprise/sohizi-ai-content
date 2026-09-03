@@ -1,13 +1,13 @@
-import { v4 as uuidv4 } from 'uuid'
-import { S3Client } from 'bun'
-import { createHash, createHmac } from 'node:crypto'
-import { parseBuffer } from 'music-metadata'
-import type { AssetType } from '@/type'
+import { v4 as uuidv4 } from "uuid"
+import { S3Client } from "bun"
+import { createHash, createHmac } from "node:crypto"
+import { parseBuffer } from "music-metadata"
+import type { AssetType } from "@/type"
 
 const S3_SIGNED_URL_EXPIRY_SECONDS = 10 * 60
-const S3_SIGNING_SERVICE = 's3'
-const S3_SIGNING_TERMINATOR = 'aws4_request'
-const S3_SIGNING_ALGORITHM = 'AWS4-HMAC-SHA256'
+const S3_SIGNING_SERVICE = "s3"
+const S3_SIGNING_TERMINATOR = "aws4_request"
+const S3_SIGNING_ALGORITHM = "AWS4-HMAC-SHA256"
 
 let s3Client: S3Client | undefined
 
@@ -19,7 +19,7 @@ type S3Config = {
   region: string
 }
 
-type SignedUrlMethod = 'GET' | 'PUT'
+type SignedUrlMethod = "GET" | "PUT"
 
 function getS3Config(): S3Config {
   const endpoint = process.env.R2_ENDPOINT
@@ -27,20 +27,20 @@ function getS3Config(): S3Config {
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
   const bucket = process.env.R2_BUCKET_NAME
 
-  if (!endpoint) throw new Error('R2_ENDPOINT environment variable is required')
+  if (!endpoint) throw new Error("R2_ENDPOINT environment variable is required")
   if (!accessKeyId)
-    throw new Error('R2_ACCESS_KEY_ID environment variable is required')
+    throw new Error("R2_ACCESS_KEY_ID environment variable is required")
   if (!secretAccessKey)
-    throw new Error('R2_SECRET_ACCESS_KEY environment variable is required')
+    throw new Error("R2_SECRET_ACCESS_KEY environment variable is required")
   if (!bucket)
-    throw new Error('R2_BUCKET_NAME environment variable is required')
+    throw new Error("R2_BUCKET_NAME environment variable is required")
 
   return {
     endpoint,
     accessKeyId,
     secretAccessKey,
     bucket,
-    region: 'auto',
+    region: "auto",
   }
 }
 
@@ -56,63 +56,63 @@ function getS3Client(): S3Client {
   return s3Client
 }
 
-type AssetFolder = 'images' | 'videos' | 'audios' | 'documents' | 'htmls'
+type AssetFolder = "images" | "videos" | "audios" | "documents" | "htmls"
 
 const EXTENSION_TO_FOLDER: Record<string, AssetFolder> = {
-  png: 'images',
-  jpg: 'images',
-  jpeg: 'images',
-  webp: 'images',
-  gif: 'images',
-  bmp: 'images',
-  svg: 'images',
-  avif: 'images',
-  mp4: 'videos',
-  webm: 'videos',
-  mov: 'videos',
-  m4v: 'videos',
-  avi: 'videos',
-  mkv: 'videos',
-  mp3: 'audios',
-  wav: 'audios',
-  ogg: 'audios',
-  m4a: 'audios',
-  aac: 'audios',
-  flac: 'audios',
-  weba: 'audios',
-  html: 'htmls',
-  htm: 'htmls',
+  png: "images",
+  jpg: "images",
+  jpeg: "images",
+  webp: "images",
+  gif: "images",
+  bmp: "images",
+  svg: "images",
+  avif: "images",
+  mp4: "videos",
+  webm: "videos",
+  mov: "videos",
+  m4v: "videos",
+  avi: "videos",
+  mkv: "videos",
+  mp3: "audios",
+  wav: "audios",
+  ogg: "audios",
+  m4a: "audios",
+  aac: "audios",
+  flac: "audios",
+  weba: "audios",
+  html: "htmls",
+  htm: "htmls",
 }
 
 const FOLDER_TO_ASSET_TYPE: Record<AssetFolder, AssetType> = {
-  images: 'image',
-  videos: 'video',
-  audios: 'audio',
-  documents: 'document',
-  htmls: 'html',
+  images: "image",
+  videos: "video",
+  audios: "audio",
+  documents: "document",
+  htmls: "html",
 }
 
 const FOLDER_DEFAULT_EXT: Record<AssetFolder, string> = {
-  images: 'png',
-  videos: 'mp4',
-  audios: 'mp3',
-  documents: 'bin',
-  htmls: 'html',
+  images: "png",
+  videos: "mp4",
+  audios: "mp3",
+  documents: "bin",
+  htmls: "html",
 }
 
 export function classifyContentType(contentType: string): {
   assetType: AssetType
   folder: AssetFolder
 } {
-  if (contentType.startsWith('image/'))
-    return { assetType: 'image', folder: 'images' }
-  if (contentType.startsWith('video/'))
-    return { assetType: 'video', folder: 'videos' }
-  if (contentType.startsWith('audio/'))
-    return { assetType: 'audio', folder: 'audios' }
-  if (contentType === 'text/html' || contentType.startsWith('text/html'))
-    return { assetType: 'html', folder: 'htmls' }
-  return { assetType: 'document', folder: 'documents' }
+  if (contentType.startsWith("image/"))
+    return { assetType: "image", folder: "images" }
+  if (contentType.startsWith("video/"))
+    return { assetType: "video", folder: "videos" }
+  if (contentType.startsWith("audio/"))
+    return { assetType: "audio", folder: "audios" }
+  if (contentType === "text/html" || contentType.startsWith("text/html"))
+    return { assetType: "html", folder: "htmls" }
+  return { assetType: "document", folder: "documents" }
 }
 
 export function getAssetFolder(contentType: string): AssetFolder {
@@ -120,13 +120,13 @@ export function getAssetFolder(contentType: string): AssetFolder {
 }
 
 function folderFromUrl(sourceUrl: string): AssetFolder | null {
-  if (sourceUrl.startsWith('data:')) {
+  if (sourceUrl.startsWith("data:")) {
     const match = /^data:([^;]+)/.exec(sourceUrl)
     return match ? getAssetFolder(match[1]) : null
   }
   try {
     const pathname = new URL(sourceUrl).pathname
-    const ext = pathname.split('.').pop()?.toLowerCase()
+    const ext = pathname.split(".").pop()?.toLowerCase()
     if (!ext) return null
     return EXTENSION_TO_FOLDER[ext] ?? null
   } catch {
@@ -139,17 +139,17 @@ function resolveAssetFolder(
   sourceUrl: string,
 ): AssetFolder {
   const fromType = getAssetFolder(contentType)
-  if (fromType !== 'documents') return fromType
+  if (fromType !== "documents") return fromType
   return folderFromUrl(sourceUrl) ?? fromType
 }
 
 function fileNameFromSource(sourceUrl: string, folder: AssetFolder): string {
-  if (sourceUrl.startsWith('data:')) {
+  if (sourceUrl.startsWith("data:")) {
     return `${FOLDER_TO_ASSET_TYPE[folder]}-${uuidv4().slice(0, 8)}.${FOLDER_DEFAULT_EXT[folder]}`
   }
   try {
     const name = decodeURIComponent(
-      new URL(sourceUrl).pathname.split('/').pop() ?? '',
+      new URL(sourceUrl).pathname.split("/").pop() ?? "",
     )
     if (name) return name
   } catch {
@@ -159,20 +159,20 @@ function fileNameFromSource(sourceUrl: string, folder: AssetFolder): string {
 }
 
 export function getMaxUploadSizeInBytes(contentType: string): number {
-  if (contentType.startsWith('video/')) return 15 * 1024 * 1024
-  if (contentType.startsWith('audio/')) return 15 * 1024 * 1024
+  if (contentType.startsWith("video/")) return 15 * 1024 * 1024
+  if (contentType.startsWith("audio/")) return 15 * 1024 * 1024
   return 5 * 1024 * 1024
 }
 
 export function sanitizeFileName(fileName: string): string {
   return fileName
-    .replace(/[/\\\s]+/g, '-')
+    .replace(/[/\\\s]+/g, "-")
     .toLowerCase()
     .trim()
 }
 
 function formatAmzDate(date: Date): string {
-  return date.toISOString().replace(/[:-]|\.\d{3}/g, '')
+  return date.toISOString().replace(/[:-]|\.\d{3}/g, "")
 }
 
 function getDateStamp(date: Date): string {
@@ -180,7 +180,7 @@ function getDateStamp(date: Date): string {
 }
 
 function hmac(key: string | Buffer, value: string): Buffer {
-  return createHmac('sha256', key).update(value).digest()
+  return createHmac("sha256", key).update(value).digest()
 }
 
 function getSigningKey(
@@ -197,9 +197,9 @@ function getSigningKey(
 export function buildPublicUrl(storageKey: string): string {
   const baseUrl = process.env.R2_PUBLIC_URL
   if (!baseUrl)
-    throw new Error('R2_PUBLIC_URL environment variable is required')
+    throw new Error("R2_PUBLIC_URL environment variable is required")
 
-  return `${baseUrl.replace(/\/$/, '')}/${storageKey}`
+  return `${baseUrl.replace(/\/$/, "")}/${storageKey}`
 }
 
 function createSignedObjectUrl(
@@ -222,16 +222,16 @@ function createSignedObjectUrl(
     config.region,
     S3_SIGNING_SERVICE,
     S3_SIGNING_TERMINATOR,
-  ].join('/')
-  const signedHeaders = 'host'
+  ].join("/")
+  const signedHeaders = "host"
 
   const signingQueryParams: Record<string, string> = {
     ...queryParams,
-    'X-Amz-Algorithm': S3_SIGNING_ALGORITHM,
-    'X-Amz-Credential': credential,
-    'X-Amz-Date': amzDate,
-    'X-Amz-Expires': String(S3_SIGNED_URL_EXPIRY_SECONDS),
-    'X-Amz-SignedHeaders': signedHeaders,
+    "X-Amz-Algorithm": S3_SIGNING_ALGORITHM,
+    "X-Amz-Credential": credential,
+    "X-Amz-Date": amzDate,
+    "X-Amz-Expires": String(S3_SIGNED_URL_EXPIRY_SECONDS),
+    "X-Amz-SignedHeaders": signedHeaders,
   }
 
   const canonicalQueryString = buildCanonicalQueryString(signingQueryParams)
@@ -242,35 +242,35 @@ function createSignedObjectUrl(
     canonicalQueryString,
     canonicalHeaders,
     signedHeaders,
-    'UNSIGNED-PAYLOAD',
-  ].join('\n')
+    "UNSIGNED-PAYLOAD",
+  ].join("\n")
   const credentialScope = [
     dateStamp,
     config.region,
     S3_SIGNING_SERVICE,
     S3_SIGNING_TERMINATOR,
-  ].join('/')
+  ].join("/")
   const stringToSign = [
     S3_SIGNING_ALGORITHM,
     amzDate,
     credentialScope,
-    createHash('sha256').update(canonicalRequest).digest('hex'),
-  ].join('\n')
+    createHash("sha256").update(canonicalRequest).digest("hex"),
+  ].join("\n")
   const signingKey = getSigningKey(
     config.secretAccessKey,
     dateStamp,
     config.region,
   )
-  const signature = createHmac('sha256', signingKey)
+  const signature = createHmac("sha256", signingKey)
     .update(stringToSign)
-    .digest('hex')
+    .digest("hex")
 
   url.search = `${canonicalQueryString}&X-Amz-Signature=${awsEncodeURIComponent(signature)}`
   return url.toString()
 }
 
 function createSignedPutUrl(config: S3Config, storageKey: string): string {
-  return createSignedObjectUrl(config, storageKey, 'PUT')
+  return createSignedObjectUrl(config, storageKey, "PUT")
 }
 
 function createSignedGetUrl(
@@ -278,8 +278,8 @@ function createSignedGetUrl(
   storageKey: string,
   fileName: string,
 ): string {
-  return createSignedObjectUrl(config, storageKey, 'GET', {
-    'response-content-disposition': buildAttachmentDisposition(fileName),
+  return createSignedObjectUrl(config, storageKey, "GET", {
+    "response-content-disposition": buildAttachmentDisposition(fileName),
   })
 }
 
@@ -288,11 +288,11 @@ function buildObjectUploadUrl(
   bucket: string,
   storageKey: string,
 ): { url: URL; canonicalUri: string } {
-  const url = new URL(endpoint.replace(/\/$/, ''))
+  const url = new URL(endpoint.replace(/\/$/, ""))
   const basePath = normalizePath(url.pathname)
   const encodedStorageKey = encodePathSegments(storageKey)
   const canonicalUri =
-    url.hostname.split('.')[0] === bucket
+    url.hostname.split(".")[0] === bucket
       ? joinPath(basePath, encodedStorageKey)
       : joinPath(basePath, awsEncodeURIComponent(bucket), encodedStorageKey)
 
@@ -312,22 +312,22 @@ function buildCanonicalQueryString(params: Record<string, string>): string {
       return 0
     })
     .map(([key, value]) => `${key}=${value}`)
-    .join('&')
+    .join("&")
 }
 
 function encodePathSegments(path: string): string {
-  return path.split('/').map(awsEncodeURIComponent).join('/')
+  return path.split("/").map(awsEncodeURIComponent).join("/")
 }
 
 function normalizePath(path: string): string {
-  const normalized = path.replace(/\/+$/, '')
-  return normalized === '' ? '/' : normalized
+  const normalized = path.replace(/\/+$/, "")
+  return normalized === "" ? "/" : normalized
 }
 
 function joinPath(...parts: string[]): string {
-  const path = parts.filter(Boolean).join('/').replace(/\/+/g, '/')
+  const path = parts.filter(Boolean).join("/").replace(/\/+/g, "/")
 
-  return path.startsWith('/') ? path : `/${path}`
+  return path.startsWith("/") ? path : `/${path}`
 }
 
 function awsEncodeURIComponent(value: string): string {
@@ -339,8 +339,8 @@ function awsEncodeURIComponent(value: string): string {
 
 function buildAttachmentDisposition(fileName: string): string {
   const fallbackFileName =
-    sanitizeFileName(fileName).replace(/[^\x20-\x7E]|["\r\n;]/g, '') ||
-    'download'
+    sanitizeFileName(fileName).replace(/[^\x20-\x7E]|["\r\n;]/g, "") ||
+    "download"
 
   return `attachment; filename="${fallbackFileName}"; filename*=UTF-8''${awsEncodeURIComponent(fileName)}`
 }
@@ -385,7 +385,7 @@ export async function uploadFromUrl(
 
   const blob = await response.blob()
   const buffer = Buffer.from(await blob.arrayBuffer())
-  const contentType = blob.type || 'application/octet-stream'
+  const contentType = blob.type || "application/octet-stream"
 
   return uploadFromBuffer(buffer, destinationPath, contentType)
 }
@@ -396,13 +396,13 @@ export async function uploadGeneratedMedia(sourceUrl: string): Promise<{
   size: number
   type: AssetType
 }> {
-  if (sourceUrl.startsWith('data:')) {
+  if (sourceUrl.startsWith("data:")) {
     const match = /^data:([^;]+);base64,(.+)$/.exec(sourceUrl)
     if (!match) {
-      throw new Error('Invalid data URL for media upload')
+      throw new Error("Invalid data URL for media upload")
     }
-    const contentType = match[1] || 'application/octet-stream'
-    const buffer = Buffer.from(match[2], 'base64')
+    const contentType = match[1] || "application/octet-stream"
+    const buffer = Buffer.from(match[2], "base64")
     const folder = resolveAssetFolder(contentType, sourceUrl)
     const destPath = buildStoragePath(
       folder,
@@ -421,7 +421,7 @@ export async function uploadGeneratedMedia(sourceUrl: string): Promise<{
 
   const blob = await response.blob()
   const buffer = Buffer.from(await blob.arrayBuffer())
-  const contentType = blob.type || 'application/octet-stream'
+  const contentType = blob.type || "application/octet-stream"
   const folder = resolveAssetFolder(contentType, sourceUrl)
   const destPath = buildStoragePath(
     folder,
@@ -448,7 +448,7 @@ export async function uploadFromBuffer(
 }
 
 export function buildStoragePath(
-  assetType: 'images' | 'videos' | 'audios' | 'documents' | 'htmls',
+  assetType: "images" | "videos" | "audios" | "documents" | "htmls",
   filename: string,
 ): string {
   const key = uuidv4()
@@ -475,7 +475,7 @@ export async function getFileMetadata(
 
   let duration: number | undefined
 
-  if (contentType.startsWith('audio/')) {
+  if (contentType.startsWith("audio/")) {
     const buffer = Buffer.from(await client.file(storageKey).arrayBuffer())
     try {
       const metadata = await parseBuffer(buffer, { mimeType: contentType })

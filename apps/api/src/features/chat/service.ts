@@ -1,47 +1,47 @@
-import { CursorPaginationOptions } from '@/type'
-import * as repo from './repo'
-import { z } from 'zod'
-import { UserModelMessage, userModelMessageSchema } from 'ai'
-import { assertConversationOwner } from '@/lib/authorize'
-import { Conversation, ConversationAgentRun } from '@/db/schema'
+import { CursorPaginationOptions } from "@/type"
+import * as repo from "./repo"
+import { z } from "zod"
+import { UserModelMessage, userModelMessageSchema } from "ai"
+import { assertConversationOwner } from "@/lib/authorize"
+import { Conversation, ConversationAgentRun } from "@/db/schema"
 import {
   getModelWithVendorBinding,
   type ResolvedVendorModel,
-} from '@/features/models/repo'
-import { BadRequest } from '../error'
-import { Session } from '../ai/agent/core/session'
-import { v4 as uuidv4 } from 'uuid'
-import { CheckpointPersistence } from '../ai/agent/core/persistence'
-import { createAgentFromDefinition } from '../ai/agent/core/agent-factory'
+} from "@/features/models/repo"
+import { BadRequest } from "../error"
+import { Session } from "../ai/agent/core/session"
+import { v4 as uuidv4 } from "uuid"
+import { CheckpointPersistence } from "../ai/agent/core/persistence"
+import { createAgentFromDefinition } from "../ai/agent/core/agent-factory"
 import {
   getAgentDefinition,
   type AgentName,
-} from '../ai/agent/core/agent-registry'
-import { generateTitle } from '../ai/agent/utils/generate-title'
+} from "../ai/agent/core/agent-registry"
+import { generateTitle } from "../ai/agent/utils/generate-title"
 import {
   broadcastCancellation,
   createCancellableController,
-} from '../generation-request/abort-manager'
+} from "../generation-request/abort-manager"
 import {
   markStreamActive,
   removeStreamActive,
   streamChunksAsSse,
   writeStreamData,
-} from '../generation-request/stream-handler'
-import { getProjectById } from '../project/repo'
-import { getErrorMessage } from '@/utils/get-error-message'
-import { listSkills } from '../file-system/repo'
-import * as commandService from '../command/service'
+} from "../generation-request/stream-handler"
+import { getProjectById } from "../project/repo"
+import { getErrorMessage } from "@/utils/get-error-message"
+import { listSkills } from "../file-system/repo"
+import * as commandService from "../command/service"
 import {
   buildInvokedCommandsPrompt,
   extractCommandNames,
-} from '../command/resolve'
+} from "../command/resolve"
 import {
   buildEditorContextPrompt,
   editorContextSchema,
   type EditorContext,
-} from './editor-context'
-import { extractTextFromUserMessage } from '../ai/agent/utils/message-content'
+} from "./editor-context"
+import { extractTextFromUserMessage } from "../ai/agent/utils/message-content"
 
 export const listConversations = async (
   projectId: string,
@@ -65,10 +65,10 @@ export const listMessages = async (
 
 export const deleteConversation = async (id: string) => {
   const result = await repo.deleteConversation(id)
-  return { ok: result, error: result ? null : 'Failed to delete conversation' }
+  return { ok: result, error: result ? null : "Failed to delete conversation" }
 }
 
-export { listLlmModels, listModelParameters } from '../models/service'
+export { listLlmModels, listModelParameters } from "../models/service"
 
 export const listConversationAgentRuns = async (
   conversationId: string,
@@ -82,8 +82,8 @@ export const listConversationAgentRuns = async (
 }
 
 export const completionSchema = z.object({
-  conversationId: z.uuid('Invalid conversation id').nullable(),
-  modelId: z.string('Invalid model id'),
+  conversationId: z.uuid("Invalid conversation id").nullable(),
+  modelId: z.string("Invalid model id"),
   userPrompt: userModelMessageSchema,
   editorContext: editorContextSchema.optional(),
 })
@@ -91,12 +91,12 @@ export const completionSchema = z.object({
 export const cancelRun = async (runId: string) => {
   try {
     await broadcastCancellation(runId)
-    await repo.updateConversationAgentRun(runId, { status: 'finished' })
+    await repo.updateConversationAgentRun(runId, { status: "finished" })
     await removeStreamActive(runId)
     return { ok: true, error: null }
   } catch (error) {
     console.error(error)
-    return { ok: false, error: getErrorMessage(error, 'Failed to cancel run') }
+    return { ok: false, error: getErrorMessage(error, "Failed to cancel run") }
   }
 }
 
@@ -115,13 +115,13 @@ export const chatCompletion = async (
 
   const shouldGenerateTitle = conversationId === null
 
-  const agentDefinition = getAgentDefinition('main-agent')
+  const agentDefinition = getAgentDefinition("main-agent")
   if (!agentDefinition) {
-    throw new Error('Agent definition not found')
+    throw new Error("Agent definition not found")
   }
   const model = await getModelWithVendorBinding(modelId, agentDefinition.vendor)
   if (!model) {
-    throw new BadRequest('Model not found')
+    throw new BadRequest("Model not found")
   }
 
   let result: { conversation: Conversation; run: ConversationAgentRun } | null =
@@ -145,7 +145,7 @@ export const chatCompletion = async (
   }
 
   if (!result) {
-    throw new BadRequest('Failed to create conversation or run')
+    throw new BadRequest("Failed to create conversation or run")
   }
 
   await markStreamActive(result.run.id)
@@ -190,7 +190,7 @@ async function runAgent(payload: RunAgentPayload) {
   const { controller, cleanup } = await createCancellableController(runId)
 
   try {
-    await repo.updateConversationAgentRun(runId, { status: 'running' })
+    await repo.updateConversationAgentRun(runId, { status: "running" })
 
     const [project, checkpoint, projectSkills, userPromptText] =
       await Promise.all([
@@ -219,7 +219,7 @@ async function runAgent(payload: RunAgentPayload) {
     })
     const checkpointPersistence = new CheckpointPersistence(checkpoint, runId)
     const agent = await createAgentFromDefinition({
-      agentName: 'main-agent',
+      agentName: "main-agent",
       session,
       model,
       persistence: checkpointPersistence,
@@ -236,7 +236,7 @@ async function runAgent(payload: RunAgentPayload) {
     const chunks = agent.runLoop(userPrompt, controller.signal, 250)
 
     for await (const chunk of chunks) {
-      await writeStreamData(runId, { runId, event: 'chunk', chunk })
+      await writeStreamData(runId, { runId, event: "chunk", chunk })
     }
 
     if (shouldGenerateTitle) {
@@ -250,16 +250,16 @@ async function runAgent(payload: RunAgentPayload) {
       // Maybe write the title to the stream
     }
 
-    await repo.updateConversationAgentRun(runId, { status: 'finished' })
+    await repo.updateConversationAgentRun(runId, { status: "finished" })
   } catch (error) {
-    const errorMessage = getErrorMessage(error, 'Completion failed')
+    const errorMessage = getErrorMessage(error, "Completion failed")
     console.error(error)
     await repo.updateConversationAgentRun(runId, {
-      status: 'error',
+      status: "error",
       error: errorMessage,
     })
   } finally {
-    await writeStreamData(runId, { runId, event: 'done' })
+    await writeStreamData(runId, { runId, event: "done" })
     await removeStreamActive(runId)
     await cleanup()
   }
@@ -271,7 +271,7 @@ async function handleTitleGeneration(
 ) {
   const { title } = await generateTitle({
     message: extractTextFromUserMessage(userPrompt),
-    modelId: 'openai/gpt-5-nano',
+    modelId: "openai/gpt-5-nano",
     organizationId,
     abortSignal: new AbortController().signal, // This won't be aborted since the request will be done at this stage
   })
@@ -294,7 +294,7 @@ function enrichSystemPrompt(
       (skill, index) =>
         `${index + 1}. ${skill.name}:\n${skill.description}\n---\n`,
     )
-    .join('\n')
+    .join("\n")
   const subAgentDefinitions = subAgents.map((name) => getAgentDefinition(name))
   const subAgentPrompts = subAgentDefinitions
     .filter((subAgent) => !!subAgent)
@@ -302,7 +302,7 @@ function enrichSystemPrompt(
       (subAgent, index) =>
         `${index + 1}. ${subAgent.name}:\n${subAgent.description}\n---\n`,
     )
-    .join('\n')
+    .join("\n")
   if (skillPrompts.length > 0) {
     finalPrompt += `
 <project-skills>

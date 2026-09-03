@@ -1,28 +1,28 @@
-import { Elysia } from 'elysia'
-import { z } from 'zod'
-import { assertProjectAccess } from '@/lib/authorize'
-import { authMiddleware } from '@/lib/auth-middleware'
+import { Elysia } from "elysia"
+import { z } from "zod"
+import { assertProjectAccess } from "@/lib/authorize"
+import { authMiddleware } from "@/lib/auth-middleware"
 import {
   installSkillSchema,
   marketListQuerySchema,
   nameAvailableQuerySchema,
-} from './schema'
-import * as skillMarketService from './service'
+} from "./schema"
+import * as skillMarketService from "./service"
 
 const projectParams = z.object({
-  projectId: z.uuid('Invalid project id'),
+  projectId: z.uuid("Invalid project id"),
 })
 
 export const skillMarketRoutes = new Elysia()
   .use(authMiddleware)
-  .group('/skills/market', (app) =>
+  .group("/skills/market", (app) =>
     app
-      .get('/', ({ query }) => skillMarketService.listMarketSkills(query), {
+      .get("/", ({ query }) => skillMarketService.listMarketSkills(query), {
         query: marketListQuerySchema,
       })
-      .get('/categories', () => skillMarketService.listMarketCategories())
+      .get("/categories", () => skillMarketService.listMarketCategories())
       .get(
-        '/:id',
+        "/:id",
         ({ params }) => skillMarketService.getMarketSkill(params.id),
         {
           params: z.object({
@@ -31,7 +31,7 @@ export const skillMarketRoutes = new Elysia()
         },
       ),
   )
-  .group('/projects/:projectId/skills', (app) =>
+  .group("/projects/:projectId/skills", (app) =>
     app
       .guard({
         params: projectParams,
@@ -41,7 +41,7 @@ export const skillMarketRoutes = new Elysia()
         return {}
       })
       .get(
-        '/name-available',
+        "/name-available",
         ({ params, query }) => {
           return skillMarketService.isSkillNameAvailable(
             params.projectId,
@@ -53,7 +53,7 @@ export const skillMarketRoutes = new Elysia()
         },
       )
       .post(
-        '/install',
+        "/install",
         ({ params, body }) => {
           return skillMarketService.installSkill(params.projectId, body)
         },
@@ -64,5 +64,5 @@ export const skillMarketRoutes = new Elysia()
   )
 
 export { skillMarketService }
-export * from './schema'
-export { NameConflictError } from './errors'
+export * from "./schema"
+export { NameConflictError } from "./errors"

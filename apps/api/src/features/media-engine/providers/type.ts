@@ -1,25 +1,25 @@
 type RequestStatus =
-  'completed' | 'failed' | 'cancelled' | 'timeout' | 'processing' | 'created'
+  "completed" | "failed" | "cancelled" | "timeout" | "processing" | "created"
 type Primitive = string | number | boolean | null | undefined
 export type SubmitPayload = Record<string, Primitive | Primitive[]>
 
 export type SubmitResponse = {
   requestId: string
-  status: 'created'
+  status: "created"
 }
 
 type RequestData = Array<string | Record<string, string>>
 
 export type GetRequestDataResponse =
   | {
-      status: Omit<RequestStatus, 'completed' | 'error'>
+      status: Omit<RequestStatus, "completed" | "error">
     }
   | {
-      status: 'completed'
+      status: "completed"
       data: RequestData
     }
   | {
-      status: 'error'
+      status: "error"
       error: string
     }
 

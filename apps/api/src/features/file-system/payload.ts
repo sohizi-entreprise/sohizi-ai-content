@@ -1,9 +1,9 @@
-import { z } from 'zod'
-import type { ProseDocument, ProseNode } from '@/type'
-import { FILE_FORMATS } from './constants'
+import { z } from "zod"
+import type { ProseDocument, ProseNode } from "@/type"
+import { FILE_FORMATS } from "./constants"
 
 const proseTextNodeSchema = z.object({
-  type: z.literal('text'),
+  type: z.literal("text"),
   text: z.string().optional(),
 })
 
@@ -19,41 +19,41 @@ export const proseNodeSchema: z.ZodType<ProseNode> = z.lazy(() =>
 )
 
 export const proseDocumentSchema: z.ZodType<ProseDocument> = z.object({
-  type: z.literal('doc'),
+  type: z.literal("doc"),
   content: z.array(proseNodeSchema),
 })
 
 export const fileCreationRequestSchema = z
   .object({
     projectId: z.string(),
-    name: z.string().max(50, 'Name must be less than 50 characters'),
+    name: z.string().max(50, "Name must be less than 50 characters"),
     directory: z.boolean(),
     parentId: z.string(),
-    position: z.number().gte(0, 'Position must be greater than 0'),
+    position: z.number().gte(0, "Position must be greater than 0"),
     format: z.enum(FILE_FORMATS).nullable(),
     editable: z.boolean().default(true),
   })
   .superRefine((data, ctx) => {
     if (!data.directory && !data.format) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'Format is required for files',
-        path: ['format'],
+        code: "custom",
+        message: "Format is required for files",
+        path: ["format"],
       })
     }
   })
 
 export const fileNodeInsertPositionSchema = z.enum([
-  'start',
-  'end',
-  'before',
-  'after',
+  "start",
+  "end",
+  "before",
+  "after",
 ])
 
 export const updateFileRequestSchema = z
   .object({
     id: z.string(),
-    name: z.string().max(50, 'Name must be less than 50 characters').optional(),
+    name: z.string().max(50, "Name must be less than 50 characters").optional(),
     parentId: z.string().nullable().optional(),
     anchorId: z.string().nullable().optional(),
     position: fileNodeInsertPositionSchema.optional(),
@@ -66,28 +66,28 @@ export const updateFileRequestSchema = z
       data.position === undefined
     ) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'At least one update field must be provided',
-        path: ['name', 'parentId', 'anchorId', 'position'],
+        code: "custom",
+        message: "At least one update field must be provided",
+        path: ["name", "parentId", "anchorId", "position"],
       })
     }
 
     if (
-      (data.position === 'before' || data.position === 'after') &&
+      (data.position === "before" || data.position === "after") &&
       !data.anchorId
     ) {
       ctx.addIssue({
-        code: 'custom',
+        code: "custom",
         message: `anchorId is required when position is ${data.position}`,
-        path: ['anchorId'],
+        path: ["anchorId"],
       })
     }
 
     if (data.anchorId !== undefined && data.position === undefined) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'position is required when anchorId is provided',
-        path: ['position'],
+        code: "custom",
+        message: "position is required when anchorId is provided",
+        path: ["position"],
       })
     }
   })
@@ -100,13 +100,13 @@ export const updateFilePositionRequestSchema = z
   })
   .superRefine((data, ctx) => {
     if (
-      (data.position === 'before' || data.position === 'after') &&
+      (data.position === "before" || data.position === "after") &&
       !data.anchorId
     ) {
       ctx.addIssue({
-        code: 'custom',
+        code: "custom",
         message: `anchorId is required when position is ${data.position}`,
-        path: ['anchorId'],
+        path: ["anchorId"],
       })
     }
   })
@@ -122,8 +122,8 @@ export const updateFileContentRequestSchema = z
       return data.content || data.jsonContent || data.proseContent
     },
     {
-      message: 'At least one of content attribute must be provided',
-      path: ['content', 'jsonContent', 'proseContent'],
+      message: "At least one of content attribute must be provided",
+      path: ["content", "jsonContent", "proseContent"],
     },
   )
 
@@ -150,17 +150,17 @@ export const updateTextFileContentRequestSchema = z
   .superRefine((data, ctx) => {
     if (data.content === undefined && data.diff === undefined) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'content or diff is required',
-        path: ['content', 'diff'],
+        code: "custom",
+        message: "content or diff is required",
+        path: ["content", "diff"],
       })
     }
 
     if (data.diff !== undefined && data.baseRevision === undefined) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'baseRevision is required when diff is provided',
-        path: ['baseRevision'],
+        code: "custom",
+        message: "baseRevision is required when diff is provided",
+        path: ["baseRevision"],
       })
     }
   })
@@ -169,8 +169,8 @@ export const updateSkillRequestSchema = z
   .object({
     description: z.string().optional(),
     instructions: z.string().optional(),
-    status: z.enum(['draft', 'published']).optional(),
-    visibility: z.enum(['public', 'private']).optional(),
+    status: z.enum(["draft", "published"]).optional(),
+    visibility: z.enum(["public", "private"]).optional(),
   })
   .superRefine((data, ctx) => {
     if (
@@ -180,9 +180,9 @@ export const updateSkillRequestSchema = z
       data.visibility === undefined
     ) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'At least one update field must be provided',
-        path: ['description', 'instructions', 'status', 'visibility'],
+        code: "custom",
+        message: "At least one update field must be provided",
+        path: ["description", "instructions", "status", "visibility"],
       })
     }
   })

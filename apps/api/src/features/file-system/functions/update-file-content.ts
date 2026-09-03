@@ -1,7 +1,7 @@
-import type { UpdateFileContentRequest } from '../payload'
-import { ingestFileContentChunks } from '../ingest-file-content-chunks'
-import * as fileSystemRepo from '../repo'
-import { FileSystemOperationError } from './base'
+import type { UpdateFileContentRequest } from "../payload"
+import { ingestFileContentChunks } from "../ingest-file-content-chunks"
+import * as fileSystemRepo from "../repo"
+import { FileSystemOperationError } from "./base"
 
 export const updateFileContent = async (
   projectId: string,
@@ -14,14 +14,14 @@ export const updateFileContent = async (
     request,
   )
   if (!fileContent) {
-    throw new FileSystemOperationError('Failed to update file content')
+    throw new FileSystemOperationError("Failed to update file content")
   }
 
   if (request.content !== undefined) {
     await ingestFileContentChunks({
       projectId,
       fileNodeId,
-      content: fileContent.content ?? '',
+      content: fileContent.content ?? "",
     })
   }
 

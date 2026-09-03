@@ -1,14 +1,14 @@
-import { z } from 'zod'
+import { z } from "zod"
 
-export const skillStatusSchema = z.enum(['draft', 'published'])
-export const skillVisibilitySchema = z.enum(['public', 'private'])
+export const skillStatusSchema = z.enum(["draft", "published"])
+export const skillVisibilitySchema = z.enum(["public", "private"])
 
 export const createSkillSchema = z.object({
   name: z.string().trim().min(1).max(255),
   description: z.string().trim().min(1),
   instructions: z.string().trim().min(1),
-  status: skillStatusSchema.optional().default('draft'),
-  visibility: skillVisibilitySchema.optional().default('private'),
+  status: skillStatusSchema.optional().default("draft"),
+  visibility: skillVisibilitySchema.optional().default("private"),
   categoryIds: z.array(z.uuid()).optional().default([]),
 })
 

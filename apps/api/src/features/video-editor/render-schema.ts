@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from "zod"
 
 /**
  * Snapshot contract for `POST /video-editor/:projectId/compositions/:compositionId/renders`.
@@ -24,12 +24,12 @@ export const RENDER_LIMITS = {
 } as const
 
 const trackTypes = [
-  'video',
-  'audio',
-  'text',
-  'image',
-  'html',
-  'caption',
+  "video",
+  "audio",
+  "text",
+  "image",
+  "html",
+  "caption",
 ] as const
 
 const frame = z.number().int().min(0).max(RENDER_LIMITS.maxDurationInFrames)
@@ -37,8 +37,8 @@ const frame = z.number().int().min(0).max(RENDER_LIMITS.maxDurationInFrames)
 const mediaUrl = z
   .string()
   .max(2048)
-  .refine((value) => value.startsWith('https://'), {
-    message: 'Media URLs must use https',
+  .refine((value) => value.startsWith("https://"), {
+    message: "Media URLs must use https",
   })
 
 /** Clips are forwarded verbatim; only render-relevant fields are asserted here. */
@@ -90,7 +90,7 @@ export const createRenderSchema = z.object({
     .max(120)
     .regex(
       /^[\w \-.]+$/,
-      'fileName may only contain letters, numbers, spaces, - _ .',
+      "fileName may only contain letters, numbers, spaces, - _ .",
     ),
   composition: renderCompositionSchema,
 })

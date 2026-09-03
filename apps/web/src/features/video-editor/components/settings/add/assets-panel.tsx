@@ -107,13 +107,20 @@ export function AssetsPanel({ projectId }: AssetsPanelProps) {
         ) : format === "audio" ? (
           <ul className="flex flex-col gap-1">
             {assets.map((node) => (
-              <AudioAssetRow key={node.id} node={node} />
+              <AudioAssetRow
+                key={node.id}
+                node={node}
+              />
             ))}
           </ul>
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {assets.map((node) => (
-              <MediaAssetTile key={node.id} node={node} format={format} />
+              <MediaAssetTile
+                key={node.id}
+                node={node}
+                format={format}
+              />
             ))}
           </div>
         )}

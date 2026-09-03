@@ -1,4 +1,4 @@
-import { db } from '@/db'
+import { db } from "@/db"
 import {
   assets,
   fileNodeContentChunks,
@@ -8,24 +8,24 @@ import {
   skills,
   videoCompositions,
   type FileNode,
-} from '@/db/schema'
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
-import { DatabaseError } from 'pg'
+} from "@/db/schema"
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { DatabaseError } from "pg"
 import {
   FileCreationRequest,
   FileNodeInsertPosition,
   UpdateFileContentRequest,
   UpdateFileRequest,
   UpdateSkillRequest,
-} from './payload'
-import { FileFormat } from './constants'
-import { FilePendingOperation } from '@/type'
+} from "./payload"
+import { FileFormat } from "./constants"
+import { FilePendingOperation } from "@/type"
 
 export const ORDER_GAP = 1000
 
 const FILE_NODE_UNIQUE_CONSTRAINTS = new Set([
-  'file_nodes_project_id_parent_id_name_unique',
-  'file_nodes_project_id_root_name_unique',
+  "file_nodes_project_id_parent_id_name_unique",
+  "file_nodes_project_id_root_name_unique",
 ])
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
@@ -34,26 +34,26 @@ const escapeLikePattern = (value: string) => {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`)
 }
 
-type DbExecutor = Pick<typeof db, 'select' | 'execute' | 'update' | 'insert'>
+type DbExecutor = Pick<typeof db, "select" | "execute" | "update" | "insert">
 
 export class FileNodeInsertionError extends Error {
   constructor(message: string) {
     super(message)
-    this.name = 'FileNodeInsertionError'
+    this.name = "FileNodeInsertionError"
   }
 }
 
 export class FileNodeUniqueConstraintError extends Error {
   constructor(message: string) {
     super(message)
-    this.name = 'FileNodeUniqueConstraintError'
+    this.name = "FileNodeUniqueConstraintError"
   }
 }
 
 const isFileNodeUniqueConstraintError = (error: unknown) => {
   return (
     error instanceof DatabaseError &&
-    error.code === '23505' &&
+    error.code === "23505" &&
     !!error.constraint &&
     FILE_NODE_UNIQUE_CONSTRAINTS.has(error.constraint)
   )
@@ -189,9 +189,9 @@ export const searchFileNodesByFormat = async (
 }
 
 const MEDIA_ASSET_FORMATS = [
-  'image',
-  'video',
-  'audio',
+  "image",
+  "video",
+  "audio",
 ] as const satisfies ReadonlyArray<FileFormat>
 
 type ListAssetsFolderOptions = {
@@ -216,7 +216,7 @@ export const listFileNodesUnderFolder = async (
 ): Promise<AssetFolderFileNode[]> => {
   const limit = options?.limit ?? 100
   const formats = options?.format ? [options.format] : [...MEDIA_ASSET_FORMATS]
-  const normalizedName = options?.name?.trim() ?? ''
+  const normalizedName = options?.name?.trim() ?? ""
 
   const nameFilter = normalizedName
     ? sql`AND fn.name ILIKE ${`%${escapeLikePattern(normalizedName)}%`} ESCAPE '\\'`
@@ -225,7 +225,7 @@ export const listFileNodesUnderFolder = async (
   const exactName = normalizedName.toLowerCase()
   const prefixPattern = normalizedName
     ? `${escapeLikePattern(normalizedName)}%`
-    : ''
+    : ""
 
   const orderBy = normalizedName
     ? sql`
@@ -350,7 +350,7 @@ export const listFolderMedia = async (
     (row): row is FolderMediaFile =>
       Boolean(row.url) &&
       row.type !== null &&
-      MEDIA_ASSET_FORMATS.includes(row.type as FolderMediaFile['type']),
+      MEDIA_ASSET_FORMATS.includes(row.type as FolderMediaFile["type"]),
   )
 }
 
@@ -386,7 +386,7 @@ export const getFileNodeDepthById = async (projectId: string, id: string) => {
     return null
   }
 
-  return typeof row.depth === 'string' ? Number(row.depth) : (row.depth ?? 0)
+  return typeof row.depth === "string" ? Number(row.depth) : (row.depth ?? 0)
 }
 
 export const getFileNodeSubtreeHeight = async (
@@ -422,7 +422,7 @@ export const getFileNodeSubtreeHeight = async (
     return null
   }
 
-  return typeof row.depth === 'string' ? Number(row.depth) : (row.depth ?? 0)
+  return typeof row.depth === "string" ? Number(row.depth) : (row.depth ?? 0)
 }
 
 export const isFileNodeInAncestorChain = async (
@@ -485,7 +485,7 @@ export const updateFileNode = async (
   data: UpdateFileRequest,
 ) => {
   try {
-    const patch: Partial<Pick<FileNode, 'name' | 'parentId'>> = {}
+    const patch: Partial<Pick<FileNode, "name" | "parentId">> = {}
     if (data.name !== undefined) {
       patch.name = data.name
     }
@@ -502,7 +502,7 @@ export const updateFileNode = async (
   } catch (error) {
     if (isFileNodeUniqueConstraintError(error)) {
       throw new FileNodeUniqueConstraintError(
-        'File name already exists in that parent directory.',
+        "File name already exists in that parent directory.",
       )
     }
     throw error
@@ -578,7 +578,7 @@ export const moveFileNode = async (
   } catch (error) {
     if (isFileNodeUniqueConstraintError(error)) {
       throw new FileNodeUniqueConstraintError(
-        'File name already exists in that parent directory.',
+        "File name already exists in that parent directory.",
       )
     }
     throw error
@@ -637,13 +637,13 @@ export const updateBulkFileNodes = async (
     const results: FileNode[] = []
 
     for (const item of data) {
-      const patch: Partial<Pick<FileNode, 'name' | 'parentId'>> = {}
+      const patch: Partial<Pick<FileNode, "name" | "parentId">> = {}
 
-      if ('name' in item) {
+      if ("name" in item) {
         patch.name = item.name
       }
 
-      if ('parentId' in item) {
+      if ("parentId" in item) {
         patch.parentId = item.parentId
       }
 
@@ -822,30 +822,30 @@ async function createContentBasedOnFormat(
   initialContent?: InitialFileContent,
 ) {
   switch (fileNode.format) {
-    case 'markdown':
+    case "markdown":
       await tx.insert(fileNodeContents).values({
         projectId,
         fileNodeId: fileNode.id,
-        content: initialContent?.markdown ?? '',
+        content: initialContent?.markdown ?? "",
       })
       break
-    case 'json':
+    case "json":
       await tx.insert(fileNodeContents).values({
         projectId,
         fileNodeId: fileNode.id,
         jsonContent: initialContent?.json ?? {},
-        content: '',
+        content: "",
       })
       break
-    case 'skill':
+    case "skill":
       await tx.insert(skills).values({
         name: fileNode.name,
         fileNodeId: fileNode.id,
-        description: initialContent?.skill?.description ?? '',
-        instructions: initialContent?.skill?.instructions ?? '',
+        description: initialContent?.skill?.description ?? "",
+        instructions: initialContent?.skill?.instructions ?? "",
       })
       break
-    case 'video-editor':
+    case "video-editor":
       await tx.insert(videoCompositions).values({
         projectId,
         fileNodeId: fileNode.id,
@@ -864,7 +864,7 @@ export const createFileWithContent = async (
     projectId,
     data,
     null,
-    'end',
+    "end",
     initialContent,
   )
 }
@@ -952,7 +952,7 @@ async function listDirectoryFilesForExecutor(
 }
 
 async function applyOrderedPositions(
-  executor: Pick<typeof db, 'execute'>,
+  executor: Pick<typeof db, "execute">,
   projectId: string,
   orderedIds: string[],
 ) {
@@ -962,7 +962,7 @@ async function applyOrderedPositions(
 
   const caseStatements = orderedIds
     .map((id, index) => `WHEN '${id}' THEN ${(index + 1) * ORDER_GAP}`)
-    .join(' ')
+    .join(" ")
 
   await executor.execute(sql`
         UPDATE file_nodes
@@ -1004,7 +1004,7 @@ function buildInsertionPlan(
   }
 
   if (!previousSibling || !nextSibling) {
-    throw new FileNodeInsertionError('Unable to resolve insertion position.')
+    throw new FileNodeInsertionError("Unable to resolve insertion position.")
   }
 
   const positionGap = nextSibling.position - previousSibling.position
@@ -1030,12 +1030,12 @@ function resolveInsertionIndex(
   position: FileNodeInsertPosition,
 ) {
   switch (position) {
-    case 'start':
+    case "start":
       return 0
-    case 'end':
+    case "end":
       return siblingIds.length
-    case 'before':
-    case 'after': {
+    case "before":
+    case "after": {
       if (!anchorId) {
         throw new FileNodeInsertionError(
           `anchorId is required when position is ${position}.`,
@@ -1049,7 +1049,7 @@ function resolveInsertionIndex(
         )
       }
 
-      return position === 'before' ? anchorIndex : anchorIndex + 1
+      return position === "before" ? anchorIndex : anchorIndex + 1
     }
   }
 }
@@ -1208,7 +1208,7 @@ export const semanticSearchFileChunks = async (
     return []
   }
 
-  const vectorLiteral = `[${queryEmbedding.join(',')}]`
+  const vectorLiteral = `[${queryEmbedding.join(",")}]`
   const distance = sql<number>`${fileNodeContentChunks.embedding} <=> ${vectorLiteral}::vector`
 
   return db
@@ -1245,7 +1245,7 @@ export const semanticSearchDirectoryChunks = async (
 
   // This works with file as well
 
-  const vectorLiteral = `[${queryEmbedding.join(',')}]`
+  const vectorLiteral = `[${queryEmbedding.join(",")}]`
   const result = await db.execute(sql`
         WITH RECURSIVE subtree AS (
             SELECT
@@ -1352,7 +1352,7 @@ export const semanticSearchProjectChunks = async (
     return []
   }
 
-  const vectorLiteral = `[${queryEmbedding.join(',')}]`
+  const vectorLiteral = `[${queryEmbedding.join(",")}]`
   const result = await db.execute(sql`
         WITH RECURSIVE hits AS (
             SELECT
@@ -1539,8 +1539,8 @@ export const listSkills = async (projectId: string) => {
     .where(
       and(
         eq(fileNodes.projectId, projectId),
-        eq(fileNodes.format, 'skill'),
-        eq(skills.status, 'published'),
+        eq(fileNodes.format, "skill"),
+        eq(skills.status, "published"),
       ),
     )
 
@@ -1554,8 +1554,8 @@ export const listSkills = async (projectId: string) => {
     .where(
       and(
         isNull(skills.fileNodeId),
-        eq(skills.status, 'published'),
-        eq(skills.visibility, 'public'),
+        eq(skills.status, "published"),
+        eq(skills.visibility, "public"),
       ),
     )
 
@@ -1582,7 +1582,7 @@ export const getSkillByName = async (projectId: string, name: string) => {
       and(
         eq(fileNodes.projectId, projectId),
         eq(fileNodes.name, name),
-        eq(fileNodes.format, 'skill'),
+        eq(fileNodes.format, "skill"),
       ),
     )
   const fileNode = fileResponse[0]
@@ -1593,7 +1593,7 @@ export const getSkillByName = async (projectId: string, name: string) => {
       .where(and(eq(skills.fileNodeId, fileNode.id)))
     const skill = skillResponse[0]
     if (skill) {
-      if (skill.status !== 'published') {
+      if (skill.status !== "published") {
         return null
       }
       return skill
@@ -1607,8 +1607,8 @@ export const getSkillByName = async (projectId: string, name: string) => {
       and(
         isNull(skills.fileNodeId),
         eq(skills.name, name),
-        eq(skills.status, 'published'),
-        eq(skills.visibility, 'public'),
+        eq(skills.status, "published"),
+        eq(skills.visibility, "public"),
       ),
     )
     .limit(1)

@@ -1,5 +1,5 @@
-import type { Caption } from '@remotion/captions'
-import type { ServerCaption } from './types'
+import type { Caption } from "@remotion/captions"
+import type { ServerCaption } from "./types"
 
 export type WhisperCaptionsInput = {
   transcription: {
@@ -13,11 +13,11 @@ export type OpenAiToCaptionsOutput = {
 }
 
 const escapeRegex = (text: string) => {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
-const apostropheVariants = ['\u0027', '\u2018', '\u2019', '\u02bc', '\uff07']
-const apostropheVariantRegex = `[${apostropheVariants.map(escapeRegex).join('')}]`
+const apostropheVariants = ["\u0027", "\u2018", "\u2019", "\u02bc", "\uff07"]
+const apostropheVariantRegex = `[${apostropheVariants.map(escapeRegex).join("")}]`
 
 const escapeWordForRegex = (text: string) => {
   return Array.from(text)
@@ -26,7 +26,7 @@ const escapeWordForRegex = (text: string) => {
         ? apostropheVariantRegex
         : escapeRegex(character)
     })
-    .join('')
+    .join("")
 }
 
 export const whisperToCaptions = ({
@@ -35,7 +35,7 @@ export const whisperToCaptions = ({
   const captions: Array<Caption> = []
 
   if (transcription.words.length === 0) {
-    throw new Error('No words found in transcription')
+    throw new Error("No words found in transcription")
   }
 
   let remainingText = transcription.text
@@ -46,7 +46,7 @@ export const whisperToCaptions = ({
     const wordText = i === 0 ? word.word.trimStart() : word.word
 
     const punctuation = `\\?,\\.\\%\\–\\!\\;\\:\\'\\"\\-\\_\\(\\)\\[\\]\\{\\}\\@\\#\\$\\^\\&\\*\\+\\=\\/\\|\\<\\>\\~\`\\u2018\\u2019\\u02bc\\uff07`
-    const wordToMatch = wordText.replace(new RegExp(`^[${punctuation}]+`), '')
+    const wordToMatch = wordText.replace(new RegExp(`^[${punctuation}]+`), "")
     const match = new RegExp(
       `^([\\s?${punctuation}]{0,4})${escapeWordForRegex(wordToMatch)}([${punctuation}]{0,3})?`,
     ).exec(remainingText)

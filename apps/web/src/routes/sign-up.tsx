@@ -13,11 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@sohizi/ui/card"
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@sohizi/ui/input-otp"
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@sohizi/ui/input-otp"
 
 export const Route = createFileRoute("/sign-up")({
   component: SignUpPage,
@@ -131,7 +127,10 @@ function SignUpPage() {
                 className="w-full"
                 onClick={handleGoogleSignUp}
               >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                <svg
+                  className="mr-2 h-4 w-4"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                     fill="#4285F4"
@@ -163,7 +162,10 @@ function SignUpPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleEmailSignUp} className="space-y-4">
+              <form
+                onSubmit={handleEmailSignUp}
+                className="space-y-4"
+              >
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
                   <Input
@@ -201,7 +203,11 @@ function SignUpPage() {
 
                 {error && <p className="text-sm text-destructive">{error}</p>}
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading}
+                >
                   {loading && <Spinner />}
                   {loading ? "Creating account..." : "Create Account"}
                 </Button>

@@ -1,8 +1,8 @@
-import type { FileNode } from '@/db/schema'
-import * as fileSystemRepo from '../repo'
-import { FileObject } from './file'
+import type { FileNode } from "@/db/schema"
+import * as fileSystemRepo from "../repo"
+import { FileObject } from "./file"
 
-const ROOT_SENTINEL = Symbol('root')
+const ROOT_SENTINEL = Symbol("root")
 
 type RootSentinel = typeof ROOT_SENTINEL
 type ParsedPath = string[] | RootSentinel
@@ -60,22 +60,22 @@ export class PathObject {
     const name = parts[parts.length - 1]
     const parentParts = parts.slice(0, -1)
     const parentPath =
-      parentParts.length === 0 ? '/' : `/${parentParts.join('/')}`
+      parentParts.length === 0 ? "/" : `/${parentParts.join("/")}`
     return { parentPath, name }
   }
 
   buildChildPath(parentPath: string, name: string) {
     const normalizedParent = parentPath.trim()
     if (
-      normalizedParent === '' ||
-      normalizedParent === '/' ||
-      normalizedParent === './' ||
-      normalizedParent === '.'
+      normalizedParent === "" ||
+      normalizedParent === "/" ||
+      normalizedParent === "./" ||
+      normalizedParent === "."
     ) {
       return `/${name}`
     }
 
-    return `${normalizedParent.replace(/\/+$/, '')}/${name}`
+    return `${normalizedParent.replace(/\/+$/, "")}/${name}`
   }
 
   private async validatePath(
@@ -104,32 +104,32 @@ export class PathObject {
   private parsePath(path: string): ParsedPath {
     const trimmedPath = path.trim()
     if (
-      trimmedPath === '' ||
-      trimmedPath === '/' ||
-      trimmedPath === './' ||
-      trimmedPath === '.'
+      trimmedPath === "" ||
+      trimmedPath === "/" ||
+      trimmedPath === "./" ||
+      trimmedPath === "."
     ) {
       return ROOT_SENTINEL
     }
 
     let normalizedPath = trimmedPath
-    while (normalizedPath.startsWith('./')) {
+    while (normalizedPath.startsWith("./")) {
       normalizedPath = normalizedPath.slice(2)
     }
-    while (normalizedPath.startsWith('/')) {
+    while (normalizedPath.startsWith("/")) {
       normalizedPath = normalizedPath.slice(1)
     }
 
-    if (normalizedPath === '') {
+    if (normalizedPath === "") {
       return ROOT_SENTINEL
     }
 
-    const parts = normalizedPath.split('/')
+    const parts = normalizedPath.split("/")
     for (const part of parts) {
       if (!part) {
         throw new Error(`Invalid path provided - "${path}"`)
       }
-      if (part === '.' || part === '..' || /[/.]/.test(part)) {
+      if (part === "." || part === ".." || /[/.]/.test(part)) {
         throw new Error(
           `Invalid path: slash or dot not allowed in filename - "${path}"`,
         )

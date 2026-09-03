@@ -1,8 +1,8 @@
-import js from '@eslint/js'
-import prettierRecommended from 'eslint-plugin-prettier/recommended'
-import globals from 'globals'
-import tseslint from 'typescript-eslint'
-import { createDefineConfig } from './define.js'
+import js from "@eslint/js"
+import prettierRecommended from "eslint-plugin-prettier/recommended"
+import globals from "globals"
+import tseslint from "typescript-eslint"
+import { createDefineConfig } from "./define.js"
 
 const preset = [
   js.configs.recommended,
@@ -14,12 +14,12 @@ const preset = [
       },
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': [
-        'error',
+      "@typescript-eslint/no-unused-vars": [
+        "error",
         {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
         },
       ],
     },

@@ -5,7 +5,7 @@ import type {
   MediaEngineProvider,
   SubmitPayload,
   SubmitResponse,
-} from '@/features/media-engine/providers/type'
+} from "@/features/media-engine/providers/type"
 
 export type FakeScript = {
   submit?: (apiName: string, payload: SubmitPayload) => Promise<SubmitResponse>
@@ -55,7 +55,7 @@ export function createFakeProviderClass(vendorName: string) {
       if (script?.submit) {
         return script.submit(apiName, payload)
       }
-      return { requestId: `${vendorName}-job`, status: 'created' }
+      return { requestId: `${vendorName}-job`, status: "created" }
     }
 
     async getRequestData(requestId: string): Promise<GetRequestDataResponse> {
@@ -64,7 +64,7 @@ export function createFakeProviderClass(vendorName: string) {
       if (script?.poll) {
         return script.poll(requestId)
       }
-      return { status: 'processing' }
+      return { status: "processing" }
     }
 
     async cancelRequest(requestId: string): Promise<CancelResponse> {

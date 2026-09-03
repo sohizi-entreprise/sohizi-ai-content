@@ -46,7 +46,10 @@ export function MediaModelSelector({
   }
 
   return (
-    <ModelSelector open={open} onOpenChange={setOpen}>
+    <ModelSelector
+      open={open}
+      onOpenChange={setOpen}
+    >
       <ModelSelectorTrigger asChild>
         <button
           type="button"
@@ -75,7 +78,10 @@ export function MediaModelSelector({
         <ModelSelectorList>
           <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
           {[...grouped.entries()].map(([provider, providerModels]) => (
-            <ModelSelectorGroup key={provider} heading={provider}>
+            <ModelSelectorGroup
+              key={provider}
+              heading={provider}
+            >
               {providerModels.map((model) => (
                 <ModelSelectorItem
                   key={model.id}

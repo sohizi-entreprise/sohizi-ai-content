@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from "zod"
 
 /**
  * Wire contract between the Sohizi API and this render service.
@@ -9,7 +9,7 @@ import { z } from 'zod'
  */
 export const RENDER_CONTRACT_VERSION = 1
 
-export const MAIN_COMPOSITION_ID = 'main'
+export const MAIN_COMPOSITION_ID = "main"
 
 export const RENDER_LIMITS = {
   minFps: 1,
@@ -32,16 +32,16 @@ const mediaUrl = z
   .string()
   .url()
   .max(2048)
-  .refine((value) => value.startsWith('https://'), {
-    message: 'Media URLs must use https',
+  .refine((value) => value.startsWith("https://"), {
+    message: "Media URLs must use https",
   })
 
 const fontWeight = z.union([
-  z.literal('normal'),
-  z.literal('bold'),
+  z.literal("normal"),
+  z.literal("bold"),
   z.number().int().min(1).max(1000),
 ])
-const textAlign = z.enum(['left', 'center', 'right'])
+const textAlign = z.enum(["left", "center", "right"])
 
 const baseClip = {
   id: identifier,
@@ -59,10 +59,10 @@ const spatial = {
   heightRatio: ratio,
 }
 
-const compositionVariableSchema = z.discriminatedUnion('type', [
+const compositionVariableSchema = z.discriminatedUnion("type", [
   z.object({
     id: identifier,
-    type: z.literal('string'),
+    type: z.literal("string"),
     label: z.string().max(200),
     description: z.string().max(1000).optional(),
     default: z.string().max(10_000),
@@ -71,7 +71,7 @@ const compositionVariableSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     id: identifier,
-    type: z.literal('number'),
+    type: z.literal("number"),
     label: z.string().max(200),
     description: z.string().max(1000).optional(),
     default: z.number().finite(),
@@ -82,21 +82,21 @@ const compositionVariableSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     id: identifier,
-    type: z.literal('color'),
+    type: z.literal("color"),
     label: z.string().max(200),
     description: z.string().max(1000).optional(),
     default: z.string().max(200),
   }),
   z.object({
     id: identifier,
-    type: z.literal('boolean'),
+    type: z.literal("boolean"),
     label: z.string().max(200),
     description: z.string().max(1000).optional(),
     default: z.boolean(),
   }),
   z.object({
     id: identifier,
-    type: z.literal('enum'),
+    type: z.literal("enum"),
     label: z.string().max(200),
     description: z.string().max(1000).optional(),
     default: z.string().max(500),
@@ -111,7 +111,7 @@ const compositionVariableSchema = z.discriminatedUnion('type', [
 const videoClipSchema = z.object({
   ...baseClip,
   ...spatial,
-  type: z.literal('video'),
+  type: z.literal("video"),
   url: mediaUrl,
   fileName: z.string().max(500),
   width: z.number().int().positive().optional(),
@@ -124,7 +124,7 @@ const videoClipSchema = z.object({
 
 const audioClipSchema = z.object({
   ...baseClip,
-  type: z.literal('audio'),
+  type: z.literal("audio"),
   url: mediaUrl,
   fileName: z.string().max(500),
   volume: z.number().finite().min(0).max(4),
@@ -134,7 +134,7 @@ const audioClipSchema = z.object({
 const textClipSchema = z.object({
   ...baseClip,
   ...spatial,
-  type: z.literal('text'),
+  type: z.literal("text"),
   text: z.string().max(10_000),
   fontSize: z.number().finite().min(1).max(2000),
   color: z.string().max(200),
@@ -147,7 +147,7 @@ const textClipSchema = z.object({
 const imageClipSchema = z.object({
   ...baseClip,
   ...spatial,
-  type: z.literal('image'),
+  type: z.literal("image"),
   url: mediaUrl,
   fileName: z.string().max(500),
   width: z.number().int().positive().optional(),
@@ -161,7 +161,7 @@ const imageClipSchema = z.object({
 const htmlClipSchema = z.object({
   ...baseClip,
   ...spatial,
-  type: z.literal('html'),
+  type: z.literal("html"),
   html: z.string().max(2 * 1024 * 1024),
   variables: z.array(compositionVariableSchema).max(200),
   values: z.record(
@@ -172,7 +172,7 @@ const htmlClipSchema = z.object({
 
 const captionClipSchema = z.object({
   ...baseClip,
-  type: z.literal('caption'),
+  type: z.literal("caption"),
   captions: z.object({
     text: z.string().max(200_000),
     words: z
@@ -201,7 +201,7 @@ const captionClipSchema = z.object({
   }),
 })
 
-export const clipSchema = z.discriminatedUnion('type', [
+export const clipSchema = z.discriminatedUnion("type", [
   videoClipSchema,
   audioClipSchema,
   textClipSchema,
@@ -212,7 +212,7 @@ export const clipSchema = z.discriminatedUnion('type', [
 
 export const trackSchema = z.object({
   id: identifier,
-  type: z.enum(['video', 'audio', 'text', 'image', 'html', 'caption']),
+  type: z.enum(["video", "audio", "text", "image", "html", "caption"]),
   name: z.string().max(200),
   muted: z.boolean(),
   hidden: z.boolean(),
@@ -245,7 +245,7 @@ export const createRenderRequestSchema = z.object({
     .string()
     .regex(
       /^[a-zA-Z0-9_][a-zA-Z0-9-_]{0,99}$/,
-      'jobId must be a workflow-safe id',
+      "jobId must be a workflow-safe id",
     ),
   projectId: z.string().uuid(),
   compositionId: z.string().uuid(),
@@ -255,7 +255,7 @@ export const createRenderRequestSchema = z.object({
     .max(120)
     .regex(
       /^[\w \-.]+$/,
-      'fileName may only contain letters, numbers, spaces, - _ .',
+      "fileName may only contain letters, numbers, spaces, - _ .",
     ),
   composition: compositionSchema,
 })
@@ -278,7 +278,7 @@ export type RenderWorkflowParams = {
 }
 
 export type RenderJobStatus =
-  'queued' | 'rendering' | 'completed' | 'failed' | 'cancelled'
+  "queued" | "rendering" | "completed" | "failed" | "cancelled"
 
 export type RenderJobState = {
   jobId: string
@@ -305,7 +305,7 @@ export type RenderProgress = z.infer<typeof renderProgressSchema>
 /** Container-side render status contract. */
 export const containerRenderStatusSchema = z.object({
   jobId: z.string(),
-  state: z.enum(['running', 'completed', 'failed']),
+  state: z.enum(["running", "completed", "failed"]),
   progress: z.number().min(0).max(1),
   renderedFrames: z.number().int().min(0),
   encodedFrames: z.number().int().min(0),

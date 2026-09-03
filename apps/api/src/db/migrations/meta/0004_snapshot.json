@@ -91,12 +91,8 @@
           "name": "checkpoints_project_id_projects_id_fk",
           "tableFrom": "checkpoints",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -104,12 +100,8 @@
           "name": "checkpoints_conversation_id_conversations_id_fk",
           "tableFrom": "checkpoints",
           "tableTo": "conversations",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conversation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -187,12 +179,8 @@
           "name": "conversations_project_id_projects_id_fk",
           "tableFrom": "conversations",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -345,14 +333,8 @@
           "name": "file_node_content_chunks_project_id_file_node_id_file_node_contents_project_id_file_node_id_fk",
           "tableFrom": "file_node_content_chunks",
           "tableTo": "file_node_contents",
-          "columnsFrom": [
-            "project_id",
-            "file_node_id"
-          ],
-          "columnsTo": [
-            "project_id",
-            "file_node_id"
-          ],
+          "columnsFrom": ["project_id", "file_node_id"],
+          "columnsTo": ["project_id", "file_node_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -468,14 +450,8 @@
           "name": "file_node_contents_project_id_file_node_id_file_nodes_project_id_id_fk",
           "tableFrom": "file_node_contents",
           "tableTo": "file_nodes",
-          "columnsFrom": [
-            "project_id",
-            "file_node_id"
-          ],
-          "columnsTo": [
-            "project_id",
-            "id"
-          ],
+          "columnsFrom": ["project_id", "file_node_id"],
+          "columnsTo": ["project_id", "id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -576,12 +552,8 @@
           "name": "file_node_relationships_file_node_id_file_nodes_id_fk",
           "tableFrom": "file_node_relationships",
           "tableTo": "file_nodes",
-          "columnsFrom": [
-            "file_node_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["file_node_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -589,12 +561,8 @@
           "name": "file_node_relationships_related_file_node_id_file_nodes_id_fk",
           "tableFrom": "file_node_relationships",
           "tableTo": "file_nodes",
-          "columnsFrom": [
-            "related_file_node_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["related_file_node_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -796,12 +764,8 @@
           "name": "file_nodes_project_id_projects_id_fk",
           "tableFrom": "file_nodes",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -809,14 +773,8 @@
           "name": "file_nodes_project_id_parent_id_file_nodes_project_id_id_fk",
           "tableFrom": "file_nodes",
           "tableTo": "file_nodes",
-          "columnsFrom": [
-            "project_id",
-            "parent_id"
-          ],
-          "columnsTo": [
-            "project_id",
-            "id"
-          ],
+          "columnsFrom": ["project_id", "parent_id"],
+          "columnsTo": ["project_id", "id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -906,12 +864,8 @@
           "name": "generation_requests_project_id_projects_id_fk",
           "tableFrom": "generation_requests",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1093,12 +1047,8 @@
           "name": "messages_conversation_id_conversations_id_fk",
           "tableFrom": "messages",
           "tableTo": "conversations",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conversation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1160,11 +1110,7 @@
     "public.chat_message_role": {
       "name": "chat_message_role",
       "schema": "public",
-      "values": [
-        "user",
-        "assistant",
-        "tool"
-      ]
+      "values": ["user", "assistant", "tool"]
     }
   },
   "schemas": {},

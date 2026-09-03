@@ -90,7 +90,10 @@ export function ParameterDetailPage({ parameterId }: Props) {
         </p>
       </div>
 
-      <ParameterMetaForm parameterId={parameterId} parameter={parameter} />
+      <ParameterMetaForm
+        parameterId={parameterId}
+        parameter={parameter}
+      />
       {parameter.xUiComponent === "select" ? (
         <OptionsSection
           parameterId={parameterId}
@@ -158,7 +161,10 @@ function ParameterMetaForm({
   }
 
   return (
-    <form className="space-y-4 rounded-xl border p-4" onSubmit={handleSubmit}>
+    <form
+      className="space-y-4 rounded-xl border p-4"
+      onSubmit={handleSubmit}
+    >
       <h2 className="text-sm font-medium">Details</h2>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
@@ -199,7 +205,10 @@ function ParameterMetaForm({
             </SelectTrigger>
             <SelectContent>
               {PARAMETER_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
+                <SelectItem
+                  key={type}
+                  value={type}
+                >
                   {type}
                 </SelectItem>
               ))}
@@ -223,7 +232,10 @@ function ParameterMetaForm({
             <SelectContent>
               <SelectItem value={NONE_VALUE}>None</SelectItem>
               {UI_COMPONENTS.map((component) => (
-                <SelectItem key={component} value={component}>
+                <SelectItem
+                  key={component}
+                  value={component}
+                >
                   {component}
                 </SelectItem>
               ))}
@@ -242,7 +254,10 @@ function ParameterMetaForm({
         />
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button type="submit" disabled={updateMutation.isPending}>
+      <Button
+        type="submit"
+        disabled={updateMutation.isPending}
+      >
         {updateMutation.isPending ? "Saving…" : "Save details"}
       </Button>
     </form>
@@ -331,7 +346,10 @@ function OptionsSection({
             }
           />
         </div>
-        <Button type="submit" disabled={createMutation.isPending}>
+        <Button
+          type="submit"
+          disabled={createMutation.isPending}
+        >
           <Plus className="size-4" />
           Add
         </Button>
@@ -529,7 +547,10 @@ function OptionCard({
             </SelectTrigger>
             <SelectContent>
               {unusedVendors.map((vendor) => (
-                <SelectItem key={vendor.id} value={vendor.id}>
+                <SelectItem
+                  key={vendor.id}
+                  value={vendor.id}
+                >
                   {vendor.name}
                 </SelectItem>
               ))}
@@ -670,7 +691,10 @@ function VendorParameterMaps({
           </SelectTrigger>
           <SelectContent>
             {unusedVendors.map((vendor) => (
-              <SelectItem key={vendor.id} value={vendor.id}>
+              <SelectItem
+                key={vendor.id}
+                value={vendor.id}
+              >
                 {vendor.name}
               </SelectItem>
             ))}

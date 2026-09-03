@@ -1,14 +1,14 @@
-import type { FileCreationRequest, UpdateFileContentRequest } from '../payload'
-import { MAX_FILE_DEPTH, MAX_FILE_IN_DIRECTORY } from '../constants'
-import * as fileSystemRepo from '../repo'
-import type { InitialFileContent } from '../repo'
-import { normalizeFileName } from '../utils'
-import { FileSystemConflictError, FileSystemInputError } from './base'
+import type { FileCreationRequest, UpdateFileContentRequest } from "../payload"
+import { MAX_FILE_DEPTH, MAX_FILE_IN_DIRECTORY } from "../constants"
+import * as fileSystemRepo from "../repo"
+import type { InitialFileContent } from "../repo"
+import { normalizeFileName } from "../utils"
+import { FileSystemConflictError, FileSystemInputError } from "./base"
 
 const EMPTY_FILE_CONTENT: UpdateFileContentRequest = {
-  content: '',
+  content: "",
   jsonContent: {},
-  proseContent: { type: 'doc', content: [] },
+  proseContent: { type: "doc", content: [] },
 }
 
 export const createFileNode = async (
@@ -17,14 +17,14 @@ export const createFileNode = async (
   initialContent?: InitialFileContent,
 ) => {
   if (!data.parentId) {
-    throw new FileSystemInputError('Parent directory is required')
+    throw new FileSystemInputError("Parent directory is required")
   }
   const parentFileNode = await fileSystemRepo.getFileNodeById(
     data.projectId,
     data.parentId,
   )
   if (!parentFileNode || !parentFileNode.directory) {
-    throw new FileSystemInputError('Invalid parent directory')
+    throw new FileSystemInputError("Invalid parent directory")
   }
 
   if (
@@ -42,7 +42,7 @@ export const createFileNode = async (
     data.parentId,
   )
   if (parentDepth === null) {
-    throw new FileSystemInputError('Invalid parent directory')
+    throw new FileSystemInputError("Invalid parent directory")
   }
   if (parentDepth + 1 > MAX_FILE_DEPTH) {
     throw new FileSystemInputError(
@@ -62,7 +62,7 @@ export const createFileNode = async (
 
   const normalizedName = normalizeFileName(data.name)
   if (!normalizedName) {
-    throw new FileSystemInputError('Invalid file name')
+    throw new FileSystemInputError("Invalid file name")
   }
 
   const payload = { ...data, name: normalizedName }
@@ -71,7 +71,7 @@ export const createFileNode = async (
     const fileNode = await fileSystemRepo.createFileNode(payload)
     if (!fileNode) {
       throw new FileSystemConflictError(
-        'File name already exists in that parent directory.',
+        "File name already exists in that parent directory.",
       )
     }
     return fileNode
@@ -85,7 +85,7 @@ export const createFileNode = async (
   )
   if (!fileNode) {
     throw new FileSystemConflictError(
-      'File name already exists in that parent directory.',
+      "File name already exists in that parent directory.",
     )
   }
   return fileNode

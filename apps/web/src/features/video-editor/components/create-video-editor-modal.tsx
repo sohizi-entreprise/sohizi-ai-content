@@ -109,7 +109,10 @@ export function CreateVideoEditorModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New video editor</DialogTitle>
@@ -188,7 +191,10 @@ export function CreateVideoEditorModal({
           >
             Cancel
           </Button>
-          <Button disabled={!canSubmit} onClick={handleCreate}>
+          <Button
+            disabled={!canSubmit}
+            onClick={handleCreate}
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />

@@ -1,6 +1,6 @@
-import { Composition } from 'remotion'
-import { MAIN_COMPOSITION_ID, MainComposition } from '@sohizi/video-composition'
-import type { Track } from '@sohizi/video-composition'
+import { Composition } from "remotion"
+import { MAIN_COMPOSITION_ID, MainComposition } from "@sohizi/video-composition"
+import type { Track } from "@sohizi/video-composition"
 
 export type MainProps = {
   tracks: Array<Track>

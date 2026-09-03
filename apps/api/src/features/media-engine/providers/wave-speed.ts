@@ -5,8 +5,8 @@ import {
   MediaEngineProvider,
   SubmitResponse,
   SubmitPayload,
-} from './type'
-import { waveSpeedFuncs } from '@/lib/wave-speed'
+} from "./type"
+import { waveSpeedFuncs } from "@/lib/wave-speed"
 
 function toRequestData(
   outputs: unknown,
@@ -14,12 +14,12 @@ function toRequestData(
   if (Array.isArray(outputs)) {
     return outputs.filter(
       (item): item is string | Record<string, string> =>
-        typeof item === 'string' ||
-        (item !== null && typeof item === 'object' && !Array.isArray(item)),
+        typeof item === "string" ||
+        (item !== null && typeof item === "object" && !Array.isArray(item)),
     )
   }
-  if (typeof outputs === 'string') return [outputs]
-  if (outputs && typeof outputs === 'object')
+  if (typeof outputs === "string") return [outputs]
+  if (outputs && typeof outputs === "object")
     return [outputs as Record<string, string>]
   return []
 }
@@ -45,9 +45,9 @@ export class WaveSpeedProvider implements MediaEngineProvider {
   async getRequestData(requestId: string): Promise<GetRequestDataResponse> {
     try {
       const response = await waveSpeedFuncs.getJobResult(this.apiKey, requestId)
-      if (response.status === 'completed') {
+      if (response.status === "completed") {
         return {
-          status: 'completed',
+          status: "completed",
           data: toRequestData(response.outputs),
         }
       }
@@ -55,9 +55,9 @@ export class WaveSpeedProvider implements MediaEngineProvider {
     } catch (error) {
       if (
         error instanceof waveSpeedFuncs.WaveSpeedError &&
-        error.errorCode === 'GENERATION_FAILED'
+        error.errorCode === "GENERATION_FAILED"
       ) {
-        return { status: 'error', error: error.message }
+        return { status: "error", error: error.message }
       }
       throw error
     }

@@ -1,11 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createTestEnv } from './fakes'
-import type { RenderWorkflowParams } from '../src/render/contracts'
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { createTestEnv } from "./fakes"
+import type { RenderWorkflowParams } from "../src/render/contracts"
 
 const containerFetch =
   vi.fn<(url: string, init: RequestInit) => Promise<Response>>()
 
-vi.mock('@cloudflare/containers', () => ({
+vi.mock("@cloudflare/containers", () => ({
   Container: class {},
   ContainerProxy: class {},
   getContainer: () => ({
@@ -13,16 +13,16 @@ vi.mock('@cloudflare/containers', () => ({
   }),
 }))
 
-const { RenderWorkflow } = await import('../src/render/workflow')
+const { RenderWorkflow } = await import("../src/render/workflow")
 
 const PARAMS: RenderWorkflowParams = {
-  jobId: 'job-1',
-  projectId: 'project-1',
-  compositionId: 'composition-1',
-  fileName: 'export.mp4',
-  inputKey: 'renders/project-1/job-1.input.json',
-  outputKey: 'renders/project-1/job-1.mp4',
-  progressKey: 'renders/project-1/job-1.progress.json',
+  jobId: "job-1",
+  projectId: "project-1",
+  compositionId: "composition-1",
+  fileName: "export.mp4",
+  inputKey: "renders/project-1/job-1.input.json",
+  outputKey: "renders/project-1/job-1.mp4",
+  progressKey: "renders/project-1/job-1.progress.json",
   frameCount: 90,
 }
 
@@ -41,7 +41,7 @@ function createStep() {
       ) => {
         names.push(name)
         const callback = (
-          typeof configOrCallback === 'function'
+          typeof configOrCallback === "function"
             ? configOrCallback
             : maybeCallback
         ) as (ctx: unknown) => Promise<unknown>
@@ -57,14 +57,14 @@ function createStep() {
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { "Content-Type": "application/json" },
   })
 }
 
 function statusBody(overrides: Record<string, unknown> = {}) {
   return {
     jobId: PARAMS.jobId,
-    state: 'running',
+    state: "running",
     progress: 0.5,
     renderedFrames: 45,
     encodedFrames: 40,
@@ -80,19 +80,19 @@ function runWorkflow(env: unknown) {
       payload: PARAMS,
       timestamp: new Date(),
       instanceId: PARAMS.jobId,
-      workflowName: 'test',
+      workflowName: "test",
     },
     step as never,
   )
   return { promise, names, sleeps }
 }
 
-describe('RenderWorkflow', () => {
+describe("RenderWorkflow", () => {
   beforeEach(() => {
     containerFetch.mockReset()
   })
 
-  it('starts the render, publishes progress and stores the output in R2', async () => {
+  it("starts the render, publishes progress and stores the output in R2", async () => {
     const { bucket, env } = createTestEnv()
     await bucket.put(PARAMS.inputKey, JSON.stringify({ jobId: PARAMS.jobId }))
 
@@ -100,24 +100,24 @@ describe('RenderWorkflow', () => {
     let statusCalls = 0
     containerFetch.mockImplementation(async (url, init) => {
       const { pathname } = new URL(url)
-      if (init.method === 'POST' && pathname === '/renders') {
+      if (init.method === "POST" && pathname === "/renders") {
         return jsonResponse(statusBody(), 202)
       }
-      if (init.method === 'GET' && pathname.endsWith('/output')) {
+      if (init.method === "GET" && pathname.endsWith("/output")) {
         return new Response(video, {
           headers: {
-            'Content-Type': 'video/mp4',
-            'Content-Length': String(video.byteLength),
+            "Content-Type": "video/mp4",
+            "Content-Length": String(video.byteLength),
           },
         })
       }
-      if (init.method === 'GET') {
+      if (init.method === "GET") {
         statusCalls += 1
         return jsonResponse(
           statusCalls === 1
             ? statusBody()
             : statusBody({
-                state: 'completed',
+                state: "completed",
                 progress: 1,
                 renderedFrames: 90,
               }),
@@ -142,14 +142,14 @@ describe('RenderWorkflow', () => {
     expect(bucket.objects.has(PARAMS.inputKey)).toBe(false)
     expect(bucket.objects.has(PARAMS.progressKey)).toBe(false)
 
-    expect(names).toContain('start render')
-    expect(names).toContain('publish progress 0')
-    expect(names).toContain('store output')
-    expect(names).toContain('cleanup')
-    expect(sleeps).toEqual(['wait 0'])
+    expect(names).toContain("start render")
+    expect(names).toContain("publish progress 0")
+    expect(names).toContain("store output")
+    expect(names).toContain("cleanup")
+    expect(sleeps).toEqual(["wait 0"])
   })
 
-  it('sends the snapshot as a buffered string so the subrequest has a known length', async () => {
+  it("sends the snapshot as a buffered string so the subrequest has a known length", async () => {
     const { bucket, env } = createTestEnv()
     const snapshot = JSON.stringify({
       jobId: PARAMS.jobId,
@@ -159,16 +159,16 @@ describe('RenderWorkflow', () => {
 
     let startBody: unknown
     containerFetch.mockImplementation(async (_url, init) => {
-      if (init.method === 'POST') {
+      if (init.method === "POST") {
         startBody = init.body
         return jsonResponse(statusBody(), 202)
       }
       return jsonResponse(
         statusBody({
-          state: 'failed',
+          state: "failed",
           error: {
-            code: 'render_failed',
-            message: 'stop here',
+            code: "render_failed",
+            message: "stop here",
             retryable: false,
           },
         }),
@@ -180,23 +180,23 @@ describe('RenderWorkflow', () => {
 
     // An R2 body stream has no declared length and can only be read once, so
     // the runtime rejects it as a request body and step retries would fail.
-    expect(typeof startBody).toBe('string')
+    expect(typeof startBody).toBe("string")
     expect(startBody).toBe(snapshot)
   })
 
-  it('fails without retrying when the container reports a permanent error', async () => {
+  it("fails without retrying when the container reports a permanent error", async () => {
     const { bucket, env } = createTestEnv()
     await bucket.put(PARAMS.inputKey, JSON.stringify({ jobId: PARAMS.jobId }))
     await bucket.put(PARAMS.progressKey, JSON.stringify({ progress: 0.5 }))
 
     containerFetch.mockImplementation(async (_url, init) => {
-      if (init.method === 'POST') return jsonResponse(statusBody(), 202)
+      if (init.method === "POST") return jsonResponse(statusBody(), 202)
       return jsonResponse(
         statusBody({
-          state: 'failed',
+          state: "failed",
           error: {
-            code: 'render_failed',
-            message: 'Asset 404',
+            code: "render_failed",
+            message: "Asset 404",
             retryable: false,
           },
         }),
@@ -205,30 +205,30 @@ describe('RenderWorkflow', () => {
 
     const { promise, names } = runWorkflow(env)
     await expect(promise).rejects.toMatchObject({
-      name: 'NonRetryableError',
-      message: 'Asset 404',
+      name: "NonRetryableError",
+      message: "Asset 404",
     })
 
-    expect(names).toContain('cleanup after failure')
+    expect(names).toContain("cleanup after failure")
     expect(bucket.objects.has(PARAMS.inputKey)).toBe(false)
     expect(bucket.objects.has(PARAMS.progressKey)).toBe(false)
   })
 
-  it('fails when the render input is gone', async () => {
+  it("fails when the render input is gone", async () => {
     const { env } = createTestEnv()
     const { promise } = runWorkflow(env)
     await expect(promise).rejects.toThrow(/missing from R2/)
   })
 
-  it('gives up after the configured timeout', async () => {
+  it("gives up after the configured timeout", async () => {
     const { bucket, env } = createTestEnv({
-      RENDER_TIMEOUT_MINUTES: '1',
-      RENDER_POLL_INTERVAL_SECONDS: '30',
+      RENDER_TIMEOUT_MINUTES: "1",
+      RENDER_POLL_INTERVAL_SECONDS: "30",
     })
     await bucket.put(PARAMS.inputKey, JSON.stringify({ jobId: PARAMS.jobId }))
 
     containerFetch.mockImplementation(async (_url, init) => {
-      if (init.method === 'POST') return jsonResponse(statusBody(), 202)
+      if (init.method === "POST") return jsonResponse(statusBody(), 202)
       return jsonResponse(statusBody({ renderedFrames: 1 }))
     })
 

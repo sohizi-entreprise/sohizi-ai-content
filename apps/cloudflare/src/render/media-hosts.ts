@@ -1,5 +1,5 @@
-import { HttpError } from '../http'
-import type { RenderComposition } from './contracts'
+import { HttpError } from "../http"
+import type { RenderComposition } from "./contracts"
 
 /**
  * The container has internet access, so every URL it is asked to fetch has to
@@ -7,8 +7,8 @@ import type { RenderComposition } from './contracts'
  * into an SSRF proxy.
  */
 export function parseAllowedHosts(value: string | undefined): Array<string> {
-  return (value ?? '')
-    .split(',')
+  return (value ?? "")
+    .split(",")
     .map((host) => host.trim().toLowerCase())
     .filter((host) => host.length > 0)
 }
@@ -24,9 +24,9 @@ export function collectMediaHosts(
   for (const track of composition.tracks) {
     for (const clip of track.clips) {
       if (
-        clip.type !== 'video' &&
-        clip.type !== 'audio' &&
-        clip.type !== 'image'
+        clip.type !== "video" &&
+        clip.type !== "audio" &&
+        clip.type !== "image"
       ) {
         continue
       }
@@ -34,7 +34,7 @@ export function collectMediaHosts(
         hosts.add(new URL(clip.url).hostname.toLowerCase())
       } catch {
         throw new HttpError(
-          'bad_request',
+          "bad_request",
           `Clip ${clip.id} has an unparsable url`,
         )
       }
@@ -49,8 +49,8 @@ export function assertMediaHostsAllowed(
 ): void {
   if (allowedHosts.length === 0) {
     throw new HttpError(
-      'internal_error',
-      'RENDER_ALLOWED_MEDIA_HOSTS is not configured',
+      "internal_error",
+      "RENDER_ALLOWED_MEDIA_HOSTS is not configured",
     )
   }
 
@@ -59,7 +59,7 @@ export function assertMediaHostsAllowed(
   )
 
   if (rejected.length > 0) {
-    throw new HttpError('bad_request', 'Clip media host is not allowed', {
+    throw new HttpError("bad_request", "Clip media host is not allowed", {
       hosts: rejected,
     })
   }

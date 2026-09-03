@@ -1,37 +1,37 @@
-import { z } from 'zod'
+import { z } from "zod"
 
-export const modelBasePricingSchema = z.discriminatedUnion('unit', [
+export const modelBasePricingSchema = z.discriminatedUnion("unit", [
   z.object({
-    unit: z.literal('per_1m_tokens'),
+    unit: z.literal("per_1m_tokens"),
     input: z.number().min(0),
     output: z.number().min(0),
     cached_input: z.number().min(0).optional(),
   }),
   z.object({
-    unit: z.literal('per_inference'),
+    unit: z.literal("per_inference"),
     rate: z.number().min(0),
   }),
 ])
 
 export const modelParameterTypeSchema = z.enum([
-  'string',
-  'number',
-  'boolean',
-  'array<string>',
-  'array<number>',
+  "string",
+  "number",
+  "boolean",
+  "array<string>",
+  "array<number>",
 ])
 
 export const modelParameterUiComponentSchema = z.enum([
-  'select',
-  'slider',
-  'uploader',
+  "select",
+  "slider",
+  "uploader",
 ])
 
 export const modelParameterConstraintSchema = z.object({
   min: z.number().optional(),
   max: z.number().optional(),
   step: z.number().optional(),
-  fileType: z.enum(['image', 'video', 'audio']).optional(),
+  fileType: z.enum(["image", "video", "audio"]).optional(),
 })
 
 export const createModelSchema = z.object({
@@ -63,8 +63,8 @@ export const createCategorySchema = z.object({
     .trim()
     .min(1)
     .max(100)
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Name must be lowercase kebab-case'),
-  description: z.string().trim().max(1000).optional().default(''),
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Name must be lowercase kebab-case"),
+  description: z.string().trim().max(1000).optional().default(""),
 })
 
 export const parameterOptionInputSchema = z.object({
@@ -114,10 +114,10 @@ export const vendorNameSlugSchema = z
   .max(100)
   .regex(
     /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-    'Name must be a lowercase kebab-case slug',
+    "Name must be a lowercase kebab-case slug",
   )
 
-export const vendorKindSchema = z.enum(['media', 'llm'])
+export const vendorKindSchema = z.enum(["media", "llm"])
 
 export const vendorRateLimitSchema = z.object({
   rpm: z.number().int().min(1),

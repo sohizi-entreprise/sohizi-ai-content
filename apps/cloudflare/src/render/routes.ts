@@ -1,22 +1,22 @@
-import { HttpError, json } from '../http'
-import { requireServiceToken } from './auth'
+import { HttpError, json } from "../http"
+import { requireServiceToken } from "./auth"
 import {
   RENDER_LIMITS,
   createRenderRequestSchema,
   renderProgressSchema,
-} from './contracts'
-import { renderKeys } from './keys'
-import { assertMediaHostsAllowed, parseAllowedHosts } from './media-hosts'
-import type { WorkerEnv } from '../env'
+} from "./contracts"
+import { renderKeys } from "./keys"
+import { assertMediaHostsAllowed, parseAllowedHosts } from "./media-hosts"
+import type { WorkerEnv } from "../env"
 import type {
   CreateRenderRequest,
   RenderJobState,
   RenderJobStatus,
   RenderWorkflowParams,
-} from './contracts'
-import type { RenderWorkflowOutput } from './workflow'
+} from "./contracts"
+import type { RenderWorkflowOutput } from "./workflow"
 
-const RENDER_PREFIX = '/v1/renders'
+const RENDER_PREFIX = "/v1/renders"
 
 export function isRenderRoute(pathname: string): boolean {
   return pathname === RENDER_PREFIX || pathname.startsWith(`${RENDER_PREFIX}/`)
@@ -29,46 +29,46 @@ export async function handleRenderRoute(
   requireServiceToken(request, env)
 
   const url = new URL(request.url)
-  const jobId = url.pathname.slice(RENDER_PREFIX.length).replace(/^\//, '')
+  const jobId = url.pathname.slice(RENDER_PREFIX.length).replace(/^\//, "")
 
-  if (jobId === '') {
-    if (request.method !== 'POST') {
-      throw new HttpError('method_not_allowed', 'Use POST to create a render')
+  if (jobId === "") {
+    if (request.method !== "POST") {
+      throw new HttpError("method_not_allowed", "Use POST to create a render")
     }
     return createRender(request, env)
   }
 
-  if (request.method === 'GET') return getRender(jobId, url, env)
-  if (request.method === 'DELETE') return cancelRender(jobId, url, env)
+  if (request.method === "GET") return getRender(jobId, url, env)
+  if (request.method === "DELETE") return cancelRender(jobId, url, env)
 
-  throw new HttpError('method_not_allowed', 'Use GET or DELETE on a render')
+  throw new HttpError("method_not_allowed", "Use GET or DELETE on a render")
 }
 
 async function readCreateRequest(
   request: Request,
 ): Promise<CreateRenderRequest> {
-  const declaredLength = Number(request.headers.get('Content-Length') ?? '0')
+  const declaredLength = Number(request.headers.get("Content-Length") ?? "0")
   if (declaredLength > RENDER_LIMITS.maxPayloadBytes) {
-    throw new HttpError('payload_too_large', 'Render snapshot is too large')
+    throw new HttpError("payload_too_large", "Render snapshot is too large")
   }
 
   const raw = await request.text()
   if (raw.length > RENDER_LIMITS.maxPayloadBytes) {
-    throw new HttpError('payload_too_large', 'Render snapshot is too large')
+    throw new HttpError("payload_too_large", "Render snapshot is too large")
   }
 
   let parsedJson: unknown
   try {
     parsedJson = JSON.parse(raw)
   } catch {
-    throw new HttpError('bad_request', 'Body must be JSON')
+    throw new HttpError("bad_request", "Body must be JSON")
   }
 
   const result = createRenderRequestSchema.safeParse(parsedJson)
   if (!result.success) {
-    throw new HttpError('bad_request', 'Invalid render snapshot', {
+    throw new HttpError("bad_request", "Invalid render snapshot", {
       issues: result.error.issues.slice(0, 20).map((issue) => ({
-        path: issue.path.join('.'),
+        path: issue.path.join("."),
         message: issue.message,
       })),
     })
@@ -103,7 +103,7 @@ async function createRender(
       composition: body.composition,
       createdAt: new Date().toISOString(),
     }),
-    { httpMetadata: { contentType: 'application/json' } },
+    { httpMetadata: { contentType: "application/json" } },
   )
 
   const params: RenderWorkflowParams = {
@@ -129,7 +129,7 @@ async function createRender(
 
   const job: RenderJobState = {
     jobId: body.jobId,
-    status: 'queued',
+    status: "queued",
     progress: 0,
     renderedFrames: 0,
     frameCount: params.frameCount,
@@ -144,7 +144,7 @@ async function getRender(
 ): Promise<Response> {
   const projectId = requireProjectId(url)
   const state = await getWorkflowState(jobId, projectId, env)
-  if (!state) throw new HttpError('not_found', 'Render job not found')
+  if (!state) throw new HttpError("not_found", "Render job not found")
   return json({ job: state })
 }
 
@@ -160,21 +160,21 @@ async function cancelRender(
   try {
     instance = await env.RENDER_WORKFLOW.get(jobId)
   } catch {
-    throw new HttpError('not_found', 'Render job not found')
+    throw new HttpError("not_found", "Render job not found")
   }
 
   const status = await instance.status()
-  if (status.status === 'complete') {
-    throw new HttpError('conflict', 'Render already completed')
+  if (status.status === "complete") {
+    throw new HttpError("conflict", "Render already completed")
   }
 
   if (
-    status.status !== 'errored' &&
-    status.status !== 'terminated' &&
-    status.status !== 'unknown'
+    status.status !== "errored" &&
+    status.status !== "terminated" &&
+    status.status !== "unknown"
   ) {
     await instance.terminate().catch((error) => {
-      console.error('[render] terminate failed:', error)
+      console.error("[render] terminate failed:", error)
     })
   }
 
@@ -182,7 +182,7 @@ async function cancelRender(
 
   const job: RenderJobState = {
     jobId,
-    status: 'cancelled',
+    status: "cancelled",
     progress: 0,
     renderedFrames: 0,
     frameCount: 0,
@@ -191,23 +191,23 @@ async function cancelRender(
 }
 
 function requireProjectId(url: URL): string {
-  const projectId = url.searchParams.get('projectId')
+  const projectId = url.searchParams.get("projectId")
   if (!projectId) {
-    throw new HttpError('bad_request', 'Missing "projectId" query parameter')
+    throw new HttpError("bad_request", 'Missing "projectId" query parameter')
   }
   return projectId
 }
 
 const STATUS_MAP: Record<string, RenderJobStatus> = {
-  queued: 'queued',
-  running: 'rendering',
-  waiting: 'rendering',
-  waitingForPause: 'rendering',
-  paused: 'rendering',
-  complete: 'completed',
-  errored: 'failed',
-  terminated: 'cancelled',
-  unknown: 'failed',
+  queued: "queued",
+  running: "rendering",
+  waiting: "rendering",
+  waitingForPause: "rendering",
+  paused: "rendering",
+  complete: "completed",
+  errored: "failed",
+  terminated: "cancelled",
+  unknown: "failed",
 }
 
 async function getWorkflowState(
@@ -223,13 +223,13 @@ async function getWorkflowState(
   }
 
   const status = await instance.status()
-  const mapped = STATUS_MAP[status.status] ?? 'failed'
+  const mapped = STATUS_MAP[status.status] ?? "failed"
 
-  if (mapped === 'completed') {
+  if (mapped === "completed") {
     const output = status.output as RenderWorkflowOutput | undefined
     return {
       jobId,
-      status: 'completed',
+      status: "completed",
       progress: 1,
       renderedFrames: output?.frameCount ?? 0,
       frameCount: output?.frameCount ?? 0,
@@ -238,7 +238,7 @@ async function getWorkflowState(
     }
   }
 
-  if (mapped === 'failed' || mapped === 'cancelled') {
+  if (mapped === "failed" || mapped === "cancelled") {
     return {
       jobId,
       status: mapped,
@@ -246,7 +246,7 @@ async function getWorkflowState(
       renderedFrames: 0,
       frameCount: 0,
       ...(status.error
-        ? { error: { code: 'render_failed', message: status.error.message } }
+        ? { error: { code: "render_failed", message: status.error.message } }
         : {}),
     }
   }

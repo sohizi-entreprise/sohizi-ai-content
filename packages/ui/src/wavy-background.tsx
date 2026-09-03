@@ -1,7 +1,7 @@
-'use client'
-import { useEffect, useRef, useState } from 'react'
-import { createNoise3D } from 'simplex-noise'
-import { cn } from './lib/utils'
+"use client"
+import { useEffect, useRef, useState } from "react"
+import { createNoise3D } from "simplex-noise"
+import { cn } from "./lib/utils"
 
 export const WavyBackground = ({
   children,
@@ -11,7 +11,7 @@ export const WavyBackground = ({
   waveWidth,
   backgroundFill,
   blur = 10,
-  speed = 'fast',
+  speed = "fast",
   waveOpacity = 0.5,
   ...props
 }: {
@@ -22,7 +22,7 @@ export const WavyBackground = ({
   waveWidth?: number
   backgroundFill?: string
   blur?: number
-  speed?: 'slow' | 'fast'
+  speed?: "slow" | "fast"
   waveOpacity?: number
   [key: string]: unknown
 }) => {
@@ -36,9 +36,9 @@ export const WavyBackground = ({
 
   const getSpeed = () => {
     switch (speed) {
-      case 'slow':
+      case "slow":
         return 0.001
-      case 'fast':
+      case "fast":
         return 0.002
       default:
         return 0.001
@@ -46,11 +46,11 @@ export const WavyBackground = ({
   }
 
   const waveColors = colors ?? [
-    '#38bdf8',
-    '#818cf8',
-    '#c084fc',
-    '#e879f9',
-    '#22d3ee',
+    "#38bdf8",
+    "#818cf8",
+    "#c084fc",
+    "#e879f9",
+    "#22d3ee",
   ]
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export const WavyBackground = ({
     const container = containerRef.current
     if (!canvas || !container) return
 
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext("2d")
     if (!ctx) return
     ctxRef.current = ctx
 
@@ -94,7 +94,7 @@ export const WavyBackground = ({
     const render = () => {
       const { w, h } = sizeRef.current
       if (w && h) {
-        if (backgroundFill && backgroundFill !== 'transparent') {
+        if (backgroundFill && backgroundFill !== "transparent") {
           ctx.globalAlpha = waveOpacity || 0.5
           ctx.fillStyle = backgroundFill
           ctx.fillRect(0, 0, w, h)
@@ -112,21 +112,21 @@ export const WavyBackground = ({
 
     const observer = new ResizeObserver(resize)
     observer.observe(container)
-    window.addEventListener('resize', resize)
+    window.addEventListener("resize", resize)
 
     return () => {
       cancelAnimationFrame(animationIdRef.current)
       observer.disconnect()
-      window.removeEventListener('resize', resize)
+      window.removeEventListener("resize", resize)
     }
   }, [backgroundFill, blur, speed, waveOpacity, waveWidth, colors])
 
   const [isSafari, setIsSafari] = useState(false)
   useEffect(() => {
     setIsSafari(
-      typeof window !== 'undefined' &&
-        navigator.userAgent.includes('Safari') &&
-        !navigator.userAgent.includes('Chrome'),
+      typeof window !== "undefined" &&
+        navigator.userAgent.includes("Safari") &&
+        !navigator.userAgent.includes("Chrome"),
     )
   }, [])
 
@@ -134,7 +134,7 @@ export const WavyBackground = ({
     <div
       ref={containerRef}
       className={cn(
-        'relative flex h-screen flex-col items-center justify-center',
+        "relative flex h-screen flex-col items-center justify-center",
         containerClassName,
       )}
     >
@@ -145,7 +145,10 @@ export const WavyBackground = ({
           ...(isSafari ? { filter: `blur(${blur}px)` } : {}),
         }}
       />
-      <div className={cn('relative z-10', className)} {...props}>
+      <div
+        className={cn("relative z-10", className)}
+        {...props}
+      >
         {children}
       </div>
     </div>

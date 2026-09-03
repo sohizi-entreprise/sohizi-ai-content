@@ -3,13 +3,13 @@ import {
   ESTIMATE_OVERBOOKING_FACTOR,
   TOPUP_TARGET_MARGIN,
   PAYMENT_FEE_RESERVE,
-} from '@/features/billing/constants'
+} from "@/features/billing/constants"
 import {
   credits_to_charge,
   loaded_cost_usd,
   retail_price_usd,
-} from '@/features/billing/credits'
-import { LUMEN_BASE_URL } from '@/features/media-engine/constants'
+} from "@/features/billing/credits"
+import { LUMEN_BASE_URL } from "@/features/media-engine/constants"
 
 export type LumenDryRunComponent = {
   type: string
@@ -41,13 +41,13 @@ export const lumenDryRun = async (
   path: string,
   body: Record<string, unknown>,
 ): Promise<LumenDryRunResponse | null> => {
-  const url = `${LUMEN_BASE_URL}${path}${path.includes('?') ? '&' : '?'}dryRun=true`
+  const url = `${LUMEN_BASE_URL}${path}${path.includes("?") ? "&" : "?"}dryRun=true`
   try {
     const response = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.LUMEN_API_KEY}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
     })
@@ -58,13 +58,13 @@ export const lumenDryRun = async (
     if (
       !data ||
       data.estimated !== true ||
-      typeof data.total_cost_micros !== 'number'
+      typeof data.total_cost_micros !== "number"
     ) {
       return null
     }
     return data
   } catch (error) {
-    console.error('[lumenDryRun] failed', error)
+    console.error("[lumenDryRun] failed", error)
     return null
   }
 }
@@ -105,7 +105,7 @@ export const providerCostToCredits = (
  */
 export const providerCostToActualCredits = (
   providerCostUsd: number,
-  options: Omit<CreditConversionOptions, 'overbookingFactor'>,
+  options: Omit<CreditConversionOptions, "overbookingFactor">,
 ): bigint => {
   return providerCostToCredits(providerCostUsd, {
     ...options,

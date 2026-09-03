@@ -1,25 +1,25 @@
-import { z } from 'zod'
-import { buildBaseTool } from './tool-definition'
-import { supportedAgents } from '../core/agent-registry'
-import { success, failure } from './utils'
-import { createCancellableController } from '@/features/generation-request/abort-manager'
-import { getErrorMessage } from '@/utils/get-error-message'
+import { z } from "zod"
+import { buildBaseTool } from "./tool-definition"
+import { supportedAgents } from "../core/agent-registry"
+import { success, failure } from "./utils"
+import { createCancellableController } from "@/features/generation-request/abort-manager"
+import { getErrorMessage } from "@/utils/get-error-message"
 
 const assignTaskInputSchema = z.object({
   subAgent: z
     .enum(supportedAgents)
-    .describe('The specific type of sub-agent required for the job.'),
+    .describe("The specific type of sub-agent required for the job."),
   instructions: z
     .string()
     .describe(
-      'The instructions for the sub-agent to follow in order to complete the assigned task.',
+      "The instructions for the sub-agent to follow in order to complete the assigned task.",
     ),
 })
 
 export const assignTaskTool = buildBaseTool({
-  name: 'assignTask',
+  name: "assignTask",
   description:
-    'Delegates a focused, heavy-lifting task to a specialized sub-agent.',
+    "Delegates a focused, heavy-lifting task to a specialized sub-agent.",
   inputSchema: assignTaskInputSchema,
   execute: async (input, { session }) => {
     const { subAgent, instructions } = input
@@ -30,12 +30,12 @@ export const assignTaskTool = buildBaseTool({
     try {
       // Lazy import avoids circular init: tasks-assign → agent-factory → agent → tool-registry → tasks-assign
       const { createAgentFromDefinition } =
-        await import('../core/agent-factory')
-      const { getAgentDefinition } = await import('../core/agent-registry')
+        await import("../core/agent-factory")
+      const { getAgentDefinition } = await import("../core/agent-registry")
       const agentDefinition = getAgentDefinition(subAgent)
       if (!agentDefinition) {
         return failure(
-          `Invalid sub-agent name provided. Supported are ${supportedAgents.join(', ')}`,
+          `Invalid sub-agent name provided. Supported are ${supportedAgents.join(", ")}`,
         )
       }
 
@@ -56,16 +56,16 @@ export const assignTaskTool = buildBaseTool({
       })
 
       const msg = {
-        role: 'user' as const,
+        role: "user" as const,
         content: instructions,
       }
 
       const chunks = agent.runLoop(msg, controller.signal, 100)
 
-      let output = ''
+      let output = ""
 
       for await (const chunk of chunks) {
-        if (chunk.type === 'complete') {
+        if (chunk.type === "complete") {
           output = chunk.text
         }
       }
@@ -73,7 +73,7 @@ export const assignTaskTool = buildBaseTool({
       return success(output)
     } catch (error) {
       console.error(error)
-      return failure(getErrorMessage(error, 'An unknown error occurred'))
+      return failure(getErrorMessage(error, "An unknown error occurred"))
     } finally {
       cleanup()
     }

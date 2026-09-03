@@ -23,14 +23,14 @@ export abstract class MediaError extends Error {
 
 export class MediaRateLimitError extends MediaError {
   readonly isRetriable = true
-  readonly code = 'RATE_LIMIT'
+  readonly code = "RATE_LIMIT"
 
   constructor(
     message: string,
     cause?: Error,
     public readonly retryAfterMs?: number,
   ) {
-    super(message || 'Rate limit exceeded. Please retry later.', cause)
+    super(message || "Rate limit exceeded. Please retry later.", cause)
   }
 
   static fromResponse(
@@ -49,11 +49,11 @@ export class MediaRateLimitError extends MediaError {
 
 export class MediaServiceUnavailableError extends MediaError {
   readonly isRetriable = true
-  readonly code = 'SERVICE_UNAVAILABLE'
+  readonly code = "SERVICE_UNAVAILABLE"
 
   constructor(message: string, cause?: Error) {
     super(
-      message || 'Service temporarily unavailable. Please retry later.',
+      message || "Service temporarily unavailable. Please retry later.",
       cause,
     )
   }
@@ -72,7 +72,7 @@ export class MediaServiceUnavailableError extends MediaError {
 
 export class MediaProviderError extends MediaError {
   readonly isRetriable = false
-  readonly code = 'PROVIDER_ERROR'
+  readonly code = "PROVIDER_ERROR"
 
   constructor(
     message: string,
@@ -97,7 +97,7 @@ export class MediaProviderError extends MediaError {
 
 export class MediaValidationError extends MediaError {
   readonly isRetriable = false
-  readonly code = 'VALIDATION_ERROR'
+  readonly code = "VALIDATION_ERROR"
 
   constructor(message: string, cause?: Error) {
     super(message, cause)
@@ -106,7 +106,7 @@ export class MediaValidationError extends MediaError {
 
 export class MediaConfigurationError extends MediaError {
   readonly isRetriable = false
-  readonly code = 'CONFIGURATION_ERROR'
+  readonly code = "CONFIGURATION_ERROR"
 
   constructor(message: string, cause?: Error) {
     super(message, cause)

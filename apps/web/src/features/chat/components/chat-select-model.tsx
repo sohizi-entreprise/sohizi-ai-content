@@ -60,12 +60,18 @@ export default function ChatSelectModel({ projectId }: { projectId: string }) {
   }
 
   return (
-    <ModelSelector open={open} onOpenChange={setOpen}>
+    <ModelSelector
+      open={open}
+      onOpenChange={setOpen}
+    >
       <ModelSelectorTrigger asChild>
         <button className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
           {model ? (
             <>
-              <ModelSelectorLogo provider={model.provider} className="size-3" />
+              <ModelSelectorLogo
+                provider={model.provider}
+                className="size-3"
+              />
               <span className="max-w-[120px] truncate">{model.name}</span>
             </>
           ) : (
@@ -80,7 +86,10 @@ export default function ChatSelectModel({ projectId }: { projectId: string }) {
         <ModelSelectorList>
           <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
           {[...grouped.entries()].map(([provider, providerModels]) => (
-            <ModelSelectorGroup key={provider} heading={provider}>
+            <ModelSelectorGroup
+              key={provider}
+              heading={provider}
+            >
               {providerModels.map((mod) => (
                 <ModelSelectorItem
                   key={mod.id}

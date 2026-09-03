@@ -1,7 +1,7 @@
-import Redis from 'ioredis'
-import { redis } from '@/lib'
+import Redis from "ioredis"
+import { redis } from "@/lib"
 
-const CANCELLATION_CHANNEL = 'request:cancellations'
+const CANCELLATION_CHANNEL = "request:cancellations"
 
 type CancellationMessage = {
   id: string
@@ -23,11 +23,11 @@ export async function createCancellableController(requestId: string): Promise<{
   const subscriber = redis.duplicate()
 
   const ensureConnected = async (client: Redis) => {
-    if (client.status === 'wait') {
+    if (client.status === "wait") {
       await client.connect()
       return
     }
-    if (client.status === 'ready' || client.status === 'connect') {
+    if (client.status === "ready" || client.status === "connect") {
       return
     }
     await new Promise<void>((resolve, reject) => {
@@ -40,13 +40,13 @@ export async function createCancellableController(requestId: string): Promise<{
         reject(err)
       }
       const off = () => {
-        client.off('ready', handleReady)
-        client.off('connect', handleReady)
-        client.off('error', handleError)
+        client.off("ready", handleReady)
+        client.off("connect", handleReady)
+        client.off("error", handleError)
       }
-      client.on('ready', handleReady)
-      client.on('connect', handleReady)
-      client.on('error', handleError)
+      client.on("ready", handleReady)
+      client.on("connect", handleReady)
+      client.on("error", handleError)
     })
   }
 
@@ -61,16 +61,16 @@ export async function createCancellableController(requestId: string): Promise<{
     }
   }
 
-  subscriber.on('message', onMessage)
+  subscriber.on("message", onMessage)
 
   const cleanup = async () => {
-    subscriber.off('message', onMessage)
+    subscriber.off("message", onMessage)
     await subscriber.unsubscribe(CANCELLATION_CHANNEL).catch(() => {})
     await subscriber.quit().catch(() => {})
   }
 
   controller.signal.addEventListener(
-    'abort',
+    "abort",
     () => {
       cleanup().catch(() => {})
     },

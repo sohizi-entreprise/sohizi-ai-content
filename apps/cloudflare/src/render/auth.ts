@@ -1,5 +1,5 @@
-import { HttpError } from '../http'
-import type { WorkerEnv } from '../env'
+import { HttpError } from "../http"
+import type { WorkerEnv } from "../env"
 
 /** Constant-time comparison so token checks do not leak length or prefix. */
 function timingSafeEqual(a: string, b: string): boolean {
@@ -23,16 +23,16 @@ export function requireServiceToken(request: Request, env: WorkerEnv): void {
   if (!expected) {
     // Failing closed keeps an unconfigured deployment from becoming an open
     // render farm.
-    throw new HttpError('unauthorized', 'Render service is not configured')
+    throw new HttpError("unauthorized", "Render service is not configured")
   }
 
-  const header = request.headers.get('Authorization') ?? ''
-  const [scheme, token] = header.split(' ')
-  if (scheme?.toLowerCase() !== 'bearer' || !token) {
-    throw new HttpError('unauthorized', 'Missing bearer token')
+  const header = request.headers.get("Authorization") ?? ""
+  const [scheme, token] = header.split(" ")
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    throw new HttpError("unauthorized", "Missing bearer token")
   }
 
   if (!timingSafeEqual(token, expected)) {
-    throw new HttpError('unauthorized', 'Invalid bearer token')
+    throw new HttpError("unauthorized", "Invalid bearer token")
   }
 }

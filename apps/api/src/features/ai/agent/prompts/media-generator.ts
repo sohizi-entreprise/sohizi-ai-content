@@ -1,5 +1,5 @@
-import { fileSystemPrompt } from './file-system-prompt'
-import { navigateContextPrompt } from './navigate-context'
+import { fileSystemPrompt } from "./file-system-prompt"
+import { navigateContextPrompt } from "./navigate-context"
 
 export const mediaGeneratorPrompt = `
 <role>

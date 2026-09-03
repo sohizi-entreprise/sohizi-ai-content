@@ -3,32 +3,32 @@ import {
   ModelMessage,
   ToolModelMessage,
   UserModelMessage,
-} from 'ai'
+} from "ai"
 import {
   createBillableLlmClient,
   type BillableLlmClient,
   type BillableLlmInput,
   type ModelConfig,
-} from '../utils/llm-client'
-import type { ResolvedVendorModel } from '@/features/models/repo'
+} from "../utils/llm-client"
+import type { ResolvedVendorModel } from "@/features/models/repo"
 import {
   LlmChunk,
   OperationChunk,
   streamEvents,
   ToolCall,
   ToolResultComplete,
-} from '../utils/llm-response'
-import { v4 as uuidv4 } from 'uuid'
-import { getTool } from '../tools/tool-registry'
-import { mergeGenerators } from '../utils/merge-generators'
-import { Session } from './session'
-import { AgentState, CompleteReason, TokenUsage } from '@/type'
-import { billingService, withBillingStream } from '@/features/billing'
-import { AgentStateManager } from './state-manager'
-import { Persistence } from './persistence'
-import { estimateInputTokens } from '../utils/estimate-token'
-import { ContextManager } from './context-manager'
-import { getErrorMessage } from '@/utils/get-error-message'
+} from "../utils/llm-response"
+import { v4 as uuidv4 } from "uuid"
+import { getTool } from "../tools/tool-registry"
+import { mergeGenerators } from "../utils/merge-generators"
+import { Session } from "./session"
+import { AgentState, CompleteReason, TokenUsage } from "@/type"
+import { billingService, withBillingStream } from "@/features/billing"
+import { AgentStateManager } from "./state-manager"
+import { Persistence } from "./persistence"
+import { estimateInputTokens } from "../utils/estimate-token"
+import { ContextManager } from "./context-manager"
+import { getErrorMessage } from "@/utils/get-error-message"
 
 const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096
 
@@ -49,7 +49,7 @@ type AgentConfig = {
   contextThreshold?: number
   summaryModelId: string
   evaluatorModelId: string
-  evaluatorModelConfig?: Pick<ModelConfig, 'reasoningEffort'>
+  evaluatorModelConfig?: Pick<ModelConfig, "reasoningEffort">
 }
 
 type BilledLlmStream = ReturnType<
@@ -62,7 +62,7 @@ export class Agent {
   private runId: string | null
   private readonly session: Session
   private readonly persistence: Persistence | undefined
-  private readonly agentParams: Pick<AgentConfig, 'name' | 'systemPrompt'>
+  private readonly agentParams: Pick<AgentConfig, "name" | "systemPrompt">
   private readonly modelConfig: ModelConfig
   private readonly model: ResolvedVendorModel
   private readonly contextManager: ContextManager
@@ -129,7 +129,7 @@ export class Agent {
         this.stateManager.finishRun()
       }
     } catch (error) {
-      console.log('runLoop error', error)
+      console.log("runLoop error", error)
       const errorMessage = this.captureStepError(error)
       yield this.buildErrorEvent(errorMessage)
     } finally {
@@ -148,8 +148,8 @@ export class Agent {
     // Future persist messages to the database [checkpoints]
     this.runId = uuidv4()
     const tool_calls: ToolCall[] = []
-    let reasoning_text = ''
-    let text = ''
+    let reasoning_text = ""
+    let text = ""
     let stepError: string | null = null
     let assistantMessageRegistered = false
     let toolCallsStarted = false
@@ -187,7 +187,7 @@ export class Agent {
       )
       if (content.length > 0) {
         this.registerMessage({
-          role: 'assistant',
+          role: "assistant",
           content,
         })
       }
@@ -214,9 +214,9 @@ export class Agent {
             this.updateStatus(chunk.finishReason, chunk.error)
             text = chunk.text || text
             reasoning_text = chunk.reasoningText ?? reasoning_text
-            if (chunk.finishReason === 'error') {
-              stepError = chunk.error ?? 'Unknown agent error'
-              console.log('stepError', stepError)
+            if (chunk.finishReason === "error") {
+              stepError = chunk.error ?? "Unknown agent error"
+              console.log("stepError", stepError)
               this.captureStepError(stepError)
             }
             break
@@ -252,18 +252,18 @@ export class Agent {
         if (evaluation.isDone) {
           this.stateManager.finishRun()
         } else {
-          console.log('evaluation', evaluation)
+          console.log("evaluation", evaluation)
           this.registerMessage(
             {
-              role: 'user',
-              content: [{ type: 'text', text: evaluation.instruction }],
+              role: "user",
+              content: [{ type: "text", text: evaluation.instruction }],
             },
             true,
           )
         }
       }
     } catch (error) {
-      console.log('runStep error', error)
+      console.log("runStep error", error)
       stepError = this.captureStepError(error)
       yield this.buildErrorEvent(stepError)
     } finally {
@@ -280,11 +280,11 @@ export class Agent {
   private updateStatus(finishReason: CompleteReason, error?: string) {
     this.stateManager.setFinishReason(finishReason)
     switch (finishReason) {
-      case 'abort':
+      case "abort":
         this.stateManager.finishRun()
         break
-      case 'error':
-        this.stateManager.setError(error ?? 'Unknown agent error')
+      case "error":
+        this.stateManager.setError(error ?? "Unknown agent error")
         break
 
       default:
@@ -297,21 +297,21 @@ export class Agent {
   private initializeState(systemPrompt: string) {
     const existingState = this.persistence?.getInitialState()
     let state: AgentState = {
-      messages: [{ role: 'system', content: systemPrompt }],
+      messages: [{ role: "system", content: systemPrompt }],
       finishReason: null,
       error: null,
-      status: 'idle',
+      status: "idle",
       todos: [],
       usage: null,
     }
     if (existingState) {
       const messages = existingState.messages.filter(
-        (message) => message.role !== 'system',
+        (message) => message.role !== "system",
       )
       state = {
         ...existingState,
-        status: 'idle',
-        messages: [{ role: 'system', content: systemPrompt }, ...messages],
+        status: "idle",
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
       }
     }
 
@@ -381,17 +381,17 @@ export class Agent {
   ): AssistantContent {
     const content: AssistantContent = []
     if (reasoningText) {
-      content.push({ type: 'reasoning', text: reasoningText })
+      content.push({ type: "reasoning", text: reasoningText })
     }
     if (text) {
-      content.push({ type: 'text', text })
+      content.push({ type: "text", text })
     }
     if (stepError) {
-      content.push({ type: 'text', text: `Step failed: ${stepError}` })
+      content.push({ type: "text", text: `Step failed: ${stepError}` })
     }
     for (const tool_call of toolCalls) {
       content.push({
-        type: 'tool-call',
+        type: "tool-call",
         toolName: tool_call.toolName,
         input: tool_call.input,
         toolCallId: tool_call.toolCallId,
@@ -403,11 +403,11 @@ export class Agent {
   private captureStepError(error: unknown): string {
     const message = getErrorMessage(error)
     let isAborted = false
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (error instanceof Error && error.name === "AbortError") {
       isAborted = true
     }
     this.stateManager.setError(message)
-    this.stateManager.setFinishReason(isAborted ? 'abort' : 'error')
+    this.stateManager.setFinishReason(isAborted ? "abort" : "error")
 
     return message
   }
@@ -416,14 +416,14 @@ export class Agent {
     if (toolCalls.length === 0) return
 
     const msgs: ToolModelMessage[] = toolCalls.map((toolCall) => ({
-      role: 'tool',
+      role: "tool",
       content: [
         {
-          type: 'tool-result',
+          type: "tool-result",
           toolCallId: toolCall.toolCallId,
           toolName: toolCall.toolName,
           output: {
-            type: 'error-text',
+            type: "error-text",
             value: errorMessage,
           },
         },
@@ -434,14 +434,14 @@ export class Agent {
 
   private updateToolResults(result: ToolResultComplete) {
     const msg: ToolModelMessage = {
-      role: 'tool',
+      role: "tool",
       content: [
         {
-          type: 'tool-result',
+          type: "tool-result",
           toolCallId: result.toolCallId,
           toolName: result.toolName,
           output: {
-            type: result.success ? 'text' : 'error-text',
+            type: result.success ? "text" : "error-text",
             value: result.output,
           },
         },
@@ -457,14 +457,14 @@ export class Agent {
 
   private appendBadToolNames(data: { toolCallId: string; toolName: string }[]) {
     const msgs: ToolModelMessage[] = data.map((item) => ({
-      role: 'tool',
+      role: "tool",
       content: [
         {
-          type: 'tool-result',
+          type: "tool-result",
           toolCallId: item.toolCallId,
           toolName: item.toolName,
           output: {
-            type: 'error-text',
+            type: "error-text",
             value: `Invalid tool name: ${item.toolName}`,
           },
         },

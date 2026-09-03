@@ -4,9 +4,9 @@ import {
   VideoComposition,
   Skill,
   Asset,
-} from '@/db/schema'
-import { ProseDocument } from '@/type'
-import { EmbedderInterface } from '@/lib/rag'
+} from "@/db/schema"
+import { ProseDocument } from "@/type"
+import { EmbedderInterface } from "@/lib/rag"
 import {
   deleteFileNode as deleteFileNodeFn,
   getFileContent as getFileContentFn,
@@ -15,20 +15,20 @@ import {
   semanticSearchDirectory as semanticSearchDirectoryFn,
   updateFileContent as updateFileContentFn,
   updateFileNode as updateFileNodeFn,
-} from '../functions'
-import { FileNodeInsertPosition } from '../payload'
-import { ChunkHit, KeywordChunkHit } from '../types'
+} from "../functions"
+import { FileNodeInsertPosition } from "../payload"
+import { ChunkHit, KeywordChunkHit } from "../types"
 import {
   countLines,
   countWords,
   normalizeFileName,
   serializeFileContent,
-} from '../utils'
-import * as fileSystemRepo from '../repo'
-import { fileFormat } from '../constants'
-import { getCompositionByFileNodeId } from '@/features/video-editor/repo'
-import { getAssetByFileNodeId } from '@/features/media-engine/repo'
-import { getErrorMessage } from '@/utils/get-error-message'
+} from "../utils"
+import * as fileSystemRepo from "../repo"
+import { fileFormat } from "../constants"
+import { getCompositionByFileNodeId } from "@/features/video-editor/repo"
+import { getAssetByFileNodeId } from "@/features/media-engine/repo"
+import { getErrorMessage } from "@/utils/get-error-message"
 
 type FileObjectResponse<T> = {
   ok: boolean
@@ -38,27 +38,27 @@ type FileObjectResponse<T> = {
 
 export type FileContentPayload =
   | {
-      type: 'markdown'
+      type: "markdown"
       data: string
     }
   | {
-      type: 'skill'
+      type: "skill"
       data: Skill
     }
   | {
-      type: 'image' | 'video' | 'document' | 'audio' | 'html'
+      type: "image" | "video" | "document" | "audio" | "html"
       data: Asset
     }
   | {
-      type: 'ai-generated'
+      type: "ai-generated"
       data: null
     }
   | {
-      type: 'video-editor'
+      type: "video-editor"
       data: VideoComposition
     }
   | {
-      type: 'json'
+      type: "json"
       data: Record<string, unknown>
     }
 
@@ -168,7 +168,7 @@ export class FileObject {
   ): Promise<FileObjectResponse<KeywordChunkHit[] | null>> {
     const normalizedKeyword = keyword.trim()
     if (!normalizedKeyword) {
-      return err('Keyword cannot be empty')
+      return err("Keyword cannot be empty")
     }
 
     try {
@@ -179,7 +179,7 @@ export class FileObject {
       })
       return ok(hits)
     } catch (error) {
-      return err(getErrorMessage(error, 'Failed to search project content'))
+      return err(getErrorMessage(error, "Failed to search project content"))
     }
   }
 
@@ -190,7 +190,7 @@ export class FileObject {
   ): Promise<FileObjectResponse<ChunkHit[] | null>> {
     const normalizedQuery = query.trim()
     if (!normalizedQuery) {
-      return err('Query cannot be empty')
+      return err("Query cannot be empty")
     }
 
     try {
@@ -238,13 +238,13 @@ export class FileObject {
 
       this.fileNode = updatedFileNode
       return ok(
-        `File moved to ${newDirectory?.fileNode.name ?? '/'} successfully`,
+        `File moved to ${newDirectory?.fileNode.name ?? "/"} successfully`,
       )
     } catch (error) {
       return err(
         getErrorMessage(
           error,
-          `Failed to move file ${this.fileNode.name} to ${newDirectory?.fileNode.name ?? '/'}`,
+          `Failed to move file ${this.fileNode.name} to ${newDirectory?.fileNode.name ?? "/"}`,
         ),
       )
     }
@@ -258,7 +258,7 @@ export class FileObject {
     }
     const normalizedName = normalizeFileName(newName)
     if (!normalizedName) {
-      return err('Invalid file name')
+      return err("Invalid file name")
     }
 
     try {
@@ -307,7 +307,7 @@ export class FileObject {
     }
 
     const writeResponse = await targetFile.writeContent({
-      content: content.content ?? '',
+      content: content.content ?? "",
       jsonContent: content.jsonContent ?? {},
       proseContent: content.proseContent ?? undefined,
     })
@@ -367,12 +367,12 @@ export class FileObject {
         return err(`Invalid content inside the file ${this.fileNode.name}`)
       }
 
-      const originalText = content.content ?? ''
+      const originalText = content.content ?? ""
       const patchedText = data.replaceAll
         ? originalText.replaceAll(data.oldText, data.newText)
         : originalText.replace(data.oldText, data.newText)
 
-      if (data.oldText !== '' && patchedText === originalText) {
+      if (data.oldText !== "" && patchedText === originalText) {
         return err(
           `Text "${data.oldText}" was not found in ${this.fileNode.name}`,
         )
@@ -401,13 +401,13 @@ export class FileObject {
       }
       const children = response.data
       return ok({
-        type: 'directory',
+        type: "directory",
         entries: children?.length ?? 0,
       })
     }
     const response = await this.getContent()
     if (!response.ok) {
-      return err(response.error ?? 'Failed to get content')
+      return err(response.error ?? "Failed to get content")
     }
     const content = response.data
     if (!content) {
@@ -415,8 +415,8 @@ export class FileObject {
     }
     const text = serializeFileContent(this.fileNode, content)
     return ok({
-      type: 'file',
-      format: this.fileNode.format ?? 'unknown',
+      type: "file",
+      format: this.fileNode.format ?? "unknown",
       lines: countLines(text),
       words: countWords(text),
     })
@@ -432,7 +432,7 @@ export class FileObject {
       }
       const children = response.data
       return ok({
-        type: 'directory',
+        type: "directory",
         childrenCount: children?.length ?? 0,
         isEditable: this.fileNode.editable,
         lastUpdated: this.fileNode.updatedAt,
@@ -440,8 +440,8 @@ export class FileObject {
       })
     }
     return ok({
-      type: 'file',
-      format: this.fileNode.format ?? 'unknown',
+      type: "file",
+      format: this.fileNode.format ?? "unknown",
       isEditable: this.fileNode.editable,
       lastUpdated: this.fileNode.updatedAt,
       createdAt: this.fileNode.createdAt,
@@ -471,8 +471,8 @@ export class FileObject {
           this.fileNode.id,
         )
         content = {
-          type: 'markdown',
-          data: fileContent?.content ?? '',
+          type: "markdown",
+          data: fileContent?.content ?? "",
         }
         break
       }
@@ -482,7 +482,7 @@ export class FileObject {
           this.fileNode.id,
         )
         content = {
-          type: 'json',
+          type: "json",
           data: fileContent?.jsonContent ?? {},
         }
         break
@@ -493,7 +493,7 @@ export class FileObject {
           content = null
         } else {
           content = {
-            type: 'skill',
+            type: "skill",
             data: skill,
           }
         }
@@ -501,7 +501,7 @@ export class FileObject {
       }
       case fileFormat.AI_GENERATED: {
         content = {
-          type: 'ai-generated',
+          type: "ai-generated",
           data: null,
         }
         break
@@ -512,7 +512,7 @@ export class FileObject {
           content = null
         } else {
           content = {
-            type: 'video-editor',
+            type: "video-editor",
             data: composition,
           }
         }

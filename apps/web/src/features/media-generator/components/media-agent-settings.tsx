@@ -56,7 +56,10 @@ export function MediaAgentSettings({ projectId }: { projectId: string }) {
           </SelectTrigger>
           <SelectContent>
             {AGENT_ASPECT_RATIOS.map((ratio) => (
-              <SelectItem key={ratio} value={ratio}>
+              <SelectItem
+                key={ratio}
+                value={ratio}
+              >
                 {ratio}
               </SelectItem>
             ))}
@@ -74,7 +77,10 @@ export function MediaAgentSettings({ projectId }: { projectId: string }) {
           </SelectTrigger>
           <SelectContent>
             {AGENT_QUALITIES.map((quality) => (
-              <SelectItem key={quality} value={quality}>
+              <SelectItem
+                key={quality}
+                value={quality}
+              >
                 {quality.charAt(0).toUpperCase() + quality.slice(1)}
               </SelectItem>
             ))}

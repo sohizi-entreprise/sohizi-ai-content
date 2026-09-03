@@ -4,14 +4,14 @@ import {
   Runstatus,
   TodoItem,
   TokenUsage,
-} from '@/type'
+} from "@/type"
 
 export class AgentStateManager {
   private state: AgentState
 
   constructor(initialState?: AgentState) {
     this.state = initialState ?? {
-      status: 'idle',
+      status: "idle",
       error: null,
       finishReason: null,
       todos: [],
@@ -22,7 +22,7 @@ export class AgentStateManager {
   get status(): Runstatus {
     return this.state.status
   }
-  get finishReason(): CompleteReason | 'need-approval' | null {
+  get finishReason(): CompleteReason | "need-approval" | null {
     return this.state.finishReason
   }
   get error(): string | null {
@@ -33,45 +33,45 @@ export class AgentStateManager {
   }
 
   get isExitStatus(): boolean {
-    return ['finished', 'error', 'paused'].includes(this.state.status)
+    return ["finished", "error", "paused"].includes(this.state.status)
   }
 
   get isRunning(): boolean {
-    return this.state.status === 'running'
+    return this.state.status === "running"
   }
   setState(state: AgentState): void {
     this.state = state
   }
   startRun(): void {
-    this.state.status = 'running'
+    this.state.status = "running"
   }
   setError(error: string | null): void {
-    this.state.status = 'error'
+    this.state.status = "error"
     this.state.error = error
   }
-  setFinishReason(finishReason: CompleteReason | 'need-approval' | null): void {
+  setFinishReason(finishReason: CompleteReason | "need-approval" | null): void {
     this.state.finishReason = finishReason
   }
   setTodos(todos: TodoItem[]): void {
     this.state.todos = todos
   }
   finishRun(): void {
-    this.state.status = 'finished'
+    this.state.status = "finished"
   }
 
   pauseRun(): void {
-    this.state.status = 'paused'
+    this.state.status = "paused"
   }
 
   getState(): AgentState {
     return this.state
   }
 
-  appendMessages(messages: AgentState['messages']): void {
+  appendMessages(messages: AgentState["messages"]): void {
     this.state.messages.push(...messages)
   }
 
-  replaceMessages(messages: AgentState['messages']): void {
+  replaceMessages(messages: AgentState["messages"]): void {
     this.state.messages = messages
   }
 

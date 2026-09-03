@@ -100,7 +100,10 @@ function ProjectCardList(props: ProjectCardProps) {
 function ProjectCardAction({ onDelete }: { onDelete?: () => void }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+      <DropdownMenuTrigger
+        asChild
+        onClick={(e) => e.preventDefault()}
+      >
         <Button
           variant="ghost"
           size="icon-sm"

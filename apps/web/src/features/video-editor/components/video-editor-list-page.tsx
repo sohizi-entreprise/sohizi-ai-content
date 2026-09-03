@@ -49,7 +49,10 @@ export function VideoEditorListPage() {
             <p className="text-sm text-destructive">
               Failed to load video editors
             </p>
-            <Button variant="outline" onClick={() => void refetch()}>
+            <Button
+              variant="outline"
+              onClick={() => void refetch()}
+            >
               Retry
             </Button>
           </div>
@@ -98,7 +101,10 @@ function VideoEditorListSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, index) => (
-        <Skeleton key={index} className="h-[220px] w-full rounded-2xl" />
+        <Skeleton
+          key={index}
+          className="h-[220px] w-full rounded-2xl"
+        />
       ))}
     </div>
   )

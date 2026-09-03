@@ -85,7 +85,11 @@ export function YoutubeEmbedDialog({
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleEmbed} disabled={!url.trim()}>
+          <Button
+            type="button"
+            onClick={handleEmbed}
+            disabled={!url.trim()}
+          >
             Embed
           </Button>
         </DialogFooter>

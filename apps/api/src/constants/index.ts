@@ -1,1 +1,1 @@
-export * as mediaConstants from './media'
+export * as mediaConstants from "./media"

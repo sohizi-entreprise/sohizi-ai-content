@@ -1,7 +1,7 @@
-import { Elysia } from 'elysia'
-import { z } from 'zod'
-import { adminMiddleware } from '@/lib/admin-middleware'
-import * as adminService from './service'
+import { Elysia } from "elysia"
+import { z } from "zod"
+import { adminMiddleware } from "@/lib/admin-middleware"
+import * as adminService from "./service"
 import {
   createCategorySchema,
   createModelSchema,
@@ -18,51 +18,51 @@ import {
   updateVendorSchema,
   upsertVendorOptionMapSchema,
   upsertVendorParameterMapSchema,
-} from '../models/schema'
-import { createCommandSchema, updateCommandSchema } from '../command/schema'
+} from "../models/schema"
+import { createCommandSchema, updateCommandSchema } from "../command/schema"
 import {
   createContentCategorySchema,
   updateContentCategorySchema,
-} from '../content-categories/schema'
+} from "../content-categories/schema"
 import {
   createSkillSchema,
   replaceSkillCategoriesSchema,
   updateSkillSchema,
-} from '../skills/schema'
+} from "../skills/schema"
 
-export const adminRoutes = new Elysia({ prefix: '/admin' })
+export const adminRoutes = new Elysia({ prefix: "/admin" })
   .use(adminMiddleware)
-  .get('/categories', () => adminService.listCategories())
-  .post('/categories', ({ body }) => adminService.createCategory(body), {
+  .get("/categories", () => adminService.listCategories())
+  .post("/categories", ({ body }) => adminService.createCategory(body), {
     body: createCategorySchema,
   })
   .delete(
-    '/categories/:id',
+    "/categories/:id",
     ({ params }) => adminService.deleteCategory(params.id),
     {
       params: z.object({ id: z.uuid() }),
     },
   )
-  .get('/models', () => adminService.listModels())
-  .post('/models', ({ body }) => adminService.createModel(body), {
+  .get("/models", () => adminService.listModels())
+  .post("/models", ({ body }) => adminService.createModel(body), {
     body: createModelSchema,
   })
-  .get('/models/:id', ({ params }) => adminService.getModel(params.id), {
+  .get("/models/:id", ({ params }) => adminService.getModel(params.id), {
     params: z.object({ id: z.string().min(1) }),
   })
   .patch(
-    '/models/:id',
+    "/models/:id",
     ({ params, body }) => adminService.updateModel(params.id, body),
     {
       params: z.object({ id: z.string().min(1) }),
       body: updateModelSchema,
     },
   )
-  .delete('/models/:id', ({ params }) => adminService.deleteModel(params.id), {
+  .delete("/models/:id", ({ params }) => adminService.deleteModel(params.id), {
     params: z.object({ id: z.string().min(1) }),
   })
   .put(
-    '/models/:id/categories',
+    "/models/:id/categories",
     ({ params, body }) => adminService.replaceModelCategories(params.id, body),
     {
       params: z.object({ id: z.string().min(1) }),
@@ -70,14 +70,14 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .get(
-    '/models/:id/parameters',
+    "/models/:id/parameters",
     ({ params }) => adminService.listModelParameters(params.id),
     {
       params: z.object({ id: z.string().min(1) }),
     },
   )
   .put(
-    '/models/:id/parameters',
+    "/models/:id/parameters",
     ({ params, body }) => adminService.replaceModelParameters(params.id, body),
     {
       params: z.object({ id: z.string().min(1) }),
@@ -85,7 +85,7 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .post(
-    '/models/:id/vendors',
+    "/models/:id/vendors",
     ({ params, body }) =>
       adminService.createModelVendorBinding(params.id, body),
     {
@@ -94,7 +94,7 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .patch(
-    '/models/:id/vendors/:vendorId',
+    "/models/:id/vendors/:vendorId",
     ({ params, body }) =>
       adminService.updateModelVendorBinding(params.id, params.vendorId, body),
     {
@@ -103,20 +103,20 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .delete(
-    '/models/:id/vendors/:vendorId',
+    "/models/:id/vendors/:vendorId",
     ({ params }) =>
       adminService.deleteModelVendorBinding(params.id, params.vendorId),
     {
       params: z.object({ id: z.string().min(1), vendorId: z.uuid() }),
     },
   )
-  .get('/vendors', () => adminService.listVendors())
-  .get('/media-vendor-slugs', () => adminService.listMediaVendorSlugs())
-  .post('/vendors', ({ body }) => adminService.createVendor(body), {
+  .get("/vendors", () => adminService.listVendors())
+  .get("/media-vendor-slugs", () => adminService.listMediaVendorSlugs())
+  .post("/vendors", ({ body }) => adminService.createVendor(body), {
     body: createVendorSchema,
   })
   .patch(
-    '/vendors/:id',
+    "/vendors/:id",
     ({ params, body }) => adminService.updateVendor(params.id, body),
     {
       params: z.object({ id: z.uuid() }),
@@ -124,25 +124,25 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .delete(
-    '/vendors/:id',
+    "/vendors/:id",
     ({ params }) => adminService.deleteVendor(params.id),
     {
       params: z.object({ id: z.uuid() }),
     },
   )
-  .get('/parameters', () => adminService.listParameters())
-  .post('/parameters', ({ body }) => adminService.createParameter(body), {
+  .get("/parameters", () => adminService.listParameters())
+  .post("/parameters", ({ body }) => adminService.createParameter(body), {
     body: createParameterSchema,
   })
   .get(
-    '/parameters/:id',
+    "/parameters/:id",
     ({ params }) => adminService.getParameter(params.id),
     {
       params: z.object({ id: z.uuid() }),
     },
   )
   .patch(
-    '/parameters/:id',
+    "/parameters/:id",
     ({ params, body }) => adminService.updateParameter(params.id, body),
     {
       params: z.object({ id: z.uuid() }),
@@ -150,14 +150,14 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .delete(
-    '/parameters/:id',
+    "/parameters/:id",
     ({ params }) => adminService.deleteParameter(params.id),
     {
       params: z.object({ id: z.uuid() }),
     },
   )
   .post(
-    '/parameters/:id/options',
+    "/parameters/:id/options",
     ({ params, body }) => adminService.createParameterOption(params.id, body),
     {
       params: z.object({ id: z.uuid() }),
@@ -165,7 +165,7 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .patch(
-    '/parameters/:id/options/:optionId',
+    "/parameters/:id/options/:optionId",
     ({ params, body }) =>
       adminService.updateParameterOption(params.id, params.optionId, body),
     {
@@ -174,7 +174,7 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .delete(
-    '/parameters/:id/options/:optionId',
+    "/parameters/:id/options/:optionId",
     ({ params }) =>
       adminService.deleteParameterOption(params.id, params.optionId),
     {
@@ -182,7 +182,7 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .put(
-    '/parameters/:id/options/:optionId/vendors/:vendorId',
+    "/parameters/:id/options/:optionId/vendors/:vendorId",
     ({ params, body }) =>
       adminService.upsertVendorOptionMapping(
         params.id,
@@ -200,7 +200,7 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .delete(
-    '/parameters/:id/options/:optionId/vendors/:vendorId',
+    "/parameters/:id/options/:optionId/vendors/:vendorId",
     ({ params }) =>
       adminService.deleteVendorOptionMapping(
         params.id,
@@ -216,7 +216,7 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .put(
-    '/parameters/:id/vendors/:vendorId',
+    "/parameters/:id/vendors/:vendorId",
     ({ params, body }) =>
       adminService.upsertVendorParameterMapping(
         params.id,
@@ -229,22 +229,22 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .delete(
-    '/parameters/:id/vendors/:vendorId',
+    "/parameters/:id/vendors/:vendorId",
     ({ params }) =>
       adminService.deleteVendorParameterMapping(params.id, params.vendorId),
     {
       params: z.object({ id: z.uuid(), vendorId: z.uuid() }),
     },
   )
-  .get('/commands', () => adminService.listCommands())
-  .post('/commands', ({ body }) => adminService.createCommand(body), {
+  .get("/commands", () => adminService.listCommands())
+  .post("/commands", ({ body }) => adminService.createCommand(body), {
     body: createCommandSchema,
   })
-  .get('/commands/:id', ({ params }) => adminService.getCommand(params.id), {
+  .get("/commands/:id", ({ params }) => adminService.getCommand(params.id), {
     params: z.object({ id: z.uuid() }),
   })
   .patch(
-    '/commands/:id',
+    "/commands/:id",
     ({ params, body }) => adminService.updateCommand(params.id, body),
     {
       params: z.object({ id: z.uuid() }),
@@ -252,29 +252,29 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .delete(
-    '/commands/:id',
+    "/commands/:id",
     ({ params }) => adminService.deleteCommand(params.id),
     {
       params: z.object({ id: z.uuid() }),
     },
   )
-  .get('/content-categories', () => adminService.listContentCategories())
+  .get("/content-categories", () => adminService.listContentCategories())
   .post(
-    '/content-categories',
+    "/content-categories",
     ({ body }) => adminService.createContentCategory(body),
     {
       body: createContentCategorySchema,
     },
   )
   .get(
-    '/content-categories/:id',
+    "/content-categories/:id",
     ({ params }) => adminService.getContentCategory(params.id),
     {
       params: z.object({ id: z.uuid() }),
     },
   )
   .patch(
-    '/content-categories/:id',
+    "/content-categories/:id",
     ({ params, body }) => adminService.updateContentCategory(params.id, body),
     {
       params: z.object({ id: z.uuid() }),
@@ -282,32 +282,32 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     },
   )
   .delete(
-    '/content-categories/:id',
+    "/content-categories/:id",
     ({ params }) => adminService.deleteContentCategory(params.id),
     {
       params: z.object({ id: z.uuid() }),
     },
   )
-  .get('/skills', () => adminService.listSkills())
-  .post('/skills', ({ body }) => adminService.createSkill(body), {
+  .get("/skills", () => adminService.listSkills())
+  .post("/skills", ({ body }) => adminService.createSkill(body), {
     body: createSkillSchema,
   })
-  .get('/skills/:id', ({ params }) => adminService.getSkill(params.id), {
+  .get("/skills/:id", ({ params }) => adminService.getSkill(params.id), {
     params: z.object({ id: z.uuid() }),
   })
   .patch(
-    '/skills/:id',
+    "/skills/:id",
     ({ params, body }) => adminService.updateSkill(params.id, body),
     {
       params: z.object({ id: z.uuid() }),
       body: updateSkillSchema,
     },
   )
-  .delete('/skills/:id', ({ params }) => adminService.deleteSkill(params.id), {
+  .delete("/skills/:id", ({ params }) => adminService.deleteSkill(params.id), {
     params: z.object({ id: z.uuid() }),
   })
   .put(
-    '/skills/:id/categories',
+    "/skills/:id/categories",
     ({ params, body }) => adminService.replaceSkillCategories(params.id, body),
     {
       params: z.object({ id: z.uuid() }),
