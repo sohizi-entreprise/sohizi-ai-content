@@ -416,9 +416,23 @@ export function escapeDiffText(text: string): string {
 }
 
 /**
+ * TipTap escapes `*` and `_` in text nodes before wrapping them in diff
+ * markers, so `{+**+}word{+**+}` serializes as `{+\*\*+}word{+\*\*+}`.
+ * Undo that only inside `{+ +}` / `[- -]` so wrap inserts stay real emphasis.
+ */
+export function unescapeEmphasisInDiffMarkers(markdown: string): string {
+  return markdown.replace(
+    /(\{\+|\[-)([\s\S]*?)(\+}|-\])/g,
+    (_match, open: string, inner: string, close: string) =>
+      `${open}${inner.replace(/\\([*_])/g, "$1")}${close}`,
+  )
+}
+
+/**
  * Parses serialized diff Markdown back into structured parts.
  */
 export function parseDiffMarkdown(markdown: string): Array<DiffPart> {
+  markdown = unescapeEmphasisInDiffMarkers(markdown)
   const parts: Array<DiffPart> = []
   let equalBuffer = ""
   let index = 0

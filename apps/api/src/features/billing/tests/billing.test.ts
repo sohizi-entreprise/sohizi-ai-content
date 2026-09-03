@@ -31,7 +31,11 @@ const billing = new BillingService()
 const createdOrgs: string[] = []
 async function newOrg(): Promise<string> {
   const id = `org_${randomUUID().slice(0, 8)}`
-  await db.insert(organization).values({ id, name: `Test Org ${id}` })
+  await db.insert(organization).values({
+    id,
+    name: `Test Org ${id}`,
+    slug: id,
+  })
   createdOrgs.push(id)
   return id
 }

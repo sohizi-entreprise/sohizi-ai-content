@@ -2,7 +2,12 @@ import { Editor } from "@tiptap/core"
 import { Markdown, MarkdownManager } from "@tiptap/markdown"
 import StarterKit from "@tiptap/starter-kit"
 import { describe, expect, it } from "vitest"
-import { acceptDiffMarkdown, asDiffMarkdown, buildDiff } from "./diff-markdown"
+import {
+  acceptDiffMarkdown,
+  asDiffMarkdown,
+  buildDiff,
+  unescapeEmphasisInDiffMarkers,
+} from "./diff-markdown"
 import { MarkdownDiffExtensions } from "./extensions/markdown-diff"
 
 const extensions = [
@@ -16,7 +21,7 @@ const manager = new MarkdownManager({
 })
 
 function roundTrip(markdown: string) {
-  return manager.serialize(manager.parse(markdown))
+  return unescapeEmphasisInDiffMarkers(manager.serialize(manager.parse(markdown)))
 }
 
 function collectTypes(node: {
@@ -131,7 +136,7 @@ describe("diff markdown bold wrapping", () => {
       contentType: "markdown",
     })
 
-    const markdown = editor.getMarkdown()
+    const markdown = unescapeEmphasisInDiffMarkers(editor.getMarkdown())
     editor.destroy()
 
     expect(() => asDiffMarkdown(markdown)).not.toThrow()
