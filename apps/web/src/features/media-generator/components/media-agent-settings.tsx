@@ -1,4 +1,11 @@
 import { useEffect } from "react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@sohizi/ui/select"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
 import { useMediaCatalog } from "../hooks/use-media-catalog"
 import {
@@ -10,13 +17,6 @@ import {
 } from "../lib/agent-settings"
 import { ReferenceAssetPickerField } from "./asset-picker-dialog"
 import type { ReactNode } from "react"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@sohizi/ui/select"
 
 export function MediaAgentSettings({ projectId }: { projectId: string }) {
   const generationType = useMediaGeneratorStore((state) => state.generationType)
@@ -56,10 +56,7 @@ export function MediaAgentSettings({ projectId }: { projectId: string }) {
           </SelectTrigger>
           <SelectContent>
             {AGENT_ASPECT_RATIOS.map((ratio) => (
-              <SelectItem
-                key={ratio}
-                value={ratio}
-              >
+              <SelectItem key={ratio} value={ratio}>
                 {ratio}
               </SelectItem>
             ))}
@@ -77,10 +74,7 @@ export function MediaAgentSettings({ projectId }: { projectId: string }) {
           </SelectTrigger>
           <SelectContent>
             {AGENT_QUALITIES.map((quality) => (
-              <SelectItem
-                key={quality}
-                value={quality}
-              >
+              <SelectItem key={quality} value={quality}>
                 {quality.charAt(0).toUpperCase() + quality.slice(1)}
               </SelectItem>
             ))}

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import "@xzdarcy/react-timeline-editor/dist/react-timeline-editor.css"
 import "../timeline/timeline.css"
+import { ResizablePanel, ResizablePanelGroup } from "@sohizi/ui/resizable"
 import { useVideoEditorStore } from "../store/editor-store"
 import { loadCompositionQueryOptions } from "../query-mutations"
 import { serverToHydration } from "../transforms"
@@ -19,7 +20,6 @@ import {
   TimelineToolbar,
 } from "./layout"
 import { Stage } from "./stage/stage"
-import { ResizablePanel, ResizablePanelGroup } from "@sohizi/ui/resizable"
 import { useEditorStore } from "@/features/editor/stores/editor-store"
 
 interface VideoEditorProps {
@@ -80,12 +80,7 @@ export function VideoEditor({ projectId, fileNodeId }: VideoEditorProps) {
     )
   }
 
-  return (
-    <VideoEditorWorkspace
-      projectId={projectId}
-      fileNodeId={fileNodeId}
-    />
-  )
+  return <VideoEditorWorkspace projectId={projectId} fileNodeId={fileNodeId} />
 }
 
 function VideoEditorWorkspace({ projectId, fileNodeId }: VideoEditorProps) {
@@ -97,10 +92,7 @@ function VideoEditorWorkspace({ projectId, fileNodeId }: VideoEditorProps) {
   return (
     <PlayerRefProvider>
       <div className="flex h-full w-full min-w-0 flex-col overflow-hidden bg-background">
-        <EditorTopBar
-          projectId={projectId}
-          fileNodeId={fileNodeId}
-        />
+        <EditorTopBar projectId={projectId} fileNodeId={fileNodeId} />
 
         <ResizablePanelGroup
           direction="horizontal"

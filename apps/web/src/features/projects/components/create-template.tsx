@@ -4,9 +4,6 @@ import { useNavigate } from "@tanstack/react-router"
 import { IconTemplate } from "@tabler/icons-react"
 import { toast } from "sonner"
 import { isAxiosError } from "axios"
-import { createTemplateSchema } from "../schema"
-import { createTemplateMutationOptions } from "../query-mutation"
-import type { FormEvent } from "react"
 import { Button } from "@sohizi/ui/button"
 import {
   Dialog,
@@ -20,6 +17,9 @@ import {
 import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
 import { Spinner } from "@sohizi/ui/spinner"
+import { createTemplateMutationOptions } from "../query-mutation"
+import { createTemplateSchema } from "../schema"
+import type { FormEvent } from "react"
 
 function toSlug(name: string) {
   return name
@@ -80,10 +80,7 @@ export default function CreateTemplate() {
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={setOpen}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
           variant="outline"
@@ -102,10 +99,7 @@ export default function CreateTemplate() {
           </DialogDescription>
         </DialogHeader>
 
-        <form
-          onSubmit={handleCreateTemplate}
-          className="space-y-4"
-        >
+        <form onSubmit={handleCreateTemplate} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="template-name">Template Name</Label>
             <Input
@@ -136,10 +130,7 @@ export default function CreateTemplate() {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isPending || !name.trim()}
-            >
+            <Button type="submit" disabled={isPending || !name.trim()}>
               {isPending && <Spinner />}
               {isPending ? "Creating..." : "Create Template"}
             </Button>

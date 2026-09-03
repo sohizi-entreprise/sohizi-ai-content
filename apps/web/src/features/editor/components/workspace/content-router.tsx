@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useParams } from "@tanstack/react-router"
+import { AssetSkeleton, TextSkeleton } from "@sohizi/ui/content-skeletons"
 import { TextEditorView } from "../content/text-editor-view"
 import { getFileContentQueryOptions } from "../../query-mutations"
 import { useEditorStore } from "../../stores/editor-store"
@@ -9,7 +10,6 @@ import { SkillEditorView } from "../content/skill-editor-view"
 import type { EditorTab } from "../../types"
 import { VideoEditor } from "@/features/video-editor"
 import { MediaGenerator } from "@/features/media-generator"
-import { AssetSkeleton, TextSkeleton } from "@sohizi/ui/content-skeletons"
 
 interface ContentRouterProps {
   tab: EditorTab
@@ -24,11 +24,7 @@ export function ContentRouter({ tab }: ContentRouterProps) {
 
   if (tab.name === "video-editor" || tab.format === "video-editor") {
     return (
-      <VideoEditor
-        projectId={projectId}
-        fileNodeId={tab.id}
-        key={tab.id}
-      />
+      <VideoEditor projectId={projectId} fileNodeId={tab.id} key={tab.id} />
     )
   }
 
@@ -36,12 +32,7 @@ export function ContentRouter({ tab }: ContentRouterProps) {
     return <MediaGenerator />
   }
 
-  return (
-    <ServerRenderedContent
-      tab={tab}
-      projectId={projectId}
-    />
-  )
+  return <ServerRenderedContent tab={tab} projectId={projectId} />
 }
 
 function ServerRenderedContent({

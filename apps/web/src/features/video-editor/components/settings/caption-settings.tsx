@@ -1,10 +1,10 @@
 import { AlignCenter, AlignLeft, AlignRight } from "lucide-react"
+import { Input } from "@sohizi/ui/input"
+import { Button } from "@sohizi/ui/button"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { SettingRow, SettingSection } from "./setting-row"
 import { SliderWithValue } from "./slider-with-value"
 import type { CaptionClip, TextAlign } from "../../store/types"
-import { Input } from "@sohizi/ui/input"
-import { Button } from "@sohizi/ui/button"
 import { cn } from "@/lib/utils"
 
 const ALIGNMENTS: Array<{ id: TextAlign; icon: typeof AlignLeft }> = [

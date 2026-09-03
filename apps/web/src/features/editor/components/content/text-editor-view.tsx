@@ -267,10 +267,7 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
-      <EditorTopChrome
-        editor={editor}
-        tabId={tab.id}
-      />
+      <EditorTopChrome editor={editor} tabId={tab.id} />
 
       <div
         ref={setScrollContainer}

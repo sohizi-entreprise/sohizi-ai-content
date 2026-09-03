@@ -21,10 +21,7 @@ export function ShowcaseSection() {
 
         <div className="mt-12 grid auto-rows-[14rem] grid-cols-1 gap-4 sm:auto-rows-[16rem] sm:grid-cols-2 lg:auto-rows-[11rem] lg:grid-flow-dense lg:grid-cols-3">
           {showcase.items.map((item) => (
-            <ShowcaseTile
-              key={item.id}
-              item={item}
-            />
+            <ShowcaseTile key={item.id} item={item} />
           ))}
         </div>
 

@@ -1,4 +1,3 @@
-import type { ComponentProps, ReactNode } from "react"
 import {
   Command,
   CommandDialog,
@@ -16,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@sohizi/ui/dialog"
+import type { ComponentProps, ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 export type ModelSelectorProps = ComponentProps<typeof Dialog>
@@ -67,10 +67,7 @@ export const ModelSelectorInput = ({
   className,
   ...props
 }: ModelSelectorInputProps) => (
-  <CommandInput
-    className={cn("h-auto py-3.5", className)}
-    {...props}
-  />
+  <CommandInput className={cn("h-auto py-3.5", className)} {...props} />
 )
 
 export type ModelSelectorListProps = ComponentProps<typeof CommandList>
@@ -212,8 +209,5 @@ export const ModelSelectorName = ({
   className,
   ...props
 }: ModelSelectorNameProps) => (
-  <span
-    className={cn("flex-1 truncate text-left", className)}
-    {...props}
-  />
+  <span className={cn("flex-1 truncate text-left", className)} {...props} />
 )

@@ -170,13 +170,7 @@ function loadSkillToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
   const text = isStreaming
     ? `Reading skill ${skillName}`
     : `Read skill${skillName}`
-  return (
-    <ToolViewer
-      icon={Search}
-      text={text}
-      isStreaming={isStreaming}
-    />
-  )
+  return <ToolViewer icon={Search} text={text} isStreaming={isStreaming} />
 }
 
 function SearchFileToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {

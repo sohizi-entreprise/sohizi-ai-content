@@ -242,10 +242,7 @@ function SignInPage() {
                 className="w-full"
                 onClick={handleGoogleSignIn}
               >
-                <svg
-                  className="mr-2 h-4 w-4"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                     fill="#4285F4"
@@ -277,14 +274,8 @@ function SignInPage() {
                 </div>
               </div>
 
-              <form
-                onSubmit={handleEmailSignIn}
-                className="space-y-4"
-              >
-                <div
-                  className="space-y-2"
-                  suppressHydrationWarning
-                >
+              <form onSubmit={handleEmailSignIn} className="space-y-4">
+                <div className="space-y-2" suppressHydrationWarning>
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -299,10 +290,7 @@ function SignInPage() {
                     data-form-type="other"
                   />
                 </div>
-                <div
-                  className="space-y-2"
-                  suppressHydrationWarning
-                >
+                <div className="space-y-2" suppressHydrationWarning>
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>
                     <button
@@ -332,11 +320,7 @@ function SignInPage() {
 
                 {error && <p className="text-sm text-destructive">{error}</p>}
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loading}
-                >
+                <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Spinner />}
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
@@ -345,10 +329,7 @@ function SignInPage() {
           )}
 
           {step === "forgot-email" && (
-            <form
-              onSubmit={handleForgotSubmitEmail}
-              className="space-y-4"
-            >
+            <form onSubmit={handleForgotSubmitEmail} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="forgot-email">Email</Label>
                 <Input
@@ -364,11 +345,7 @@ function SignInPage() {
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading}
-              >
+              <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Spinner />}
                 {loading ? "Sending..." : "Send Reset Code"}
               </Button>
@@ -459,10 +436,7 @@ function SignInPage() {
           )}
 
           {step === "forgot-new-password" && (
-            <form
-              onSubmit={handleResetPassword}
-              className="space-y-4"
-            >
+            <form onSubmit={handleResetPassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="new-password">New Password</Label>
                 <Input
@@ -491,11 +465,7 @@ function SignInPage() {
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading}
-              >
+              <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Spinner />}
                 {loading ? "Resetting..." : "Reset Password"}
               </Button>

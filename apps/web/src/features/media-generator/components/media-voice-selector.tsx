@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react"
+import { Button } from "@sohizi/ui/button"
+import { Skeleton } from "@sohizi/ui/skeleton"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
 import type { GoogleVoiceDescription } from "../requests"
 import {
@@ -15,8 +17,6 @@ import {
   VoiceSelectorPreview,
   VoiceSelectorTrigger,
 } from "@/components/ai-elements/voice-selector"
-import { Button } from "@sohizi/ui/button"
-import { Skeleton } from "@sohizi/ui/skeleton"
 
 export function MediaVoiceSelector({
   voices,
@@ -131,10 +131,7 @@ export function MediaVoiceSelector({
           )}
         </Button>
       </VoiceSelectorTrigger>
-      <VoiceSelectorContent
-        className="max-w-md"
-        title="Select a voice"
-      >
+      <VoiceSelectorContent className="max-w-md" title="Select a voice">
         <VoiceSelectorInput placeholder="Search voices..." />
         <VoiceSelectorList>
           <VoiceSelectorEmpty>No voices found.</VoiceSelectorEmpty>
@@ -168,10 +165,7 @@ function VoiceItem({
   onPreview: (name: string) => void
 }) {
   return (
-    <VoiceSelectorItem
-      value={voice.name}
-      onSelect={() => onSelect(voice.name)}
-    >
+    <VoiceSelectorItem value={voice.name} onSelect={() => onSelect(voice.name)}>
       <VoiceSelectorPreview
         loading={loadingVoice === voice.name}
         playing={playingVoice === voice.name}

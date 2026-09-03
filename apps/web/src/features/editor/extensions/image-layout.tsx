@@ -193,10 +193,7 @@ function ImageLayoutView({
       >
         <Trash2 className="size-3.5" />
       </button>
-      <div
-        className="image-layout-media"
-        contentEditable={false}
-      >
+      <div className="image-layout-media" contentEditable={false}>
         {slots.map((image, index) => (
           <ImageUploadSlot
             key={index}
@@ -301,10 +298,7 @@ function ImageUploadSlot({
       disabled={isUploading}
     >
       {image.url ? (
-        <img
-          src={image.url}
-          alt={image.name || label}
-        />
+        <img src={image.url} alt={image.name || label} />
       ) : (
         <span className="image-upload-placeholder">
           {isUploading ? (

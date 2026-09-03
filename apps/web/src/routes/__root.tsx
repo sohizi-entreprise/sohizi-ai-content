@@ -4,12 +4,13 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from "@tanstack/react-router"
+import { Toaster } from "@sohizi/ui/sonner"
 import appCss from "../styles.css?url"
 
 import type { QueryClient } from "@tanstack/react-query"
-import { Toaster } from "@sohizi/ui/sonner"
+import type { PublicEnv } from "@/lib/public-env"
 import { loadPublicEnv } from "@/lib/load-public-env"
-import { getPublicEnv, setPublicEnv, type PublicEnv } from "@/lib/public-env"
+import { getPublicEnv, setPublicEnv } from "@/lib/public-env"
 
 interface MyRouterContext {
   queryClient: QueryClient
@@ -76,10 +77,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className="dark"
-    >
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>
@@ -93,9 +91,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { publicEnv } = Route.useRouteContext()
-  if (publicEnv) {
-    setPublicEnv(publicEnv)
-  }
+  setPublicEnv(publicEnv)
 
   return (
     <>

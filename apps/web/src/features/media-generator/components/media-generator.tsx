@@ -3,25 +3,14 @@ import { useParams } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
-import {
-  bulkDeleteAssetsMutationOptions,
-  bulkMoveAssetsToFolderMutationOptions,
-  downloadAssetsZipMutationOptions,
-  listAiGeneratedAssetsQueryOptions,
-} from "../query-mutations"
-import MediaCardRenderer from "./media-card-renderer"
-import MediaComposer from "./media-composer"
-import type { MediaFilter } from "../types"
 import { ScrollArea } from "@sohizi/ui/scroll-area"
 import { Tabs, TabsList, TabsTrigger } from "@sohizi/ui/tabs"
-import { cn } from "@/lib/utils"
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@sohizi/ui/resizable"
 import { Button } from "@sohizi/ui/button"
-import { useFolderSearch } from "@/hooks/use-folder-search"
 import {
   Dialog,
   DialogContent,
@@ -31,6 +20,17 @@ import {
   DialogTitle,
 } from "@sohizi/ui/dialog"
 import { Input } from "@sohizi/ui/input"
+import {
+  bulkDeleteAssetsMutationOptions,
+  bulkMoveAssetsToFolderMutationOptions,
+  downloadAssetsZipMutationOptions,
+  listAiGeneratedAssetsQueryOptions,
+} from "../query-mutations"
+import MediaCardRenderer from "./media-card-renderer"
+import MediaComposer from "./media-composer"
+import type { MediaFilter } from "../types"
+import { cn } from "@/lib/utils"
+import { useFolderSearch } from "@/hooks/use-folder-search"
 
 const mediaFilterOptions = [
   {
@@ -63,10 +63,7 @@ export function MediaGenerator() {
   const [filter, setFilter] = useState<MediaFilter>("all")
 
   return (
-    <ResizablePanelGroup
-      direction="horizontal"
-      className="h-full w-full"
-    >
+    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
       <ResizablePanel
         id="editor-workspace"
         defaultSize={65}
@@ -74,16 +71,10 @@ export function MediaGenerator() {
         className="bg-card rounded-2xl"
       >
         <div className="flex h-full w-full flex-col">
-          <RenderHeader
-            filter={filter}
-            setFilter={setFilter}
-          />
+          <RenderHeader filter={filter} setFilter={setFilter} />
 
           <ScrollArea className="flex-1 min-h-0 px-4">
-            <RenderAssets
-              projectId={projectId}
-              filter={filter}
-            />
+            <RenderAssets projectId={projectId} filter={filter} />
           </ScrollArea>
         </div>
       </ResizablePanel>
@@ -348,10 +339,7 @@ function BulkAssetActionBar({
           <X className="size-4" />
         </Button>
       </div>
-      <Dialog
-        open={moveDialogOpen}
-        onOpenChange={setMoveDialogOpen}
-      >
+      <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Move selected assets</DialogTitle>

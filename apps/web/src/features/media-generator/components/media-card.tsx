@@ -9,19 +9,8 @@ import {
   X,
 } from "lucide-react"
 import { toast } from "sonner"
-import { useAssetMenu } from "../hooks/use-asset-menu"
-import AudioPlayer from "./audio-player"
-import { RenderHtml } from "./html-asset-preview"
-import { MediaCardMenu } from "./media-card-menu"
-import { RequestSettingsDialog } from "./request-settings-dialog"
-import type { MediaAsset } from "../requests"
 import { Button } from "@sohizi/ui/button"
 import { Input } from "@sohizi/ui/input"
-import { cn } from "@/lib/utils"
-import {
-  buildOptimizeddImageUrl,
-  imageUrlTransforms,
-} from "@/utils/transform-url"
 import {
   Dialog,
   DialogClose,
@@ -32,8 +21,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@sohizi/ui/dialog"
-import { useFolderSearch } from "@/hooks/use-folder-search"
 import { Checkbox } from "@sohizi/ui/checkbox"
+import { useAssetMenu } from "../hooks/use-asset-menu"
+import AudioPlayer from "./audio-player"
+import { RenderHtml } from "./html-asset-preview"
+import { MediaCardMenu } from "./media-card-menu"
+import { RequestSettingsDialog } from "./request-settings-dialog"
+import type { MediaAsset } from "../requests"
+import { cn } from "@/lib/utils"
+import {
+  buildOptimizeddImageUrl,
+  imageUrlTransforms,
+} from "@/utils/transform-url"
+import { useFolderSearch } from "@/hooks/use-folder-search"
 
 type MediaCardProps = {
   item: MediaAsset
@@ -144,21 +144,14 @@ function RenderImage({ item }: { item: MediaAsset }) {
 function RenderVideo({ item }: { item: MediaAsset }) {
   return (
     <div className="size-full">
-      <video
-        className="size-full object-contain"
-        src={item.url}
-        controls
-      />
+      <video className="size-full object-contain" src={item.url} controls />
     </div>
   )
 }
 function RenderAudio({ item }: { item: MediaAsset }) {
   return (
     <div className="size-full flex items-center justify-center">
-      <AudioPlayer
-        src={item.url}
-        className="size-full"
-      />
+      <AudioPlayer src={item.url} className="size-full" />
     </div>
   )
 }
@@ -242,19 +235,13 @@ function CardMenu({
 
   return (
     <>
-      <MediaCardMenu
-        className={className}
-        options={options}
-      />
+      <MediaCardMenu className={className} options={options} />
       <RequestSettingsDialog
         open={settingsDialogOpen}
         onOpenChange={setSettingsDialogOpen}
         request={asset.generationRequest?.request ?? null}
       />
-      <Dialog
-        open={moveDialogOpen}
-        onOpenChange={setMoveDialogOpen}
-      >
+      <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
         <DialogContent onCloseAutoFocus={(event) => event.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Move to folder</DialogTitle>
@@ -300,16 +287,10 @@ function CardMenu({
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setMoveDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setMoveDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              disabled={!selectedFolder}
-              onClick={confirmMove}
-            >
+            <Button disabled={!selectedFolder} onClick={confirmMove}>
               Confirm move
             </Button>
           </DialogFooter>

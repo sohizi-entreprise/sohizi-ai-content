@@ -2,6 +2,7 @@ import { useRef } from "react"
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
 import { Upload } from "lucide-react"
 import { toast } from "sonner"
+import { Button } from "@sohizi/ui/button"
 import { listUploadedAssetsQueryOptions } from "../query-mutations"
 import {
   acceptForFileTypes,
@@ -11,7 +12,6 @@ import {
 } from "../lib/parameter-assets"
 import { AssetPickerGrid } from "./asset-picker-grid"
 import type { PickerAsset, PickerAssetType } from "../lib/parameter-assets"
-import { Button } from "@sohizi/ui/button"
 import { useSaveFileBucket } from "@/hooks/use-save-file-bucket"
 
 type AssetPickerUploadTabProps = {

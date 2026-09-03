@@ -13,10 +13,6 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react"
-import { useVideoEditorStore } from "../store/editor-store"
-import type { LucideIcon } from "lucide-react"
-import type { Track, TrackType } from "../store/types"
-import { cn } from "@/lib/utils"
 import { Button } from "@sohizi/ui/button"
 import {
   DropdownMenu,
@@ -24,6 +20,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sohizi/ui/dropdown-menu"
+import { useVideoEditorStore } from "../store/editor-store"
+import type { LucideIcon } from "lucide-react"
+import type { Track, TrackType } from "../store/types"
+import { cn } from "@/lib/utils"
 
 interface TrackHeadersProps {
   rowHeight: number
@@ -178,10 +178,7 @@ function TrackHeaderRow({
           track.hidden && "opacity-45",
         )}
       >
-        <Icon
-          className="size-3.5"
-          strokeWidth={1.75}
-        />
+        <Icon className="size-3.5" strokeWidth={1.75} />
       </div>
 
       <Button
@@ -195,15 +192,9 @@ function TrackHeaderRow({
         title={track.hidden ? "Show track" : "Hide track"}
       >
         {track.hidden ? (
-          <EyeOff
-            className="size-3.5"
-            strokeWidth={1.75}
-          />
+          <EyeOff className="size-3.5" strokeWidth={1.75} />
         ) : (
-          <Eye
-            className="size-3.5"
-            strokeWidth={1.75}
-          />
+          <Eye className="size-3.5" strokeWidth={1.75} />
         )}
       </Button>
 
@@ -219,22 +210,13 @@ function TrackHeaderRow({
           title={track.muted ? "Unmute track" : "Mute track"}
         >
           {track.muted ? (
-            <VolumeX
-              className="size-3.5"
-              strokeWidth={1.75}
-            />
+            <VolumeX className="size-3.5" strokeWidth={1.75} />
           ) : (
-            <Volume2
-              className="size-3.5"
-              strokeWidth={1.75}
-            />
+            <Volume2 className="size-3.5" strokeWidth={1.75} />
           )}
         </Button>
       ) : (
-        <span
-          className="size-7 shrink-0"
-          aria-hidden
-        />
+        <span className="size-7 shrink-0" aria-hidden />
       )}
 
       <DropdownMenu>
@@ -245,21 +227,11 @@ function TrackHeaderRow({
             className={iconBtn}
             title="Track options"
           >
-            <MoreHorizontal
-              className="size-3.5"
-              strokeWidth={1.75}
-            />
+            <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          side="right"
-          className="min-w-36"
-        >
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={onDelete}
-          >
+        <DropdownMenuContent align="start" side="right" className="min-w-36">
+          <DropdownMenuItem variant="destructive" onClick={onDelete}>
             <Trash2 className="size-3.5" />
             Delete track
           </DropdownMenuItem>

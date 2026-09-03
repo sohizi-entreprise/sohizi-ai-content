@@ -1,13 +1,6 @@
 import { useEffect, useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import {
-  createAdminVendorMutationOptions,
-  listMediaVendorSlugsQueryOptions,
-  updateAdminVendorMutationOptions,
-} from "../query-mutation"
-import type { AdminVendor, VendorKind } from "../types"
-import { getErrorMessage } from "@/lib/errors"
-import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -25,6 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sohizi/ui/select"
+import {
+  createAdminVendorMutationOptions,
+  listMediaVendorSlugsQueryOptions,
+  updateAdminVendorMutationOptions,
+} from "../query-mutation"
+import type { AdminVendor, VendorKind } from "../types"
+import { getErrorMessage } from "@/lib/errors"
 
 type Props = {
   open: boolean
@@ -99,18 +99,12 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
   const slugs = mediaSlugs?.slugs ?? []
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit vendor" : "Add vendor"}</DialogTitle>
         </DialogHeader>
-        <form
-          className="space-y-4"
-          onSubmit={handleSubmit}
-        >
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="vendor-kind">Kind</Label>
             <Select
@@ -126,10 +120,7 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                 }))
               }
             >
-              <SelectTrigger
-                id="vendor-kind"
-                className="w-full"
-              >
+              <SelectTrigger id="vendor-kind" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -145,18 +136,12 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                 value={form.name || undefined}
                 onValueChange={(name) => setForm((prev) => ({ ...prev, name }))}
               >
-                <SelectTrigger
-                  id="vendor-name"
-                  className="w-full"
-                >
+                <SelectTrigger id="vendor-name" className="w-full">
                   <SelectValue placeholder="Select provider slug" />
                 </SelectTrigger>
                 <SelectContent>
                   {slugs.map((slug) => (
-                    <SelectItem
-                      key={slug}
-                      value={slug}
-                    >
+                    <SelectItem key={slug} value={slug}>
                       {slug}
                     </SelectItem>
                   ))}
@@ -242,10 +227,7 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={pending || !form.name}
-            >
+            <Button type="submit" disabled={pending || !form.name}>
               {pending ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>

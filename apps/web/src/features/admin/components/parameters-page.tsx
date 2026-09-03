@@ -1,12 +1,6 @@
 import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import {
-  deleteAdminParameterMutationOptions,
-  listAdminParametersQueryOptions,
-} from "../query-mutation"
-import { ParameterFormDialog } from "./parameter-form-dialog"
-import type { AdminParameter } from "../types"
 import { Badge } from "@sohizi/ui/badge"
 import { Button } from "@sohizi/ui/button"
 import {
@@ -17,6 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from "@sohizi/ui/table"
+import {
+  deleteAdminParameterMutationOptions,
+  listAdminParametersQueryOptions,
+} from "../query-mutation"
+import { ParameterFormDialog } from "./parameter-form-dialog"
+import type { AdminParameter } from "../types"
 
 export function ParametersPage() {
   const navigate = useNavigate()

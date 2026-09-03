@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import {
-  createAdminCommandMutationOptions,
-  updateAdminCommandMutationOptions,
-} from "../query-mutation"
-import type { AdminCommand, CreateCommandInput } from "../types"
-import { getErrorMessage } from "@/lib/errors"
-import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -18,6 +12,12 @@ import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
 import { Switch } from "@sohizi/ui/switch"
 import { Textarea } from "@sohizi/ui/textarea"
+import {
+  createAdminCommandMutationOptions,
+  updateAdminCommandMutationOptions,
+} from "../query-mutation"
+import type { AdminCommand, CreateCommandInput } from "../types"
+import { getErrorMessage } from "@/lib/errors"
 
 type Props = {
   open: boolean
@@ -76,18 +76,12 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
   const pending = createMutation.isPending || updateMutation.isPending
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit command" : "Add command"}</DialogTitle>
         </DialogHeader>
-        <form
-          className="space-y-4"
-          onSubmit={handleSubmit}
-        >
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="command-name">Name</Label>
             <Input
@@ -140,10 +134,7 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={pending}
-            >
+            <Button type="submit" disabled={pending}>
               {pending ? "Saving…" : isEdit ? "Save" : "Create"}
             </Button>
           </DialogFooter>

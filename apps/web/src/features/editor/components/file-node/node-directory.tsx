@@ -11,15 +11,6 @@ import {
 import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { useEditorStore } from "../../stores/editor-store"
-import { insertNodeAt as insertNodeInCache } from "../../stores/file-tree-cache"
-import { getDirectoryIcon } from "../../utils/get-file-icon"
-import { FILE_FORMAT_OPTIONS } from "./node-menu"
-import type { FileNodeFormat, FileTreeNode, NodeProps } from "../../types"
-import { getlistFileTreePerDirectoryOptions } from "@/features/projects/query-mutation"
-import { cn } from "@/lib/utils"
-import { useFileUpload } from "@/hooks/use-file-upload"
-import { useSaveFileBucket } from "@/hooks/use-save-file-bucket"
 import {
   Menubar,
   MenubarContent,
@@ -31,6 +22,15 @@ import {
   MenubarSubTrigger,
   MenubarTrigger,
 } from "@sohizi/ui/menubar"
+import { useEditorStore } from "../../stores/editor-store"
+import { insertNodeAt as insertNodeInCache } from "../../stores/file-tree-cache"
+import { getDirectoryIcon } from "../../utils/get-file-icon"
+import { FILE_FORMAT_OPTIONS } from "./node-menu"
+import type { FileNodeFormat, FileTreeNode, NodeProps } from "../../types"
+import { getlistFileTreePerDirectoryOptions } from "@/features/projects/query-mutation"
+import { cn } from "@/lib/utils"
+import { useFileUpload } from "@/hooks/use-file-upload"
+import { useSaveFileBucket } from "@/hooks/use-save-file-bucket"
 
 const MAX_CHILDREN_PER_DIRECTORY = 100
 
@@ -241,10 +241,7 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
           </MenubarContent>
         </MenubarMenu>
       </Menubar>
-      <input
-        {...getInputProps()}
-        className="sr-only"
-      />
+      <input {...getInputProps()} className="sr-only" />
     </div>
   )
 }

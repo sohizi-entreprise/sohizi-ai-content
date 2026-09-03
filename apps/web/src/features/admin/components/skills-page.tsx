@@ -1,11 +1,5 @@
 import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import {
-  deleteAdminSkillMutationOptions,
-  listAdminSkillsQueryOptions,
-} from "../query-mutation"
-import { SkillFormDialog } from "./skill-form-dialog"
-import type { AdminSkill } from "../types"
 import { Badge } from "@sohizi/ui/badge"
 import { Button } from "@sohizi/ui/button"
 import {
@@ -16,6 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from "@sohizi/ui/table"
+import {
+  deleteAdminSkillMutationOptions,
+  listAdminSkillsQueryOptions,
+} from "../query-mutation"
+import { SkillFormDialog } from "./skill-form-dialog"
+import type { AdminSkill } from "../types"
 
 export function SkillsPage() {
   const {
@@ -102,10 +102,7 @@ export function SkillsPage() {
                       <span className="text-sm text-muted-foreground">—</span>
                     ) : (
                       skill.categories.map((category) => (
-                        <Badge
-                          key={category.id}
-                          variant="secondary"
-                        >
+                        <Badge key={category.id} variant="secondary">
                           {category.name}
                         </Badge>
                       ))

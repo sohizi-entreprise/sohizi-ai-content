@@ -1,8 +1,4 @@
 import { AlignCenter, AlignLeft, AlignRight } from "lucide-react"
-import { useVideoEditorStore } from "../../store/editor-store"
-import { SettingRow, SettingSection } from "./setting-row"
-import { SliderWithValue } from "./slider-with-value"
-import type { FontWeight, TextAlign, TextClip } from "../../store/types"
 import { Input } from "@sohizi/ui/input"
 import {
   Select,
@@ -13,6 +9,10 @@ import {
 } from "@sohizi/ui/select"
 import { Button } from "@sohizi/ui/button"
 import { Textarea } from "@sohizi/ui/textarea"
+import { useVideoEditorStore } from "../../store/editor-store"
+import { SettingRow, SettingSection } from "./setting-row"
+import { SliderWithValue } from "./slider-with-value"
+import type { FontWeight, TextAlign, TextClip } from "../../store/types"
 import { cn } from "@/lib/utils"
 
 interface TextSettingsProps {
@@ -38,10 +38,7 @@ export function TextSettings({ clip }: TextSettingsProps) {
   return (
     <div className="flex flex-col gap-5 pb-2">
       <SettingSection title="Content">
-        <SettingRow
-          label="Text"
-          align="start"
-        >
+        <SettingRow label="Text" align="start">
           <Textarea
             value={clip.text}
             onChange={(e) => updateClip(clip.id, { text: e.target.value })}
@@ -57,19 +54,12 @@ export function TextSettings({ clip }: TextSettingsProps) {
             value={clip.fontFamily}
             onValueChange={(v) => updateClip(clip.id, { fontFamily: v })}
           >
-            <SelectTrigger
-              size="sm"
-              className="h-8 w-full text-xs"
-            >
+            <SelectTrigger size="sm" className="h-8 w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {FONT_FAMILIES.map((f) => (
-                <SelectItem
-                  key={f.id}
-                  value={f.id}
-                  className="text-xs"
-                >
+                <SelectItem key={f.id} value={f.id} className="text-xs">
                   {f.label}
                 </SelectItem>
               ))}
@@ -86,10 +76,7 @@ export function TextSettings({ clip }: TextSettingsProps) {
               })
             }
           >
-            <SelectTrigger
-              size="sm"
-              className="h-8 w-full text-xs"
-            >
+            <SelectTrigger size="sm" className="h-8 w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

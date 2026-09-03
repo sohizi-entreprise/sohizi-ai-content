@@ -1,5 +1,5 @@
-import { CTA_LABEL } from "../content"
 import { Button } from "@sohizi/ui/button"
+import { CTA_LABEL } from "../content"
 import { cn } from "@/lib/utils"
 import { appUrl } from "@/lib/app-url"
 

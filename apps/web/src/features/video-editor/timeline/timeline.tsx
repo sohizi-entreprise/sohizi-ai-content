@@ -497,28 +497,13 @@ export function VideoTimeline() {
         )
       }
       if (clip.type === "audio") {
-        return (
-          <AudioBlock
-            clip={clip}
-            selected={selected}
-          />
-        )
+        return <AudioBlock clip={clip} selected={selected} />
       }
       if (clip.type === "image") {
-        return (
-          <ImageBlock
-            clip={clip}
-            selected={selected}
-          />
-        )
+        return <ImageBlock clip={clip} selected={selected} />
       }
       if (clip.type === "html") {
-        return (
-          <HtmlBlock
-            clip={clip}
-            selected={selected}
-          />
-        )
+        return <HtmlBlock clip={clip} selected={selected} />
       }
       if (clip.type === "caption") {
         return (
@@ -529,12 +514,7 @@ export function VideoTimeline() {
           />
         )
       }
-      return (
-        <TextBlock
-          clip={clip}
-          selected={selected}
-        />
-      )
+      return <TextBlock clip={clip} selected={selected} />
     },
     [clipById, fps],
   )

@@ -6,10 +6,10 @@ import {
   IconMovie,
   IconX,
 } from "@tabler/icons-react"
-import { useChatStore } from "../store/chat-store"
-import type { AttachedFile } from "@/components/widgets/file-attachments"
 import { DotsLoader } from "@sohizi/ui/loaders"
 import { Button } from "@sohizi/ui/button"
+import { useChatStore } from "../store/chat-store"
+import type { AttachedFile } from "@/components/widgets/file-attachments"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -23,10 +23,7 @@ export default function ChatFilesPreview({ className, onRemoveFile }: Props) {
   return (
     <div className={cn("grid grid-cols-5 gap-4 w-full", className)}>
       {attachedFiles.map((file) => (
-        <div
-          key={file.id}
-          className="aspect-3/4 rounded relative"
-        >
+        <div key={file.id} className="aspect-3/4 rounded relative">
           <RenderFileType file={file} />
           {file.status === "pending" && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">

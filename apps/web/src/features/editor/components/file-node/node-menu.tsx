@@ -1,11 +1,11 @@
 import { MoreHorizontal } from "lucide-react"
-import type { FileNodeFormat } from "../../types"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sohizi/ui/dropdown-menu"
+import type { FileNodeFormat } from "../../types"
 
 export const FILE_FORMAT_OPTIONS: Array<{
   label: string

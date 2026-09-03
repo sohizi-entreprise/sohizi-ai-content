@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { Menu } from "lucide-react"
-import { CtaButton } from "../components/cta-button"
-import { navLinks } from "../content"
 import { Button } from "@sohizi/ui/button"
 import {
   Sheet,
@@ -11,6 +9,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@sohizi/ui/sheet"
+import { CtaButton } from "../components/cta-button"
+import { navLinks } from "../content"
 import { cn } from "@/lib/utils"
 import { appUrl, isAppPath } from "@/lib/app-url"
 
@@ -42,11 +42,7 @@ function NavLink({
   }
 
   return (
-    <Link
-      to={href}
-      onClick={onClick}
-      className={className}
-    >
+    <Link to={href} onClick={onClick} className={className}>
       {label}
     </Link>
   )
@@ -104,10 +100,7 @@ export function LandingNav() {
   return (
     <header className={cn("backdrop-blur-md transition-colors duration-300")}>
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6">
-        <Link
-          to="/"
-          className="flex items-center gap-2"
-        >
+        <Link to="/" className="flex items-center gap-2">
           <img
             src={
               overLight ? "/logo-monochrome.svg" : "/logo-monochrome-white.svg"
@@ -156,16 +149,10 @@ export function LandingNav() {
           >
             <a href={appUrl("/sign-in")}>Sign in</a>
           </Button>
-          <CtaButton
-            size="sm"
-            className="h-9 px-4 text-sm"
-          />
+          <CtaButton size="sm" className="h-9 px-4 text-sm" />
         </div>
 
-        <Sheet
-          open={open}
-          onOpenChange={setOpen}
-        >
+        <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button
               variant="ghost"
@@ -205,17 +192,11 @@ export function LandingNav() {
                   variant="outline"
                   className="h-11 justify-center"
                 >
-                  <a
-                    href={appUrl("/sign-in")}
-                    onClick={() => setOpen(false)}
-                  >
+                  <a href={appUrl("/sign-in")} onClick={() => setOpen(false)}>
                     Sign in
                   </a>
                 </Button>
-                <span
-                  onClick={() => setOpen(false)}
-                  className="block w-full"
-                >
+                <span onClick={() => setOpen(false)} className="block w-full">
                   <CtaButton className="w-full" />
                 </span>
               </div>

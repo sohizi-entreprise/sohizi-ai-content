@@ -18,14 +18,14 @@ import {
 } from "react"
 import { Streamdown } from "streamdown"
 
-import { Shimmer } from "./shimmer"
-import type { ComponentProps, ReactNode } from "react"
-import { cn } from "@/lib/utils"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@sohizi/ui/collapsible"
+import { Shimmer } from "./shimmer"
+import type { ComponentProps, ReactNode } from "react"
+import { cn } from "@/lib/utils"
 
 interface ReasoningContextValue {
   isStreaming: boolean

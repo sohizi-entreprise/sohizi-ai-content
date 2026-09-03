@@ -1,5 +1,4 @@
 import { Clapperboard } from "lucide-react"
-import type { FileNode } from "@/features/projects/type"
 import {
   Card,
   CardContent,
@@ -7,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@sohizi/ui/card"
+import type { FileNode } from "@/features/projects/type"
 
 type VideoEditorCardProps = {
   file: FileNode

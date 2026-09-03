@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { MoreVertical } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
 import { Button } from "@sohizi/ui/button"
 import {
   DropdownMenu,
@@ -8,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sohizi/ui/dropdown-menu"
+import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export type MediaCardMenuOption = {
@@ -25,11 +25,7 @@ export function MediaCardMenu({ className, options }: MediaCardMenuProps) {
   const [open, setOpen] = useState(false)
 
   return (
-    <DropdownMenu
-      open={open}
-      onOpenChange={setOpen}
-      modal={false}
-    >
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"

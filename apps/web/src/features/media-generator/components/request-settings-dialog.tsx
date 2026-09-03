@@ -1,4 +1,3 @@
-import { flattenRequestSettings } from "../lib/request-state"
 import {
   Dialog,
   DialogContent,
@@ -14,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@sohizi/ui/table"
+import { flattenRequestSettings } from "../lib/request-state"
 
 type RequestSettingsDialogProps = {
   open: boolean
@@ -29,10 +29,7 @@ export function RequestSettingsDialog({
   const rows = flattenRequestSettings(request)
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="md:max-w-2xl"
         onCloseAutoFocus={(event) => event.preventDefault()}
@@ -58,10 +55,7 @@ export function RequestSettingsDialog({
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow
-                    key={row.key}
-                    className="text-muted-foreground"
-                  >
+                  <TableRow key={row.key} className="text-muted-foreground">
                     <TableCell className="whitespace-normal">
                       {row.key}
                     </TableCell>

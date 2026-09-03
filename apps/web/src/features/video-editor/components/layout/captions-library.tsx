@@ -2,12 +2,12 @@ import { useMemo } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { Loader2, Sparkles, Subtitles } from "lucide-react"
 import { toast } from "sonner"
+import { Button } from "@sohizi/ui/button"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { useSelectedClip } from "../../hooks/use-selected-clip"
 import { generateCaptionMutationOptions } from "../../query-mutations"
 import { formatPlayerTimecode, framesToSeconds } from "../../utils/time"
 import type { CaptionClip } from "../../store/types"
-import { Button } from "@sohizi/ui/button"
 import { cn } from "@/lib/utils"
 
 interface CaptionsLibraryProps {

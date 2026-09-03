@@ -1,9 +1,9 @@
 import { FilePlus, FolderPlus, Plus } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
+import { Button } from "@sohizi/ui/button"
 import { FileNodeMenu } from "../file-node/node-menu"
 import useFileTreeBridge from "../../bridge/use-file-tree-bridge"
 import { FileTree } from "./file-tree"
-import { Button } from "@sohizi/ui/button"
 
 interface FileExplorerProps {
   projectId: string
@@ -60,10 +60,7 @@ export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
           Files
         </span>
         <div className="flex items-center gap-0.5">
-          <FileNodeMenu
-            options={menuOptions}
-            onChange={handleOnCreate}
-          >
+          <FileNodeMenu options={menuOptions} onChange={handleOnCreate}>
             <Button
               variant="ghost"
               size="icon"
@@ -75,10 +72,7 @@ export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-1">
-        <FileTree
-          projectId={projectId}
-          rootFolderId={rootFolderId}
-        />
+        <FileTree projectId={projectId} rootFolderId={rootFolderId} />
       </div>
     </div>
   )

@@ -42,10 +42,5 @@ export function VideoProductionEditor() {
     )
   }
 
-  return (
-    <AppLayout
-      projectId={projectId}
-      rootFolderId={data.rootFolderId}
-    />
-  )
+  return <AppLayout projectId={projectId} rootFolderId={data.rootFolderId} />
 }

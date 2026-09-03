@@ -3,14 +3,14 @@ import { Link } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, Check, Cloud, Download, Loader2, X } from "lucide-react"
 import { toast } from "sonner"
+import { Button } from "@sohizi/ui/button"
+import { Input } from "@sohizi/ui/input"
 import { useVideoEditorUiStore } from "../../store/ui-store"
 import { useVideoExport } from "../../hooks/use-video-export"
 import {
   listFilesByFormatQueryOptions,
   renameFileNodeMutationOptions,
 } from "@/features/projects/query-mutation"
-import { Button } from "@sohizi/ui/button"
-import { Input } from "@sohizi/ui/input"
 
 interface EditorTopBarProps {
   projectId: string
@@ -33,10 +33,7 @@ export function EditorTopBar({ projectId, fileNodeId }: EditorTopBarProps) {
 
       <div className="mx-1 h-5 w-px bg-border" />
 
-      <CompositionTitle
-        projectId={projectId}
-        fileNodeId={fileNodeId}
-      />
+      <CompositionTitle projectId={projectId} fileNodeId={fileNodeId} />
 
       <SaveIndicator />
 

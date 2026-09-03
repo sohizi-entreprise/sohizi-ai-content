@@ -2,13 +2,13 @@ import { useEffect, useState } from "react"
 import { useDrag } from "react-dnd"
 import { useQuery } from "@tanstack/react-query"
 import { Film, ImageIcon, Loader2, Music2, Search } from "lucide-react"
+import { Input } from "@sohizi/ui/input"
 import { useEmptyDragPreview } from "../../../hooks/use-empty-drag-preview"
 import { flushTimelineDropPreview } from "../../../utils/library-dnd"
 import type { ProjectAssetFile } from "@/features/projects/type"
 import type { LibraryAssetDragItem } from "../../../utils/library-dnd"
 import { ARBORIST_NODE_DRAG_TYPE } from "@/features/editor/utils/arborist-dnd"
 import { listProjectAssetsQueryOptions } from "@/features/projects/query-mutation"
-import { Input } from "@sohizi/ui/input"
 import { cn } from "@/lib/utils"
 import {
   buildOptimizeddImageUrl,
@@ -107,20 +107,13 @@ export function AssetsPanel({ projectId }: AssetsPanelProps) {
         ) : format === "audio" ? (
           <ul className="flex flex-col gap-1">
             {assets.map((node) => (
-              <AudioAssetRow
-                key={node.id}
-                node={node}
-              />
+              <AudioAssetRow key={node.id} node={node} />
             ))}
           </ul>
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {assets.map((node) => (
-              <MediaAssetTile
-                key={node.id}
-                node={node}
-                format={format}
-              />
+              <MediaAssetTile key={node.id} node={node} format={format} />
             ))}
           </div>
         )}

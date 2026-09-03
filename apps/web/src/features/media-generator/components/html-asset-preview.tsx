@@ -9,11 +9,6 @@ import {
 import { useMutation } from "@tanstack/react-query"
 import { Code2, X } from "lucide-react"
 import { toast } from "sonner"
-import { updateHtmlAssetValuesMutationOptions } from "../query-mutations"
-import type { CompositionVariable } from "@sohizi/video-composition"
-import type { HyperframesPlayerElement } from "@/types/hyperframes-player"
-import type { MediaAsset } from "../requests"
-import type { HtmlAssetMetadata } from "../types"
 import { Button } from "@sohizi/ui/button"
 import {
   Dialog,
@@ -32,6 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sohizi/ui/select"
+import { updateHtmlAssetValuesMutationOptions } from "../query-mutations"
+import type { HtmlAssetMetadata } from "../types"
+import type { MediaAsset } from "../requests"
+import type { HyperframesPlayerElement } from "@/types/hyperframes-player"
+import type { CompositionVariable } from "@sohizi/video-composition"
 import {
   applyLiveHtmlConfig,
   buildDefaultValues,
@@ -93,10 +93,7 @@ export function RenderHtml({ item }: { item: MediaAsset }) {
         className="flex h-[90vh] max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col overflow-hidden bg-surface/30 p-4 backdrop-blur-sm sm:max-w-5xl md:max-w-6xl"
         showCloseButton={false}
       >
-        <HtmlPreviewDialogBody
-          item={item}
-          metadata={metadata}
-        />
+        <HtmlPreviewDialogBody item={item} metadata={metadata} />
         <DialogClose asChild>
           <Button
             size="icon"
@@ -345,19 +342,13 @@ function VariableField({
         />
       ) : null}
       {isEnumVariable(variable) ? (
-        <Select
-          value={String(value)}
-          onValueChange={onChange}
-        >
+        <Select value={String(value)} onValueChange={onChange}>
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {variable.options.map((option) => (
-              <SelectItem
-                key={option.value}
-                value={option.value}
-              >
+              <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>
             ))}

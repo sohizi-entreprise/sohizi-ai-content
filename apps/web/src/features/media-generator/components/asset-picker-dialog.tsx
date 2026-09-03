@@ -279,10 +279,7 @@ function AssetPickerDialog({
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden md:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Choose {label.toLowerCase()}</DialogTitle>
@@ -293,19 +290,13 @@ function AssetPickerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs
-          defaultValue="folder"
-          className="flex min-h-0 flex-1 flex-col"
-        >
+        <Tabs defaultValue="folder" className="flex min-h-0 flex-1 flex-col">
           <TabsList>
             <TabsTrigger value="folder">From a folder</TabsTrigger>
             <TabsTrigger value="upload">Upload</TabsTrigger>
             <TabsTrigger value="generated">From generated</TabsTrigger>
           </TabsList>
-          <TabsContent
-            value="folder"
-            className="flex min-h-0 flex-1 flex-col"
-          >
+          <TabsContent value="folder" className="flex min-h-0 flex-1 flex-col">
             <AssetPickerFolderTab
               projectId={projectId}
               fileTypes={fileTypes}
@@ -315,10 +306,7 @@ function AssetPickerDialog({
               allowMultiple={allowMultiple}
             />
           </TabsContent>
-          <TabsContent
-            value="upload"
-            className="flex min-h-0 flex-1 flex-col"
-          >
+          <TabsContent value="upload" className="flex min-h-0 flex-1 flex-col">
             <AssetPickerUploadTab
               projectId={projectId}
               fileTypes={fileTypes}
@@ -345,10 +333,7 @@ function AssetPickerDialog({
 
         {allowMultiple ? (
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button

@@ -6,8 +6,6 @@ import {
   useNavigate,
 } from "@tanstack/react-router"
 import { useEffect } from "react"
-import { useSession } from "@/lib/auth-client"
-import { cn } from "@/lib/utils"
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -16,6 +14,8 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@sohizi/ui/navigation-menu"
+import { useSession } from "@/lib/auth-client"
+import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -125,10 +125,7 @@ function CategoriesNavMenu() {
   const categoriesActive = modelsActive || contentActive
 
   return (
-    <NavigationMenu
-      viewport={false}
-      className="max-w-none flex-none"
-    >
+    <NavigationMenu viewport={false} className="max-w-none flex-none">
       <NavigationMenuList>
         <NavigationMenuItem>
           <NavigationMenuTrigger
@@ -142,10 +139,7 @@ function CategoriesNavMenu() {
           <NavigationMenuContent>
             <ul className="grid w-[280px] gap-1 p-1">
               <li>
-                <NavigationMenuLink
-                  asChild
-                  active={modelsActive}
-                >
+                <NavigationMenuLink asChild active={modelsActive}>
                   <Link to="/admin/categories/models">
                     <span className="font-medium">Models</span>
                     <span className="text-muted-foreground text-xs">
@@ -155,10 +149,7 @@ function CategoriesNavMenu() {
                 </NavigationMenuLink>
               </li>
               <li>
-                <NavigationMenuLink
-                  asChild
-                  active={contentActive}
-                >
+                <NavigationMenuLink asChild active={contentActive}>
                   <Link to="/admin/categories/content">
                     <span className="font-medium">Content</span>
                     <span className="text-muted-foreground text-xs">

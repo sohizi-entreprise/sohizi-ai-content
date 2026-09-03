@@ -2,8 +2,6 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Link, useParams } from "@tanstack/react-router"
 import { Clapperboard, Plus } from "lucide-react"
-import { CreateVideoEditorModal } from "./create-video-editor-modal"
-import { VideoEditorCard } from "./video-editor-card"
 import { Button } from "@sohizi/ui/button"
 import {
   Empty,
@@ -13,6 +11,8 @@ import {
   EmptyTitle,
 } from "@sohizi/ui/empty"
 import { Skeleton } from "@sohizi/ui/skeleton"
+import { VideoEditorCard } from "./video-editor-card"
+import { CreateVideoEditorModal } from "./create-video-editor-modal"
 import { listFilesByFormatQueryOptions } from "@/features/projects/query-mutation"
 
 export function VideoEditorListPage() {
@@ -49,10 +49,7 @@ export function VideoEditorListPage() {
             <p className="text-sm text-destructive">
               Failed to load video editors
             </p>
-            <Button
-              variant="outline"
-              onClick={() => void refetch()}
-            >
+            <Button variant="outline" onClick={() => void refetch()}>
               Retry
             </Button>
           </div>
@@ -101,10 +98,7 @@ function VideoEditorListSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, index) => (
-        <Skeleton
-          key={index}
-          className="h-[220px] w-full rounded-2xl"
-        />
+        <Skeleton key={index} className="h-[220px] w-full rounded-2xl" />
       ))}
     </div>
   )

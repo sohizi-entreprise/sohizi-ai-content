@@ -162,10 +162,7 @@ function InfiniteScrollSentinel({
   }, [handleLoadMore])
 
   return (
-    <div
-      ref={sentinelRef}
-      className="flex justify-center py-3"
-    >
+    <div ref={sentinelRef} className="flex justify-center py-3">
       {isFetching ? (
         <IconLoader2 className="size-4 animate-spin text-muted-foreground" />
       ) : (

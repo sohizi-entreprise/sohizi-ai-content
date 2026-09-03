@@ -3,6 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link, useParams } from "@tanstack/react-router"
 import { ArrowLeft, Check, Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
+import { Badge } from "@sohizi/ui/badge"
+import { Button } from "@sohizi/ui/button"
+import { Skeleton } from "@sohizi/ui/skeleton"
 import {
   getMarketSkillQueryOptions,
   installSkillMutationOptions,
@@ -10,9 +13,6 @@ import {
 import { SkillNameConflictError } from "../request"
 import { ReadonlySkillViewer } from "./readonly-skill-viewer"
 import { SkillNameConflictModal } from "./skill-name-conflict-modal"
-import { Badge } from "@sohizi/ui/badge"
-import { Button } from "@sohizi/ui/button"
-import { Skeleton } from "@sohizi/ui/skeleton"
 import { filesByFormatKey } from "@/features/projects/query-mutation"
 
 export function SkillMarketDetailPage() {
@@ -93,16 +93,10 @@ export function SkillMarketDetailPage() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 p-8">
         <p className="text-sm text-destructive">Failed to load skill</p>
-        <Button
-          variant="outline"
-          onClick={() => void refetch()}
-        >
+        <Button variant="outline" onClick={() => void refetch()}>
           Retry
         </Button>
-        <Button
-          variant="ghost"
-          asChild
-        >
+        <Button variant="ghost" asChild>
           <Link
             to="/dashboard/projects/$projectId/skill-market"
             params={{ projectId }}

@@ -1,8 +1,6 @@
 import { useMutation } from "@tanstack/react-query"
 import { ChevronDown } from "lucide-react"
 import { toast } from "sonner"
-import { saveSkillMutationOptions } from "../../query-mutations"
-import type { Skill } from "../../types"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +8,8 @@ import {
   DropdownMenuTrigger,
 } from "@sohizi/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"
+import { saveSkillMutationOptions } from "../../query-mutations"
+import type { Skill } from "../../types"
 import { cn } from "@/lib/utils"
 
 const STATUS_STYLES: Record<
@@ -169,19 +169,13 @@ function SkillMetaBadge<T extends string>({
                 aria-hidden
               />
               {label}
-              <ChevronDown
-                className="size-3 opacity-70"
-                aria-hidden
-              />
+              <ChevronDown className="size-3 opacity-70" aria-hidden />
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent side="bottom">{tooltip}</TooltipContent>
       </Tooltip>
-      <DropdownMenuContent
-        align="start"
-        className="w-64"
-      >
+      <DropdownMenuContent align="start" className="w-64">
         {options.map((option) => {
           const selected = option.value === value
           return (

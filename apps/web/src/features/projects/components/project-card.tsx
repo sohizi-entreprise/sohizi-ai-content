@@ -1,5 +1,4 @@
 import { MoreVertical, Trash2 } from "lucide-react"
-import type { ProjectListItem } from "../type"
 import {
   Card,
   CardContent,
@@ -14,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@sohizi/ui/dropdown-menu"
 import { Button } from "@sohizi/ui/button"
+import type { ProjectListItem } from "../type"
 import { timeFromNow } from "@/lib/utils"
 
 type ProjectCardProps = ProjectListItem & {
@@ -100,10 +100,7 @@ function ProjectCardList(props: ProjectCardProps) {
 function ProjectCardAction({ onDelete }: { onDelete?: () => void }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        asChild
-        onClick={(e) => e.preventDefault()}
-      >
+      <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
         <Button
           variant="ghost"
           size="icon-sm"

@@ -1,7 +1,5 @@
 import { useState } from "react"
 import { toast } from "sonner"
-import { isValidYoutubeUrl } from "../../extensions/youtube-embed"
-import type { Editor } from "@tiptap/core"
 import {
   Dialog,
   DialogContent,
@@ -12,6 +10,8 @@ import {
 import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
 import { Button } from "@sohizi/ui/button"
+import { isValidYoutubeUrl } from "../../extensions/youtube-embed"
+import type { Editor } from "@tiptap/core"
 
 type YoutubeEmbedDialogProps = {
   editor: Editor
@@ -85,11 +85,7 @@ export function YoutubeEmbedDialog({
           >
             Cancel
           </Button>
-          <Button
-            type="button"
-            onClick={handleEmbed}
-            disabled={!url.trim()}
-          >
+          <Button type="button" onClick={handleEmbed} disabled={!url.trim()}>
             Embed
           </Button>
         </DialogFooter>

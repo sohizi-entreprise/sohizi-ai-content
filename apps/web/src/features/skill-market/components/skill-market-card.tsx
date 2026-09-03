@@ -1,5 +1,4 @@
 import { Sparkles } from "lucide-react"
-import type { MarketSkill } from "../types"
 import { Badge } from "@sohizi/ui/badge"
 import {
   Card,
@@ -8,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@sohizi/ui/card"
+import type { MarketSkill } from "../types"
 
 type SkillMarketCardProps = {
   skill: MarketSkill
@@ -47,10 +47,7 @@ export function SkillMarketCard({ skill }: SkillMarketCardProps) {
               </Badge>
             ))}
             {skill.categories.length > 3 ? (
-              <Badge
-                variant="outline"
-                className="text-[10px]"
-              >
+              <Badge variant="outline" className="text-[10px]">
                 +{skill.categories.length - 3}
               </Badge>
             ) : null}

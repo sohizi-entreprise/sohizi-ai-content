@@ -1,9 +1,9 @@
 import { useId } from "react"
 import { motion } from "motion/react"
+import { SparklesCore } from "@sohizi/ui/sparkles"
 import { CtaButton } from "../components/cta-button"
 import { hero } from "../content"
 import { cn } from "@/lib/utils"
-import { SparklesCore } from "@sohizi/ui/sparkles"
 
 export function HeroSection() {
   return (
@@ -106,60 +106,42 @@ function ArcBackground({ className }: ArcBackgroundProps) {
           strokeWidth="4"
         />
       </g>
-      <g
-        opacity="0.4"
-        className="mix-blend-plus-lighter blur-[30px]"
-      >
+      <g opacity="0.4" className="mix-blend-plus-lighter blur-[30px]">
         <path
           d="M975.5 255C1398.3 255 1739 565.452 1739 946C1739 1326.55 1398.3 1637 975.5 1637C552.695 1637 212 1326.55 212 946C212 565.452 552.695 255 975.5 255Z"
           stroke={`url(#${id}-3)`}
           strokeWidth="24"
         />
       </g>
-      <g
-        opacity="0.4"
-        className="mix-blend-plus-lighter blur-[30px]"
-      >
+      <g opacity="0.4" className="mix-blend-plus-lighter blur-[30px]">
         <path
           d="M975.5 255C1398.3 255 1739 565.452 1739 946C1739 1326.55 1398.3 1637 975.5 1637C552.695 1637 212 1326.55 212 946C212 565.452 552.695 255 975.5 255Z"
           stroke={`url(#${id}-4)`}
           strokeWidth="24"
         />
       </g>
-      <g
-        opacity="0.4"
-        className="mix-blend-plus-lighter blur-2xl"
-      >
+      <g opacity="0.4" className="mix-blend-plus-lighter blur-2xl">
         <path
           d="M975.5 255C1398.3 255 1739 565.452 1739 946C1739 1326.55 1398.3 1637 975.5 1637C552.695 1637 212 1326.55 212 946C212 565.452 552.695 255 975.5 255Z"
           stroke={`url(#${id}-5)`}
           strokeWidth="24"
         />
       </g>
-      <g
-        opacity="0.4"
-        className="mix-blend-plus-lighter blur-[50px]"
-      >
+      <g opacity="0.4" className="mix-blend-plus-lighter blur-[50px]">
         <path
           d="M975.5 255C1398.3 255 1739 565.452 1739 946C1739 1326.55 1398.3 1637 975.5 1637C552.695 1637 212 1326.55 212 946C212 565.452 552.695 255 975.5 255Z"
           stroke={`url(#${id}-6)`}
           strokeWidth="24"
         />
       </g>
-      <g
-        opacity="0.4"
-        className="mix-blend-plus-lighter blur-[50px]"
-      >
+      <g opacity="0.4" className="mix-blend-plus-lighter blur-[50px]">
         <path
           d="M975.5 212C1398.3 212 1739 522.452 1739 903C1739 1283.55 1398.3 1594 975.5 1594C552.695 1594 212 1283.55 212 903C212 522.452 552.695 212 975.5 212Z"
           stroke={`url(#${id}-7)`}
           strokeWidth="24"
         />
       </g>
-      <g
-        opacity="0.4"
-        className="mix-blend-plus-lighter blur-[100px]"
-      >
+      <g opacity="0.4" className="mix-blend-plus-lighter blur-[100px]">
         <path
           d="M975.5 212C1398.3 212 1739 522.452 1739 903C1739 1283.55 1398.3 1594 975.5 1594C552.695 1594 212 1283.55 212 903C212 522.452 552.695 212 975.5 212Z"
           stroke={`url(#${id}-8)`}
@@ -176,11 +158,7 @@ function ArcBackground({ className }: ArcBackgroundProps) {
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="var(--arc-warm)" />
-          <stop
-            offset="1"
-            stopColor="var(--arc-warm)"
-            stopOpacity="0"
-          />
+          <stop offset="1" stopColor="var(--arc-warm)" stopOpacity="0" />
         </linearGradient>
         <linearGradient
           id={`${id}-1`}
@@ -191,11 +169,7 @@ function ArcBackground({ className }: ArcBackgroundProps) {
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="var(--arc-warm)" />
-          <stop
-            offset="1"
-            stopColor="var(--arc-warm)"
-            stopOpacity="0"
-          />
+          <stop offset="1" stopColor="var(--arc-warm)" stopOpacity="0" />
         </linearGradient>
         <linearGradient
           id={`${id}-2`}
@@ -206,11 +180,7 @@ function ArcBackground({ className }: ArcBackgroundProps) {
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="var(--arc-warm)" />
-          <stop
-            offset="1"
-            stopColor="var(--arc-warm)"
-            stopOpacity="0"
-          />
+          <stop offset="1" stopColor="var(--arc-warm)" stopOpacity="0" />
         </linearGradient>
         <linearGradient
           id={`${id}-3`}
@@ -221,11 +191,7 @@ function ArcBackground({ className }: ArcBackgroundProps) {
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="var(--arc-warm)" />
-          <stop
-            offset="1"
-            stopColor="var(--arc-warm)"
-            stopOpacity="0"
-          />
+          <stop offset="1" stopColor="var(--arc-warm)" stopOpacity="0" />
         </linearGradient>
         <linearGradient
           id={`${id}-4`}
@@ -236,11 +202,7 @@ function ArcBackground({ className }: ArcBackgroundProps) {
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="var(--arc-warm)" />
-          <stop
-            offset="1"
-            stopColor="var(--arc-warm)"
-            stopOpacity="0"
-          />
+          <stop offset="1" stopColor="var(--arc-warm)" stopOpacity="0" />
         </linearGradient>
         <linearGradient
           id={`${id}-5`}
@@ -251,11 +213,7 @@ function ArcBackground({ className }: ArcBackgroundProps) {
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="var(--arc-gold)" />
-          <stop
-            offset="1"
-            stopColor="var(--arc-gold)"
-            stopOpacity="0"
-          />
+          <stop offset="1" stopColor="var(--arc-gold)" stopOpacity="0" />
         </linearGradient>
         <linearGradient
           id={`${id}-6`}
@@ -266,11 +224,7 @@ function ArcBackground({ className }: ArcBackgroundProps) {
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="var(--arc-gold)" />
-          <stop
-            offset="1"
-            stopColor="var(--arc-gold)"
-            stopOpacity="0"
-          />
+          <stop offset="1" stopColor="var(--arc-gold)" stopOpacity="0" />
         </linearGradient>
         <linearGradient
           id={`${id}-7`}
@@ -281,11 +235,7 @@ function ArcBackground({ className }: ArcBackgroundProps) {
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="var(--arc-gold)" />
-          <stop
-            offset="1"
-            stopColor="var(--arc-gold)"
-            stopOpacity="0"
-          />
+          <stop offset="1" stopColor="var(--arc-gold)" stopOpacity="0" />
         </linearGradient>
         <linearGradient
           id={`${id}-8`}
@@ -296,11 +246,7 @@ function ArcBackground({ className }: ArcBackgroundProps) {
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="var(--arc-glow)" />
-          <stop
-            offset="1"
-            stopColor="var(--arc-glow)"
-            stopOpacity="0"
-          />
+          <stop offset="1" stopColor="var(--arc-glow)" stopOpacity="0" />
         </linearGradient>
       </defs>
     </svg>

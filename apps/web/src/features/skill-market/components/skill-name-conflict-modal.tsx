@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
-import { skillNameAvailableQueryOptions } from "../query-mutation"
-import { useDebouncedValue } from "@/hooks/use-debounced-value"
 import { Button } from "@sohizi/ui/button"
 import {
   Dialog,
@@ -14,6 +12,8 @@ import {
 } from "@sohizi/ui/dialog"
 import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
+import { skillNameAvailableQueryOptions } from "../query-mutation"
+import { useDebouncedValue } from "@/hooks/use-debounced-value"
 import { cn } from "@/lib/utils"
 
 type SkillNameConflictModalProps = {
@@ -72,10 +72,7 @@ export function SkillNameConflictModal({
     !isFetching
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Skill already exists</DialogTitle>

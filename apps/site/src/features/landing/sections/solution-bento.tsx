@@ -1,9 +1,9 @@
 import { CreditCard, Fingerprint, Flame, GraduationCap } from "lucide-react"
+import { ContainerTextFlip } from "@sohizi/ui/container-text-flip"
+import { CapabilityHub } from "@sohizi/ui/capability-hub"
 import { CtaButton } from "../components/cta-button"
 import { SolutionsGrid } from "../components/solutions-grid"
 import { capabilityHub, solution } from "../content"
-import { ContainerTextFlip } from "@sohizi/ui/container-text-flip"
-import { CapabilityHub } from "@sohizi/ui/capability-hub"
 
 const icons = [CreditCard, GraduationCap, Fingerprint, Flame]
 

@@ -1,11 +1,11 @@
-import { CtaButton } from "../components/cta-button"
-import { faq } from "../content"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@sohizi/ui/accordion"
+import { CtaButton } from "../components/cta-button"
+import { faq } from "../content"
 
 export function FaqSection() {
   return (
@@ -37,19 +37,12 @@ export function FaqSection() {
               {faq.ctaCard.body}
             </p>
             <div className="mt-5">
-              <CtaButton
-                size="default"
-                className="h-10 text-sm"
-              />
+              <CtaButton size="default" className="h-10 text-sm" />
             </div>
           </div>
         </div>
 
-        <Accordion
-          type="single"
-          collapsible
-          className="w-full"
-        >
+        <Accordion type="single" collapsible className="w-full">
           {faq.items.map((item) => (
             <AccordionItem
               key={item.question}

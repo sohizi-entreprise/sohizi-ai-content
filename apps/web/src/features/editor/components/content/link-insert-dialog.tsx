@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-import type { Editor } from "@tiptap/core"
 import {
   Dialog,
   DialogContent,
@@ -10,6 +9,7 @@ import {
 import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
 import { Button } from "@sohizi/ui/button"
+import type { Editor } from "@tiptap/core"
 
 function normalizeUrl(url: string): string {
   const trimmed = url.trim()
@@ -65,10 +65,7 @@ export function LinkInsertDialog({
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Insert link</DialogTitle>
@@ -91,11 +88,7 @@ export function LinkInsertDialog({
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
           {hasLink && (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleRemove}
-            >
+            <Button type="button" variant="destructive" onClick={handleRemove}>
               Remove link
             </Button>
           )}
@@ -106,11 +99,7 @@ export function LinkInsertDialog({
           >
             Cancel
           </Button>
-          <Button
-            type="button"
-            onClick={handleApply}
-            disabled={!url.trim()}
-          >
+          <Button type="button" onClick={handleApply} disabled={!url.trim()}>
             Apply
           </Button>
         </DialogFooter>

@@ -1,7 +1,7 @@
 import { ZoomIn, ZoomOut } from "lucide-react"
-import { useVideoEditorStore } from "../store/editor-store"
 import { Slider } from "@sohizi/ui/slider"
 import { Button } from "@sohizi/ui/button"
+import { useVideoEditorStore } from "../store/editor-store"
 import { cn } from "@/lib/utils"
 
 const MIN = 0.25

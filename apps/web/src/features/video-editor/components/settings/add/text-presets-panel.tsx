@@ -13,10 +13,7 @@ export function TextPresetsPanel() {
   return (
     <div className="grid grid-cols-3 gap-2">
       {TEXT_PRESETS.map((preset) => (
-        <TextPresetCell
-          key={preset.id}
-          preset={preset}
-        />
+        <TextPresetCell key={preset.id} preset={preset} />
       ))}
     </div>
   )

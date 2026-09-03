@@ -8,7 +8,6 @@ const config = {
   tabWidth: 2,
   printWidth: 80,
   bracketSpacing: true,
-  singleAttributePerLine: true,
 }
 
 export default config

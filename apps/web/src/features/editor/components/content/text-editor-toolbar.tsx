@@ -24,11 +24,6 @@ import {
 } from "lucide-react"
 import React, { useState } from "react"
 import { useEditorState } from "@tiptap/react"
-import { LinkInsertDialog } from "./link-insert-dialog"
-import { YoutubeEmbedDialog } from "./youtube-embed-dialog"
-import type { Editor } from "@tiptap/core"
-import type { LucideProps } from "lucide-react"
-import type { ClassValue } from "clsx"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +34,11 @@ import {
 } from "@sohizi/ui/dropdown-menu"
 import { Separator } from "@sohizi/ui/separator"
 import { Button } from "@sohizi/ui/button"
+import { LinkInsertDialog } from "./link-insert-dialog"
+import { YoutubeEmbedDialog } from "./youtube-embed-dialog"
+import type { Editor } from "@tiptap/core"
+import type { LucideProps } from "lucide-react"
+import type { ClassValue } from "clsx"
 import { cn } from "@/lib/utils"
 
 type ToolbarOption = {
@@ -326,10 +326,7 @@ export default function TextEditorToolbar({
       ))}
       {editorState.isInTable && (
         <>
-          <Separator
-            orientation="vertical"
-            className="mx-1.5 h-5!"
-          />
+          <Separator orientation="vertical" className="mx-1.5 h-5!" />
           <UpdateTableOptions
             editor={editor}
             visible={editorState.isInTable}
@@ -431,10 +428,7 @@ function RenderToolbarOption({
           <Icon className="size-4" />
         </ToolbarButton>
         {option.separator && (
-          <Separator
-            orientation="vertical"
-            className="mx-1.5 h-5!"
-          />
+          <Separator orientation="vertical" className="mx-1.5 h-5!" />
         )}
       </React.Fragment>
     )
@@ -458,10 +452,7 @@ function RenderToolbarOption({
         </Button>
       </DropdownMenuTrigger>
       {option.separator && (
-        <Separator
-          orientation="vertical"
-          className="mx-1.5 h-5!"
-        />
+        <Separator orientation="vertical" className="mx-1.5 h-5!" />
       )}
       <DropdownMenuContent {...dropdownContentProps}>
         {option.children.map((child) => (
@@ -509,11 +500,7 @@ function UpdateTableOptions(data: {
   }
 
   return (
-    <DropdownMenu
-      modal={false}
-      open={open}
-      onOpenChange={setOpen}
-    >
+    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"

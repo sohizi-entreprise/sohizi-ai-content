@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
 import { Check, ChevronDown } from "lucide-react"
+import { Skeleton } from "@sohizi/ui/skeleton"
 import type { CatalogModel } from "@/features/admin/types"
 import {
   ModelSelector,
@@ -13,7 +14,6 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector"
-import { Skeleton } from "@sohizi/ui/skeleton"
 
 type MediaModelSelectorProps = {
   models: Array<CatalogModel>
@@ -46,10 +46,7 @@ export function MediaModelSelector({
   }
 
   return (
-    <ModelSelector
-      open={open}
-      onOpenChange={setOpen}
-    >
+    <ModelSelector open={open} onOpenChange={setOpen}>
       <ModelSelectorTrigger asChild>
         <button
           type="button"
@@ -78,10 +75,7 @@ export function MediaModelSelector({
         <ModelSelectorList>
           <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
           {[...grouped.entries()].map(([provider, providerModels]) => (
-            <ModelSelectorGroup
-              key={provider}
-              heading={provider}
-            >
+            <ModelSelectorGroup key={provider} heading={provider}>
               {providerModels.map((model) => (
                 <ModelSelectorItem
                   key={model.id}

@@ -5,9 +5,6 @@ import {
   IconBrandTiktok,
   IconBrandYoutube,
 } from "@tabler/icons-react"
-import { useVideoEditorStore } from "../../store/editor-store"
-import type { ReactNode } from "react"
-import type { AspectRatio } from "../../store/types"
 import { Button } from "@sohizi/ui/button"
 import {
   Command,
@@ -18,6 +15,9 @@ import {
   CommandList,
 } from "@sohizi/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@sohizi/ui/popover"
+import { useVideoEditorStore } from "../../store/editor-store"
+import type { ReactNode } from "react"
+import type { AspectRatio } from "../../store/types"
 import { cn } from "@/lib/utils"
 
 type AspectPreset = {
@@ -102,10 +102,7 @@ export function AspectRatioPicker() {
   }
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={setOpen}
-    >
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -125,10 +122,7 @@ export function AspectRatioPicker() {
         className="w-64 p-0"
       >
         <Command>
-          <CommandInput
-            placeholder="Search ratios..."
-            className="h-9"
-          />
+          <CommandInput placeholder="Search ratios..." className="h-9" />
           <CommandList>
             <CommandEmpty>No aspect ratio found.</CommandEmpty>
             <CommandGroup>

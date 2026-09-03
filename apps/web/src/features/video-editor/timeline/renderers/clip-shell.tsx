@@ -74,10 +74,7 @@ export function ClipShell({
         ) : (
           <>
             <span className="flex h-full min-w-0 shrink items-center gap-1 pl-2.5 pr-1.5 text-[11px] font-medium text-foreground">
-              <Icon
-                className="size-3 shrink-0"
-                style={{ color: accent }}
-              />
+              <Icon className="size-3 shrink-0" style={{ color: accent }} />
               <span className="truncate">{label}</span>
             </span>
             {children}

@@ -1,6 +1,5 @@
 import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
-import { authClient, organization, useSession } from "@/lib/auth-client"
 import { Button } from "@sohizi/ui/button"
 import { Spinner } from "@sohizi/ui/spinner"
 import { Input } from "@sohizi/ui/input"
@@ -12,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@sohizi/ui/dialog"
+import { authClient, organization, useSession } from "@/lib/auth-client"
 
 export const Route = createFileRoute("/dashboard")({
   component: RouteComponent,
@@ -143,10 +143,7 @@ function OrgSetupModal({
             This is your workspace where you'll create and manage projects.
           </DialogDescription>
         </DialogHeader>
-        <form
-          onSubmit={handleCreateOrg}
-          className="space-y-4"
-        >
+        <form onSubmit={handleCreateOrg} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="org-name">Organization Name</Label>
             <Input

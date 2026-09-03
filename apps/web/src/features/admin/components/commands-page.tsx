@@ -1,12 +1,5 @@
 import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import {
-  deleteAdminCommandMutationOptions,
-  listAdminCommandsQueryOptions,
-  updateAdminCommandMutationOptions,
-} from "../query-mutation"
-import { CommandFormDialog } from "./command-form-dialog"
-import type { AdminCommand } from "../types"
 import { Button } from "@sohizi/ui/button"
 import {
   Table,
@@ -17,6 +10,13 @@ import {
   TableRow,
 } from "@sohizi/ui/table"
 import { Switch } from "@sohizi/ui/switch"
+import {
+  deleteAdminCommandMutationOptions,
+  listAdminCommandsQueryOptions,
+  updateAdminCommandMutationOptions,
+} from "../query-mutation"
+import { CommandFormDialog } from "./command-form-dialog"
+import type { AdminCommand } from "../types"
 
 const previewAction = (action: string) =>
   action.length > 80 ? `${action.slice(0, 80)}…` : action

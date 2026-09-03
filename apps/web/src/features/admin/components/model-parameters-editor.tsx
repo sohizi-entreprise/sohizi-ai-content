@@ -16,18 +16,9 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
-import type { DragEndEvent } from "@dnd-kit/core"
-import type {
-  AdminParameter,
-  ModelParameterBinding,
-  ModelParameterConstraint,
-  ParameterOptionSummary,
-  ReplaceModelParameterBinding,
-} from "../types"
 import { Button } from "@sohizi/ui/button"
 import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
-import { cn } from "@/lib/utils"
 import {
   Select,
   SelectContent,
@@ -37,6 +28,15 @@ import {
 } from "@sohizi/ui/select"
 import { Switch } from "@sohizi/ui/switch"
 import { Checkbox } from "@sohizi/ui/checkbox"
+import type {
+  AdminParameter,
+  ModelParameterBinding,
+  ModelParameterConstraint,
+  ParameterOptionSummary,
+  ReplaceModelParameterBinding,
+} from "../types"
+import type { DragEndEvent } from "@dnd-kit/core"
+import { cn } from "@/lib/utils"
 
 export type ParameterBindingDraft = {
   parameterId: string
@@ -202,10 +202,7 @@ export function ModelParametersEditor({ value, onChange, catalog }: Props) {
           </SelectTrigger>
           <SelectContent>
             {unbound.map((parameter) => (
-              <SelectItem
-                key={parameter.id}
-                value={parameter.id}
-              >
+              <SelectItem key={parameter.id} value={parameter.id}>
                 {parameter.label} ({parameter.key})
               </SelectItem>
             ))}
@@ -432,10 +429,7 @@ function VisibleOptionsEditor({
         {options.map((option) => {
           const isSelected = selected.has(option.id)
           return (
-            <div
-              key={option.id}
-              className="flex items-center gap-2"
-            >
+            <div key={option.id} className="flex items-center gap-2">
               <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
                 <Checkbox
                   checked={isSelected}

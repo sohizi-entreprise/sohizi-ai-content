@@ -1,7 +1,7 @@
 import { Redo2, Scissors, Trash2, Undo2 } from "lucide-react"
+import { Button } from "@sohizi/ui/button"
 import { useTemporalStore, useVideoEditorStore } from "../../store/editor-store"
 import { ZoomSlider } from "../zoom-slider"
-import { Button } from "@sohizi/ui/button"
 
 export function TimelineToolbar() {
   const splitClipAtPlayhead = useVideoEditorStore((s) => s.splitClipAtPlayhead)

@@ -2,11 +2,11 @@ import { useEditorState } from "@tiptap/react"
 import { BubbleMenu } from "@tiptap/react/menus"
 import { AtSign } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { Button } from "@sohizi/ui/button"
+import { Separator } from "@sohizi/ui/separator"
 import { useEditorInputBridge } from "../../bridge/use-editor-input-bridge"
 import TextEditorToolbar from "../content/text-editor-toolbar"
 import type { Editor } from "@tiptap/react"
-import { Button } from "@sohizi/ui/button"
-import { Separator } from "@sohizi/ui/separator"
 import { buildAttachedSelection } from "@/features/chat/lib/editor-context"
 
 const BUBBLE_MENU_PLUGIN_KEY = "textEditorBubbleMenu"
@@ -124,10 +124,7 @@ export default function TextEditorBubbleMenu({
               <AtSign className="size-3.5" />
               Add to context
             </Button>
-            <Separator
-              orientation="vertical"
-              className="mx-0.5 h-5!"
-            />
+            <Separator orientation="vertical" className="mx-0.5 h-5!" />
           </>
         )}
         <TextEditorToolbar

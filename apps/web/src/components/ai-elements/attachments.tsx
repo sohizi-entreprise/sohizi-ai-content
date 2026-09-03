@@ -10,14 +10,14 @@ import {
   XIcon,
 } from "lucide-react"
 import { createContext, useCallback, useContext, useMemo } from "react"
-import type { FileUIPart, SourceDocumentUIPart } from "ai"
-import type { ComponentProps, HTMLAttributes, ReactNode } from "react"
 import { Button } from "@sohizi/ui/button"
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@sohizi/ui/hover-card"
+import type { FileUIPart, SourceDocumentUIPart } from "ai"
+import type { ComponentProps, HTMLAttributes, ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 // ============================================================================
@@ -246,13 +246,7 @@ export const AttachmentPreview = ({
     }
 
     if (mediaCategory === "video" && data.type === "file" && data.url) {
-      return (
-        <video
-          className="size-full object-cover"
-          muted
-          src={data.url}
-        />
-      )
+      return <video className="size-full object-cover" muted src={data.url} />
     }
 
     const Icon = mediaCategoryIcons[mediaCategory]
@@ -296,10 +290,7 @@ export const AttachmentInfo = ({
   }
 
   return (
-    <div
-      className={cn("min-w-0 flex-1", className)}
-      {...props}
-    >
+    <div className={cn("min-w-0 flex-1", className)} {...props}>
       <span className="block truncate">{label}</span>
       {showMediaType && data.mediaType && (
         <span className="block truncate text-muted-foreground text-xs">
@@ -379,11 +370,7 @@ export const AttachmentHoverCard = ({
   closeDelay = 0,
   ...props
 }: AttachmentHoverCardProps) => (
-  <HoverCard
-    closeDelay={closeDelay}
-    openDelay={openDelay}
-    {...props}
-  />
+  <HoverCard closeDelay={closeDelay} openDelay={openDelay} {...props} />
 )
 
 export type AttachmentHoverCardTriggerProps = ComponentProps<

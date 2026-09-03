@@ -4,7 +4,6 @@ import { Suspense, useState } from "react"
 import { Link, useRouterState } from "@tanstack/react-router"
 import { IconBrain, IconFocus2, IconX } from "@tabler/icons-react"
 import { Button } from "@sohizi/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Dialog,
   DialogClose,
@@ -14,8 +13,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@sohizi/ui/dialog"
-import { getListProjectsQueryOptions } from "@/features/projects/query-mutation"
 import { Skeleton } from "@sohizi/ui/skeleton"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { getListProjectsQueryOptions } from "@/features/projects/query-mutation"
 import { useSession } from "@/lib/auth-client"
 import {
   getChatChromeContext,
@@ -98,10 +98,7 @@ const ProjectDropdownContent = ({
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={setOpen}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
           variant="ghost"

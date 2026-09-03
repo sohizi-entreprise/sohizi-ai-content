@@ -5,11 +5,11 @@ import {
   IconPlayerTrackNextFilled,
   IconPlayerTrackPrevFilled,
 } from "@tabler/icons-react"
+import { Button } from "@sohizi/ui/button"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { usePlayerRef } from "../../engine/player-ref"
 import { formatPlayerTimecode } from "../../utils/time"
 import { AspectRatioPicker } from "./aspect-ratio-picker"
-import { Button } from "@sohizi/ui/button"
 
 export function TransportBar() {
   const playerRef = usePlayerRef()

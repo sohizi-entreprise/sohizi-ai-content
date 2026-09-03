@@ -1,12 +1,6 @@
 import { IconHistory, IconLoader2, IconTrash, IconX } from "@tabler/icons-react"
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query"
 import { useState } from "react"
-import {
-  deleteConversationMutationOptions,
-  listConversationsQueryOptions,
-} from "../query-mutation"
-import { useChatStore } from "../store/chat-store"
-import type { Conversation } from "../types"
 import { Button } from "@sohizi/ui/button"
 import {
   Sheet,
@@ -17,8 +11,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@sohizi/ui/sheet"
-import { timeFromNow } from "@/lib/utils"
 import { Skeleton } from "@sohizi/ui/skeleton"
+import {
+  deleteConversationMutationOptions,
+  listConversationsQueryOptions,
+} from "../query-mutation"
+import { useChatStore } from "../store/chat-store"
+import type { Conversation } from "../types"
+import { timeFromNow } from "@/lib/utils"
 
 export function ChatHistory({ projectId }: { projectId: string }) {
   const { data: conversations = [], isLoading } = useInfiniteQuery(
@@ -37,10 +37,7 @@ export function ChatHistory({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={setOpen}
-    >
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
           variant="ghost"
@@ -51,11 +48,7 @@ export function ChatHistory({ projectId }: { projectId: string }) {
           <IconHistory className="size-4" />
         </Button>
       </SheetTrigger>
-      <SheetContent
-        side="right"
-        showCloseButton={false}
-        className="w-2xl"
-      >
+      <SheetContent side="right" showCloseButton={false} className="w-2xl">
         <SheetHeader className="border-b">
           <SheetTitle>Chat History</SheetTitle>
           <SheetDescription className="sr-only">
@@ -160,12 +153,7 @@ function ConversationItem({
 
 function ConversationLoader() {
   const items = [1, 2, 3, 4]
-  return items.map((item) => (
-    <Skeleton
-      className="w-full h-4"
-      key={item}
-    />
-  ))
+  return items.map((item) => <Skeleton className="w-full h-4" key={item} />)
 }
 
 function ConversationEmpty() {

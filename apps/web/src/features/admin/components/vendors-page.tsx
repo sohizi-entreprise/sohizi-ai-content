@@ -1,12 +1,5 @@
 import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import {
-  deleteAdminVendorMutationOptions,
-  listAdminVendorsQueryOptions,
-  updateAdminVendorMutationOptions,
-} from "../query-mutation"
-import { VendorFormDialog } from "./vendor-form-dialog"
-import type { AdminVendor } from "../types"
 import { Button } from "@sohizi/ui/button"
 import { Switch } from "@sohizi/ui/switch"
 import {
@@ -17,6 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@sohizi/ui/table"
+import {
+  deleteAdminVendorMutationOptions,
+  listAdminVendorsQueryOptions,
+  updateAdminVendorMutationOptions,
+} from "../query-mutation"
+import { VendorFormDialog } from "./vendor-form-dialog"
+import type { AdminVendor } from "../types"
 
 export function VendorsPage() {
   const {

@@ -35,10 +35,7 @@ export function ContextWindowDonut({
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <div
-        className="relative"
-        style={{ width: diameter, height: diameter }}
-      >
+      <div className="relative" style={{ width: diameter, height: diameter }}>
         <svg
           width={diameter}
           height={diameter}

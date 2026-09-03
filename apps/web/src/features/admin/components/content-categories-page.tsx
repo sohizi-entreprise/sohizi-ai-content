@@ -1,11 +1,5 @@
 import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import {
-  deleteAdminContentCategoryMutationOptions,
-  listAdminContentCategoriesQueryOptions,
-} from "../query-mutation"
-import { ContentCategoryFormDialog } from "./content-category-form-dialog"
-import type { AdminContentCategory } from "../types"
 import { Badge } from "@sohizi/ui/badge"
 import { Button } from "@sohizi/ui/button"
 import {
@@ -16,6 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from "@sohizi/ui/table"
+import {
+  deleteAdminContentCategoryMutationOptions,
+  listAdminContentCategoriesQueryOptions,
+} from "../query-mutation"
+import { ContentCategoryFormDialog } from "./content-category-form-dialog"
+import type { AdminContentCategory } from "../types"
 
 export function ContentCategoriesPage() {
   const {

@@ -1,4 +1,3 @@
-import type { ModelBasePricing } from "../types"
 import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
 import {
@@ -8,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sohizi/ui/select"
+import type { ModelBasePricing } from "../types"
 
 export type PricingUnit = "none" | "per_1m_tokens" | "per_inference"
 

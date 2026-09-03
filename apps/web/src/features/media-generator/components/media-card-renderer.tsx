@@ -43,12 +43,7 @@ export default function MediaCardRenderer({
   }
 
   if (isFailed) {
-    return (
-      <FailedMediaCard
-        item={item}
-        projectId={projectId}
-      />
-    )
+    return <FailedMediaCard item={item} projectId={projectId} />
   }
 
   return (
@@ -102,11 +97,7 @@ function PendingMediaCard({ item }: { item: AiGeneratedMediaRequest }) {
   return (
     <StreamingContainer>
       <div className="flex shrink-0 items-center gap-2 px-2 py-1.5">
-        <SphereLoader
-          isLoading
-          size={18}
-          showRings={false}
-        />
+        <SphereLoader isLoading size={18} showRings={false} />
         <p className="min-w-0 truncate text-xs tracking-wide text-muted-foreground">
           {progressText}
         </p>
@@ -171,10 +162,7 @@ function FailedMediaCard({
 function StreamingContainer({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative aspect-4/3 overflow-hidden rounded-md border bg-background">
-      <DotGridLoader
-        circleSize={0.6}
-        dotColor="rgb(212, 255, 0)"
-      />
+      <DotGridLoader circleSize={0.6} dotColor="rgb(212, 255, 0)" />
       <div className="absolute inset-0 flex items-center justify-center px-3">
         <div className="min-w-0 max-w-full rounded-md px-2 py-1 backdrop-blur-xs">
           {children}
@@ -191,12 +179,7 @@ function CompletedMediaCards({
   onSelectedChange,
 }: MediaCardRendererProps) {
   if (item.assets.length === 0) {
-    return (
-      <FailedMediaCard
-        item={item}
-        projectId={projectId}
-      />
-    )
+    return <FailedMediaCard item={item} projectId={projectId} />
   }
 
   if (item.assets.length === 1) {

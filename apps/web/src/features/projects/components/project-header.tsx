@@ -6,9 +6,9 @@ import {
   IconSearch,
 } from "@tabler/icons-react"
 import { Link, useNavigate, useSearch } from "@tanstack/react-router"
+import { Button } from "@sohizi/ui/button"
 import CreateTemplate from "./create-template"
 import { cn } from "@/lib/utils"
-import { Button } from "@sohizi/ui/button"
 
 export default function ProjectHeader() {
   const searchQuery = useSearch({ from: "/dashboard/main/projects" })

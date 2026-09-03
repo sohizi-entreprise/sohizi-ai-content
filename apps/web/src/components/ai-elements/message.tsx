@@ -15,9 +15,6 @@ import {
   useState,
 } from "react"
 import { Streamdown } from "streamdown"
-import type { ComponentProps, HTMLAttributes, ReactElement } from "react"
-import type { UIMessage } from "ai"
-import { cn } from "@/lib/utils"
 import {
   Tooltip,
   TooltipContent,
@@ -26,6 +23,9 @@ import {
 } from "@sohizi/ui/tooltip"
 import { ButtonGroup, ButtonGroupText } from "@sohizi/ui/button-group"
 import { Button } from "@sohizi/ui/button"
+import type { ComponentProps, HTMLAttributes, ReactElement } from "react"
+import type { UIMessage } from "ai"
+import { cn } from "@/lib/utils"
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"]
@@ -69,10 +69,7 @@ export const MessageActions = ({
   children,
   ...props
 }: MessageActionsProps) => (
-  <div
-    className={cn("flex items-center gap-1", className)}
-    {...props}
-  >
+  <div className={cn("flex items-center gap-1", className)} {...props}>
     {children}
   </div>
 )
@@ -91,12 +88,7 @@ export const MessageAction = ({
   ...props
 }: MessageActionProps) => {
   const button = (
-    <Button
-      size={size}
-      type="button"
-      variant={variant}
-      {...props}
-    >
+    <Button size={size} type="button" variant={variant} {...props}>
       {children}
       <span className="sr-only">{label || tooltip}</span>
     </Button>

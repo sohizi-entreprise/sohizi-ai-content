@@ -8,6 +8,7 @@ import {
   Type,
   Upload,
 } from "lucide-react"
+import { Button } from "@sohizi/ui/button"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { useVideoEditorUiStore } from "../../store/ui-store"
 import { useSelectedClip } from "../../hooks/use-selected-clip"
@@ -19,7 +20,6 @@ import { CLIP_TYPE_LABEL, ClipSettings } from "../settings/settings-panel"
 import { CaptionsLibrary } from "./captions-library"
 import type { LeftPanelTab } from "../../store/ui-store"
 import type { ComponentType, ReactNode } from "react"
-import { Button } from "@sohizi/ui/button"
 import { cn } from "@/lib/utils"
 
 interface LeftPanelProps {
@@ -215,10 +215,7 @@ function AssetsLibrary({ projectId }: LeftPanelProps) {
 function TextLibrary() {
   return (
     <>
-      <SectionHeader
-        title="Text"
-        description="Drag a style to the timeline"
-      />
+      <SectionHeader title="Text" description="Drag a style to the timeline" />
       <div className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-3.5">
         <TextPresetsPanel />
       </div>

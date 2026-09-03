@@ -5,8 +5,9 @@ import {
   createRootRouteWithContext,
 } from "@tanstack/react-router"
 import appCss from "../styles.css?url"
+import type { PublicEnv } from "@/lib/public-env"
 import { loadPublicEnv } from "@/lib/load-public-env"
-import { getPublicEnv, setPublicEnv, type PublicEnv } from "@/lib/public-env"
+import { getPublicEnv, setPublicEnv } from "@/lib/public-env"
 
 interface RouterContext {
   publicEnv?: PublicEnv
@@ -71,10 +72,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className="dark"
-    >
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>
@@ -88,9 +86,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { publicEnv } = Route.useRouteContext()
-  if (publicEnv) {
-    setPublicEnv(publicEnv)
-  }
+  setPublicEnv(publicEnv)
 
   return <Outlet />
 }

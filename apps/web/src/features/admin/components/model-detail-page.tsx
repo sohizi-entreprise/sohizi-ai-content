@@ -2,31 +2,6 @@ import { useEffect, useRef, useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { Trash2 } from "lucide-react"
-import {
-  createModelVendorBindingMutationOptions,
-  deleteModelVendorBindingMutationOptions,
-  getAdminModelQueryOptions,
-  listAdminCategoriesQueryOptions,
-  listAdminParametersQueryOptions,
-  listAdminVendorsQueryOptions,
-  listModelParametersQueryOptions,
-  replaceModelParametersMutationOptions,
-  updateAdminModelMutationOptions,
-  updateModelVendorBindingMutationOptions,
-} from "../query-mutation"
-import {
-  ModelParametersEditor,
-  bindingsToDrafts,
-  draftsToPayload,
-} from "./model-parameters-editor"
-import {
-  PricingEditor,
-  formStateToPricing,
-  pricingToFormState,
-} from "./pricing-editor"
-import type { ParameterBindingDraft } from "./model-parameters-editor"
-import type { PricingFormState } from "./pricing-editor"
-import { getErrorMessage } from "@/lib/errors"
 import { Button } from "@sohizi/ui/button"
 import { Checkbox } from "@sohizi/ui/checkbox"
 import { Input } from "@sohizi/ui/input"
@@ -48,6 +23,31 @@ import {
   TableHeader,
   TableRow,
 } from "@sohizi/ui/table"
+import {
+  createModelVendorBindingMutationOptions,
+  deleteModelVendorBindingMutationOptions,
+  getAdminModelQueryOptions,
+  listAdminCategoriesQueryOptions,
+  listAdminParametersQueryOptions,
+  listAdminVendorsQueryOptions,
+  listModelParametersQueryOptions,
+  replaceModelParametersMutationOptions,
+  updateAdminModelMutationOptions,
+  updateModelVendorBindingMutationOptions,
+} from "../query-mutation"
+import {
+  PricingEditor,
+  formStateToPricing,
+  pricingToFormState,
+} from "./pricing-editor"
+import {
+  ModelParametersEditor,
+  bindingsToDrafts,
+  draftsToPayload,
+} from "./model-parameters-editor"
+import type { PricingFormState } from "./pricing-editor"
+import type { ParameterBindingDraft } from "./model-parameters-editor"
+import { getErrorMessage } from "@/lib/errors"
 
 type Props = {
   modelId: string
@@ -220,10 +220,7 @@ function ModelDetailForm({
         <p className="font-mono text-sm text-muted-foreground">{model.id}</p>
       </div>
 
-      <form
-        className="space-y-6"
-        onSubmit={handleSave}
-      >
+      <form className="space-y-6" onSubmit={handleSave}>
         <section className="space-y-4 rounded-xl border p-4">
           <h2 className="text-sm font-medium">Details</h2>
           <div className="space-y-2">
@@ -300,10 +297,7 @@ function ModelDetailForm({
             Listed rates for this model. Option multipliers on parameters below
             adjust this base rate.
           </p>
-          <PricingEditor
-            value={pricing}
-            onChange={setPricing}
-          />
+          <PricingEditor value={pricing} onChange={setPricing} />
         </section>
 
         <section className="space-y-4 rounded-xl border p-4">
@@ -317,10 +311,7 @@ function ModelDetailForm({
         {saveError ? (
           <p className="text-sm text-destructive">{saveError}</p>
         ) : null}
-        <Button
-          type="submit"
-          disabled={pending}
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : "Save model"}
         </Button>
       </form>
@@ -436,10 +427,7 @@ function ModelVendorsSection({
         </Table>
       </div>
 
-      <form
-        className="space-y-3 rounded-xl border p-4"
-        onSubmit={attach}
-      >
+      <form className="space-y-3 rounded-xl border p-4" onSubmit={attach}>
         <h3 className="text-sm font-medium">Attach vendor</h3>
         <div className="grid grid-cols-3 gap-3">
           <div className="space-y-2">
@@ -460,10 +448,7 @@ function ModelVendorsSection({
               </SelectTrigger>
               <SelectContent>
                 {unusedVendors.map((vendor) => (
-                  <SelectItem
-                    key={vendor.id}
-                    value={vendor.id}
-                  >
+                  <SelectItem key={vendor.id} value={vendor.id}>
                     {vendor.name}
                   </SelectItem>
                 ))}
@@ -490,10 +475,7 @@ function ModelVendorsSection({
           </div>
         </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <Button
-          type="submit"
-          disabled={!vendorId || createMutation.isPending}
-        >
+        <Button type="submit" disabled={!vendorId || createMutation.isPending}>
           {createMutation.isPending ? "Attaching…" : "Attach vendor"}
         </Button>
       </form>

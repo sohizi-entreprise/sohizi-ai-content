@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Folder } from "lucide-react"
+import { Input } from "@sohizi/ui/input"
 import {
   describeFileTypes,
   isPickerAssetType,
@@ -8,7 +9,6 @@ import {
 } from "../lib/parameter-assets"
 import { AssetPickerGrid } from "./asset-picker-grid"
 import type { PickerAsset, PickerAssetType } from "../lib/parameter-assets"
-import { Input } from "@sohizi/ui/input"
 import { cn } from "@/lib/utils"
 import { listFolderMediaQueryOptions } from "@/features/projects/query-mutation"
 import { useFolderSearch } from "@/hooks/use-folder-search"

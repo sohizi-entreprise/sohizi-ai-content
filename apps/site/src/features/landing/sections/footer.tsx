@@ -22,20 +22,14 @@ function FooterLink({ href, label }: { href: string; label: string }) {
 
   if (href.startsWith("/#") || href.startsWith("#") || isAppPath(href)) {
     return (
-      <a
-        href={isAppPath(href) ? appUrl(href) : href}
-        className={className}
-      >
+      <a href={isAppPath(href) ? appUrl(href) : href} className={className}>
         {label}
       </a>
     )
   }
 
   return (
-    <Link
-      to={href}
-      className={className}
-    >
+    <Link to={href} className={className}>
       {label}
     </Link>
   )
@@ -46,10 +40,7 @@ export function LandingFooter() {
     <footer className="border-t border-white/5 bg-background px-4 pb-10 pt-14 sm:px-6">
       <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))]">
         <div>
-          <Link
-            to="/"
-            className="flex items-center gap-2"
-          >
+          <Link to="/" className="flex items-center gap-2">
             <img
               src="/logo.svg"
               alt=""
@@ -81,10 +72,7 @@ export function LandingFooter() {
                   aria-label={social.label}
                   className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
-                  <Icon
-                    className="size-5"
-                    stroke={1.5}
-                  />
+                  <Icon className="size-5" stroke={1.5} />
                 </a>
               )
             })}
@@ -99,10 +87,7 @@ export function LandingFooter() {
             <ul className="mt-4 space-y-3">
               {column.links.map((link) => (
                 <li key={link.label}>
-                  <FooterLink
-                    href={link.href}
-                    label={link.label}
-                  />
+                  <FooterLink href={link.href} label={link.label} />
                 </li>
               ))}
             </ul>

@@ -1,12 +1,5 @@
 import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Trash } from "lucide-react"
 import { useState } from "react"
-import { useEditorStore } from "../../stores/editor-store"
-import { useFileTreeStore } from "../../stores/file-tree-store"
-import { DirectoryNode } from "../file-node/node-directory"
-import { getFileIcon } from "../../utils/get-file-icon"
-import { FILE_FORMAT_OPTIONS } from "./node-menu"
-import type { FileNodeFormat, FileTreeNode, NodeProps } from "../../types"
-import { cn } from "@/lib/utils"
 import {
   Menubar,
   MenubarContent,
@@ -17,6 +10,13 @@ import {
   MenubarSubTrigger,
   MenubarTrigger,
 } from "@sohizi/ui/menubar"
+import { useEditorStore } from "../../stores/editor-store"
+import { useFileTreeStore } from "../../stores/file-tree-store"
+import { DirectoryNode } from "../file-node/node-directory"
+import { getFileIcon } from "../../utils/get-file-icon"
+import { FILE_FORMAT_OPTIONS } from "./node-menu"
+import type { FileNodeFormat, FileTreeNode, NodeProps } from "../../types"
+import { cn } from "@/lib/utils"
 
 export function DocumentNode(props: NodeProps) {
   const { node, style, dragHandle } = props

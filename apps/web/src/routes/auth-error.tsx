@@ -81,17 +81,10 @@ function AuthErrorPage() {
           )}
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
-          <Button
-            asChild
-            className="w-full"
-          >
+          <Button asChild className="w-full">
             <Link to="/sign-in">Try Again</Link>
           </Button>
-          <Button
-            asChild
-            variant="ghost"
-            className="w-full"
-          >
+          <Button asChild variant="ghost" className="w-full">
             <Link to="/">Back to Home</Link>
           </Button>
         </CardFooter>

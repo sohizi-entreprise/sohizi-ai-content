@@ -1,11 +1,5 @@
 import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import {
-  deleteAdminCategoryMutationOptions,
-  listAdminCategoriesQueryOptions,
-} from "../query-mutation"
-import { CategoryFormDialog } from "./category-form-dialog"
-import type { AdminCategory } from "../types"
 import { Button } from "@sohizi/ui/button"
 import {
   Table,
@@ -15,6 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@sohizi/ui/table"
+import {
+  deleteAdminCategoryMutationOptions,
+  listAdminCategoriesQueryOptions,
+} from "../query-mutation"
+import { CategoryFormDialog } from "./category-form-dialog"
+import type { AdminCategory } from "../types"
 
 export function ModelCategoriesPage() {
   const {
@@ -107,10 +107,7 @@ export function ModelCategoriesPage() {
         </Table>
       </div>
 
-      <CategoryFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
+      <CategoryFormDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   )
 }

@@ -1,4 +1,11 @@
 import { Check, Minus } from "lucide-react"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@sohizi/ui/accordion"
+import { WavyBackground } from "@sohizi/ui/wavy-background"
 import { MarketingShell } from "../marketing-shell"
 import { CtaButton } from "../components/cta-button"
 import {
@@ -8,13 +15,6 @@ import {
   pricingPage,
 } from "../content/pricing"
 import type { CompareCell } from "../content/pricing"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@sohizi/ui/accordion"
-import { WavyBackground } from "@sohizi/ui/wavy-background"
 import { cn } from "@/lib/utils"
 
 /** Brand lemon green + nearby teal (hex for reliable canvas support) */
@@ -29,10 +29,7 @@ const PRICING_WAVE_COLORS = [
 function CellValue({ value }: { value: CompareCell }) {
   if (typeof value === "boolean") {
     return value ? (
-      <Check
-        className="mx-auto size-4 text-primary"
-        aria-label="Included"
-      />
+      <Check className="mx-auto size-4 text-primary" aria-label="Included" />
     ) : (
       <Minus
         className="mx-auto size-4 text-muted-foreground/50"
@@ -226,11 +223,7 @@ export function PricingPage() {
             </p>
           </div>
 
-          <Accordion
-            type="single"
-            collapsible
-            className="w-full"
-          >
+          <Accordion type="single" collapsible className="w-full">
             {pricingFaq.items.map((item) => (
               <AccordionItem
                 key={item.question}

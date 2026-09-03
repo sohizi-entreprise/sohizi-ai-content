@@ -1,5 +1,5 @@
-import { howItWorks } from "../content"
 import { Spotlight } from "@sohizi/ui/spotlight"
+import { howItWorks } from "../content"
 
 export function HowItWorksSection() {
   return (

@@ -109,15 +109,9 @@ export function ChatInput({
             >
               <IconPlus className="size-4" />
             </PromptInputButton>
-            <input
-              {...getInputProps()}
-              className="sr-only"
-            />
+            <input {...getInputProps()} className="sr-only" />
 
-            <ContextWindowDonut
-              usage={{ percentage: 40 }}
-              size="xs"
-            />
+            <ContextWindowDonut usage={{ percentage: 40 }} size="xs" />
             <ChatSelectModel projectId={projectId} />
           </PromptInputTools>
 

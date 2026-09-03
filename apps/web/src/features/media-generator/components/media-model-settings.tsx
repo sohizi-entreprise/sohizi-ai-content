@@ -1,14 +1,5 @@
 import { useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { listGoogleVoicesQueryOptions } from "../query-mutations"
-import { useMediaCatalog } from "../hooks/use-media-catalog"
-import { showsVoiceSelector } from "../constants"
-import { useMediaGeneratorStore } from "../store/media-generator-store"
-import { MediaVoiceSelector } from "./media-voice-selector"
-import { AssetPickerField } from "./asset-picker-dialog"
-import { MediaModelSelector } from "./media-model-selector"
-import type { ReactNode } from "react"
-import type { ModelParameterBinding } from "@/features/admin/types"
 import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
 import {
@@ -21,6 +12,15 @@ import {
 import { Slider } from "@sohizi/ui/slider"
 import { Switch } from "@sohizi/ui/switch"
 import { Skeleton } from "@sohizi/ui/skeleton"
+import { listGoogleVoicesQueryOptions } from "../query-mutations"
+import { useMediaCatalog } from "../hooks/use-media-catalog"
+import { showsVoiceSelector } from "../constants"
+import { useMediaGeneratorStore } from "../store/media-generator-store"
+import { MediaVoiceSelector } from "./media-voice-selector"
+import { AssetPickerField } from "./asset-picker-dialog"
+import { MediaModelSelector } from "./media-model-selector"
+import type { ReactNode } from "react"
+import type { ModelParameterBinding } from "@/features/admin/types"
 import { cn } from "@/lib/utils"
 
 type MediaModelSettingsProps = {
@@ -92,10 +92,7 @@ export function MediaModelSettings(props: MediaModelSettingsProps) {
 
       {showVoice ? (
         <SettingsField label="Voice">
-          <MediaVoiceSelector
-            voices={voices}
-            isLoading={isLoadingVoices}
-          />
+          <MediaVoiceSelector voices={voices} isLoading={isLoadingVoices} />
         </SettingsField>
       ) : null}
 
@@ -168,10 +165,7 @@ function ParameterLabel({
     >
       {parameter.label}
       {parameter.required ? (
-        <span
-          className="ml-0.5 text-destructive"
-          aria-hidden="true"
-        >
+        <span className="ml-0.5 text-destructive" aria-hidden="true">
           *
         </span>
       ) : null}
@@ -197,14 +191,8 @@ function ParameterField({
   if (component === "select" && parameter.options.length > 0) {
     return (
       <div className="space-y-2">
-        <ParameterLabel
-          parameter={parameter}
-          error={error}
-        />
-        <Select
-          value={value}
-          onValueChange={onChange}
-        >
+        <ParameterLabel parameter={parameter} error={error} />
+        <Select value={value} onValueChange={onChange}>
           <SelectTrigger className="h-11 w-full rounded-xl dark:bg-background dark:hover:bg-accent/40">
             <SelectValue
               placeholder={`Select ${parameter.label.toLowerCase()}`}
@@ -212,10 +200,7 @@ function ParameterField({
           </SelectTrigger>
           <SelectContent>
             {parameter.options.map((option) => (
-              <SelectItem
-                key={option.id}
-                value={option.value}
-              >
+              <SelectItem key={option.id} value={option.value}>
                 {option.label}
               </SelectItem>
             ))}
@@ -236,10 +221,7 @@ function ParameterField({
       return (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <ParameterLabel
-              parameter={parameter}
-              error={error}
-            />
+            <ParameterLabel parameter={parameter} error={error} />
             <span className="text-xs text-muted-foreground">{safeValue}</span>
           </div>
           <Slider
@@ -255,10 +237,7 @@ function ParameterField({
 
     return (
       <div className="space-y-2">
-        <ParameterLabel
-          parameter={parameter}
-          error={error}
-        />
+        <ParameterLabel parameter={parameter} error={error} />
         <Input
           type="number"
           min={min}
@@ -275,10 +254,7 @@ function ParameterField({
   if (component === "uploader") {
     return (
       <div className="space-y-2">
-        <ParameterLabel
-          parameter={parameter}
-          error={error}
-        />
+        <ParameterLabel parameter={parameter} error={error} />
         <AssetPickerField
           projectId={projectId}
           parameter={parameter}
@@ -297,10 +273,7 @@ function ParameterField({
   if (parameter.type === "boolean") {
     return (
       <div className="flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5">
-        <ParameterLabel
-          parameter={parameter}
-          error={error}
-        />
+        <ParameterLabel parameter={parameter} error={error} />
         <Switch
           checked={value === "true"}
           onCheckedChange={(checked) => onChange(checked ? "true" : "false")}
@@ -311,10 +284,7 @@ function ParameterField({
 
   return (
     <div className="space-y-2">
-      <ParameterLabel
-        parameter={parameter}
-        error={error}
-      />
+      <ParameterLabel parameter={parameter} error={error} />
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}

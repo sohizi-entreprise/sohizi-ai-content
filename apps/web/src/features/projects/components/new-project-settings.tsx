@@ -11,13 +11,6 @@ import {
   IconX,
 } from "@tabler/icons-react"
 import { useState } from "react"
-import { useNewProjectStore } from "../store/new-project-store"
-import type { IconProps } from "@tabler/icons-react"
-import type { ForwardRefExoticComponent, RefAttributes } from "react"
-import type {
-  AdditionalSettings,
-  SettingOption,
-} from "../store/new-project-store"
 import { Button } from "@sohizi/ui/button"
 import {
   Dialog,
@@ -29,6 +22,13 @@ import {
   DialogTrigger,
 } from "@sohizi/ui/dialog"
 import { Label } from "@sohizi/ui/label"
+import { useNewProjectStore } from "../store/new-project-store"
+import type { IconProps } from "@tabler/icons-react"
+import type { ForwardRefExoticComponent, RefAttributes } from "react"
+import type {
+  AdditionalSettings,
+  SettingOption,
+} from "../store/new-project-store"
 
 type OptionProps = {
   onSelect: (value: string) => void
@@ -116,10 +116,7 @@ export default function NewProjectSettings() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          className="border dark:border-white/10"
-        >
+        <Button variant="outline" className="border dark:border-white/10">
           <IconSettings className="size-4" />
           Configure
         </Button>
@@ -413,11 +410,7 @@ function SettingItem({
       <div
         className={`flex justify-center items-center bg-gray-200 rounded-xl overflow-hidden aspect-4/3 group-hover:scale-105 transition-all duration-300 ring-2 ${isSelected ? "ring-primary ring-offset-2 ring-offset-gray-800" : "ring-transparent"}`}
       >
-        <img
-          className="w-1/2 object-contain"
-          src={source}
-          alt={label}
-        />
+        <img className="w-1/2 object-contain" src={source} alt={label} />
       </div>
       <Label
         className={`text-base transition-all duration-300 ${isSelected ? "text-primary font-semibold" : "group-hover:text-primary"}`}

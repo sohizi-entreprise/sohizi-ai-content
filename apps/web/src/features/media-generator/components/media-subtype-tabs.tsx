@@ -1,8 +1,8 @@
+import { Tabs, TabsList, TabsTrigger } from "@sohizi/ui/tabs"
 import { AUDIO_SUBTYPES, IMAGE_SUBTYPES, VIDEO_SUBTYPES } from "../constants"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
 import type { GenerationSubtype } from "../types"
 import { cn } from "@/lib/utils"
-import { Tabs, TabsList, TabsTrigger } from "@sohizi/ui/tabs"
 
 const SUBTYPE_OPTIONS = {
   image: IMAGE_SUBTYPES,

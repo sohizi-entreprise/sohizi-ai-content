@@ -1,10 +1,5 @@
 import { useMutation, useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { Link, useSearch } from "@tanstack/react-router"
-import {
-  deleteProjectMutationOptions,
-  getListProjectsQueryOptions,
-} from "../query-mutation"
-import ProjectCard from "./project-card"
 import { Skeleton } from "@sohizi/ui/skeleton"
 import {
   Empty,
@@ -14,6 +9,11 @@ import {
   EmptyTitle,
 } from "@sohizi/ui/empty"
 import { Button } from "@sohizi/ui/button"
+import {
+  deleteProjectMutationOptions,
+  getListProjectsQueryOptions,
+} from "../query-mutation"
+import ProjectCard from "./project-card"
 import { cn } from "@/lib/utils"
 import { useSession } from "@/lib/auth-client"
 
@@ -72,10 +72,7 @@ export const ListProjectsSkeleton = () => {
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, index) => (
-        <Skeleton
-          key={index}
-          className="h-[280px] w-full"
-        />
+        <Skeleton key={index} className="h-[280px] w-full" />
       ))}
     </div>
   )
@@ -91,10 +88,7 @@ export const ListProjectsError = ({
   return (
     <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-red-500 p-4">
       <h3>{msg}</h3>
-      <button
-        className="cursor-pointer"
-        onClick={reset}
-      >
+      <button className="cursor-pointer" onClick={reset}>
         Retry
       </button>
     </div>

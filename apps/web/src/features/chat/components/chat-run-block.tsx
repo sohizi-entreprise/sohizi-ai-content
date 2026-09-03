@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import { TextShimmerCss } from "@sohizi/ui/loaders"
 import { useBufferChunks } from "../hooks/use-buffer-chunks"
 import { useChatStore } from "../store/chat-store"
 import ChatBuble from "./chat-buble"
 import type { AgentRunBlock, FilePendingOperation, Message } from "../types"
-import { TextShimmerCss } from "@sohizi/ui/loaders"
 import { fileTreeKey } from "@/features/projects/query-mutation"
 import { getFilePendingKey } from "@/features/editor/query-mutations"
 
@@ -76,10 +76,7 @@ function RenderMessages({ messages }: { messages: Array<Message> }) {
   return (
     <div className="flex flex-col gap-4">
       {messages.map((msg) => (
-        <ChatBuble
-          key={msg.id}
-          data={msg}
-        />
+        <ChatBuble key={msg.id} data={msg} />
       ))}
     </div>
   )
