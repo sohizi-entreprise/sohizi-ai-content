@@ -120,7 +120,7 @@ jobs:
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
-          ENV_FILE: ${{ secrets.ENV_FILE }}
+          ENV_FILE: ${{ vars.ENV_FILE_RC }}
         run: |
           mkdir -p /tmp/sohizi-deploy
           cp compose.prod.yaml /tmp/sohizi-deploy/compose.yml

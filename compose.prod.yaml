@@ -11,9 +11,6 @@ services:
     image: sohizi/sohizi-lab:api-latest
     pull_policy: always
     restart: unless-stopped
-    # ports:
-    #   - "3030:3030"
-    env_file: .env
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -22,6 +19,25 @@ services:
       INNGEST_BASE_URL: http://inngest:8288
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
+      OPENAI_API_KEY: ${API_OPENAI_API_KEY}
+      R2_ACCESS_KEY_ID: ${API_R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${API_R2_SECRET_ACCESS_KEY}
+      R2_ENDPOINT: ${API_R2_ENDPOINT}
+      R2_BUCKET_NAME: ${API_R2_BUCKET_NAME}
+      R2_PUBLIC_URL: ${API_R2_PUBLIC_URL}
+      BETTER_AUTH_SECRET: ${API_BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${API_BETTER_AUTH_URL}
+      GOOGLE_CLIENT_ID: ${API_GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${API_GOOGLE_CLIENT_SECRET}
+      RESEND_API_KEY: ${API_RESEND_API_KEY}
+      EMAIL_FROM: ${API_EMAIL_FROM}
+      FRONTEND_URL: ${API_FRONTEND_URL}
+      CLOUDFLARE_WORKER_URL: ${API_CLOUDFLARE_WORKER_URL}
+      RENDER_SERVICE_TOKEN: ${API_RENDER_SERVICE_TOKEN}
+      RENDER_ALLOWED_MEDIA_HOSTS: ${API_RENDER_ALLOWED_MEDIA_HOSTS}
+      LUMEN_API_KEY: ${API_LUMEN_API_KEY}
+      OPENROUTER_API_KEY: ${API_OPENROUTER_API_KEY}
+      WAVESPEED_API_KEY: ${API_WAVESPEED_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -31,44 +47,50 @@ services:
     networks:
       - caddy
       - private
+    labels:
+      caddy: api.${DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 3030}}"
 
   web:
     image: sohizi/sohizi-lab:web-latest
     pull_policy: always
     restart: unless-stopped
-    # ports:
-    #   - "3000:3000"
-    env_file: .env
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: "3000"
+      SITE_URL: ${WEB_SITE_URL}
+      MEDIA_CDN_URL: ${WEB_MEDIA_CDN_URL}
+      API_URL: ${WEB_API_URL}
     depends_on:
       api:
         condition: service_started
     logging: *default-logging
     networks:
       - caddy
+    labels:
+      caddy: app.${DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 3000}}"
 
   site:
     image: sohizi/sohizi-lab:site-latest
     pull_policy: always
     restart: unless-stopped
-    # ports:
-    #   - "3001:3001"
-    env_file: .env
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: "3001"
+      APP_URL: ${SITE_APP_URL}
     logging: *default-logging
     networks:
       - caddy
+    labels:
+      caddy: ${DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 3001}}"
 
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
-    env_file: .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -114,7 +136,6 @@ services:
       - --poll-interval
       - "60"
       - --json
-    env_file: .env
     environment:
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
@@ -139,6 +160,9 @@ services:
     networks:
       - private
       - caddy
+    labels:
+      caddy: inngest.${DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 8288}}"
 
 
 volumes:
