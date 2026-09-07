@@ -50,6 +50,7 @@ services:
     labels:
       caddy: api.${DOMAIN}
       caddy.reverse_proxy: "{{upstreams 3030}}"
+      caddy.tls: "off"
 
   web:
     image: sohizi/sohizi-lab:web-latest
@@ -71,6 +72,7 @@ services:
     labels:
       caddy: app.${DOMAIN}
       caddy.reverse_proxy: "{{upstreams 3000}}"
+      caddy.tls: "off"
 
   site:
     image: sohizi/sohizi-lab:site-latest
