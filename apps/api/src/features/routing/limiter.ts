@@ -1,21 +1,12 @@
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
 import type Redis from "ioredis"
 import { redis as defaultRedis } from "@/lib/redis"
 import {
   DEFAULT_VENDOR_CIRCUIT_CONFIG,
   DEFAULT_VENDOR_RATE_LIMIT,
 } from "@/type"
+import ACQUIRE_LUA from "./lua/acquire.lua" with { type: "text" }
+import RELEASE_LUA from "./lua/release.lua" with { type: "text" }
 import type { AcquireResult, ReleaseOutcome } from "./types"
-
-const ACQUIRE_LUA = readFileSync(
-  join(import.meta.dir, "lua/acquire.lua"),
-  "utf8",
-)
-const RELEASE_LUA = readFileSync(
-  join(import.meta.dir, "lua/release.lua"),
-  "utf8",
-)
 
 const INFLIGHT_KEY_TTL_MS = 24 * 60 * 60 * 1000
 const DEFAULT_ACQUIRE_TIMEOUT_MS = 100
