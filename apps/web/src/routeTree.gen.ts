@@ -13,11 +13,8 @@ import { Route as IndexRouteImport } from "./routes/index"
 import { Route as AdminRouteImport } from "./routes/admin"
 import { Route as AuthErrorRouteImport } from "./routes/auth-error"
 import { Route as DashboardRouteImport } from "./routes/dashboard"
-import { Route as PricingRouteImport } from "./routes/pricing"
-import { Route as PrivacyRouteImport } from "./routes/privacy"
 import { Route as SignInRouteImport } from "./routes/sign-in"
 import { Route as SignUpRouteImport } from "./routes/sign-up"
-import { Route as TermsRouteImport } from "./routes/terms"
 import { Route as AdminIndexRouteImport } from "./routes/admin/index"
 import { Route as AdminCommandsRouteImport } from "./routes/admin/commands"
 import { Route as AdminContentCategoriesRouteImport } from "./routes/admin/content-categories"
@@ -64,16 +61,6 @@ const DashboardRoute = DashboardRouteImport.update({
   path: "/dashboard",
   getParentRoute: () => rootRouteImport,
 } as any)
-const PricingRoute = PricingRouteImport.update({
-  id: "/pricing",
-  path: "/pricing",
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: "/privacy",
-  path: "/privacy",
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SignInRoute = SignInRouteImport.update({
   id: "/sign-in",
   path: "/sign-in",
@@ -82,11 +69,6 @@ const SignInRoute = SignInRouteImport.update({
 const SignUpRoute = SignUpRouteImport.update({
   id: "/sign-up",
   path: "/sign-up",
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TermsRoute = TermsRouteImport.update({
-  id: "/terms",
-  path: "/terms",
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -228,11 +210,8 @@ export interface FileRoutesByFullPath {
   "/admin": typeof AdminRouteWithChildren
   "/auth-error": typeof AuthErrorRoute
   "/dashboard": typeof DashboardRouteWithChildren
-  "/pricing": typeof PricingRoute
-  "/privacy": typeof PrivacyRoute
   "/sign-in": typeof SignInRoute
   "/sign-up": typeof SignUpRoute
-  "/terms": typeof TermsRoute
   "/admin/commands": typeof AdminCommandsRoute
   "/admin/content-categories": typeof AdminContentCategoriesRoute
   "/admin/models": typeof AdminModelsRouteWithChildren
@@ -262,11 +241,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
   "/auth-error": typeof AuthErrorRoute
-  "/pricing": typeof PricingRoute
-  "/privacy": typeof PrivacyRoute
   "/sign-in": typeof SignInRoute
   "/sign-up": typeof SignUpRoute
-  "/terms": typeof TermsRoute
   "/admin/commands": typeof AdminCommandsRoute
   "/admin/content-categories": typeof AdminContentCategoriesRoute
   "/admin/skills": typeof AdminSkillsRoute
@@ -297,11 +273,8 @@ export interface FileRoutesById {
   "/admin": typeof AdminRouteWithChildren
   "/auth-error": typeof AuthErrorRoute
   "/dashboard": typeof DashboardRouteWithChildren
-  "/pricing": typeof PricingRoute
-  "/privacy": typeof PrivacyRoute
   "/sign-in": typeof SignInRoute
   "/sign-up": typeof SignUpRoute
-  "/terms": typeof TermsRoute
   "/admin/commands": typeof AdminCommandsRoute
   "/admin/content-categories": typeof AdminContentCategoriesRoute
   "/admin/models": typeof AdminModelsRouteWithChildren
@@ -335,11 +308,8 @@ export interface FileRouteTypes {
     | "/admin"
     | "/auth-error"
     | "/dashboard"
-    | "/pricing"
-    | "/privacy"
     | "/sign-in"
     | "/sign-up"
-    | "/terms"
     | "/admin/commands"
     | "/admin/content-categories"
     | "/admin/models"
@@ -369,11 +339,8 @@ export interface FileRouteTypes {
   to:
     | "/"
     | "/auth-error"
-    | "/pricing"
-    | "/privacy"
     | "/sign-in"
     | "/sign-up"
-    | "/terms"
     | "/admin/commands"
     | "/admin/content-categories"
     | "/admin/skills"
@@ -403,11 +370,8 @@ export interface FileRouteTypes {
     | "/admin"
     | "/auth-error"
     | "/dashboard"
-    | "/pricing"
-    | "/privacy"
     | "/sign-in"
     | "/sign-up"
-    | "/terms"
     | "/admin/commands"
     | "/admin/content-categories"
     | "/admin/models"
@@ -440,11 +404,8 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AuthErrorRoute: typeof AuthErrorRoute
   DashboardRoute: typeof DashboardRouteWithChildren
-  PricingRoute: typeof PricingRoute
-  PrivacyRoute: typeof PrivacyRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
-  TermsRoute: typeof TermsRoute
 }
 
 declare module "@tanstack/react-router" {
@@ -477,20 +438,6 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    "/pricing": {
-      id: "/pricing"
-      path: "/pricing"
-      fullPath: "/pricing"
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    "/privacy": {
-      id: "/privacy"
-      path: "/privacy"
-      fullPath: "/privacy"
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     "/sign-in": {
       id: "/sign-in"
       path: "/sign-in"
@@ -503,13 +450,6 @@ declare module "@tanstack/react-router" {
       path: "/sign-up"
       fullPath: "/sign-up"
       preLoaderRoute: typeof SignUpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    "/terms": {
-      id: "/terms"
-      path: "/terms"
-      fullPath: "/terms"
-      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/admin/": {
@@ -811,11 +751,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AuthErrorRoute: AuthErrorRoute,
   DashboardRoute: DashboardRouteWithChildren,
-  PricingRoute: PricingRoute,
-  PrivacyRoute: PrivacyRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
-  TermsRoute: TermsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

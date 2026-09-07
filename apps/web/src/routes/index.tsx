@@ -1,8 +1,13 @@
-import { createFileRoute, redirect } from "@tanstack/react-router"
-import { siteUrl } from "@/lib/site-url"
+import { createFileRoute } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/")({
-  beforeLoad: () => {
-    throw redirect({ href: siteUrl("/") })
-  },
+  component: HomePage,
 })
+
+function HomePage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <p className="text-muted-foreground">Welcome to Sohizi Lab</p>
+    </div>
+  )
+}
