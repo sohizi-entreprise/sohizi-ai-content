@@ -136,6 +136,7 @@ jobs:
             cd ~/sohizi-lab
             docker login -u "'"$DOCKER_USERNAME"'" --password-stdin
             docker compose pull
+            docker compose up -d postgres --wait
             docker compose run --rm migrate
             docker compose up -d --remove-orphans
           '

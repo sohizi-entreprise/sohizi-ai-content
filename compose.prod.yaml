@@ -89,7 +89,7 @@ services:
       caddy.reverse_proxy: "{{upstreams 3001}}"
 
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg18
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
