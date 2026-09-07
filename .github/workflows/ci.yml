@@ -121,6 +121,8 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           ENV_FILE: ${{ vars.ENV_FILE_RC }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN }}
         run: |
           mkdir -p /tmp/sohizi-deploy
           cp compose.prod.yaml /tmp/sohizi-deploy/compose.yml
@@ -130,8 +132,9 @@ jobs:
           ssh "$remote" 'mkdir -p ~/sohizi-lab'
           scp /tmp/sohizi-deploy/compose.yml /tmp/sohizi-deploy/init.sql /tmp/sohizi-deploy/.env "$remote:~/sohizi-lab/"
           ssh "$remote" 'cd ~/sohizi-lab && ls -la && test -s compose.yml && test -s init.sql && test -s .env && wc -l compose.yml init.sql .env'
-          ssh "$remote" 'set -euo pipefail
+          printf '%s\n' "$DOCKER_ACCESS_TOKEN" | ssh "$remote" 'set -euo pipefail
             cd ~/sohizi-lab
+            docker login -u "'"$DOCKER_USERNAME"'" --password-stdin
             docker compose pull
             docker compose run --rm migrate
             docker compose up -d --remove-orphans
