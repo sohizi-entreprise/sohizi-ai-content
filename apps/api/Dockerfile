@@ -24,13 +24,21 @@ RUN bun build \
 	--minify-whitespace \
 	--minify-syntax \
 	--outfile /app/api \
-	src/index.ts
+	src/index.ts \
+	&& bun build \
+	--compile \
+	--minify-whitespace \
+	--minify-syntax \
+	--outfile /app/migrate \
+	src/db/migrate.ts
 
 FROM gcr.io/distroless/base
 
 WORKDIR /app
 
 COPY --from=build --chmod=755 /app/api api
+COPY --from=build --chmod=755 /app/migrate migrate
+COPY --from=build /app/apps/api/src/db/migrations /app/migrations
 
 ENV NODE_ENV=production
 

@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -99,8 +99,8 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
-  deploy-files:
-    name: Deploy files
+  deploy:
+    name: Deploy
     needs: docker
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -116,7 +116,7 @@ jobs:
       - name: Add VPS to known hosts
         run: ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Stage and copy files
+      - name: Stage, copy, migrate, and roll out
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -130,3 +130,9 @@ jobs:
           ssh "$remote" 'mkdir -p ~/sohizi-lab'
           scp /tmp/sohizi-deploy/compose.yml /tmp/sohizi-deploy/init.sql /tmp/sohizi-deploy/.env "$remote:~/sohizi-lab/"
           ssh "$remote" 'cd ~/sohizi-lab && ls -la && test -s compose.yml && test -s init.sql && test -s .env && wc -l compose.yml init.sql .env'
+          ssh "$remote" 'set -euo pipefail
+            cd ~/sohizi-lab
+            docker compose pull
+            docker compose run --rm migrate
+            docker compose up -d --remove-orphans
+          '

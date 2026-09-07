@@ -164,6 +164,22 @@ services:
       caddy: inngest.${DOMAIN}
       caddy.reverse_proxy: "{{upstreams 8288}}"
 
+  migrate:
+    image: sohizi/sohizi-lab:api-latest
+    pull_policy: always
+    command: ["./migrate"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      MIGRATIONS_FOLDER: /app/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - private
+    restart: "no"
+    profiles: ["migrate"]
+    logging: *default-logging
+
 
 volumes:
   postgres_data:
