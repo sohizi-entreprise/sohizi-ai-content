@@ -1,21 +1,29 @@
-import { E5SmallLocalEmbedder } from "@/lib/rag/local-embedder"
+import { splitIntoChunks } from "@/lib/rag/chunker"
 import * as fileSystemRepo from "./repo"
 import { countWords } from "./utils"
+
+const CHUNK_TARGET_WORDS = 256
+const CHUNK_OVERLAP_WORDS = 128
+
+const wordTokenizer = {
+  tokenLength: async (text: string) => countWords(text),
+}
 
 export type IngestFileContentChunksParams = {
   projectId: string
   fileNodeId: string
   content: string
-  embedder?: E5SmallLocalEmbedder
 }
 
 export async function ingestFileContentChunks({
   projectId,
   fileNodeId,
   content,
-  embedder = new E5SmallLocalEmbedder(),
 }: IngestFileContentChunksParams): Promise<void> {
-  const chunks = await embedder.chunkText(content)
+  const chunks = await splitIntoChunks(content, wordTokenizer, {
+    targetTokens: CHUNK_TARGET_WORDS,
+    overlapTokens: CHUNK_OVERLAP_WORDS,
+  })
 
   if (chunks.length === 0) {
     await fileSystemRepo.replaceFileContentChunks(projectId, fileNodeId, [])

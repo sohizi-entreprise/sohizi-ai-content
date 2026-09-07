@@ -6,18 +6,16 @@ import {
   Asset,
 } from "@/db/schema"
 import { ProseDocument } from "@/type"
-import { EmbedderInterface } from "@/lib/rag"
 import {
   deleteFileNode as deleteFileNodeFn,
   getFileContent as getFileContentFn,
   listDirectoryFiles as listDirectoryFilesFn,
   searchProjectContent as searchProjectContentFn,
-  semanticSearchDirectory as semanticSearchDirectoryFn,
   updateFileContent as updateFileContentFn,
   updateFileNode as updateFileNodeFn,
 } from "../functions"
 import { FileNodeInsertPosition } from "../payload"
-import { ChunkHit, KeywordChunkHit } from "../types"
+import { KeywordChunkHit } from "../types"
 import {
   countLines,
   countWords,
@@ -137,7 +135,7 @@ export class FileObject {
         this.fileNode.projectId,
         this.fileNode.id,
       )
-      return ok(children.map((child) => new FileObject(child)))
+      return ok(children.map((child: unknown) => new FileObject(child)))
     } catch (error) {
       return err(
         getErrorMessage(
@@ -180,38 +178,6 @@ export class FileObject {
       return ok(hits)
     } catch (error) {
       return err(getErrorMessage(error, "Failed to search project content"))
-    }
-  }
-
-  async searchByEmbedding(
-    embedder: EmbedderInterface,
-    query: string,
-    limit = 20,
-  ): Promise<FileObjectResponse<ChunkHit[] | null>> {
-    const normalizedQuery = query.trim()
-    if (!normalizedQuery) {
-      return err("Query cannot be empty")
-    }
-
-    try {
-      const hits = await semanticSearchDirectoryFn(
-        {
-          projectId: this.fileNode.projectId,
-          fileNodeId: this.fileNode.id,
-          query: normalizedQuery,
-          limit,
-        },
-        embedder,
-      )
-
-      return ok(hits)
-    } catch (error) {
-      return err(
-        getErrorMessage(
-          error,
-          `Failed to search by embedding inside ${this.fileNode.name}`,
-        ),
-      )
     }
   }
 

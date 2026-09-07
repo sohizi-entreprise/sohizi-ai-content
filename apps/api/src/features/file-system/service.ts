@@ -9,7 +9,6 @@ import {
   createFileNode as createFileNodeFn,
   getFileContent as getFileContentFn,
   searchProjectContent as searchProjectContentFn,
-  semanticSearchDirectory as semanticSearchDirectoryFn,
   updateFileContent as updateFileContentFn,
   updateFileNode as updateFileNodeFn,
 } from "./functions"
@@ -21,7 +20,6 @@ import {
 } from "./payload"
 import * as fileSystemRepo from "./repo"
 import * as mediaRepo from "../media-engine/repo"
-import { E5SmallLocalEmbedder } from "@/lib/rag/local-embedder"
 import { ingestFileContentChunks } from "./ingest-file-content-chunks"
 import { Asset } from "@/db/schema"
 import * as storage from "../media-engine/storage"
@@ -294,17 +292,6 @@ export const getFileContent = async (
 }
 
 // ==============================
-
-export const semanticSearch = async (request: {
-  projectId: string
-  fileNodeId: string
-  query: string
-  limit?: number
-}) => {
-  await validateProject(request.projectId)
-  const embedder = new E5SmallLocalEmbedder()
-  return semanticSearchDirectoryFn(request, embedder)
-}
 
 export const searchFileContent = async (request: {
   projectId: string
