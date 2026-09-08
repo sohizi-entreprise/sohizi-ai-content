@@ -70,7 +70,12 @@ services:
       - caddy
     labels:
       caddy: http://app.${DOMAIN}
-      caddy.reverse_proxy: "{{upstreams 3000}}"
+      caddy.0_handle: /api/auth*
+      caddy.0_handle.0_reverse_proxy: api:3030
+      caddy.1_handle_path: /api/*
+      caddy.1_handle_path.0_reverse_proxy: api:3030
+      caddy.2_handle:
+      caddy.2_handle.0_reverse_proxy: "{{upstreams 3000}}"
 
   site:
     image: sohizi/sohizi-lab:site-latest
