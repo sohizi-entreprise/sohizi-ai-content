@@ -85,7 +85,7 @@ services:
     networks:
       - caddy
     labels:
-      caddy: http://${DOMAIN}
+      caddy: http://www.${DOMAIN}
       caddy.reverse_proxy: "{{upstreams 3001}}"
 
   postgres:
