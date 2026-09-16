@@ -21,7 +21,6 @@ export const fileSystemPrompt = `
 - All files are stored under a root directory: \`/root\`
 - Use absolute paths starting with \`/root/\` (e.g., \`/root/scripts/episode_1\`)
 - Maximum directory depth: 5 levels
-- Maximum files per directory: 150
 
 ### File Formats
 Files use custom formats: ${FILE_FORMATS.join(", ")}

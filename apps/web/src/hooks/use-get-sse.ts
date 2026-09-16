@@ -17,6 +17,9 @@ export const useGetSSE = <TEvent extends string>(
 
   const eventSourceRef = useRef<EventSource | null>(null)
   const eventTypesRef = useRef<Record<TEvent, SseEventHandler>>(eventFuncMap)
+  const onErrorRef = useRef(onError)
+  eventTypesRef.current = eventFuncMap
+  onErrorRef.current = onError
 
   const subscribe = useCallback((sseUrl: string) => {
     // Clean up any existing connection
@@ -46,7 +49,7 @@ export const useGetSSE = <TEvent extends string>(
       } catch (e) {
         const err =
           e instanceof Error ? e : new Error("Failed to parse stream event")
-        onError?.(err)
+        onErrorRef.current?.(err)
       }
     }
     Object.keys(eventTypesRef.current).forEach((eventName) => {
@@ -57,7 +60,7 @@ export const useGetSSE = <TEvent extends string>(
       if (eventSource.readyState === EventSource.CLOSED) {
         const err = new Error("Stream connection closed")
         eventSourceRef.current = null
-        onError?.(err)
+        onErrorRef.current?.(err)
       }
     }
 

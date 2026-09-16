@@ -46,6 +46,15 @@ export const listModels = async (
   return response.data
 }
 
+export const listCatalogModels = async (
+  categories: Array<string>,
+): Promise<Array<LlmModel>> => {
+  const response = await api.get("/models", {
+    params: { categories: categories.join(",") },
+  })
+  return response.data
+}
+
 export const listAgentRuns = async (
   projectId: string,
   conversationId: string,

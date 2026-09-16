@@ -15,6 +15,10 @@ import {
 } from "../generation-request/stream-handler"
 import { appendRequestAssets } from "../generation-request/repo"
 import type { AssetMetadata, CompositionVariable } from "@/type"
+import {
+  textFromAgentChunk,
+  withAgentTrace,
+} from "@/features/ai/agent/utils/tracing"
 
 type HtmlVideoEventData = {
   requestId: string
@@ -115,18 +119,34 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
           ],
         }
 
-        for await (const chunk of agent.runLoop(
-          userPrompt,
-          new AbortController().signal,
-          40,
-        )) {
-          console.log("[html-video] agent chunk", {
-            requestId,
-            type: chunk.type,
-            name: chunk.name,
-            chunk,
-          })
-        }
+        await withAgentTrace(
+          session,
+          {
+            agentName: "motion-graphic",
+            entrypoint: "motion-graphic",
+            input: instructions,
+          },
+          async (updateOutput) => {
+            let outputText = ""
+            for await (const chunk of agent.runLoop(
+              userPrompt,
+              new AbortController().signal,
+              40,
+            )) {
+              const text = textFromAgentChunk(chunk)
+              if (text !== undefined) {
+                outputText = text
+              }
+              console.log("[html-video] agent chunk", {
+                requestId,
+                type: chunk.type,
+                name: chunk.name,
+                chunk,
+              })
+            }
+            updateOutput(outputText)
+          },
+        )
 
         const handoff = takeHtmlCompositionHandoff(requestId)
         if (!handoff) {

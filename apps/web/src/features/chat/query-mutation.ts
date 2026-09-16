@@ -29,6 +29,11 @@ const keysFactory = {
     projectId,
     categories,
   ],
+  catalogModels: (categories: Array<string>) => [
+    "models",
+    "catalog",
+    categories,
+  ],
   fileNameSearch: (projectId: string, name: string, limit: number) => [
     "file-name-search",
     projectId,
@@ -191,6 +196,12 @@ export const listModelsQueryOptions = (
   queryOptions({
     queryKey: keysFactory.models(projectId, categories),
     queryFn: () => requests.listModels(projectId, categories),
+  })
+
+export const listCatalogModelsQueryOptions = (categories: Array<string>) =>
+  queryOptions({
+    queryKey: keysFactory.catalogModels(categories),
+    queryFn: () => requests.listCatalogModels(categories),
   })
 
 export const searchFilesByNameQueryOptions = (

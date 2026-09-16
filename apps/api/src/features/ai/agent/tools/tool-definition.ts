@@ -27,7 +27,7 @@ export type ToolResult = {
 
 type AgenticToolResult = AgentChunk | AgenticToolChunk | OperationChunk
 
-type LlmConfig<T extends z.ZodSchema> = {
+type LlmConfig<T extends z.ZodType> = {
   modelId: string
   modelConfig: ModelConfig
   buildInput: (data: z.infer<T>) => ModelMessage[]
@@ -40,7 +40,7 @@ type ToolExecutionOptions = {
   artifacts: Map<string, unknown>
 }
 
-interface BaseToolDefinition<T extends z.ZodSchema> {
+interface BaseToolDefinition<T extends z.ZodType> {
   name: string
   description: string
   inputSchema: T
@@ -50,7 +50,7 @@ interface BaseToolDefinition<T extends z.ZodSchema> {
   ) => Promise<ToolResult> | AsyncGenerator<AgenticToolResult, void, unknown>
 }
 
-export class BaseTool<T extends z.ZodSchema> {
+export class BaseTool<T extends z.ZodType> {
   public readonly params: BaseToolDefinition<T>
   constructor(params: BaseToolDefinition<T>) {
     this.params = params
@@ -153,12 +153,12 @@ export class BaseTool<T extends z.ZodSchema> {
   }
 }
 
-type LlmToolParams<T extends z.ZodSchema> = Omit<
+type LlmToolParams<T extends z.ZodType> = Omit<
   BaseToolDefinition<T>,
   "execute"
 > & { config: LlmConfig<T> }
 
-export class LlmTool<T extends z.ZodSchema> extends BaseTool<T> {
+export class LlmTool<T extends z.ZodType> extends BaseTool<T> {
   private config: LlmConfig<T>
 
   constructor(params: LlmToolParams<T>) {
@@ -248,13 +248,13 @@ export class LlmTool<T extends z.ZodSchema> extends BaseTool<T> {
   }
 }
 
-export const buildBaseTool = <T extends z.ZodSchema>(
+export const buildBaseTool = <T extends z.ZodType>(
   params: BaseToolDefinition<T>,
 ): BaseTool<T> => {
   return new BaseTool(params)
 }
 
-export const buildLlmTool = <T extends z.ZodSchema>(
+export const buildLlmTool = <T extends z.ZodType>(
   params: LlmToolParams<T>,
 ): LlmTool<T> => {
   return new LlmTool(params)

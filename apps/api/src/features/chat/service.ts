@@ -42,6 +42,7 @@ import {
   type EditorContext,
 } from "./editor-context"
 import { extractTextFromUserMessage } from "../ai/agent/utils/message-content"
+import { textFromAgentChunk, withAgentTrace } from "../ai/agent/utils/tracing"
 
 export const listConversations = async (
   projectId: string,
@@ -233,22 +234,38 @@ async function runAgent(payload: RunAgentPayload) {
         ),
     })
 
-    const chunks = agent.runLoop(userPrompt, controller.signal, 250)
+    await withAgentTrace(
+      session,
+      {
+        agentName: "main-agent",
+        entrypoint: "chat",
+        input: userPromptText,
+      },
+      async (updateOutput) => {
+        const chunks = agent.runLoop(userPrompt, controller.signal, 250)
+        let outputText = ""
 
-    for await (const chunk of chunks) {
-      await writeStreamData(runId, { runId, event: "chunk", chunk })
-    }
+        for await (const chunk of chunks) {
+          const text = textFromAgentChunk(chunk)
+          if (text !== undefined) {
+            outputText = text
+          }
+          await writeStreamData(runId, { runId, event: "chunk", chunk })
+        }
 
-    if (shouldGenerateTitle) {
-      const conversationTitle = await handleTitleGeneration(
-        userPrompt,
-        project.organizationId,
-      )
-      await repo.updateConversation(conversationId, {
-        title: conversationTitle,
-      })
-      // Maybe write the title to the stream
-    }
+        if (shouldGenerateTitle) {
+          const conversationTitle = await handleTitleGeneration(
+            userPrompt,
+            project.organizationId,
+          )
+          await repo.updateConversation(conversationId, {
+            title: conversationTitle,
+          })
+        }
+
+        updateOutput(outputText)
+      },
+    )
 
     await repo.updateConversationAgentRun(runId, { status: "finished" })
   } catch (error) {
@@ -286,6 +303,7 @@ function enrichSystemPrompt(
   editorContext?: EditorContext,
 ) {
   let finalPrompt = systemPrompt
+
   const skillPrompts = projectSkills
     .filter(
       (skill) => !!skill.description.trim() && !!skill.instructions.trim(),

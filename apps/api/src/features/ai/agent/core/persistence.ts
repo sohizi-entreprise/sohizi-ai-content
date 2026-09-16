@@ -40,6 +40,7 @@ export class CheckpointPersistence extends Persistence {
       await Promise.all([
         this.persistCheckpoint(runtimeState),
         this.persistConversationAgentRun(),
+        this.persistConversationUsage(runtimeState),
       ])
     } catch (error) {
       console.error("Failed to persist session state", error)
@@ -74,6 +75,13 @@ export class CheckpointPersistence extends Persistence {
     if (filteredMessages.length === 0) return
 
     await repo.updateConversationAgentRun(this.runId, { messages })
+  }
+
+  async persistConversationUsage(state: AgentState) {
+    if (!state.usage) return
+    await repo.updateConversation(this.checkpoint.conversationId, {
+      metadata: { usage: state.usage },
+    })
   }
 }
 

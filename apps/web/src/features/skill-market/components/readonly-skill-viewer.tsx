@@ -11,6 +11,7 @@ import {
   preprocessFileMentions,
 } from "@/features/editor/extensions/file-mention"
 import { ImageLayout } from "@/features/editor/extensions/image-layout"
+import { MarkdownHighlight } from "@/features/editor/extensions/markdown-highlight"
 import "@/features/editor/components/content/text-editor.css"
 
 const SkillDocument = Node.create({
@@ -107,6 +108,7 @@ const markdownContentExtensions = [
   }),
   FileMention,
   ImageLayout,
+  MarkdownHighlight,
 ]
 
 const markdownManager = new MarkdownManager({
@@ -140,6 +142,7 @@ const skillViewerExtensions = [
     types: ["heading", "paragraph"],
   }),
   ImageLayout,
+  MarkdownHighlight,
   FileMention.configure({
     HTMLAttributes: {
       class: "file-mention",

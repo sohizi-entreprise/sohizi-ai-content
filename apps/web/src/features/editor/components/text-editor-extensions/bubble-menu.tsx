@@ -110,7 +110,15 @@ export default function TextEditorBubbleMenu({
         ref={setMenuContainer}
         data-editor-bubble-menu
         className="flex max-w-[min(100vw-2rem,42rem)] items-center gap-1 rounded-2xl border bg-card/95 px-1.5 py-1 shadow-lg backdrop-blur-md dark:bg-background"
-        onMouseDown={(event) => event.preventDefault()}
+        onMouseDown={(event) => {
+          if (
+            event.target instanceof Element &&
+            event.target.closest("[data-slot='dialog-content']")
+          ) {
+            return
+          }
+          event.preventDefault()
+        }}
       >
         {!isSelectionEmpty && (
           <>

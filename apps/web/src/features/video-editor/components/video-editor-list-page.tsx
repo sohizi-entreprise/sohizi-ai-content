@@ -16,7 +16,9 @@ import { CreateVideoEditorModal } from "./create-video-editor-modal"
 import { listFilesByFormatQueryOptions } from "@/features/projects/query-mutation"
 
 export function VideoEditorListPage() {
-  const { projectId } = useParams({ from: "/dashboard/projects/$projectId" })
+  const { projectId } = useParams({
+    from: "/_authenticated/projects/$projectId",
+  })
   const [createOpen, setCreateOpen] = useState(false)
 
   const {
@@ -73,7 +75,7 @@ export function VideoEditorListPage() {
             {files.map((file) => (
               <Link
                 key={file.id}
-                to="/dashboard/projects/$projectId/video-editor/$fileNodeId"
+                to="/projects/$projectId/video-editor/$fileNodeId"
                 params={{ projectId, fileNodeId: file.id }}
                 className="block"
                 preload={false}

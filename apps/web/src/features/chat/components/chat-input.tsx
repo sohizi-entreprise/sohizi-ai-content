@@ -3,6 +3,7 @@ import { IconPlus } from "@tabler/icons-react"
 import { toast } from "sonner"
 import { useSendMessage } from "../hooks/use-chat"
 import { useChatStore } from "../store/chat-store"
+import { contextWindowPercentage } from "../types"
 import ChatSelectModel from "./chat-select-model"
 import { ContextWindowDonut } from "./context-window-donut"
 import ChatTextarea from "./chat-textarea"
@@ -45,6 +46,14 @@ export function ChatInput({
 
   const attachedFiles = useChatStore((state) => state.attachedFiles)
   const hasAttachments = attachedFiles.length > 0
+  const usageTotal = useChatStore(
+    (state) => state.activeConversation?.metadata?.usage?.total,
+  )
+  const model = useChatStore((state) => state.model)
+  const usagePercentage = contextWindowPercentage(
+    usageTotal,
+    model?.contextWindow,
+  )
 
   // Register the chat editor with the cross-editor bridge so document
   // selections can be inserted as references into the prompt.
@@ -111,7 +120,7 @@ export function ChatInput({
             </PromptInputButton>
             <input {...getInputProps()} className="sr-only" />
 
-            <ContextWindowDonut usage={{ percentage: 40 }} size="xs" />
+            <ContextWindowDonut usage={{ percentage: usagePercentage }} size="xs" />
             <ChatSelectModel projectId={projectId} />
           </PromptInputTools>
 

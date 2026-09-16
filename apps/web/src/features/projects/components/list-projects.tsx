@@ -8,11 +8,11 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@sohizi/ui/empty"
-import { Button } from "@sohizi/ui/button"
 import {
   deleteProjectMutationOptions,
   getListProjectsQueryOptions,
 } from "../query-mutation"
+import CreateProject from "./create-project"
 import ProjectCard from "./project-card"
 import { cn } from "@/lib/utils"
 import { useSession } from "@/lib/auth-client"
@@ -37,7 +37,7 @@ function ListProjectsContent({ organizationId }: { organizationId: string }) {
     }),
   )
   const { mutate: deleteProject } = useMutation(deleteProjectMutationOptions)
-  const { display } = useSearch({ from: "/dashboard/main/projects" })
+  const { display } = useSearch({ from: "/_authenticated/_sidebar/" })
 
   if (projects.length === 0) {
     return <ListProjectEmpty />
@@ -51,7 +51,7 @@ function ListProjectsContent({ organizationId }: { organizationId: string }) {
     >
       {projects.map((project) => (
         <Link
-          to="/dashboard/projects/$projectId/editor"
+          to="/projects/$projectId/editor"
           params={{ projectId: project.id }}
           key={project.id}
           className="block"
@@ -72,7 +72,7 @@ export const ListProjectsSkeleton = () => {
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, index) => (
-        <Skeleton key={index} className="h-[280px] w-full" />
+        <Skeleton key={index} className="h-70 w-full" />
       ))}
     </div>
   )
@@ -103,9 +103,7 @@ function ListProjectEmpty() {
         <EmptyDescription>Create a new project to get started</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Link to="/dashboard/projects/new">
-          <Button>Create Project</Button>
-        </Link>
+        <CreateProject />
       </EmptyContent>
     </Empty>
   )

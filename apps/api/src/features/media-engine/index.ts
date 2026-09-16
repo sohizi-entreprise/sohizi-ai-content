@@ -156,6 +156,7 @@ export const mediaEngineRoutes = new Elysia({ prefix: "/media/:projectId" })
     set.headers["Content-Type"] = "text/event-stream"
     set.headers["Cache-Control"] = "no-cache"
     set.headers["Connection"] = "keep-alive"
+    set.headers["X-Accel-Buffering"] = "no"
     yield* mediaService.getRequestStreams(params.requestId)
   })
   .delete("/requests/:requestId", async ({ params, user }) => {

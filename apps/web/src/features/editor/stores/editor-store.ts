@@ -2,10 +2,15 @@ import { create } from "zustand"
 import { toast } from "sonner"
 import type { EditorTab, FileTreeNode } from "../types"
 
-export type ChatChromeContext = "file-system" | "video-editor"
+export type ChatChromeContext =
+  | "file-system"
+  | "video-editor"
+  | "media-generator"
 
 export function getChatChromeContext(pathname: string): ChatChromeContext {
-  return pathname.includes("/video-editor") ? "video-editor" : "file-system"
+  if (pathname.includes("/video-editor")) return "video-editor"
+  if (pathname.includes("/generate")) return "media-generator"
+  return "file-system"
 }
 
 interface EditorState {
@@ -27,6 +32,7 @@ interface EditorState {
     format: string
   }) => void
   closeTab: (tabId: string) => void
+  closeAllTabs: () => void
   setActiveTab: (tabId: string) => void
   setActivityBarItem: (item: string) => void
   setSelectedFileId: (id: string | null) => void
@@ -46,6 +52,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   chatOpenByContext: {
     "file-system": true,
     "video-editor": true,
+    "media-generator": true,
   },
 
   setSavingStatus: (tabId, status) => {
@@ -140,6 +147,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 
     set(updates)
+  },
+
+  closeAllTabs: () => {
+    set({
+      openTabs: [],
+      activeTabId: null,
+      selectedFileId: null,
+      savingStatus: {},
+      lastSavedAt: {},
+    })
   },
 
   setActiveTab: (tabId) => {

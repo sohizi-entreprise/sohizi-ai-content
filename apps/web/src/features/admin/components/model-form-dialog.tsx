@@ -29,6 +29,7 @@ const emptyForm = {
   provider: "",
   name: "",
   description: "",
+  contextWindow: "",
   enabled: true,
   categoryNames: [] as Array<string>,
 }
@@ -68,6 +69,7 @@ export function ModelFormDialog({
         name: form.name,
         description: form.description.trim() || null,
         enabled: form.enabled,
+        contextWindow: Number(form.contextWindow),
         categoryNames: form.categoryNames,
       }
       const created = await createMutation.mutateAsync(payload)
@@ -117,6 +119,24 @@ export function ModelFormDialog({
                 setForm((prev) => ({ ...prev, name: event.target.value }))
               }
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="model-context-window">Context window</Label>
+            <Input
+              id="model-context-window"
+              type="number"
+              min={1}
+              step={1}
+              value={form.contextWindow}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  contextWindow: event.target.value,
+                }))
+              }
+              required
+              placeholder="e.g. 250000"
             />
           </div>
           <div className="space-y-2">

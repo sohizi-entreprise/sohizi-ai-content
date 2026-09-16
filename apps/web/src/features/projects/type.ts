@@ -17,6 +17,7 @@ export type FileNode = {
   position: number
   editable: boolean
   contentEditable: boolean
+  path: string
 }
 
 /** File node from the assets-folder listing, with media URL joined in. */

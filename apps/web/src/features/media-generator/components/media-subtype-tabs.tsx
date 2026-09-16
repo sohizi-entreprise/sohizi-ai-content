@@ -2,7 +2,6 @@ import { Tabs, TabsList, TabsTrigger } from "@sohizi/ui/tabs"
 import { AUDIO_SUBTYPES, IMAGE_SUBTYPES, VIDEO_SUBTYPES } from "../constants"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
 import type { GenerationSubtype } from "../types"
-import { cn } from "@/lib/utils"
 
 const SUBTYPE_OPTIONS = {
   image: IMAGE_SUBTYPES,
@@ -36,16 +35,9 @@ export function MediaSubtypeTabs() {
         setGenerationSubtype(value as GenerationSubtype)
       }
     >
-      <TabsList className="h-9 w-full rounded-xl bg-black/30 p-1">
+      <TabsList className="w-full rounded-xl">
         {options.map((option) => (
-          <TabsTrigger
-            key={option.value}
-            value={option.value}
-            className={cn(
-              "flex-1 rounded-lg px-2 text-xs text-muted-foreground",
-              "data-[state=active]:bg-primary/15 data-[state=active]:text-primary",
-            )}
-          >
+          <TabsTrigger key={option.value} value={option.value}>
             {option.label}
           </TabsTrigger>
         ))}

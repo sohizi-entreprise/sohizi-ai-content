@@ -41,6 +41,7 @@ export const createModelSchema = z.object({
   description: z.string().trim().max(1000).nullable().optional(),
   enabled: z.boolean().optional(),
   pricing: modelBasePricingSchema.nullable().optional(),
+  contextWindow: z.number().int().positive(),
   categoryNames: z.array(z.string().min(1)).default([]),
 })
 
@@ -50,6 +51,7 @@ export const updateModelSchema = z.object({
   description: z.string().trim().max(1000).nullable().optional(),
   enabled: z.boolean().optional(),
   pricing: modelBasePricingSchema.nullable().optional(),
+  contextWindow: z.number().int().positive().optional(),
   categoryNames: z.array(z.string().min(1)).optional(),
 })
 

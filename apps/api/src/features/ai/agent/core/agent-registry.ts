@@ -1,39 +1,18 @@
 import { ToolSet } from "ai"
 import { mediaGeneratorPrompt } from "../prompts/media-generator"
-import { editFileTool } from "../tools/file-edit"
-import { exploreFileTool } from "../tools/file-explore"
-import { searchFileTool } from "../tools/file-search"
-import {
-  listModelsTool,
-  getModelSchemaTool,
-  cancelRequestTool,
-  submitRequestTool,
-} from "../tools/submit-media-jobs"
-import { submitHtmlCompositionTool } from "../tools/submit-html-composition"
-import { manageTodoListTool } from "../tools/tasks-manage"
-import { timelineEditTool } from "../tools/timeline-edit"
-import { timelineExploreTool } from "../tools/timeline-explore"
 import { ModelConfig } from "../utils/llm-client"
-import { generateSystemPrompt } from "./sys-prompt"
 import { BaseTool } from "../tools/tool-definition"
 import { z } from "zod"
 import { htmlVideoGeneratorPrompt } from "../prompts/html-video-generator"
-import {
-  youtubeAnalyzerTool,
-  videoAnalyzerTool,
-  imageAnalyzerTool,
-} from "../tools/media-analyzer"
-import { generateImageTool } from "../tools/generate-image"
-import { loadSkillTool } from "../tools/load-skill"
+import { allTools } from "../tools/tool-registry"
 import { DEFAULT_AGENT_VENDOR } from "./vendor"
-
-export const supportedAgents = [
-  "media-generator",
-  "main-agent",
-  "explorer",
-  "researcher",
-  "motion-graphic",
-] as const
+import { supportedAgents } from "../constants"
+import {
+  explorerPrompt,
+  mainAgentPrompt,
+  fileSystemPrompt,
+  navigateContextPrompt,
+} from "../prompts"
 
 export type AgentName = (typeof supportedAgents)[number]
 
@@ -44,7 +23,6 @@ export type AgentDefinition = {
   modelConfig: ModelConfig
   modelId: string
   vendor: string
-  maxContextTokens: number // model context window used for consumption % computation
   contextThreshold?: number // 0-1, defaults to 0.8 in the ContextManager
   summaryModelId: string // dedicated summarizer model
   evaluatorModelId: string // dedicated stop-condition evaluator model
@@ -52,7 +30,7 @@ export type AgentDefinition = {
   subAgents: AgentName[]
 }
 
-const getSchemas = (tools: BaseTool<z.ZodSchema>[]): ToolSet => {
+const getSchemas = (tools: BaseTool<z.ZodType>[]): ToolSet => {
   const result: ToolSet = {}
   for (const tool of tools) {
     result[tool.params.name] = tool.schema
@@ -75,20 +53,26 @@ const registerAgent = (definition: AgentDefinition): void => {
 registerAgent({
   name: "main-agent",
   description: "The main agent for the application.",
-  baseSystemPrompt: generateSystemPrompt(),
+  baseSystemPrompt:
+    mainAgentPrompt +
+    "\n\n" +
+    fileSystemPrompt +
+    "\n\n" +
+    navigateContextPrompt,
   modelConfig: {
     tools: getSchemas([
-      exploreFileTool,
-      searchFileTool,
-      timelineExploreTool,
-      timelineEditTool,
-      manageTodoListTool,
-      youtubeAnalyzerTool,
-      videoAnalyzerTool,
-      imageAnalyzerTool,
-      editFileTool,
-      loadSkillTool,
-      generateImageTool,
+      allTools.exploreFileTool,
+      allTools.searchFileTool,
+      allTools.timelineExploreTool,
+      allTools.timelineEditTool,
+      allTools.manageTodoListTool,
+      allTools.youtubeAnalyzerTool,
+      allTools.videoAnalyzerTool,
+      allTools.imageAnalyzerTool,
+      allTools.editFileTool,
+      allTools.assignTaskTool,
+      allTools.loadSkillTool,
+      allTools.generateImageTool,
     ]),
     reasoningEffort: "medium",
     reasoningSummary: "auto",
@@ -96,11 +80,10 @@ registerAgent({
   },
   modelId: "openai/gpt-5.1", // This will be overridden by the model passed to the agent
   vendor: DEFAULT_AGENT_VENDOR,
-  maxContextTokens: 400_000,
   contextThreshold: 0.8,
   summaryModelId: "openai/gpt-5-nano",
   evaluatorModelId: "openai/gpt-5-nano",
-  subAgents: ["media-generator"],
+  subAgents: ["media-generator", "explorer"],
 })
 
 registerAgent({
@@ -109,23 +92,22 @@ registerAgent({
   baseSystemPrompt: mediaGeneratorPrompt,
   modelConfig: {
     tools: getSchemas([
-      manageTodoListTool,
-      exploreFileTool,
-      searchFileTool,
-      youtubeAnalyzerTool,
-      videoAnalyzerTool,
-      imageAnalyzerTool,
-      listModelsTool,
-      getModelSchemaTool,
-      cancelRequestTool,
-      submitRequestTool,
+      allTools.manageTodoListTool,
+      allTools.exploreFileTool,
+      allTools.searchFileTool,
+      allTools.youtubeAnalyzerTool,
+      allTools.videoAnalyzerTool,
+      allTools.imageAnalyzerTool,
+      allTools.listModelsTool,
+      allTools.getModelSchemaTool,
+      allTools.cancelRequestTool,
+      allTools.submitRequestTool,
     ]),
     reasoningEffort: "low",
     reasoningSummary: "auto",
   },
   modelId: "openai/gpt-5.2",
   vendor: DEFAULT_AGENT_VENDOR,
-  maxContextTokens: 400_000,
   contextThreshold: 0.8,
   summaryModelId: "openai/gpt-5-nano",
   evaluatorModelId: "openai/gpt-5-nano",
@@ -138,9 +120,9 @@ registerAgent({
   baseSystemPrompt: htmlVideoGeneratorPrompt,
   modelConfig: {
     tools: getSchemas([
-      submitHtmlCompositionTool,
-      exploreFileTool,
-      searchFileTool,
+      allTools.submitHtmlCompositionTool,
+      allTools.exploreFileTool,
+      allTools.searchFileTool,
     ]),
     reasoningEffort: "medium",
     reasoningSummary: "auto",
@@ -148,7 +130,25 @@ registerAgent({
   },
   modelId: "openai/gpt-5.2",
   vendor: DEFAULT_AGENT_VENDOR,
-  maxContextTokens: 400_000,
+  contextThreshold: 0.8,
+  summaryModelId: "openai/gpt-5-nano",
+  evaluatorModelId: "openai/gpt-5-nano",
+  subAgents: [],
+})
+
+registerAgent({
+  name: "explorer",
+  description: "Explore the file system.",
+  baseSystemPrompt:
+    explorerPrompt + "\n\n" + fileSystemPrompt + "\n\n" + navigateContextPrompt,
+  modelConfig: {
+    tools: getSchemas([allTools.exploreFileTool]),
+    reasoningEffort: "low",
+    reasoningSummary: "auto",
+    maxOutputTokens: 3000,
+  },
+  modelId: "openai/gpt-5.2",
+  vendor: DEFAULT_AGENT_VENDOR,
   contextThreshold: 0.8,
   summaryModelId: "openai/gpt-5-nano",
   evaluatorModelId: "openai/gpt-5-nano",

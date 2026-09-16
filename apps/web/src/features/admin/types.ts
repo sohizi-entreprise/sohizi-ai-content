@@ -25,6 +25,7 @@ export type AdminModel = {
   description: string | null
   enabled: boolean
   pricing?: ModelBasePricing | null
+  contextWindow: number | null
   createdAt: string
   updatedAt: string
   categories: Array<string>
@@ -222,6 +223,7 @@ export type CreateModelInput = {
   description?: string | null
   enabled?: boolean
   pricing?: ModelBasePricing | null
+  contextWindow: number
   categoryNames: Array<string>
 }
 
@@ -231,6 +233,7 @@ export type CatalogModel = {
   id: string
   name: string
   provider: string
+  contextWindow?: number | null
 }
 
 export type AdminCommand = {

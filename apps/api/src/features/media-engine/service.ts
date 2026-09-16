@@ -9,6 +9,7 @@ import {
   listDirectoryFiles,
   ORDER_GAP,
 } from "../file-system/repo"
+import { serializeFileNode } from "../file-system/utils"
 import { AssetType, CursorPaginationOptions } from "@/type"
 import { broadcastCancellation } from "../generation-request/abort-manager"
 import { v4 as uuidv4 } from "uuid"
@@ -122,7 +123,10 @@ export async function uploadSuccess(
       storageKey,
       filePosition,
     })
-    return response
+    return {
+      ...response,
+      fileNode: serializeFileNode(response.fileNode),
+    }
   } catch (error) {
     console.error(error)
     throw new BadRequest("Failed to create asset with file node")
@@ -297,7 +301,15 @@ export const attachAssetToFileNode = async (
     throw new Forbidden("Folder does not exist or is not a directory")
   }
 
-  return await repo.attachAssetToFileNode({ projectId, assetId, folderId })
+  const result = await repo.attachAssetToFileNode({
+    projectId,
+    assetId,
+    folderId,
+  })
+  return {
+    ...result,
+    fileNode: serializeFileNode(result.fileNode),
+  }
 }
 
 export const deleteAssets = async (projectId: string, assetIds: string[]) => {
@@ -330,11 +342,15 @@ export const attachAssetsToFileNodes = async (
     throw new Forbidden("Folder does not exist or is not a directory")
   }
 
-  return await repo.attachAssetsToFileNodes({
+  const result = await repo.attachAssetsToFileNodes({
     projectId,
     assetIds: normalizedAssetIds,
     folderId,
   })
+  return {
+    ...result,
+    fileNodes: result.fileNodes.map(serializeFileNode),
+  }
 }
 
 export const downloadAssetsZip = async (

@@ -51,9 +51,20 @@ type ToolbarOption = {
   isActive?: boolean
   separator?: boolean
   children?: Array<ToolbarOption>
+  restoreFocus?: boolean
+}
+
+function isDialogEvent(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest("[data-slot='dialog-content']"))
+  )
 }
 
 function preventToolbarFocusLoss(event: React.MouseEvent) {
+  // Dialog content is portaled, but React still bubbles mousedown here.
+  // preventDefault would keep the URL input from receiving focus.
+  if (isDialogEvent(event.target)) return
   event.preventDefault()
 }
 
@@ -61,10 +72,15 @@ function preventDropdownFocusChange(event: Event) {
   event.preventDefault()
 }
 
-function runToolbarCommand(editor: Editor, command: () => void) {
+function runToolbarCommand(
+  editor: Editor,
+  command: () => void,
+  restoreFocus = true,
+) {
   return (event: Event) => {
     event.preventDefault()
     command()
+    if (!restoreFocus) return
     queueMicrotask(() => {
       if (!editor.isDestroyed) {
         editor.view.focus()
@@ -83,7 +99,7 @@ function canRunCommand(editor: Editor, commandName: string): boolean {
 
 function getToolbarDropdownContentProps(portalContainer?: HTMLElement | null) {
   return {
-    align: "start" as const,
+    align: "end" as const,
     // Keep submenus inside the TipTap bubble element so blur doesn't hide the toolbar
     // (body-portaled menus position at 0,0 after the bubble unmounts).
     container: portalContainer ?? undefined,
@@ -283,11 +299,13 @@ export default function TextEditorToolbar({
           },
           disabled: editorState.isSelectionEmpty,
           isActive: !editorState.isSelectionEmpty && editorState.isLink,
+          restoreFocus: false,
         },
         {
           label: "YouTube",
           icon: Play,
           onClick: () => setYoutubeDialogOpen(true),
+          restoreFocus: false,
         },
         {
           label: "Blockquote",
@@ -458,7 +476,11 @@ function RenderToolbarOption({
         {option.children.map((child) => (
           <DropdownMenuItem
             disabled={child.disabled}
-            onSelect={runToolbarCommand(editor, child.onClick)}
+            onSelect={runToolbarCommand(
+              editor,
+              child.onClick,
+              child.restoreFocus !== false,
+            )}
             key={child.label}
           >
             <child.icon className="size-4" /> {child.label}

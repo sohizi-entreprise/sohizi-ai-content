@@ -146,6 +146,7 @@ export type Conversation = {
   title: string
   createdAt: string
   updatedAt: string
+  metadata?: ChatMetadata | null
 }
 
 export type ConversationRun = {
@@ -189,6 +190,10 @@ export type StreamTokenUsage = {
   total: number
   modelId: string
   cost: number
+}
+
+export type ChatMetadata = {
+  usage: StreamTokenUsage | null
 }
 
 // ============================================================================
@@ -407,4 +412,16 @@ export type LlmModel = {
   id: string
   provider: string
   name: string
+  contextWindow?: number | null
+}
+
+export const DEFAULT_CONTEXT_WINDOW = 250_000
+
+export function contextWindowPercentage(
+  usageTotal: number | undefined,
+  contextWindow: number | null | undefined,
+): number {
+  const window = contextWindow ?? DEFAULT_CONTEXT_WINDOW
+  if (window <= 0) return 0
+  return Math.min(100, ((usageTotal ?? 0) / window) * 100)
 }

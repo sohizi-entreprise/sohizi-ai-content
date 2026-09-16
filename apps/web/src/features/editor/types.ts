@@ -30,14 +30,20 @@ export interface EditorTab {
   content?: string
 }
 
-export type MarkdownContent = {
+export type FileContentBase = {
+  id: string
+  name: string
+  path: string
+}
+
+export type MarkdownContent = FileContentBase & {
   type: "markdown"
   content: string
   revision: number
   updatedAt: string
 }
 
-export type AssetContent = {
+export type AssetContent = FileContentBase & {
   type: "document" | "video" | "audio" | "image"
   url: string
   name: string
@@ -50,7 +56,7 @@ export type AssetContent = {
 
 export type AssetType = "document" | "video" | "audio" | "image"
 
-export type AiGeneratedAssetsContent = {
+export type AiGeneratedAssetsContent = FileContentBase & {
   type: "ai-generated-assets"
   data: Array<AiGeneratedMediaRequest>
   nextCursor: string | null
@@ -69,7 +75,7 @@ export type Skill = {
   updatedAt: string
 }
 
-export type SkillContent = {
+export type SkillContent = FileContentBase & {
   type: "skill"
   data: Skill
 }

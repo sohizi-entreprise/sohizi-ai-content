@@ -17,7 +17,7 @@ import { filesByFormatKey } from "@/features/projects/query-mutation"
 
 export function SkillMarketDetailPage() {
   const { projectId, skillId } = useParams({
-    from: "/dashboard/projects/$projectId/skill-market/$skillId",
+    from: "/_authenticated/projects/$projectId/skill-market/$skillId",
   })
   const queryClient = useQueryClient()
   const [added, setAdded] = useState(false)
@@ -98,7 +98,7 @@ export function SkillMarketDetailPage() {
         </Button>
         <Button variant="ghost" asChild>
           <Link
-            to="/dashboard/projects/$projectId/skill-market"
+            to="/projects/$projectId/skill-market"
             params={{ projectId }}
           >
             Back to Skill market
@@ -119,7 +119,7 @@ export function SkillMarketDetailPage() {
             className="gap-1.5 text-muted-foreground hover:text-foreground"
           >
             <Link
-              to="/dashboard/projects/$projectId/skill-market"
+              to="/projects/$projectId/skill-market"
               params={{ projectId }}
             >
               <ArrowLeft className="size-4" />

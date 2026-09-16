@@ -24,6 +24,7 @@ import type {
 } from "@/type"
 import { and, eq, desc, lt, isNull, max, inArray, or, sql } from "drizzle-orm"
 import { ORDER_GAP } from "../file-system/repo"
+import { joinLtree, normalizeFileName } from "../file-system/utils"
 import {
   createGenerationRequest,
   deleteGenerationRequest,
@@ -103,6 +104,7 @@ export const createAssetWithFileNode = async (
     storageKey,
     filePosition,
   } = payload
+  const normalizedName = normalizeFileName(name) || name
 
   const result = await db.transaction(async (tx) => {
     const existingFileNodeResponse = await tx
@@ -112,7 +114,7 @@ export const createAssetWithFileNode = async (
         and(
           eq(fileNodes.projectId, projectId),
           eq(fileNodes.parentId, folderId),
-          eq(fileNodes.name, name),
+          eq(fileNodes.name, normalizedName),
         ),
       )
       .limit(1)
@@ -169,13 +171,25 @@ export const createAssetWithFileNode = async (
       return { asset, fileNode }
     }
 
+    const folderResponse = await tx
+      .select({ path: fileNodes.path })
+      .from(fileNodes)
+      .where(
+        and(eq(fileNodes.projectId, projectId), eq(fileNodes.id, folderId)),
+      )
+    const folder = folderResponse[0]
+    if (!folder) {
+      throw new Error("Folder not found")
+    }
+
     const filePayload = {
       projectId,
-      name,
+      name: normalizedName,
       parentId: folderId,
       format: type,
       editable: true,
       position: filePosition,
+      path: joinLtree(folder.path, normalizedName),
     }
     const fileNodeResponse = await tx
       .insert(fileNodes)
@@ -582,15 +596,27 @@ export const attachAssetToFileNode = async ({
         ),
       )
     const maxPosition = resPos[0]?.maxPosition ?? 0
+    const folderResponse = await tx
+      .select({ path: fileNodes.path })
+      .from(fileNodes)
+      .where(
+        and(eq(fileNodes.projectId, projectId), eq(fileNodes.id, folderId)),
+      )
+    const folder = folderResponse[0]
+    if (!folder) {
+      throw new Error("Folder not found")
+    }
+    const fileName = normalizeFileName(asset.name) || asset.name
     const res2 = await tx
       .insert(fileNodes)
       .values({
         projectId,
-        name: asset.name,
+        name: fileName,
         parentId: folderId,
         format: asset.type,
         editable: true,
         position: maxPosition + ORDER_GAP,
+        path: joinLtree(folder.path, fileName),
       })
       .returning()
     const fileNode = res2[0]
@@ -640,15 +666,29 @@ export const attachAssetsToFileNodes = async ({
         ),
       )
     const maxPosition = resPos[0]?.maxPosition ?? 0
+    const folderResponse = await tx
+      .select({ path: fileNodes.path })
+      .from(fileNodes)
+      .where(
+        and(eq(fileNodes.projectId, projectId), eq(fileNodes.id, folderId)),
+      )
+    const folder = folderResponse[0]
+    if (!folder) {
+      throw new Error("Folder not found")
+    }
 
-    const fileNodeRows = orderedAssets.map((asset, index) => ({
-      projectId,
-      name: asset.name,
-      parentId: folderId,
-      format: asset.type,
-      editable: true,
-      position: maxPosition + ORDER_GAP * (index + 1),
-    }))
+    const fileNodeRows = orderedAssets.map((asset, index) => {
+      const fileName = normalizeFileName(asset.name) || asset.name
+      return {
+        projectId,
+        name: fileName,
+        parentId: folderId,
+        format: asset.type,
+        editable: true,
+        position: maxPosition + ORDER_GAP * (index + 1),
+        path: joinLtree(folder.path, fileName),
+      }
+    })
 
     const insertedFileNodes = await tx
       .insert(fileNodes)

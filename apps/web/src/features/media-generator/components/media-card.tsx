@@ -258,7 +258,7 @@ function CardMenu({
               }}
               placeholder="Search folders..."
             />
-            <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border p-1">
+            <div className="max-h-64 space-y-1 overflow-y-auto rounded-md p-1">
               {folderOptions.length === 0 ? (
                 <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                   {!trimmedDebouncedFolderQuery

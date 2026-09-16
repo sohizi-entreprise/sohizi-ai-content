@@ -123,6 +123,7 @@ export const chatRoutes = new Elysia({ prefix: "/chats/:projectId" })
       set.headers["Content-Type"] = "text/event-stream"
       set.headers["Cache-Control"] = "no-cache"
       set.headers["Connection"] = "keep-alive"
+      set.headers["X-Accel-Buffering"] = "no"
 
       yield* chatService.getStreams(params.runId)
     },

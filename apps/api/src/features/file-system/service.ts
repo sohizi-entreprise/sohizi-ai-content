@@ -25,6 +25,7 @@ import { Asset } from "@/db/schema"
 import * as storage from "../media-engine/storage"
 import { CursorPaginationOptions } from "@/type"
 import * as videoEditorRepo from "../video-editor/repo"
+import { serializeFileNode, toApiPath } from "./utils"
 
 // List file trees -> ok
 // rename file
@@ -44,7 +45,7 @@ export const createFileNode = async (data: FileCreationRequest) => {
         content: "",
       })
     }
-    return fileNode
+    return serializeFileNode(fileNode)
   } catch (error) {
     if (
       error instanceof FileSystemConflictError ||
@@ -214,7 +215,9 @@ export const listFileTreePerLevel = async (
   if (!fileNode.directory) {
     throw new BadRequest("Parent is not a directory")
   }
-  return fileSystemRepo.listDirectoryFiles(projectId, parentId)
+  return fileSystemRepo
+    .listDirectoryFiles(projectId, parentId)
+    .then((files) => files.map(serializeFileNode))
 }
 
 export const getFileContent = async (
@@ -230,6 +233,12 @@ export const getFileContent = async (
     throw new BadRequest("File is a directory")
   }
 
+  const fileMeta = {
+    id: fileNode.id,
+    name: fileNode.name,
+    path: toApiPath(fileNode.path),
+  }
+
   switch (fileNode.format) {
     case fileFormat.MARKDOWN: {
       const textContent = await fileSystemRepo.getFileContentById(
@@ -240,7 +249,8 @@ export const getFileContent = async (
         throw new NotFound("File content not found")
       }
       return {
-        type: "markdown",
+        type: "markdown" as const,
+        ...fileMeta,
         content: textContent.content,
         revision: textContent.revision,
         updatedAt: textContent.updatedAt,
@@ -253,6 +263,7 @@ export const getFileContent = async (
       const asset = await mediaRepo.getAssetByFileNodeId(projectId, fileNodeId)
       return {
         type: asset.type,
+        ...fileMeta,
         url: asset.url,
         name: asset.name,
         metadata: asset.metadata,
@@ -265,7 +276,8 @@ export const getFileContent = async (
         paginationOptions,
       )
       return {
-        type: "ai-generated-assets",
+        type: "ai-generated-assets" as const,
+        ...fileMeta,
         data: aiGeneratedAssets.data,
         nextCursor: aiGeneratedAssets.nextCursor,
         hasMore: aiGeneratedAssets.hasMore,
@@ -276,7 +288,7 @@ export const getFileContent = async (
       if (!skill) {
         throw new NotFound("Skill not found")
       }
-      return { type: "skill", data: skill }
+      return { type: "skill" as const, ...fileMeta, data: skill }
     }
     case fileFormat.VIDEO_EDITOR: {
       const videoEditor =
@@ -284,7 +296,7 @@ export const getFileContent = async (
       if (!videoEditor) {
         throw new NotFound("Video editor not found")
       }
-      return { type: "video-editor", data: videoEditor }
+      return { type: "video-editor" as const, ...fileMeta, data: videoEditor }
     }
     default:
       throw new BadRequest("Unsupported file format")
@@ -310,7 +322,7 @@ export const searchFilesByName = async (request: {
   format?: FileFormat
 }) => {
   await validateProject(request.projectId)
-  return fileSystemRepo.searchFileNodesByName(
+  const files = await fileSystemRepo.searchFileNodesByName(
     request.projectId,
     request.name,
     request.limit ?? 15,
@@ -319,6 +331,7 @@ export const searchFilesByName = async (request: {
       format: request.format,
     },
   )
+  return files.map(serializeFileNode)
 }
 
 export const listFilesByFormat = async (request: {
@@ -327,11 +340,12 @@ export const listFilesByFormat = async (request: {
   limit?: number
 }) => {
   await validateProject(request.projectId)
-  return fileSystemRepo.searchFileNodesByFormat(
+  const files = await fileSystemRepo.searchFileNodesByFormat(
     request.projectId,
     request.format,
     request.limit ?? 100,
   )
+  return files.map(serializeFileNode)
 }
 
 export const listFolderMedia = async (
@@ -347,7 +361,14 @@ export const listFolderMedia = async (
   if (!folder.directory) {
     throw new BadRequest("Required a folder to list media from")
   }
-  return fileSystemRepo.listFolderMedia(projectId, folderId, options)
+  return fileSystemRepo
+    .listFolderMedia(projectId, folderId, options)
+    .then((files) =>
+      files.map((file) => ({
+        ...file,
+        path: toApiPath(file.path),
+      })),
+    )
 }
 
 export const listAssetsFolder = async (request: {
@@ -361,15 +382,13 @@ export const listAssetsFolder = async (request: {
   if (!assetsFolder) {
     return []
   }
-  return fileSystemRepo.listFileNodesUnderFolder(
-    request.projectId,
-    assetsFolder.id,
-    {
+  return fileSystemRepo
+    .listFileNodesUnderFolder(request.projectId, assetsFolder.id, {
       name: request.name,
       format: request.format,
       limit: request.limit ?? 100,
-    },
-  )
+    })
+    .then((files) => files.map(serializeFileNode))
 }
 
 export const updateFileNode = async (
@@ -378,7 +397,8 @@ export const updateFileNode = async (
 ) => {
   await validateProject(projectId)
   try {
-    return await updateFileNodeFn(projectId, request)
+    const updated = await updateFileNodeFn(projectId, request)
+    return updated ? serializeFileNode(updated) : updated
   } catch (error) {
     if (
       error instanceof FileSystemConflictError ||

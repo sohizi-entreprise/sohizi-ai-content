@@ -1,8 +1,8 @@
 import type { FileCreationRequest, UpdateFileContentRequest } from "../payload"
-import { MAX_FILE_DEPTH, MAX_FILE_IN_DIRECTORY } from "../constants"
+import { MAX_FILE_DEPTH } from "../constants"
 import * as fileSystemRepo from "../repo"
 import type { InitialFileContent } from "../repo"
-import { normalizeFileName } from "../utils"
+import { normalizeFileName, ltreeDepth } from "../utils"
 import { FileSystemConflictError, FileSystemInputError } from "./base"
 
 const EMPTY_FILE_CONTENT: UpdateFileContentRequest = {
@@ -37,26 +37,10 @@ export const createFileNode = async (
     )
   }
 
-  const parentDepth = await fileSystemRepo.getFileNodeDepthById(
-    data.projectId,
-    data.parentId,
-  )
-  if (parentDepth === null) {
-    throw new FileSystemInputError("Invalid parent directory")
-  }
+  const parentDepth = ltreeDepth(parentFileNode.path)
   if (parentDepth + 1 > MAX_FILE_DEPTH) {
     throw new FileSystemInputError(
       `Maximum file depth of ${MAX_FILE_DEPTH} exceeded`,
-    )
-  }
-
-  const siblingFiles = await fileSystemRepo.listDirectoryFiles(
-    data.projectId,
-    data.parentId,
-  )
-  if (siblingFiles.length >= MAX_FILE_IN_DIRECTORY) {
-    throw new FileSystemInputError(
-      `Maximum file count of ${MAX_FILE_IN_DIRECTORY} exceeded in this directory`,
     )
   }
 

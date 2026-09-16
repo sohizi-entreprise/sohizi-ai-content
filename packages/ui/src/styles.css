@@ -86,7 +86,7 @@ code,
 
   --border: oklch(1 0 0 / 10%); /* Subtle structural lines */
   --input: oklch(0.33 0.025 265); /* Input borders */
-  --ring: oklch(0.77 0.22 148); /* Lemon Green focus rings */
+  --ring: oklch(85.713% 0.25206 137.085); /* Lemon Green focus rings */
 
   /* Charts mapped to Semantic Icon Colors */
   --chart-1: oklch(0.77 0.22 148); /* Lemon Green */

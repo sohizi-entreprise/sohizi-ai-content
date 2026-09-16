@@ -4,12 +4,14 @@ import {
   IconBrandYoutube,
   IconListTree,
   IconMoodSmile,
+  IconMovie,
   IconPuzzle,
   IconSettings,
   IconUserSquare,
   IconUsers,
   IconX,
 } from "@tabler/icons-react"
+import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { Button } from "@sohizi/ui/button"
 import {
@@ -22,6 +24,7 @@ import {
   DialogTrigger,
 } from "@sohizi/ui/dialog"
 import { Label } from "@sohizi/ui/label"
+import { getProjectOptionsQueryOptions } from "../query-mutation"
 import { useNewProjectStore } from "../store/new-project-store"
 import type { IconProps } from "@tabler/icons-react"
 import type { ForwardRefExoticComponent, RefAttributes } from "react"
@@ -31,7 +34,7 @@ import type {
 } from "../store/new-project-store"
 
 type OptionProps = {
-  onSelect: (value: string) => void
+  onSelect: (option: SettingOption) => void
   selectedValue: SettingOption | null
 }
 
@@ -43,6 +46,12 @@ type SettingConfig = {
 }
 
 const settings: Array<SettingConfig> = [
+  {
+    label: "Format",
+    storeKey: "format",
+    component: SelectFormat,
+    icon: IconMovie,
+  },
   {
     label: "Genre",
     storeKey: "genre",
@@ -93,6 +102,11 @@ const settings: Array<SettingConfig> = [
   },
 ]
 
+export const PROJECT_SETTING_META = settings.map(({ label, storeKey }) => ({
+  label,
+  storeKey,
+}))
+
 export default function NewProjectSettings() {
   const [selectedSetting, setSelectedSetting] = useState<string>(
     settings[0].label,
@@ -107,22 +121,23 @@ export default function NewProjectSettings() {
   const content = settings.find((setting) => setting.label === selectedSetting)!
   const currentValue = additionalSettings[content.storeKey]
 
-  const handleSelect = (label: string) => {
-    return (value: string) => {
-      setAdditionalSetting(content.storeKey, { label, value })
-    }
+  const handleSelect = (option: SettingOption) => {
+    setAdditionalSetting(content.storeKey, option)
   }
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="border dark:border-white/10">
+        <Button
+          variant="outline"
+          className="h-auto gap-1.5 rounded-full border-white/10 bg-transparent px-3 py-1.5 text-sm text-foreground hover:bg-white/5"
+        >
           <IconSettings className="size-4" />
-          Configure
+          Settings
         </Button>
       </DialogTrigger>
       <DialogContent
-        className="sm:max-w-6xl h-[80%] max-h-[800px] bg-gray-800 p-0 rounded-xl"
+        className="sm:max-w-6xl h-[80%] max-h-200 bg-gray-800 p-0 rounded-xl"
         showCloseButton={false}
       >
         <DialogDescription className="sr-only">
@@ -149,7 +164,7 @@ export default function NewProjectSettings() {
           <div className="flex-1 min-h-0 overflow-y-auto p-4">
             <div className="space-y-4">
               <content.component
-                onSelect={handleSelect(content.label)}
+                onSelect={handleSelect}
                 selectedValue={currentValue}
               />
             </div>
@@ -183,7 +198,7 @@ function RenderSettings({
   selectedValue,
 }: RenderSettingsProps) {
   const handleClick = (option: SettingOption) => {
-    onSelect(option.value)
+    onSelect(option)
   }
 
   return (
@@ -201,6 +216,23 @@ function RenderSettings({
         ))}
       </div>
     </div>
+  )
+}
+
+function SelectFormat({ onSelect, selectedValue }: OptionProps) {
+  const { data } = useQuery(getProjectOptionsQueryOptions)
+  const formats = (data?.formats ?? []).map((item) => ({
+    label: item.name,
+    value: item.id,
+  }))
+
+  return (
+    <RenderSettings
+      onSelect={onSelect}
+      options={formats}
+      setting="Format"
+      selectedValue={selectedValue}
+    />
   )
 }
 

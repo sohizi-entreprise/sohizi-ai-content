@@ -16,7 +16,7 @@ export default function StepMarker({
       <div className="flex items-center gap-3 mb-2">
         <span className="h-px w-8 bg-primary/40"></span>
         <span className="text-[11px] font-bold text-primary uppercase tracking-[0.3em]">
-          Step {step}
+          {step}
         </span>
       </div>
       <h1 className="text-4xl font-bold tracking-tight mb-2">{title}</h1>

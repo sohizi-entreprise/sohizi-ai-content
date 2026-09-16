@@ -26,31 +26,59 @@ import {
 
 const toolRegistry = new Map<string, BaseTool<z.ZodSchema>>()
 
-const registerTool = (tool: BaseTool<z.ZodSchema>): void => {
+const registerTool = (tool: BaseTool<z.ZodType>): void => {
   toolRegistry.set(tool.params.name, tool)
 }
 
-export const getTool = (name: string): BaseTool<z.ZodSchema> | undefined => {
+export const getTool = (name: string): BaseTool<z.ZodType> | undefined => {
   return toolRegistry.get(name)
 }
 
-registerTool(endExecutionLoopTool)
-registerTool(editFileTool)
-registerTool(exploreFileTool)
-registerTool(searchFileTool)
-registerTool(manageTodoListTool)
-registerTool(generateImageTool)
-registerTool(finishTool)
-registerTool(timelineExploreTool)
-registerTool(timelineEditTool)
-registerTool(processSpeechTool)
-registerTool(listModelsTool)
-registerTool(getModelSchemaTool)
-registerTool(submitRequestTool)
-registerTool(cancelRequestTool)
-registerTool(submitHtmlCompositionTool)
-registerTool(loadSkillTool)
-registerTool(assignTaskTool)
-registerTool(imageAnalyzerTool)
-registerTool(videoAnalyzerTool)
-registerTool(youtubeAnalyzerTool)
+export const allTools = {
+  endExecutionLoopTool,
+  editFileTool,
+  exploreFileTool,
+  searchFileTool,
+  manageTodoListTool,
+  generateImageTool,
+  finishTool,
+  timelineExploreTool,
+  timelineEditTool,
+  processSpeechTool,
+  listModelsTool,
+  getModelSchemaTool,
+  submitRequestTool,
+  cancelRequestTool,
+  submitHtmlCompositionTool,
+  loadSkillTool,
+  assignTaskTool,
+  imageAnalyzerTool,
+  videoAnalyzerTool,
+  youtubeAnalyzerTool,
+} as const
+
+for (const tool of Object.values(allTools)) {
+  registerTool(tool)
+}
+
+// registerTool(endExecutionLoopTool)
+// registerTool(editFileTool)
+// registerTool(exploreFileTool)
+// registerTool(searchFileTool)
+// registerTool(manageTodoListTool)
+// registerTool(generateImageTool)
+// registerTool(finishTool)
+// registerTool(timelineExploreTool)
+// registerTool(timelineEditTool)
+// registerTool(processSpeechTool)
+// registerTool(listModelsTool)
+// registerTool(getModelSchemaTool)
+// registerTool(submitRequestTool)
+// registerTool(cancelRequestTool)
+// registerTool(submitHtmlCompositionTool)
+// registerTool(loadSkillTool)
+// registerTool(assignTaskTool)
+
+// registerTool(imageAnalyzerTool)
+// registerTool(videoAnalyzerTool)
+// registerTool(youtubeAnalyzerTool)

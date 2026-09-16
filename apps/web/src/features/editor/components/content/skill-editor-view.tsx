@@ -18,6 +18,7 @@ import {
   preprocessFileMentions,
 } from "../../extensions/file-mention"
 import { ImageLayout } from "../../extensions/image-layout"
+import { MarkdownHighlight } from "../../extensions/markdown-highlight"
 import { SlashCommandExtension } from "../../extensions/slash-command"
 import { NestedTrailingNode } from "../../extensions/nested-trailing-node"
 import { useEditorInputBridge } from "../../bridge/use-editor-input-bridge"
@@ -25,7 +26,7 @@ import { MAX_CHARACTER_COUNT } from "../../constants"
 import { EditorTopChrome } from "./editor-top-chrome"
 import { SkillMetaBadges } from "./skill-meta-badges"
 import type { EditorTab, Skill } from "../../types"
-import type { JSONContent } from "@tiptap/react"
+import type { Editor, JSONContent } from "@tiptap/react"
 import { useFileMentionSearch } from "@/hooks/use-file-mention-search"
 import "./text-editor.css"
 
@@ -107,6 +108,28 @@ const SkillInstruction = Node.create({
   },
 })
 
+function getSkillSection(editor: Editor, pos: number) {
+  const $pos = editor.state.doc.resolve(pos)
+  for (let depth = $pos.depth; depth >= 0; depth -= 1) {
+    const nodeName = $pos.node(depth).type.name
+    if (nodeName === "skillDescription" || nodeName === "skillInstruction") {
+      return nodeName
+    }
+  }
+  return null
+}
+
+function isEmptySkillDescription(editor: Editor, pos: number) {
+  const $pos = editor.state.doc.resolve(pos)
+  for (let depth = $pos.depth; depth >= 0; depth -= 1) {
+    const parent = $pos.node(depth)
+    if (parent.type.name === "skillDescription") {
+      return parent.textContent.trim().length === 0
+    }
+  }
+  return false
+}
+
 const markdownContentExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
@@ -123,6 +146,7 @@ const markdownContentExtensions = [
   }),
   FileMention,
   ImageLayout,
+  MarkdownHighlight,
 ]
 
 const markdownManager = new MarkdownManager({
@@ -168,50 +192,38 @@ const skillEditorExtensions = [
     types: ["heading", "paragraph"],
   }),
   ImageLayout,
+  MarkdownHighlight,
   Markdown.configure({
     markedOptions: {
       gfm: true,
     },
   }),
   Placeholder.configure({
+    showOnlyCurrent: false,
     includeChildren: true,
-    showOnlyCurrent: true,
-    placeholder: ({ editor, node, pos }) => {
+    emptyNodeClass: ({ editor, pos, hasAnchor }) => {
+      if (isEmptySkillDescription(editor, pos) || hasAnchor) return "is-empty"
+      return ""
+    },
+    placeholder: ({ editor, node, pos, hasAnchor }) => {
       if (node.type.name !== "paragraph") return ""
 
-      const $pos = editor.state.doc.resolve(pos)
-      for (let depth = $pos.depth; depth >= 0; depth -= 1) {
-        const parentNode = $pos.node(depth)
-        const nodeName = parentNode.type.name
-        const isFirstChild = $pos.index(depth) === 0
-        const isSectionEmpty = parentNode.textContent.trim().length === 0
-
-        if (nodeName === "skillDescription" && isFirstChild && isSectionEmpty) {
-          return "Describe what this skill does..."
-        }
-        if (nodeName === "skillInstruction" && isFirstChild && isSectionEmpty) {
-          return "Write instructions or use / command..."
-        }
+      if (isEmptySkillDescription(editor, pos)) {
+        return "Describe what this skill does..."
       }
 
-      return ""
+      if (!hasAnchor) return ""
+
+      const section = getSkillSection(editor, pos)
+      if (section === "skillInstruction") {
+        return "Write instructions or use / command..."
+      }
+
+      return "Write something or use / command"
     },
   }),
   SlashCommandExtension,
 ]
-
-const skillEditorStyles = `
-.tiptap-editor-content [data-type='skill-description'] p.is-empty::before,
-.tiptap-editor-content [data-type='skill-description'] p.is-editor-empty::before,
-.tiptap-editor-content [data-type='skill-instruction'] p.is-empty::before,
-.tiptap-editor-content [data-type='skill-instruction'] p.is-editor-empty::before {
-  color: var(--muted-foreground);
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
-}
-`
 
 interface SkillEditorViewProps {
   tab: EditorTab
@@ -298,7 +310,7 @@ export function SkillEditorView({
     null,
   )
   const { projectId } = useParams({
-    from: "/dashboard/projects/$projectId/editor",
+    from: "/_authenticated/projects/$projectId/editor",
   })
   const saveSkill = useSkillAutosave({
     duration: 2000,
@@ -355,7 +367,6 @@ export function SkillEditorView({
 
   return (
     <div className="relative flex h-full w-full flex-col bg-surface">
-      <style>{skillEditorStyles}</style>
       <EditorTopChrome editor={editor} tabId={tab.id} />
       <div
         ref={setScrollContainer}
@@ -370,7 +381,7 @@ export function SkillEditorView({
           />
           <EditorContent
             editor={editor}
-            className="[&_.tiptap]:min-h-[420px] [&_.tiptap]:outline-none"
+            className="[&_.tiptap]:min-h-105 [&_.tiptap]:outline-none"
           />
           <TextEditorBubbleMenu
             editor={editor}

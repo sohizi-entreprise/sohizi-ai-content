@@ -55,6 +55,15 @@
   text-underline-offset: 0.18em;
 }
 
+.tiptap-editor-content mark,
+.tiptap-editor-content .text-highlight {
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
+  color: inherit;
+  border-radius: 0.2rem;
+  padding: 0.05em 0.2em;
+  box-decoration-break: clone;
+}
+
 .tiptap-editor-content a {
   color: var(--primary);
   text-decoration: underline;

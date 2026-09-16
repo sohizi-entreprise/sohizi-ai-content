@@ -20,12 +20,14 @@ import {
 } from "./payload"
 import { FileFormat } from "./constants"
 import { FilePendingOperation } from "@/type"
+import { joinLtree, toApiPath, ltreeDepth } from "./utils"
 
 export const ORDER_GAP = 1000
 
 const FILE_NODE_UNIQUE_CONSTRAINTS = new Set([
   "file_nodes_project_id_parent_id_name_unique",
   "file_nodes_project_id_root_name_unique",
+  "file_nodes_project_id_path_unique",
 ])
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
@@ -57,6 +59,45 @@ const isFileNodeUniqueConstraintError = (error: unknown) => {
     !!error.constraint &&
     FILE_NODE_UNIQUE_CONSTRAINTS.has(error.constraint)
   )
+}
+
+async function resolveChildPath(
+  executor: DbExecutor,
+  projectId: string,
+  parentId: string | null,
+  name: string,
+) {
+  if (!parentId) {
+    return joinLtree(null, name)
+  }
+
+  const parent = await executor
+    .select({ path: fileNodes.path })
+    .from(fileNodes)
+    .where(and(eq(fileNodes.projectId, projectId), eq(fileNodes.id, parentId)))
+  const parentPath = parent[0]?.path
+  if (!parentPath) {
+    throw new FileNodeInsertionError("Invalid parent directory")
+  }
+  return joinLtree(parentPath, name)
+}
+
+async function rewriteSubtreePaths(
+  executor: DbExecutor,
+  projectId: string,
+  oldPath: string,
+  newPath: string,
+) {
+  if (oldPath === newPath) {
+    return
+  }
+
+  await executor.execute(sql`
+    UPDATE file_nodes
+    SET path = ${newPath}::ltree || subpath(path, nlevel(${oldPath}::ltree))
+    WHERE project_id = ${projectId}
+      AND path <@ ${oldPath}::ltree
+  `)
 }
 
 // ================================
@@ -120,6 +161,19 @@ export const getFileNodeByName = async (
           ? isNull(fileNodes.parentId)
           : eq(fileNodes.parentId, parentId),
       ),
+    )
+  return result[0]
+}
+
+export const getFileNodeByPath = async (
+  projectId: string,
+  ltreePath: string,
+) => {
+  const result = await db
+    .select()
+    .from(fileNodes)
+    .where(
+      and(eq(fileNodes.projectId, projectId), eq(fileNodes.path, ltreePath)),
     )
   return result[0]
 }
@@ -241,42 +295,12 @@ export const listFileNodesUnderFolder = async (
           `
     : sql`ORDER BY fn.name ASC`
 
+  const folder = await getFileNodeById(projectId, folderId)
+  if (!folder?.path) {
+    return []
+  }
+
   const result = await db.execute(sql`
-        WITH RECURSIVE subtree AS (
-            SELECT
-                child.id,
-                child.project_id,
-                child.name,
-                child.directory,
-                child.parent_id,
-                child.position,
-                child.editable,
-                child.content_editable,
-                child.format,
-                child.created_at,
-                child.updated_at
-            FROM file_nodes child
-            WHERE child.project_id = ${projectId}
-              AND child.parent_id = ${folderId}
-
-            UNION ALL
-
-            SELECT
-                descendant.id,
-                descendant.project_id,
-                descendant.name,
-                descendant.directory,
-                descendant.parent_id,
-                descendant.position,
-                descendant.editable,
-                descendant.content_editable,
-                descendant.format,
-                descendant.created_at,
-                descendant.updated_at
-            FROM file_nodes descendant
-            JOIN subtree ON descendant.parent_id = subtree.id
-            WHERE descendant.project_id = ${projectId}
-        ) CYCLE id SET is_cycle USING cycle_path
         SELECT
             fn.id,
             fn.project_id AS "projectId",
@@ -287,14 +311,17 @@ export const listFileNodesUnderFolder = async (
             fn.editable,
             fn.content_editable AS "contentEditable",
             fn.format,
+            fn.path,
             fn.created_at AS "createdAt",
             fn.updated_at AS "updatedAt",
             a.url AS url
-        FROM subtree fn
+        FROM file_nodes fn
         LEFT JOIN assets a
           ON a.file_node_id = fn.id
          AND a.project_id = ${projectId}
-        WHERE NOT fn.is_cycle
+        WHERE fn.project_id = ${projectId}
+          AND fn.path <@ ${folder.path}::ltree
+          AND fn.path <> ${folder.path}::ltree
           AND fn.directory = false
           AND fn.format IN (${sql.join(
             formats.map((format) => sql`${format}`),
@@ -311,6 +338,7 @@ export const listFileNodesUnderFolder = async (
 export type FolderMediaFile = {
   id: string
   name: string
+  path: string
   url: string
   type: (typeof MEDIA_ASSET_FORMATS)[number]
 }
@@ -327,6 +355,7 @@ export const listFolderMedia = async (
     .select({
       id: fileNodes.id,
       name: fileNodes.name,
+      path: fileNodes.path,
       url: assets.url,
       type: fileNodes.format,
     })
@@ -355,71 +384,34 @@ export const listFolderMedia = async (
 }
 
 export const getFileNodeDepthById = async (projectId: string, id: string) => {
-  const result = await db.execute(sql`
-        WITH RECURSIVE ancestors AS (
-            SELECT
-                fn.id,
-                fn.parent_id,
-                0 AS depth
-            FROM file_nodes fn
-            WHERE fn.project_id = ${projectId}
-              AND fn.id = ${id}
-
-            UNION ALL
-
-            SELECT
-                parent.id,
-                parent.parent_id,
-                ancestors.depth + 1
-            FROM file_nodes parent
-            JOIN ancestors ON ancestors.parent_id = parent.id
-            WHERE parent.project_id = ${projectId}
-        ) CYCLE id SET is_cycle USING cycle_path
-        SELECT COALESCE(MAX(depth), 0) AS depth
-        FROM ancestors
-        WHERE NOT is_cycle
-    `)
-
-  const row = result.rows[0] as { depth?: number | string } | undefined
-
-  if (!row) {
+  const fileNode = await getFileNodeById(projectId, id)
+  if (!fileNode) {
     return null
   }
-
-  return typeof row.depth === "string" ? Number(row.depth) : (row.depth ?? 0)
+  return ltreeDepth(fileNode.path)
 }
 
 export const getFileNodeSubtreeHeight = async (
   projectId: string,
   id: string,
 ) => {
+  const fileNode = await getFileNodeById(projectId, id)
+  if (!fileNode) {
+    return null
+  }
+
   const result = await db.execute(sql`
-        WITH RECURSIVE subtree AS (
-            SELECT
-                fn.id,
-                0 AS depth
-            FROM file_nodes fn
-            WHERE fn.project_id = ${projectId}
-              AND fn.id = ${id}
-
-            UNION ALL
-
-            SELECT
-                child.id,
-                subtree.depth + 1
-            FROM file_nodes child
-            JOIN subtree ON child.parent_id = subtree.id
-            WHERE child.project_id = ${projectId}
-        ) CYCLE id SET is_cycle USING cycle_path
-        SELECT COALESCE(MAX(depth), 0) AS depth
-        FROM subtree
-        WHERE NOT is_cycle
+        SELECT COALESCE(MAX(nlevel(path)), nlevel(${fileNode.path}::ltree))
+          - nlevel(${fileNode.path}::ltree) AS depth
+        FROM file_nodes
+        WHERE project_id = ${projectId}
+          AND path <@ ${fileNode.path}::ltree
     `)
 
   const row = result.rows[0] as { depth?: number | string } | undefined
 
   if (!row) {
-    return null
+    return 0
   }
 
   return typeof row.depth === "string" ? Number(row.depth) : (row.depth ?? 0)
@@ -430,30 +422,16 @@ export const isFileNodeInAncestorChain = async (
   startId: string,
   targetAncestorId: string,
 ) => {
+  const [startNode, ancestorNode] = await Promise.all([
+    getFileNodeById(projectId, startId),
+    getFileNodeById(projectId, targetAncestorId),
+  ])
+  if (!startNode || !ancestorNode) {
+    return false
+  }
+
   const result = await db.execute(sql`
-        WITH RECURSIVE ancestors AS (
-            SELECT
-                fn.id,
-                fn.parent_id
-            FROM file_nodes fn
-            WHERE fn.project_id = ${projectId}
-              AND fn.id = ${startId}
-
-            UNION ALL
-
-            SELECT
-                parent.id,
-                parent.parent_id
-            FROM file_nodes parent
-            JOIN ancestors ON ancestors.parent_id = parent.id
-            WHERE parent.project_id = ${projectId}
-        ) CYCLE id SET is_cycle USING cycle_path
-        SELECT EXISTS(
-            SELECT 1
-            FROM ancestors
-            WHERE id = ${targetAncestorId}
-              AND NOT is_cycle
-        ) AS exists
+        SELECT ${startNode.path}::ltree <@ ${ancestorNode.path}::ltree AS exists
     `)
 
   const row = result.rows[0] as { exists?: boolean } | undefined
@@ -461,9 +439,15 @@ export const isFileNodeInAncestorChain = async (
 }
 
 export const createFileNode = async (data: FileCreationRequest) => {
+  const path = await resolveChildPath(
+    db,
+    data.projectId,
+    data.parentId,
+    data.name,
+  )
   const result = await db
     .insert(fileNodes)
-    .values(data)
+    .values({ ...data, path })
     .onConflictDoNothing()
     .returning()
   if (result.length === 0) {
@@ -485,20 +469,51 @@ export const updateFileNode = async (
   data: UpdateFileRequest,
 ) => {
   try {
-    const patch: Partial<Pick<FileNode, "name" | "parentId">> = {}
-    if (data.name !== undefined) {
-      patch.name = data.name
-    }
-    if (data.parentId !== undefined) {
-      patch.parentId = data.parentId
-    }
+    return await db.transaction(async (tx) => {
+      const source = await tx
+        .select()
+        .from(fileNodes)
+        .where(
+          and(eq(fileNodes.projectId, projectId), eq(fileNodes.id, data.id)),
+        )
+      const sourceFileNode = source[0]
+      if (!sourceFileNode) {
+        return undefined
+      }
 
-    const result = await db
-      .update(fileNodes)
-      .set(patch)
-      .where(and(eq(fileNodes.id, data.id), eq(fileNodes.projectId, projectId)))
-      .returning()
-    return result[0]
+      const patch: Partial<Pick<FileNode, "name" | "parentId">> = {}
+      if (data.name !== undefined) {
+        patch.name = data.name
+      }
+      if (data.parentId !== undefined) {
+        patch.parentId = data.parentId
+      }
+
+      const nextName = data.name ?? sourceFileNode.name
+      const nextParentId =
+        data.parentId === undefined ? sourceFileNode.parentId : data.parentId
+      const newPath = await resolveChildPath(
+        tx,
+        projectId,
+        nextParentId,
+        nextName,
+      )
+
+      const result = await tx
+        .update(fileNodes)
+        .set(patch)
+        .where(
+          and(eq(fileNodes.id, data.id), eq(fileNodes.projectId, projectId)),
+        )
+        .returning()
+      const updated = result[0]
+      if (!updated) {
+        return undefined
+      }
+
+      await rewriteSubtreePaths(tx, projectId, sourceFileNode.path, newPath)
+      return { ...updated, path: newPath }
+    })
   } catch (error) {
     if (isFileNodeUniqueConstraintError(error)) {
       throw new FileNodeUniqueConstraintError(
@@ -570,10 +585,18 @@ export const moveFileNode = async (
         return null
       }
 
+      const newPath = await resolveChildPath(
+        tx,
+        projectId,
+        data.parentId,
+        data.name,
+      )
+      await rewriteSubtreePaths(tx, projectId, sourceFileNode.path, newPath)
+
       if (insertionPlan.orderedIds) {
         await applyOrderedPositions(tx, projectId, insertionPlan.orderedIds)
       }
-      return updated[0]
+      return { ...updated[0], path: newPath }
     })
   } catch (error) {
     if (isFileNodeUniqueConstraintError(error)) {
@@ -637,6 +660,17 @@ export const updateBulkFileNodes = async (
     const results: FileNode[] = []
 
     for (const item of data) {
+      const current = await tx
+        .select()
+        .from(fileNodes)
+        .where(
+          and(eq(fileNodes.projectId, projectId), eq(fileNodes.id, item.id)),
+        )
+      const currentFileNode = current[0]
+      if (!currentFileNode) {
+        continue
+      }
+
       const patch: Partial<Pick<FileNode, "name" | "parentId">> = {}
 
       if ("name" in item) {
@@ -647,6 +681,16 @@ export const updateBulkFileNodes = async (
         patch.parentId = item.parentId
       }
 
+      const nextName = item.name ?? currentFileNode.name
+      const nextParentId =
+        item.parentId === undefined ? currentFileNode.parentId : item.parentId
+      const newPath = await resolveChildPath(
+        tx,
+        projectId,
+        nextParentId,
+        nextName,
+      )
+
       const updated = await tx
         .update(fileNodes)
         .set(patch)
@@ -656,7 +700,8 @@ export const updateBulkFileNodes = async (
         .returning()
 
       if (updated[0]) {
-        results.push(updated[0])
+        await rewriteSubtreePaths(tx, projectId, currentFileNode.path, newPath)
+        results.push({ ...updated[0], path: newPath })
       }
     }
 
@@ -772,9 +817,10 @@ export const createFileWithContentAtPosition = async (
       data.parentId,
     )
     const provisionalPosition = getNextPositionFromSiblings(siblings)
+    const path = await resolveChildPath(tx, projectId, data.parentId, data.name)
     const file = await tx
       .insert(fileNodes)
-      .values({ ...data, position: provisionalPosition })
+      .values({ ...data, position: provisionalPosition, path })
       .onConflictDoNothing()
       .returning()
     if (file.length === 0) {
@@ -925,10 +971,18 @@ export const insertFileNodeInDirectory = async (
       return null
     }
 
+    const newPath = await resolveChildPath(
+      tx,
+      projectId,
+      data.parentId,
+      sourceFileNode.name,
+    )
+    await rewriteSubtreePaths(tx, projectId, sourceFileNode.path, newPath)
+
     if (insertionPlan.orderedIds) {
       await applyOrderedPositions(tx, projectId, insertionPlan.orderedIds)
     }
-    return updated[0]
+    return { ...updated[0], path: newPath }
   })
 }
 
@@ -1102,35 +1156,11 @@ export const getFileNodePathById = async (
   projectId: string,
   fileNodeId: string,
 ) => {
-  const result = await db.execute(sql`
-        WITH RECURSIVE ancestors AS (
-            SELECT
-                fn.id,
-                fn.parent_id,
-                fn.name,
-                0 AS depth
-            FROM file_nodes fn
-            WHERE fn.project_id = ${projectId}
-              AND fn.id = ${fileNodeId}
-
-            UNION ALL
-
-            SELECT
-                parent.id,
-                parent.parent_id,
-                parent.name,
-                ancestors.depth + 1
-            FROM file_nodes parent
-            JOIN ancestors ON ancestors.parent_id = parent.id
-            WHERE parent.project_id = ${projectId}
-        ) CYCLE id SET is_cycle USING cycle_path
-        SELECT '/' || string_agg(name, '/' ORDER BY depth DESC) AS path
-        FROM ancestors
-        WHERE NOT is_cycle
-    `)
-
-  const row = result.rows[0] as { path?: string | null } | undefined
-  return row?.path ?? null
+  const fileNode = await getFileNodeById(projectId, fileNodeId)
+  if (!fileNode) {
+    return null
+  }
+  return toApiPath(fileNode.path)
 }
 
 export const searchProjectChunksByKeyword = async (
@@ -1177,6 +1207,7 @@ export const searchProjectChunksByKeyword = async (
             ranked_documents.id,
             ranked_documents.file_node_id AS "fileNodeId",
             ranked_documents.total_chunks_matched::int AS "totalChunksMatched",
+            '/' || replace(fn.path::text, '.', '/') AS path,
             ts_headline(
                 'simple',
                 ranked_documents.chunk_text,
@@ -1184,6 +1215,9 @@ export const searchProjectChunksByKeyword = async (
                 'StartSel=**, StopSel=**, MaxWords=50, MinWords=15'
             ) AS snippet
         FROM ranked_documents
+        JOIN file_nodes fn
+          ON fn.id = ranked_documents.file_node_id
+         AND fn.project_id = ${projectId}
         CROSS JOIN search
         WHERE ranked_documents.chunk_rn = 1
         ORDER BY ranked_documents.rank DESC
@@ -1194,6 +1228,7 @@ export const searchProjectChunksByKeyword = async (
     id: string
     fileNodeId: string
     totalChunksMatched: number
+    path: string
     snippet: string
   }>
 }

@@ -19,6 +19,7 @@ type Params = {
   onFinish: (status: AgentRunBlock["status"]) => void
   onAsset?: (asset: MediaAsset) => void
   onOperation?: (operation: FilePendingOperation) => void
+  onError?: (error: Error) => void
 }
 
 export function useBufferChunks({
@@ -27,6 +28,7 @@ export function useBufferChunks({
   onFinish,
   onAsset,
   onOperation,
+  onError,
 }: Params) {
   const [messages, setMessages] = useState<Array<Message>>(initialMessages)
   const [assets, setAssets] = useState<Array<MediaAsset>>([])
@@ -38,6 +40,9 @@ export function useBufferChunks({
     eventFuncMap: {
       chunk: (data) => {
         const chunk = (data as { chunk: ChatStreamChunk }).chunk
+        if (chunk.type === "usage") {
+          patchConversation({ metadata: { usage: chunk.usage } })
+        }
         setMessages((prev) => applyChunk(chunk, prev, onOperation))
       },
       asset: (data) => {
@@ -51,6 +56,7 @@ export function useBufferChunks({
         patchConversation({ isStreaming: false })
       },
     },
+    onError,
   })
 
   useEffect(() => {
@@ -167,7 +173,7 @@ function applyChunkToMessage(
           toolCallId: chunk.toolCallId,
           toolName: chunk.toolName,
           input: chunk.input as Record<string, unknown>,
-          isStreaming: false,
+          isStreaming: true,
         }),
       }
     case "tool_result_complete":
@@ -191,7 +197,6 @@ function applyChunkToMessage(
         ],
       }
     case "usage":
-      console.log("usage", chunk)
       return currentMessage
     case "error":
       console.error("error", chunk)

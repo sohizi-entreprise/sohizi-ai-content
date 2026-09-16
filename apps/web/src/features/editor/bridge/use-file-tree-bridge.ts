@@ -88,6 +88,7 @@ function createTempNode(
     position: index * 1000,
     editable: true,
     contentEditable: true,
+    path: "",
   }
   return tempNode
 }

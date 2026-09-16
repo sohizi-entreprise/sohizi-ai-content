@@ -11,6 +11,7 @@ import {
   AgentRunMetadata,
   AgentRunStatus,
   AgentState,
+  ChatMetadata,
   CursorPaginationOptions,
   CursorPaginationResult,
   MsgContent,
@@ -178,7 +179,7 @@ export const listConversations = async (
 
 export const updateConversation = async (
   id: string,
-  data: { title?: string },
+  data: { title?: string; metadata?: ChatMetadata },
 ) => {
   const result = await db
     .update(conversations)

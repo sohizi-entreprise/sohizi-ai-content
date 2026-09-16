@@ -17,7 +17,7 @@ interface ContentRouterProps {
 
 export function ContentRouter({ tab }: ContentRouterProps) {
   const { projectId } = useParams({
-    from: "/dashboard/projects/$projectId/editor",
+    from: "/_authenticated/projects/$projectId/editor",
   })
 
   const isMediaGenerator = tab.name === "media-generator"

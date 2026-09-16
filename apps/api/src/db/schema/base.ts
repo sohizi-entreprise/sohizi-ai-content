@@ -49,6 +49,7 @@ import {
   VendorCircuitConfig,
   VendorKind,
   VendorRateLimit,
+  ChatMetadata,
 } from "@/type"
 import { FileFormat } from "@/features/file-system/constants"
 
@@ -69,6 +70,18 @@ const tsvector = customType<{ data: string }>({
 const avector = customType<{ data: number[] }>({
   dataType() {
     return "vector"
+  },
+})
+
+const ltree = customType<{ data: string; driverData: string }>({
+  dataType() {
+    return "ltree"
+  },
+  toDriver(value: string) {
+    return value
+  },
+  fromDriver(value: unknown) {
+    return String(value)
   },
 })
 
@@ -169,6 +182,7 @@ export const fileNodes = pgTable(
     editable: boolean("editable").default(true).notNull(), // If you can rename/delete the file itself
     contentEditable: boolean("content_editable").default(true).notNull(), // If you can edit the content of the file
     format: varchar("format", { length: 50 }).$type<FileFormat>(),
+    path: ltree("path").notNull(),
     ...timestamps,
   },
   (table) => [
@@ -188,6 +202,11 @@ export const fileNodes = pgTable(
     uniqueIndex("file_nodes_project_id_root_name_unique")
       .on(table.projectId, table.name)
       .where(sql`${table.parentId} is null`),
+    uniqueIndex("file_nodes_project_id_path_unique").on(
+      table.projectId,
+      table.path,
+    ),
+    index("file_nodes_path_gist_idx").using("gist", table.path),
     index("file_nodes_project_id_parent_id_position_idx").on(
       table.projectId,
       table.parentId,
@@ -307,7 +326,7 @@ export const conversations = pgTable(
       .references(() => user.id, { onDelete: "cascade" })
       .notNull(),
     title: varchar("title", { length: 255 }).default("New Chat").notNull(),
-    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    metadata: jsonb("metadata").$type<ChatMetadata>(),
     ...timestamps,
   },
   (table) => [
@@ -370,6 +389,7 @@ export const llmModels = pgTable("llm_models", {
   description: text("description"),
   enabled: boolean("enabled").default(true).notNull(),
   pricing: jsonb("pricing").$type<ModelBasePricing>(),
+  contextWindow: integer("context_window"),
   ...timestamps,
 })
 

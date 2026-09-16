@@ -12,7 +12,6 @@ export const fileFormat = {
 } as const
 
 export const MAX_FILE_DEPTH = 5
-export const MAX_FILE_IN_DIRECTORY = 150
 
 export type FileFormat = (typeof fileFormat)[keyof typeof fileFormat]
 export const FILE_FORMATS = [

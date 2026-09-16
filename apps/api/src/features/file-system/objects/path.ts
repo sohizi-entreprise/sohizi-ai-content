@@ -87,18 +87,11 @@ export class PathObject {
       return { fileNode: null, isRoot: true }
     }
 
-    let parentId: string | null = null
-    let node: FileNode | undefined
-
-    for (const part of parts) {
-      node = await fileSystemRepo.getFileNodeByName(projectId, parentId, part)
-      if (!node) {
-        return { fileNode: null, isRoot: false }
-      }
-      parentId = node.id
-    }
-
-    return { fileNode: node ?? null, isRoot: false }
+    const fileNode = await fileSystemRepo.getFileNodeByPath(
+      projectId,
+      parts.join("."),
+    )
+    return { fileNode: fileNode ?? null, isRoot: false }
   }
 
   private parsePath(path: string): ParsedPath {

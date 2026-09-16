@@ -7,7 +7,7 @@ import { AppLayout } from "./components/layout/app-layout"
 
 export function VideoProductionEditor() {
   const { projectId } = useParams({
-    from: "/dashboard/projects/$projectId/editor",
+    from: "/_authenticated/projects/$projectId/editor",
   })
 
   const { data, isPending, isError } = useQuery(

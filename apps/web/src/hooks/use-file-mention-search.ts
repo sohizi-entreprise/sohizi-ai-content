@@ -10,9 +10,12 @@ export type FileMentionItem = {
 }
 
 export function useFileMentionSearch(projectId: string) {
-  const search = useMentionSearch(
+  const search = useMentionSearch<FileMentionItem>(
     useCallback(
-      async (query: string, options?: { signal?: AbortSignal }) => {
+      async (
+        query: string,
+        options?: { signal?: AbortSignal },
+      ): Promise<Array<FileMentionItem>> => {
         const files = await searchFilesByName(projectId, query, 15, {
           signal: options?.signal,
         })

@@ -30,6 +30,7 @@ import { MediaGenerationPersistence } from "../ai/agent/core/persistence"
 import { createAgentFromDefinition } from "../ai/agent/core/agent-factory"
 import { UserModelMessage } from "ai"
 import { getErrorMessage } from "@/utils/get-error-message"
+import { textFromAgentChunk, withAgentTrace } from "../ai/agent/utils/tracing"
 import {
   limiter,
   pollWithSticky,
@@ -475,19 +476,36 @@ async function runAgent(payload: AgentPayload) {
         fullPrompt(baseSystemPrompt, referenceFiles),
     })
 
-    const chunks = agent.runLoop(
-      buildUserPrompt(requestPayload.prompt as string, referenceFiles),
-      controller.signal,
-      250,
-    )
+    await withAgentTrace(
+      session,
+      {
+        agentName: "media-generator",
+        entrypoint: "media-generation",
+        input: String(requestPayload.prompt ?? ""),
+      },
+      async (updateOutput) => {
+        const chunks = agent.runLoop(
+          buildUserPrompt(requestPayload.prompt as string, referenceFiles),
+          controller.signal,
+          250,
+        )
+        let outputText = ""
 
-    for await (const chunk of chunks) {
-      await writeStreamData(requestId, {
-        runId: requestId,
-        event: "chunk",
-        chunk,
-      })
-    }
+        for await (const chunk of chunks) {
+          const text = textFromAgentChunk(chunk)
+          if (text !== undefined) {
+            outputText = text
+          }
+          await writeStreamData(requestId, {
+            runId: requestId,
+            event: "chunk",
+            chunk,
+          })
+        }
+
+        updateOutput(outputText)
+      },
+    )
 
     const submitRequest = agent.artifacts.get("submitRequest") as
       { status: "ready" | "cancelled"; input: SubmitRequestInput } | undefined

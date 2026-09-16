@@ -10,6 +10,7 @@ import {
   searchProjectChunksByKeyword,
 } from "@/features/file-system/repo"
 import { FileNode } from "@/db/schema"
+import { toApiPath } from "@/features/file-system/utils"
 
 const toolSchema = z.discriminatedUnion("cmd", [
   findCommandSchema,
@@ -79,7 +80,7 @@ async function executeFindCommand(
   let output = `Total files: ${files.length}\n---\n`
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
-    output += `${i + 1}. (${file.directory ? "directory" : "file"}) ${file.name} ${file.format ? `[format: ${file.format}]` : ""}\n`
+    output += `${i + 1}. (${file.directory ? "directory" : "file"}) ${toApiPath(file.path)} ${file.format ? `[format: ${file.format}]` : ""}\n`
   }
   return success(output)
 }

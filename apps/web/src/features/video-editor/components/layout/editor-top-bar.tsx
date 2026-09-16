@@ -23,7 +23,7 @@ export function EditorTopBar({ projectId, fileNodeId }: EditorTopBarProps) {
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 px-3">
       <Link
-        to="/dashboard/projects/$projectId/video-editor"
+        to="/projects/$projectId/video-editor"
         params={{ projectId }}
         className="flex items-center gap-1 rounded-lg px-1.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
       >

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { IconAlertTriangle } from "@tabler/icons-react"
 import { Eye, RotateCcw, Trash2 } from "lucide-react"
 import { DotsLoader, SphereLoader } from "@sohizi/ui/loaders"
@@ -58,6 +59,7 @@ export default function MediaCardRenderer({
 
 function PendingMediaCard({ item }: { item: AiGeneratedMediaRequest }) {
   const assetsRef = useRef(item.assets)
+  const queryClient = useQueryClient()
   const updateAssetsList = useUpdateAssetsList(item.projectId)
   const patchRequest = usePatchAiGeneratedRequest(item.projectId)
 
@@ -77,6 +79,11 @@ function PendingMediaCard({ item }: { item: AiGeneratedMediaRequest }) {
       patchRequest(item.id, {
         status: assetsRef.current.length > 0 ? "completed" : "failed",
         assets: assetsRef.current,
+      })
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["media", item.projectId, "ai-assets"],
       })
     },
   })

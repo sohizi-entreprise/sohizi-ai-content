@@ -66,6 +66,7 @@ export const listEnabledModelsByCategories = async (categories: string[]) => {
       id: llmModels.id,
       name: llmModels.name,
       provider: llmModels.provider,
+      contextWindow: llmModels.contextWindow,
     })
     .from(llmModels)
     .innerJoin(
@@ -82,7 +83,12 @@ export const listEnabledModelsByCategories = async (categories: string[]) => {
         eq(llmModels.enabled, true),
       ),
     )
-    .groupBy(llmModels.id, llmModels.name, llmModels.provider)
+    .groupBy(
+      llmModels.id,
+      llmModels.name,
+      llmModels.provider,
+      llmModels.contextWindow,
+    )
     .limit(50)
 }
 
@@ -99,6 +105,7 @@ export type ResolvedVendorModel = {
   vendorName: string
   apiName: string
   pricing: ModelBasePricing | null
+  contextWindow: number | null
 }
 
 export const getModelWithVendorBinding = async (
@@ -139,6 +146,7 @@ export const getModelWithVendorBinding = async (
     vendorName: row.vendorName,
     apiName: row.apiName,
     pricing: model.pricing,
+    contextWindow: model.contextWindow,
   }
 }
 
@@ -151,6 +159,7 @@ export const getModelWithRelations = async (id: string) => {
       description: llmModels.description,
       enabled: llmModels.enabled,
       pricing: llmModels.pricing,
+      contextWindow: llmModels.contextWindow,
       createdAt: llmModels.createdAt,
       updatedAt: llmModels.updatedAt,
       categoryName: modelCategories.name,
@@ -216,6 +225,7 @@ export const getModelWithRelations = async (id: string) => {
     description: first.description,
     enabled: first.enabled,
     pricing: first.pricing,
+    contextWindow: first.contextWindow,
     createdAt: first.createdAt,
     updatedAt: first.updatedAt,
     categories,
@@ -349,6 +359,7 @@ export const listAllModels = async () => {
       description: llmModels.description,
       enabled: llmModels.enabled,
       pricing: llmModels.pricing,
+      contextWindow: llmModels.contextWindow,
       createdAt: llmModels.createdAt,
       updatedAt: llmModels.updatedAt,
       categoryName: modelCategories.name,
@@ -378,6 +389,7 @@ export const listAllModels = async () => {
       description: string | null
       enabled: boolean
       pricing: ModelBasePricing | null
+      contextWindow: number | null
       createdAt: Date
       updatedAt: Date
       categories: string[]
@@ -397,6 +409,7 @@ export const listAllModels = async () => {
         description: row.description,
         enabled: row.enabled,
         pricing: row.pricing,
+        contextWindow: row.contextWindow,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         categories: row.categoryName ? [row.categoryName] : [],
@@ -499,6 +512,7 @@ export const createModel = async (data: {
   description?: string | null
   enabled?: boolean
   pricing?: ModelBasePricing | null
+  contextWindow: number
 }) => {
   const [created] = await db
     .insert(llmModels)
@@ -509,6 +523,7 @@ export const createModel = async (data: {
       description: data.description,
       enabled: data.enabled ?? true,
       pricing: data.pricing ?? null,
+      contextWindow: data.contextWindow,
     })
     .returning()
   return created
@@ -522,6 +537,7 @@ export const updateModel = async (
     description: string | null
     enabled: boolean
     pricing: ModelBasePricing | null
+    contextWindow: number
   }>,
 ) => {
   const [updated] = await db

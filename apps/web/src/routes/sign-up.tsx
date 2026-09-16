@@ -71,7 +71,7 @@ function SignUpPage() {
       return
     }
 
-    navigate({ to: "/dashboard" })
+    navigate({ to: "/" })
   }
 
   const handleResend = async () => {
@@ -96,7 +96,7 @@ function SignUpPage() {
   const handleGoogleSignUp = async () => {
     await signIn.social({
       provider: "google",
-      callbackURL: window.location.origin + "/dashboard",
+      callbackURL: window.location.origin + "/",
       errorCallbackURL: window.location.origin + "/auth-error",
     })
   }

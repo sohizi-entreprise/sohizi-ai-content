@@ -29,6 +29,7 @@ import { Persistence } from "./persistence"
 import { estimateInputTokens } from "../utils/estimate-token"
 import { ContextManager } from "./context-manager"
 import { getErrorMessage } from "@/utils/get-error-message"
+import { observeToolExecution } from "../utils/tracing"
 
 const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096
 
@@ -342,12 +343,16 @@ export class Agent {
       }
       validToolCalls.push(tool_call)
       generators.push(
-        tool.execute(tool_call, {
-          session: this.session,
-          state: this.stateManager,
-          abortSignal,
-          artifacts: this.artifacts,
-        }),
+        observeToolExecution(
+          tool_call.toolName,
+          tool_call.input,
+          tool.execute(tool_call, {
+            session: this.session,
+            state: this.stateManager,
+            abortSignal,
+            artifacts: this.artifacts,
+          }),
+        ),
       )
     }
 

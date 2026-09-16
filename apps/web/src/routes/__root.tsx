@@ -81,7 +81,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-background font-geist antialiased">
+      <body className="min-h-screen bg-background font-space-grotesk antialiased">
         {children}
         <Scripts />
       </body>

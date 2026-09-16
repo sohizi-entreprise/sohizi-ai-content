@@ -17,6 +17,7 @@ import {
 import { Session } from "./session"
 import { AgentStateManager } from "./state-manager"
 import { extractTextFromContent } from "../utils/message-content"
+import { withEvaluatorObservation } from "../utils/tracing"
 
 export type ContextManagerConfig = {
   maxContextTokens: number
@@ -148,33 +149,41 @@ export class ContextManager {
     runId: string,
   ): Promise<StopEvaluation> {
     try {
-      const evaluatorStream = await this.getEvaluatorStream()
-      if (!evaluatorStream) {
-        return { isDone: true, instruction: "" }
-      }
+      return await withEvaluatorObservation(lastAssistantText, async () => {
+        const evaluatorStream = await this.getEvaluatorStream()
+        if (!evaluatorStream) {
+          return { isDone: true, instruction: "" }
+        }
 
-      const evaluatorInput = buildEvaluatorInput({
-        userMessage,
-        lastAssistantText,
+        const evaluatorInput = buildEvaluatorInput({
+          userMessage,
+          lastAssistantText,
+        })
+        const billedStream = evaluatorStream(
+          {
+            ...evaluatorInput,
+            telemetryFunctionId: "evaluate-stop",
+          },
+          {
+            organizationId: this.session.organizationId,
+            userId: this.session.userId,
+            signal: abortSignal,
+            metadata: {
+              sessionId: this.session.id,
+              conversationId: this.session.conversationId,
+              runId,
+            },
+          },
+        )
+
+        const result = await drainStreamForComplete(billedStream)
+        if (!result) {
+          return { isDone: true, instruction: "" }
+        }
+
+        stateManager.incrementUsage(result.usage)
+        return parseEvaluatorResponse(result.text)
       })
-      const billedStream = evaluatorStream(evaluatorInput, {
-        organizationId: this.session.organizationId,
-        userId: this.session.userId,
-        signal: abortSignal,
-        metadata: {
-          sessionId: this.session.id,
-          conversationId: this.session.conversationId,
-          runId,
-        },
-      })
-
-      const result = await drainStreamForComplete(billedStream)
-      if (!result) {
-        return { isDone: true, instruction: "" }
-      }
-
-      stateManager.incrementUsage(result.usage)
-      return parseEvaluatorResponse(result.text)
     } catch {
       return { isDone: true, instruction: "" }
     }
@@ -435,6 +444,7 @@ export class ContextManager {
         stream: false,
         estimatedInputTokens: estimateInputTokens(messages, 1.15),
         estimatedOutputTokens: DEFAULT_SUMMARY_OUTPUT_TOKENS,
+        telemetryFunctionId: "compress-context",
       }
       const stream = summaryStream(input, {
         organizationId: this.session.organizationId,

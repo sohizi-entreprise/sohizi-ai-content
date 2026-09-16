@@ -82,6 +82,7 @@ export type InvokeRequest = {
   abortSignal: AbortSignal
   outputSchema?: z.ZodSchema
   stream?: boolean
+  telemetryFunctionId?: string
 }
 
 export class LlmClient {
@@ -96,11 +97,11 @@ export class LlmClient {
   }
 
   async *invoke(request: InvokeRequest) {
-    const { messages, abortSignal, outputSchema, stream = true } = request
+    const { stream = true } = request
     if (stream) {
-      yield* this.streamResponse({ messages, abortSignal, outputSchema })
+      yield* this.streamResponse(request)
     } else {
-      yield* this.fullResponse({ messages, abortSignal, outputSchema })
+      yield* this.fullResponse(request)
     }
   }
 
@@ -108,6 +109,7 @@ export class LlmClient {
     messages,
     abortSignal,
     outputSchema,
+    telemetryFunctionId,
   }: Omit<InvokeRequest, "stream">): AsyncGenerator<LlmChunk, void, unknown> {
     const output =
       outputSchema instanceof z.ZodArray
@@ -130,6 +132,10 @@ export class LlmClient {
         maxOutputTokens: modelConfig?.maxOutputTokens,
         output,
         experimental_download: passthroughOpenRouterMedia,
+        telemetry: {
+          isEnabled: true,
+          functionId: telemetryFunctionId ?? "generate-response",
+        },
         providerOptions: {
           openai: {
             reasoningEffort: modelConfig?.reasoningEffort,
@@ -176,6 +182,7 @@ export class LlmClient {
     messages,
     abortSignal,
     outputSchema,
+    telemetryFunctionId,
   }: Omit<InvokeRequest, "stream">): AsyncGenerator<LlmChunk, void, unknown> {
     const output =
       outputSchema instanceof z.ZodArray
@@ -211,6 +218,10 @@ export class LlmClient {
         maxOutputTokens: modelConfig?.maxOutputTokens,
         output,
         experimental_download: passthroughOpenRouterMedia,
+        telemetry: {
+          isEnabled: true,
+          functionId: telemetryFunctionId ?? "generate-response",
+        },
         providerOptions: {
           openai: {
             reasoningEffort: modelConfig?.reasoningEffort,
@@ -380,6 +391,7 @@ export type BillableLlmInput = {
   stream?: boolean
   estimatedInputTokens: number
   estimatedOutputTokens: number
+  telemetryFunctionId?: string
 }
 
 export type BillableLlmOutput = {
@@ -452,6 +464,7 @@ export function createBillableLlmClient(
       abortSignal,
       outputSchema: input.outputSchema,
       stream: input.stream,
+      telemetryFunctionId: input.telemetryFunctionId,
     })
   }
 

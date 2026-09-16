@@ -31,6 +31,7 @@ import MediaComposer from "./media-composer"
 import type { MediaFilter } from "../types"
 import { cn } from "@/lib/utils"
 import { useFolderSearch } from "@/hooks/use-folder-search"
+import { useEditorStore } from "@/features/editor/stores/editor-store"
 
 const mediaFilterOptions = [
   {
@@ -57,16 +58,20 @@ const mediaFilterOptions = [
 
 export function MediaGenerator() {
   const { projectId } = useParams({
-    from: "/dashboard/projects/$projectId",
+    from: "/_authenticated/projects/$projectId",
   })
 
   const [filter, setFilter] = useState<MediaFilter>("all")
+  const showComposer = useEditorStore(
+    (s) => s.chatOpenByContext["media-generator"],
+  )
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full w-full">
       <ResizablePanel
-        id="editor-workspace"
-        defaultSize={65}
+        id="media-history"
+        order={1}
+        defaultSize={showComposer ? 65 : 100}
         minSize={50}
         className="bg-card rounded-2xl"
       >
@@ -78,16 +83,20 @@ export function MediaGenerator() {
           </ScrollArea>
         </div>
       </ResizablePanel>
-      <ResizableHandle className="mx-1 bg-transparent" />
-      <ResizablePanel
-        id="file-explorer"
-        defaultSize={35}
-        minSize={30}
-        // maxSize={40}
-        className="rounded-2xl mb-2 bg-card"
-      >
-        <MediaComposer projectId={projectId} />
-      </ResizablePanel>
+      {showComposer && (
+        <>
+          <ResizableHandle className="mx-1 bg-transparent" />
+          <ResizablePanel
+            id="media-composer"
+            order={2}
+            defaultSize={35}
+            minSize={30}
+            className="rounded-2xl mb-2 bg-card"
+          >
+            <MediaComposer projectId={projectId} />
+          </ResizablePanel>
+        </>
+      )}
     </ResizablePanelGroup>
   )
 }
@@ -419,7 +428,7 @@ function downloadBlob(blob: Blob, fileName: string) {
 
 function EmptyMediaState() {
   return (
-    <div className="flex min-h-[420px] items-center justify-center">
+    <div className="flex min-h-105 items-center justify-center">
       <div className="max-w-sm text-center">
         <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-card">
           <ImagePlus className="size-6" />

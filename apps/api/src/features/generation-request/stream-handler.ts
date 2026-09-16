@@ -63,13 +63,29 @@ export async function finalizeGenerationRequest(
   status: "completed" | "failed",
 ): Promise<void> {
   const remaining = await decrementKey(requestId)
-  if (remaining === 0) {
-    await updateGenerationRequest(requestId, { status })
+  // Missing counter (null) still needs a terminal status — otherwise the UI
+  // stays on the loading card after Inngest has already finished.
+  if (remaining !== null && remaining > 0) return
+
+  await updateGenerationRequest(requestId, { status })
+  try {
+    await writeStreamData(requestId, {
+      runId: requestId,
+      event: "done",
+    })
+  } finally {
     await removeStreamActive(requestId)
   }
 }
 
 export async function* streamChunksAsSse(streamKey: string) {
+  // Flush headers immediately so the Nitro/h3 proxy does not sit on an empty
+  // body until the first Redis event (media jobs can be idle for minutes).
+  yield sse({
+    event: "ready",
+    data: { event: "ready", runId: streamKey },
+  })
+
   for await (const chunk of readStreamChunks(streamKey)) {
     const data = chunk.data as BaseStreamData
     yield sse({
@@ -135,6 +151,7 @@ export async function* readStreamChunks<T = unknown>(
         }
 
         hasSeenActiveStream = true
+        yield createPingChunk<T>(streamKey, cursor)
         continue
       }
 
@@ -169,6 +186,19 @@ function createDoneChunk<T>(
     id: `${lastId}:done`,
     data: {
       event: "done",
+      runId: streamKey,
+    } as T,
+  }
+}
+
+function createPingChunk<T>(
+  streamKey: string,
+  lastId: string,
+): RedisStreamChunk<T> {
+  return {
+    id: `${lastId}:ping`,
+    data: {
+      event: "ping",
       runId: streamKey,
     } as T,
   }

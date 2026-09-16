@@ -2,60 +2,47 @@ import { Clapperboard, Files, Play, Sparkles } from "lucide-react"
 import { Link, useParams, useRouterState } from "@tanstack/react-router"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { useEditorStore } from "@/features/editor/stores/editor-store"
 
 const ITEMS = [
   {
     id: "files",
     icon: Files,
     label: "Explorer",
-    link: "/dashboard/projects/$projectId/editor",
+    link: "/projects/$projectId/editor",
   },
   {
     id: "media-generator",
     icon: Play,
     label: "AI media generator",
-    link: "/dashboard/projects/$projectId/generate",
+    link: "/projects/$projectId/generate",
   },
   {
     id: "video-editor",
     icon: Clapperboard,
     label: "Video editor",
-    link: "/dashboard/projects/$projectId/video-editor",
+    link: "/projects/$projectId/video-editor",
   },
   {
     id: "skill-market",
     icon: Sparkles,
     label: "Skill market",
-    link: "/dashboard/projects/$projectId/skill-market",
+    link: "/projects/$projectId/skill-market",
   },
 ] as const
-
-type ActivityBarItem = (typeof ITEMS)[number]["id"]
 
 function resolvePathname(link: string, projectId: string) {
   return link.replace("$projectId", projectId)
 }
 
 export function AppNavBar() {
-  const setActive = useEditorStore((s) => s.setActivityBarItem)
-  const toggleSidebar = useEditorStore((s) => s.toggleSidebar)
-  const { projectId } = useParams({ from: "/dashboard/projects/$projectId" })
+  const { projectId } = useParams({
+    from: "/_authenticated/projects/$projectId",
+  })
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   const activeItem = ITEMS.find((item) =>
     pathname.startsWith(resolvePathname(item.link, projectId)),
   )?.id
-
-  const handleClick = (id: ActivityBarItem) => {
-    if (activeItem === id) {
-      toggleSidebar()
-    } else {
-      setActive(id)
-      const { sidebarCollapsed } = useEditorStore.getState()
-      if (sidebarCollapsed) toggleSidebar()
-    }
-  }
 
   return (
     <div className="flex w-12 shrink-0 flex-col items-center justify-between py-2 backdrop-blur-md">
@@ -63,10 +50,9 @@ export function AppNavBar() {
         {ITEMS.map(({ id, icon: Icon, label, link }) => (
           <Link
             key={id}
-            from="/dashboard/projects/$projectId"
+            from="/projects/$projectId"
             to={link}
             params={{ projectId }}
-            onClick={() => handleClick(id)}
           >
             <Tooltip>
               <TooltipTrigger asChild>

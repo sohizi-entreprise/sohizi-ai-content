@@ -107,6 +107,7 @@ function ModelDetailForm({
     description: string | null
     enabled: boolean
     pricing?: Parameters<typeof pricingToFormState>[0]
+    contextWindow: number | null
     categories: Array<string>
     vendors: Array<{
       vendorId: string
@@ -126,6 +127,7 @@ function ModelDetailForm({
     name: model.name,
     description: model.description ?? "",
     enabled: model.enabled,
+    contextWindow: model.contextWindow != null ? String(model.contextWindow) : "",
     categoryNames: model.categories,
   })
   const [pricing, setPricing] = useState<PricingFormState>(() =>
@@ -189,6 +191,7 @@ function ModelDetailForm({
           name: form.name,
           description: form.description.trim() || null,
           enabled: form.enabled,
+          contextWindow: Number(form.contextWindow),
           categoryNames: form.categoryNames,
           pricing: formStateToPricing(pricing),
         },
@@ -243,6 +246,24 @@ function ModelDetailForm({
                 setForm((prev) => ({ ...prev, name: event.target.value }))
               }
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="model-context-window">Context window</Label>
+            <Input
+              id="model-context-window"
+              type="number"
+              min={1}
+              step={1}
+              value={form.contextWindow}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  contextWindow: event.target.value,
+                }))
+              }
+              required
+              placeholder="e.g. 250000"
             />
           </div>
           <div className="space-y-2">

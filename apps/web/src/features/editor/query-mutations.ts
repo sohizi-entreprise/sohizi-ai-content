@@ -7,7 +7,7 @@ import {
   saveSkill,
 } from "./requests"
 import type { CursorPaginationOptions, SaveSkillPayload } from "./requests"
-import type { PendingFileOperation } from "./types"
+import type { FileContentResponse, PendingFileOperation } from "./types"
 
 const keysFactory = {
   fileContent: (
@@ -56,12 +56,28 @@ export const saveFileContentMutationOptions = (
     mutationFn: (data: { content: string; diffApplied?: boolean }) =>
       saveFileContent(projectId, fileId, data.content, data.diffApplied),
     onSuccess: (data, variables, _, context) => {
-      context.client.setQueryData(keysFactory.fileContent(projectId, fileId), {
-        type: "markdown",
-        content: data.content,
-        revision: data.revision,
-        updatedAt: new Date().toISOString(),
-      })
+      context.client.setQueryData(
+        keysFactory.fileContent(projectId, fileId),
+        (current: FileContentResponse | undefined) => {
+          if (current?.type === "markdown") {
+            return {
+              ...current,
+              content: data.content,
+              revision: data.revision,
+              updatedAt: new Date().toISOString(),
+            }
+          }
+          return {
+            type: "markdown" as const,
+            id: fileId,
+            name: "",
+            path: "",
+            content: data.content,
+            revision: data.revision,
+            updatedAt: new Date().toISOString(),
+          }
+        },
+      )
 
       if (variables.diffApplied) {
         context.client.setQueryData(

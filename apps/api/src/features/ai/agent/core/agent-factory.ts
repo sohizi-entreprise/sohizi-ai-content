@@ -9,6 +9,8 @@ import {
 import type { Persistence } from "./persistence"
 import type { Session } from "./session"
 
+const DEFAULT_CONTEXT_WINDOW = 300_000
+
 export type CreateAgentFromDefinitionOptions = {
   agentName: AgentName
   session: Session
@@ -52,7 +54,7 @@ export async function createAgentFromDefinition(
     vendor: definition.vendor,
     modelConfig: definition.modelConfig,
     persistence,
-    maxContextTokens: definition.maxContextTokens,
+    maxContextTokens: model.contextWindow ?? DEFAULT_CONTEXT_WINDOW,
     contextThreshold: definition.contextThreshold,
     summaryModelId: definition.summaryModelId,
     evaluatorModelId: definition.evaluatorModelId,

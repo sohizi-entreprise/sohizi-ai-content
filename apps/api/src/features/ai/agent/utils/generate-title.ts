@@ -53,6 +53,7 @@ export async function generateTitle(
         estimatedInputTokens: estimateInputTokens(titleMessages, 1.15),
         estimatedOutputTokens: 60,
         stream: false,
+        telemetryFunctionId: "generate-title",
       },
       {
         organizationId,

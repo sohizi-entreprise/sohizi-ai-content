@@ -1,9 +1,11 @@
 import { z } from "zod"
 import { buildBaseTool } from "./tool-definition"
-import { supportedAgents } from "../core/agent-registry"
+import { supportedAgents } from "../constants"
 import { success, failure } from "./utils"
 import { createCancellableController } from "@/features/generation-request/abort-manager"
 import { getErrorMessage } from "@/utils/get-error-message"
+import { streamEvents } from "../utils/llm-response"
+import { withSubAgentObservation } from "../utils/tracing"
 
 const assignTaskInputSchema = z.object({
   subAgent: z
@@ -60,15 +62,26 @@ export const assignTaskTool = buildBaseTool({
         content: instructions,
       }
 
-      const chunks = agent.runLoop(msg, controller.signal, 100)
+      const output = await withSubAgentObservation(
+        subAgent,
+        instructions,
+        async () => {
+          const chunks = agent.runLoop(msg, controller.signal, 100)
+          let text = ""
 
-      let output = ""
+          console.log("started agents")
 
-      for await (const chunk of chunks) {
-        if (chunk.type === "complete") {
-          output = chunk.text
-        }
-      }
+          for await (const chunk of chunks) {
+            if (chunk.type === streamEvents.textDelta) {
+              text = chunk.text
+            }
+            console.log(chunk)
+          }
+
+          console.log("finished agents")
+          return text
+        },
+      )
 
       return success(output)
     } catch (error) {

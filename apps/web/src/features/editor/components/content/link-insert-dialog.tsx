@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,7 @@ export function LinkInsertDialog({
   hasLink = false,
 }: LinkInsertDialogProps) {
   const [url, setUrl] = useState(initialHref)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (open) {
@@ -66,13 +67,23 @@ export function LinkInsertDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          requestAnimationFrame(() => {
+            inputRef.current?.focus()
+          })
+        }}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>Insert link</DialogTitle>
         </DialogHeader>
         <div className="grid gap-2">
           <Label htmlFor="link-url">URL</Label>
           <Input
+            ref={inputRef}
             id="link-url"
             placeholder="https://example.com"
             value={url}
@@ -83,15 +94,9 @@ export function LinkInsertDialog({
                 handleApply()
               }
             }}
-            autoFocus
           />
         </div>
-        <DialogFooter className="gap-2 sm:gap-0">
-          {hasLink && (
-            <Button type="button" variant="destructive" onClick={handleRemove}>
-              Remove link
-            </Button>
-          )}
+        <DialogFooter className="gap-2">
           <Button
             type="button"
             variant="outline"
@@ -102,6 +107,11 @@ export function LinkInsertDialog({
           <Button type="button" onClick={handleApply} disabled={!url.trim()}>
             Apply
           </Button>
+          {hasLink && (
+            <Button type="button" variant="destructive" onClick={handleRemove}>
+              Remove link
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

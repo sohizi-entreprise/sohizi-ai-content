@@ -41,7 +41,7 @@ function AdminLayout() {
       return
     }
     if (session.user.type !== "admin") {
-      navigate({ to: "/dashboard/main/projects" })
+      navigate({ to: "/" })
     }
   }, [session, isPending, navigate])
 
@@ -78,7 +78,7 @@ function AdminLayout() {
             </nav>
           </div>
           <Link
-            to="/dashboard/main/projects"
+            to="/"
             className="text-sm text-muted-foreground hover:text-foreground"
           >
             Back to app

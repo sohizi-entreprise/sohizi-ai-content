@@ -49,14 +49,13 @@ const editorExtensions = [
     link: false,
   }),
   Placeholder.configure({
-    placeholder: ({ node }) => {
-      if (node.type.name === "paragraph") {
-        return "Write something or use / command"
-      }
-      return ""
-    },
     showOnlyCurrent: true,
-    includeChildren: true,
+    includeChildren: false,
+    emptyNodeClass: ({ hasAnchor }) => (hasAnchor ? "is-empty" : ""),
+    placeholder: ({ node, hasAnchor }) => {
+      if (!hasAnchor || node.type.name !== "paragraph") return ""
+      return "Write something or use / command"
+    },
   }),
   TaskList,
   TaskItem.configure({
@@ -105,7 +104,7 @@ interface TextEditorViewProps {
 
 export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
   const { projectId } = useParams({
-    from: "/dashboard/projects/$projectId/editor",
+    from: "/_authenticated/projects/$projectId/editor",
   })
   const baseMarkdown = initialContent || ""
   const initialEditorContent = useMemo(
@@ -276,7 +275,7 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
         <div className="mx-auto min-w-2xl max-w-3xl px-6 pb-8 pt-12">
           <EditorContent
             editor={editor}
-            className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[400px]"
+            className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-100"
           />
           <TextEditorBubbleMenu
             editor={editor}

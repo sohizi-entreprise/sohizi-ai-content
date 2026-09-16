@@ -8,6 +8,68 @@ export const normalizeFileName = (name: string) => {
     .replace(/[\W\s]+/g, "-")
 }
 
+export function joinLtree(parentPath: string | null | undefined, name: string) {
+  if (!parentPath) {
+    return name
+  }
+  return `${parentPath}.${name}`
+}
+
+export function parentLtree(path: string) {
+  const separatorIndex = path.lastIndexOf(".")
+  if (separatorIndex === -1) {
+    return null
+  }
+  return path.slice(0, separatorIndex)
+}
+
+export function toApiPath(ltreePath: string) {
+  if (!ltreePath) {
+    return "/"
+  }
+  return `/${ltreePath.replaceAll(".", "/")}`
+}
+
+export function fromApiPath(apiPath: string) {
+  const trimmedPath = apiPath.trim()
+  if (
+    trimmedPath === "" ||
+    trimmedPath === "/" ||
+    trimmedPath === "./" ||
+    trimmedPath === "."
+  ) {
+    return null
+  }
+
+  let normalizedPath = trimmedPath
+  while (normalizedPath.startsWith("./")) {
+    normalizedPath = normalizedPath.slice(2)
+  }
+  while (normalizedPath.startsWith("/")) {
+    normalizedPath = normalizedPath.slice(1)
+  }
+
+  if (normalizedPath === "") {
+    return null
+  }
+
+  return normalizedPath.replaceAll("/", ".")
+}
+
+export function serializeFileNode<T extends { path: string }>(node: T): T {
+  return {
+    ...node,
+    path: toApiPath(node.path),
+  }
+}
+
+export function ltreeDepth(path: string) {
+  if (!path) {
+    return 0
+  }
+  return path.split(".").length - 1
+}
+
 export function serializeFileContent(
   fileNode: FileNode,
   fileContent: FileNodeContent,
@@ -90,6 +152,7 @@ export function formatKeywordChunkResults(
     fileNodeId: string
     totalChunksMatched: number
     snippet: string
+    path?: string
   }>,
 ) {
   if (hits.length === 0) {
@@ -98,8 +161,9 @@ export function formatKeywordChunkResults(
 
   return hits
     .map((hit, index) => {
+      const location = hit.path ?? `/[fileId: ${hit.fileNodeId}]`
       return [
-        `${index + 1}. [fileId: ${hit.fileNodeId}] (${hit.totalChunksMatched} chunk${hit.totalChunksMatched === 1 ? "" : "s"} matched)`,
+        `${index + 1}. ${location} [fileId: ${hit.fileNodeId}] (${hit.totalChunksMatched} chunk${hit.totalChunksMatched === 1 ? "" : "s"} matched)`,
         hit.snippet,
       ].join("\n")
     })

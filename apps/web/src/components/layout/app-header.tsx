@@ -1,12 +1,16 @@
 import { ChevronDown } from "lucide-react"
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
-import { Suspense, useState } from "react"
-import { Link, useRouterState } from "@tanstack/react-router"
-import { IconBrain, IconFocus2, IconX } from "@tabler/icons-react"
+import { Suspense, useMemo, useState } from "react"
+import { Link, useParams, useRouterState } from "@tanstack/react-router"
+import {
+  IconBrain,
+  IconCheck,
+  IconFocus2,
+  IconLayoutSidebar,
+} from "@tabler/icons-react"
 import { Button } from "@sohizi/ui/button"
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -14,20 +18,24 @@ import {
   DialogTrigger,
 } from "@sohizi/ui/dialog"
 import { Skeleton } from "@sohizi/ui/skeleton"
-import { ThemeToggle } from "@/components/theme-toggle"
+import type { ProjectListItem } from "@/features/projects/type"
 import { getListProjectsQueryOptions } from "@/features/projects/query-mutation"
 import { useSession } from "@/lib/auth-client"
 import {
   getChatChromeContext,
   useEditorStore,
 } from "@/features/editor/stores/editor-store"
-import { useFileTreeStore } from "@/features/editor/stores/file-tree-store"
+import { cn } from "@/lib/utils"
 
 export function AppHeader() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const chatContext = getChatChromeContext(pathname)
   const toggleChatPanel = useEditorStore((s) => s.toggleChatPanel)
   const activateFocusMode = useEditorStore((s) => s.activateFocusMode)
+  const toggleSidebar = useEditorStore((s) => s.toggleSidebar)
+  const sidebarCollapsed = useEditorStore((s) => s.sidebarCollapsed)
+  const isEditorPage =
+    pathname.includes("/editor") && !pathname.includes("/video-editor")
 
   return (
     <header className="flex h-11 shrink-0 items-center justify-between border-border  px-3">
@@ -40,26 +48,55 @@ export function AppHeader() {
             height={28}
             className="h-7 w-8 shrink-0 object-contain sm:h-8 sm:w-9 -mt-2"
           />
-          <span className="text-sm font-semibold text-muted-foreground">
-            Sohizi Lab
-          </span>
+
+          <div className="flex items-center gap-2">
+            {isEditorPage && (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleSidebar}
+                  aria-label={
+                    sidebarCollapsed
+                      ? "Show file explorer"
+                      : "Hide file explorer"
+                  }
+                  className="flex size-7 items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                >
+                  <IconLayoutSidebar className="size-5" />
+                </button>
+
+                <span className="text-muted-foreground/40">|</span>
+              </>
+            )}
+
+            <Link
+              to="/"
+              className="text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+            >
+              All Projects
+            </Link>
+
+            <span className="text-muted-foreground/40">|</span>
+
+            <Suspense fallback={<Skeleton className="w-20 h-7" />}>
+              <ProjectDropdown />
+            </Suspense>
+          </div>
         </div>
-
-        <span className="text-muted-foreground/40">|</span>
-
-        <Suspense fallback={<Skeleton className="w-20 h-7" />}>
-          <ProjectDropdown />
-        </Suspense>
       </div>
 
       <div className="flex items-center gap-4">
-        <ThemeToggle />
-
-        <button onClick={() => activateFocusMode(chatContext)}>
+        <button
+          onClick={() => activateFocusMode(chatContext)}
+          className="cursor-pointer"
+        >
           <IconFocus2 className="size-5 text-foreground" />
         </button>
 
-        <button onClick={() => toggleChatPanel(chatContext)}>
+        <button
+          onClick={() => toggleChatPanel(chatContext)}
+          className="cursor-pointer"
+        >
           {<IconBrain className="size-5 text-primary" />}
         </button>
       </div>
@@ -72,7 +109,7 @@ const ProjectDropdown = () => {
   const organizationId = session?.session.activeOrganizationId ?? undefined
 
   if (!organizationId) {
-    return <Skeleton className="w-20 h-7" />
+    return <Skeleton className="w-24 h-6" />
   }
 
   return <ProjectDropdownContent organizationId={organizationId} />
@@ -90,12 +127,25 @@ const ProjectDropdownContent = ({
       organizationId,
     }),
   )
-  const currentProjectTitle = useFileTreeStore((state) => state.project?.title)
   const [open, setOpen] = useState(false)
 
-  const handleLinkClick = () => {
+  const { projectId } = useParams({
+    from: "/_authenticated/projects/$projectId",
+  })
+
+  const closeAllTabs = useEditorStore((s) => s.closeAllTabs)
+
+  const handleLinkClick = (nextProjectId: string) => {
     setOpen(false)
+    if (nextProjectId !== projectId) {
+      closeAllTabs()
+    }
   }
+
+  const currentProjectTitle = useMemo(
+    () => projects.find((project) => project.id === projectId)?.title,
+    [projects, projectId],
+  )
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -110,45 +160,61 @@ const ProjectDropdownContent = ({
         </Button>
       </DialogTrigger>
       <DialogContent
-        className="sm:max-w-2xl h-[70%] max-h-[800px] bg-gray-800 rounded-xl flex flex-col"
-        showCloseButton={false}
+        className="sm:max-w-2xl h-[70%] max-h-200 rounded-xl flex flex-col"
+        // showCloseButton={false}
       >
         <DialogDescription className="sr-only">
           Projects settings
         </DialogDescription>
         <DialogHeader>
-          <DialogTitle>All Projects</DialogTitle>
+          <DialogTitle>Select a project</DialogTitle>
         </DialogHeader>
-        <div className="flex gap-4 h-full min-h-0 flex-1">
+        <div className="flex flex-col h-full min-h-0 flex-1">
           {projects.map((project) => (
-            <Link
-              to="/dashboard/projects/$projectId/editor"
-              params={{ projectId: project.id }}
+            <ProjectItem
+              project={project}
+              handleLinkClick={handleLinkClick}
               key={project.id}
-              className="w-full"
-              onClick={handleLinkClick}
-            >
-              <div
-                key={project.id}
-                className="w-full border-b dark:border-white/10 hover:bg-gray-200/10 hover:rounded-lg px-4 py-2 cursor-pointer"
-              >
-                {project.title}
-              </div>
-            </Link>
+              isCurrentProject={project.id === projectId}
+            />
           ))}
-        </div>
-
-        <div className="absolute -top-8 -right-8">
-          <DialogClose asChild>
-            <Button
-              size="icon"
-              className="border dark:border-gray-700 rounded-full"
-            >
-              <IconX className="size-4" />
-            </Button>
-          </DialogClose>
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+const ProjectItem = ({
+  project,
+  handleLinkClick,
+  isCurrentProject,
+}: {
+  project: ProjectListItem
+  handleLinkClick: (nextProjectId: string) => void
+  isCurrentProject: boolean
+}) => {
+  return (
+    <Link
+      to="/projects/$projectId/editor"
+      params={{ projectId: project.id }}
+      key={project.id}
+      className="w-full"
+      onClick={() => handleLinkClick(project.id)}
+    >
+      <div
+        key={project.id}
+        className="w-full border-b dark:border-white/5 group py-2 cursor-pointer flex items-center gap-2"
+      >
+        {isCurrentProject && <IconCheck className="size-4 text-primary" />}
+        <span
+          className={cn(
+            "text-foreground group-hover:text-primary",
+            isCurrentProject && "text-foreground",
+          )}
+        >
+          {project.title}
+        </span>
+      </div>
+    </Link>
   )
 }

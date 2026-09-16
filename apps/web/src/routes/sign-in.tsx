@@ -56,7 +56,7 @@ function SignInPage() {
       return
     }
 
-    navigate({ to: "/dashboard" })
+    navigate({ to: "/" })
   }
 
   const handleVerifyOtp = async () => {
@@ -82,7 +82,7 @@ function SignInPage() {
       return
     }
 
-    navigate({ to: "/dashboard" })
+    navigate({ to: "/" })
   }
 
   const handleForgotSubmitEmail = async (e: React.FormEvent) => {
@@ -187,7 +187,7 @@ function SignInPage() {
   const handleGoogleSignIn = async () => {
     await signIn.social({
       provider: "google",
-      callbackURL: window.location.origin + "/dashboard",
+      callbackURL: window.location.origin + "/",
       errorCallbackURL: window.location.origin + "/auth-error",
     })
   }

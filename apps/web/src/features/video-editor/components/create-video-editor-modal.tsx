@@ -94,7 +94,7 @@ export function CreateVideoEditorModal({
 
       onOpenChange(false)
       void navigate({
-        to: "/dashboard/projects/$projectId/video-editor/$fileNodeId",
+        to: "/projects/$projectId/video-editor/$fileNodeId",
         params: { projectId, fileNodeId: created.id },
       })
     } catch (error) {

@@ -14,6 +14,7 @@ import { createProjectSchema } from "./schema"
 import { z } from "zod"
 import { v4 as uuidv4 } from "uuid"
 import { ORDER_GAP } from "../file-system/repo"
+import { joinLtree, serializeFileNode } from "../file-system/utils"
 import { RepositoryError } from "../error"
 import { DatabaseError } from "pg"
 // Create the projects, list the project with pagination, delete a project, get a project by id, update a project
@@ -174,14 +175,20 @@ export const getProjectWithRootFiles = async (id: string) => {
         parentId: fileNodes.parentId,
         position: fileNodes.position,
         editable: fileNodes.editable,
+        contentEditable: fileNodes.contentEditable,
         format: fileNodes.format,
+        path: fileNodes.path,
       })
       .from(fileNodes)
       .where(
         and(eq(fileNodes.projectId, id), eq(fileNodes.parentId, rootFolderId)),
       )
       .orderBy(asc(fileNodes.position))
-    return { project, rootFolderId, rootFiles }
+    return {
+      project,
+      rootFolderId,
+      rootFiles: rootFiles.map(serializeFileNode),
+    }
   })
 
   return result
@@ -403,6 +410,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
       position: 0,
       editable: false,
       format: null,
+      path: "root",
     })
     .returning()
   const rootFolder = resp1[0]
@@ -417,6 +425,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
       position: ORDER_GAP,
       editable: false,
       format: null,
+      path: joinLtree(rootFolder.path, "core"),
     })
     .returning()
 
@@ -430,6 +439,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
       position: ORDER_GAP * 2,
       editable: false,
       format: null,
+      path: joinLtree(rootFolder.path, "assets"),
     })
     .returning()
 
@@ -444,6 +454,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
     position: ORDER_GAP,
     editable: false,
     format: null,
+    path: joinLtree(coreFolder.path, "skills"),
   })
 
   await tx.insert(fileNodes).values({
@@ -454,6 +465,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
     position: ORDER_GAP,
     editable: false,
     format: null,
+    path: joinLtree(assetsFolder.path, "uploads"),
   })
 
   const resp4 = await tx
@@ -466,6 +478,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
       position: ORDER_GAP,
       editable: false,
       format: "markdown",
+      path: joinLtree(coreFolder.path, "context"),
     })
     .returning()
 
@@ -521,6 +534,7 @@ async function createFileFromTemplate(
         position: file.position,
         editable: file.editable,
         format: file.format,
+        path: file.path,
       })),
     )
     .returning()
@@ -575,6 +589,7 @@ async function createSecondaryFiles(
         position: file.position,
         editable: false,
         format: file.format,
+        path: joinLtree("root", file.name),
       })
       .returning()
     const fileNode = response[0]

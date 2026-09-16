@@ -83,14 +83,6 @@ export type TextTokenUsage = {
   cachedInputTokens?: number
 }
 
-export type ChatMetadata = {
-  spentTokens: {
-    input: number
-    output: number
-  }
-  selectedModel?: string
-}
-
 export type CursorPaginationOptions = {
   limit?: number
   cursor?: string
@@ -120,6 +112,10 @@ export type TokenUsage = {
   total: number
   modelId: string
   cost: number
+}
+
+export type ChatMetadata = {
+  usage: TokenUsage | null
 }
 
 export type AgentState = {

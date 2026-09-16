@@ -6,6 +6,7 @@ export type SettingOption = {
 }
 
 export type AdditionalSettings = {
+  format: SettingOption | null
   genre: SettingOption | null
   tone: SettingOption | null
   targetAudience: SettingOption | null
@@ -16,30 +17,51 @@ export type AdditionalSettings = {
   characterStyle: SettingOption | null
 }
 
+export const PROJECT_MODES = [
+  { label: "Build the entire video", value: "build-video" },
+  { label: "Prepare the structure", value: "prepare-structure" },
+  { label: "Build the world", value: "build-world" },
+] as const
+
+export type ProjectMode = (typeof PROJECT_MODES)[number]["value"]
+
+export type ProjectAttachment = {
+  id: string
+  name: string
+  type: string
+  preview?: string
+  file: File
+}
+
 export type NewProjectState = {
-  format: string | null
   duration: string
   storyIdea: string
   additionalSettings: AdditionalSettings
   modelId: string | null
+  mode: ProjectMode
+  attachments: Array<ProjectAttachment>
 }
 
-type AdditionalSettingKey = keyof AdditionalSettings
+export type AdditionalSettingKey = keyof AdditionalSettings
 
 type NewProjectActions = {
-  setFormat: (format: string) => void
   setDuration: (duration: string) => void
   setStoryIdea: (storyIdea: string) => void
   setAdditionalSetting: (
     key: AdditionalSettingKey,
     value: SettingOption,
   ) => void
+  clearAdditionalSetting: (key: AdditionalSettingKey) => void
   setModelId: (modelId: string) => void
+  setMode: (mode: ProjectMode) => void
+  addAttachments: (attachments: Array<ProjectAttachment>) => void
+  removeAttachment: (id: string) => void
   reset: () => void
   validate: () => { valid: boolean; errors: Array<string> }
 }
 
 const initialAdditionalSettings: AdditionalSettings = {
+  format: null,
   genre: null,
   tone: null,
   targetAudience: null,
@@ -51,18 +73,17 @@ const initialAdditionalSettings: AdditionalSettings = {
 }
 
 const initialState: NewProjectState = {
-  format: null,
   duration: "< 2",
   storyIdea: "",
   additionalSettings: initialAdditionalSettings,
   modelId: null,
+  mode: PROJECT_MODES[0].value,
+  attachments: [],
 }
 
 export const useNewProjectStore = create<NewProjectState & NewProjectActions>(
   (set, get) => ({
     ...initialState,
-
-    setFormat: (format) => set({ format }),
 
     setDuration: (duration) => set({ duration }),
 
@@ -76,13 +97,35 @@ export const useNewProjectStore = create<NewProjectState & NewProjectActions>(
         },
       })),
 
+    clearAdditionalSetting: (key) =>
+      set((state) => ({
+        additionalSettings: {
+          ...state.additionalSettings,
+          [key]: null,
+        },
+      })),
+
+    setMode: (mode) => set({ mode }),
+
+    addAttachments: (attachments) =>
+      set((state) => ({
+        attachments: [...state.attachments, ...attachments],
+      })),
+
+    removeAttachment: (id) =>
+      set((state) => ({
+        attachments: state.attachments.filter(
+          (attachment) => attachment.id !== id,
+        ),
+      })),
+
     reset: () => set(initialState),
 
     validate: () => {
       const state = get()
       const errors: Array<string> = []
 
-      if (!state.format) {
+      if (!state.additionalSettings.format) {
         errors.push("Please select a format")
       }
       if (!state.storyIdea.trim()) {

@@ -21,7 +21,9 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value"
 import { cn } from "@/lib/utils"
 
 export function SkillMarketListPage() {
-  const { projectId } = useParams({ from: "/dashboard/projects/$projectId" })
+  const { projectId } = useParams({
+    from: "/_authenticated/projects/$projectId",
+  })
   const [search, setSearch] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
@@ -118,7 +120,7 @@ export function SkillMarketListPage() {
             {skills.map((skill) => (
               <Link
                 key={skill.id}
-                to="/dashboard/projects/$projectId/skill-market/$skillId"
+                to="/projects/$projectId/skill-market/$skillId"
                 params={{ projectId, skillId: skill.id }}
                 className="block"
                 preload={false}

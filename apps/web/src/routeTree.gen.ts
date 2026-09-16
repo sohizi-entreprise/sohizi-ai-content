@@ -8,627 +8,743 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root"
-import { Route as IndexRouteImport } from "./routes/index"
-import { Route as AdminRouteImport } from "./routes/admin"
-import { Route as AuthErrorRouteImport } from "./routes/auth-error"
-import { Route as DashboardRouteImport } from "./routes/dashboard"
-import { Route as SignInRouteImport } from "./routes/sign-in"
-import { Route as SignUpRouteImport } from "./routes/sign-up"
-import { Route as AdminIndexRouteImport } from "./routes/admin/index"
-import { Route as AdminCommandsRouteImport } from "./routes/admin/commands"
-import { Route as AdminContentCategoriesRouteImport } from "./routes/admin/content-categories"
-import { Route as AdminModelsRouteImport } from "./routes/admin/models"
-import { Route as AdminParametersRouteImport } from "./routes/admin/parameters"
-import { Route as AdminSkillsRouteImport } from "./routes/admin/skills"
-import { Route as AdminVendorsRouteImport } from "./routes/admin/vendors"
-import { Route as DashboardIndexRouteImport } from "./routes/dashboard/index"
-import { Route as DashboardMainRouteImport } from "./routes/dashboard/main"
-import { Route as AdminCategoriesIndexRouteImport } from "./routes/admin/categories/index"
-import { Route as AdminCategoriesContentRouteImport } from "./routes/admin/categories/content"
-import { Route as AdminCategoriesModelsRouteImport } from "./routes/admin/categories/models"
-import { Route as AdminModelsIndexRouteImport } from "./routes/admin/models/index"
-import { Route as AdminModelsModelIdRouteImport } from "./routes/admin/models/$modelId"
-import { Route as AdminParametersIndexRouteImport } from "./routes/admin/parameters/index"
-import { Route as AdminParametersParameterIdRouteImport } from "./routes/admin/parameters/$parameterId"
-import { Route as DashboardMainProjectsRouteImport } from "./routes/dashboard/main/projects"
-import { Route as DashboardProjectsProjectIdRouteImport } from "./routes/dashboard/projects/$projectId"
-import { Route as DashboardProjectsNewRouteImport } from "./routes/dashboard/projects/new"
-import { Route as DashboardProjectsProjectIdEditorRouteImport } from "./routes/dashboard/projects/$projectId/editor"
-import { Route as DashboardProjectsProjectIdGenerateRouteImport } from "./routes/dashboard/projects/$projectId/generate"
-import { Route as DashboardProjectsProjectIdSkillMarketIndexRouteImport } from "./routes/dashboard/projects/$projectId/skill-market/index"
-import { Route as DashboardProjectsProjectIdSkillMarketSkillIdRouteImport } from "./routes/dashboard/projects/$projectId/skill-market/$skillId"
-import { Route as DashboardProjectsProjectIdVideoEditorIndexRouteImport } from "./routes/dashboard/projects/$projectId/video-editor/index"
-import { Route as DashboardProjectsProjectIdVideoEditorFileNodeIdRouteImport } from "./routes/dashboard/projects/$projectId/video-editor/$fileNodeId"
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AuthErrorRouteImport } from './routes/auth-error'
+import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as AuthenticatedSidebarRouteImport } from './routes/_authenticated/_sidebar'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminCommandsRouteImport } from './routes/admin/commands'
+import { Route as AdminContentCategoriesRouteImport } from './routes/admin/content-categories'
+import { Route as AdminModelsRouteImport } from './routes/admin/models'
+import { Route as AdminParametersRouteImport } from './routes/admin/parameters'
+import { Route as AdminSkillsRouteImport } from './routes/admin/skills'
+import { Route as AdminVendorsRouteImport } from './routes/admin/vendors'
+import { Route as AuthenticatedSidebarIndexRouteImport } from './routes/_authenticated/_sidebar/index'
+import { Route as AuthenticatedSidebarAccountRouteImport } from './routes/_authenticated/_sidebar/account'
+import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects/$projectId'
+import { Route as AdminCategoriesIndexRouteImport } from './routes/admin/categories/index'
+import { Route as AdminCategoriesContentRouteImport } from './routes/admin/categories/content'
+import { Route as AdminCategoriesModelsRouteImport } from './routes/admin/categories/models'
+import { Route as AdminModelsIndexRouteImport } from './routes/admin/models/index'
+import { Route as AdminModelsModelIdRouteImport } from './routes/admin/models/$modelId'
+import { Route as AdminParametersIndexRouteImport } from './routes/admin/parameters/index'
+import { Route as AdminParametersParameterIdRouteImport } from './routes/admin/parameters/$parameterId'
+import { Route as AuthenticatedSidebarAccountIndexRouteImport } from './routes/_authenticated/_sidebar/account/index'
+import { Route as AuthenticatedSidebarAccountBillingRouteImport } from './routes/_authenticated/_sidebar/account/billing'
+import { Route as AuthenticatedSidebarAccountOrganizationRouteImport } from './routes/_authenticated/_sidebar/account/organization'
+import { Route as AuthenticatedSidebarAccountProfileRouteImport } from './routes/_authenticated/_sidebar/account/profile'
+import { Route as AuthenticatedProjectsProjectIdEditorRouteImport } from './routes/_authenticated/projects/$projectId/editor'
+import { Route as AuthenticatedProjectsProjectIdGenerateRouteImport } from './routes/_authenticated/projects/$projectId/generate'
+import { Route as AuthenticatedProjectsProjectIdSkillMarketIndexRouteImport } from './routes/_authenticated/projects/$projectId/skill-market/index'
+import { Route as AuthenticatedProjectsProjectIdSkillMarketSkillIdRouteImport } from './routes/_authenticated/projects/$projectId/skill-market/$skillId'
+import { Route as AuthenticatedProjectsProjectIdVideoEditorIndexRouteImport } from './routes/_authenticated/projects/$projectId/video-editor/index'
+import { Route as AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRouteImport } from './routes/_authenticated/projects/$projectId/video-editor/$fileNodeId'
 
-const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
-  id: "/admin",
-  path: "/admin",
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthErrorRoute = AuthErrorRouteImport.update({
-  id: "/auth-error",
-  path: "/auth-error",
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: "/dashboard",
-  path: "/dashboard",
+  id: '/auth-error',
+  path: '/auth-error',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignInRoute = SignInRouteImport.update({
-  id: "/sign-in",
-  path: "/sign-in",
+  id: '/sign-in',
+  path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignUpRoute = SignUpRouteImport.update({
-  id: "/sign-up",
-  path: "/sign-up",
+  id: '/sign-up',
+  path: '/sign-up',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSidebarRoute = AuthenticatedSidebarRouteImport.update({
+  id: '/_sidebar',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminCommandsRoute = AdminCommandsRouteImport.update({
-  id: "/commands",
-  path: "/commands",
+  id: '/commands',
+  path: '/commands',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminContentCategoriesRoute = AdminContentCategoriesRouteImport.update({
-  id: "/content-categories",
-  path: "/content-categories",
+  id: '/content-categories',
+  path: '/content-categories',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminModelsRoute = AdminModelsRouteImport.update({
-  id: "/models",
-  path: "/models",
+  id: '/models',
+  path: '/models',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminParametersRoute = AdminParametersRouteImport.update({
-  id: "/parameters",
-  path: "/parameters",
+  id: '/parameters',
+  path: '/parameters',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminSkillsRoute = AdminSkillsRouteImport.update({
-  id: "/skills",
-  path: "/skills",
+  id: '/skills',
+  path: '/skills',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminVendorsRoute = AdminVendorsRouteImport.update({
-  id: "/vendors",
-  path: "/vendors",
+  id: '/vendors',
+  path: '/vendors',
   getParentRoute: () => AdminRoute,
 } as any)
-const DashboardIndexRoute = DashboardIndexRouteImport.update({
-  id: "/",
-  path: "/",
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardMainRoute = DashboardMainRouteImport.update({
-  id: "/main",
-  path: "/main",
-  getParentRoute: () => DashboardRoute,
-} as any)
+const AuthenticatedSidebarIndexRoute =
+  AuthenticatedSidebarIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedSidebarRoute,
+  } as any)
+const AuthenticatedSidebarAccountRoute =
+  AuthenticatedSidebarAccountRouteImport.update({
+    id: '/account',
+    path: '/account',
+    getParentRoute: () => AuthenticatedSidebarRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdRoute =
+  AuthenticatedProjectsProjectIdRouteImport.update({
+    id: '/projects/$projectId',
+    path: '/projects/$projectId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AdminCategoriesIndexRoute = AdminCategoriesIndexRouteImport.update({
-  id: "/categories/",
-  path: "/categories/",
+  id: '/categories/',
+  path: '/categories/',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminCategoriesContentRoute = AdminCategoriesContentRouteImport.update({
-  id: "/categories/content",
-  path: "/categories/content",
+  id: '/categories/content',
+  path: '/categories/content',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminCategoriesModelsRoute = AdminCategoriesModelsRouteImport.update({
-  id: "/categories/models",
-  path: "/categories/models",
+  id: '/categories/models',
+  path: '/categories/models',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminModelsIndexRoute = AdminModelsIndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => AdminModelsRoute,
 } as any)
 const AdminModelsModelIdRoute = AdminModelsModelIdRouteImport.update({
-  id: "/$modelId",
-  path: "/$modelId",
+  id: '/$modelId',
+  path: '/$modelId',
   getParentRoute: () => AdminModelsRoute,
 } as any)
 const AdminParametersIndexRoute = AdminParametersIndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => AdminParametersRoute,
 } as any)
 const AdminParametersParameterIdRoute =
   AdminParametersParameterIdRouteImport.update({
-    id: "/$parameterId",
-    path: "/$parameterId",
+    id: '/$parameterId',
+    path: '/$parameterId',
     getParentRoute: () => AdminParametersRoute,
   } as any)
-const DashboardMainProjectsRoute = DashboardMainProjectsRouteImport.update({
-  id: "/projects",
-  path: "/projects",
-  getParentRoute: () => DashboardMainRoute,
-} as any)
-const DashboardProjectsProjectIdRoute =
-  DashboardProjectsProjectIdRouteImport.update({
-    id: "/projects/$projectId",
-    path: "/projects/$projectId",
-    getParentRoute: () => DashboardRoute,
+const AuthenticatedSidebarAccountIndexRoute =
+  AuthenticatedSidebarAccountIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedSidebarAccountRoute,
   } as any)
-const DashboardProjectsNewRoute = DashboardProjectsNewRouteImport.update({
-  id: "/projects/new",
-  path: "/projects/new",
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardProjectsProjectIdEditorRoute =
-  DashboardProjectsProjectIdEditorRouteImport.update({
-    id: "/editor",
-    path: "/editor",
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+const AuthenticatedSidebarAccountBillingRoute =
+  AuthenticatedSidebarAccountBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
+    getParentRoute: () => AuthenticatedSidebarAccountRoute,
   } as any)
-const DashboardProjectsProjectIdGenerateRoute =
-  DashboardProjectsProjectIdGenerateRouteImport.update({
-    id: "/generate",
-    path: "/generate",
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+const AuthenticatedSidebarAccountOrganizationRoute =
+  AuthenticatedSidebarAccountOrganizationRouteImport.update({
+    id: '/organization',
+    path: '/organization',
+    getParentRoute: () => AuthenticatedSidebarAccountRoute,
   } as any)
-const DashboardProjectsProjectIdSkillMarketIndexRoute =
-  DashboardProjectsProjectIdSkillMarketIndexRouteImport.update({
-    id: "/skill-market/",
-    path: "/skill-market/",
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+const AuthenticatedSidebarAccountProfileRoute =
+  AuthenticatedSidebarAccountProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedSidebarAccountRoute,
   } as any)
-const DashboardProjectsProjectIdSkillMarketSkillIdRoute =
-  DashboardProjectsProjectIdSkillMarketSkillIdRouteImport.update({
-    id: "/skill-market/$skillId",
-    path: "/skill-market/$skillId",
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+const AuthenticatedProjectsProjectIdEditorRoute =
+  AuthenticatedProjectsProjectIdEditorRouteImport.update({
+    id: '/editor',
+    path: '/editor',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
-const DashboardProjectsProjectIdVideoEditorIndexRoute =
-  DashboardProjectsProjectIdVideoEditorIndexRouteImport.update({
-    id: "/video-editor/",
-    path: "/video-editor/",
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+const AuthenticatedProjectsProjectIdGenerateRoute =
+  AuthenticatedProjectsProjectIdGenerateRouteImport.update({
+    id: '/generate',
+    path: '/generate',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
-const DashboardProjectsProjectIdVideoEditorFileNodeIdRoute =
-  DashboardProjectsProjectIdVideoEditorFileNodeIdRouteImport.update({
-    id: "/video-editor/$fileNodeId",
-    path: "/video-editor/$fileNodeId",
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
+const AuthenticatedProjectsProjectIdSkillMarketIndexRoute =
+  AuthenticatedProjectsProjectIdSkillMarketIndexRouteImport.update({
+    id: '/skill-market/',
+    path: '/skill-market/',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute =
+  AuthenticatedProjectsProjectIdSkillMarketSkillIdRouteImport.update({
+    id: '/skill-market/$skillId',
+    path: '/skill-market/$skillId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdVideoEditorIndexRoute =
+  AuthenticatedProjectsProjectIdVideoEditorIndexRouteImport.update({
+    id: '/video-editor/',
+    path: '/video-editor/',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute =
+  AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRouteImport.update({
+    id: '/video-editor/$fileNodeId',
+    path: '/video-editor/$fileNodeId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute
-  "/admin": typeof AdminRouteWithChildren
-  "/auth-error": typeof AuthErrorRoute
-  "/dashboard": typeof DashboardRouteWithChildren
-  "/sign-in": typeof SignInRoute
-  "/sign-up": typeof SignUpRoute
-  "/admin/commands": typeof AdminCommandsRoute
-  "/admin/content-categories": typeof AdminContentCategoriesRoute
-  "/admin/models": typeof AdminModelsRouteWithChildren
-  "/admin/parameters": typeof AdminParametersRouteWithChildren
-  "/admin/skills": typeof AdminSkillsRoute
-  "/admin/vendors": typeof AdminVendorsRoute
-  "/dashboard/main": typeof DashboardMainRouteWithChildren
-  "/admin/": typeof AdminIndexRoute
-  "/dashboard/": typeof DashboardIndexRoute
-  "/admin/categories/content": typeof AdminCategoriesContentRoute
-  "/admin/categories/models": typeof AdminCategoriesModelsRoute
-  "/admin/models/$modelId": typeof AdminModelsModelIdRoute
-  "/admin/parameters/$parameterId": typeof AdminParametersParameterIdRoute
-  "/dashboard/main/projects": typeof DashboardMainProjectsRoute
-  "/dashboard/projects/$projectId": typeof DashboardProjectsProjectIdRouteWithChildren
-  "/dashboard/projects/new": typeof DashboardProjectsNewRoute
-  "/admin/categories/": typeof AdminCategoriesIndexRoute
-  "/admin/models/": typeof AdminModelsIndexRoute
-  "/admin/parameters/": typeof AdminParametersIndexRoute
-  "/dashboard/projects/$projectId/editor": typeof DashboardProjectsProjectIdEditorRoute
-  "/dashboard/projects/$projectId/generate": typeof DashboardProjectsProjectIdGenerateRoute
-  "/dashboard/projects/$projectId/skill-market/$skillId": typeof DashboardProjectsProjectIdSkillMarketSkillIdRoute
-  "/dashboard/projects/$projectId/video-editor/$fileNodeId": typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
-  "/dashboard/projects/$projectId/skill-market/": typeof DashboardProjectsProjectIdSkillMarketIndexRoute
-  "/dashboard/projects/$projectId/video-editor/": typeof DashboardProjectsProjectIdVideoEditorIndexRoute
+  '/': typeof AuthenticatedSidebarIndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/auth-error': typeof AuthErrorRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/admin/commands': typeof AdminCommandsRoute
+  '/admin/content-categories': typeof AdminContentCategoriesRoute
+  '/admin/models': typeof AdminModelsRouteWithChildren
+  '/admin/parameters': typeof AdminParametersRouteWithChildren
+  '/admin/skills': typeof AdminSkillsRoute
+  '/admin/vendors': typeof AdminVendorsRoute
+  '/admin/': typeof AdminIndexRoute
+  '/account': typeof AuthenticatedSidebarAccountRouteWithChildren
+  '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
+  '/admin/categories/content': typeof AdminCategoriesContentRoute
+  '/admin/categories/models': typeof AdminCategoriesModelsRoute
+  '/admin/models/$modelId': typeof AdminModelsModelIdRoute
+  '/admin/parameters/$parameterId': typeof AdminParametersParameterIdRoute
+  '/admin/categories/': typeof AdminCategoriesIndexRoute
+  '/admin/models/': typeof AdminModelsIndexRoute
+  '/admin/parameters/': typeof AdminParametersIndexRoute
+  '/account/billing': typeof AuthenticatedSidebarAccountBillingRoute
+  '/account/organization': typeof AuthenticatedSidebarAccountOrganizationRoute
+  '/account/profile': typeof AuthenticatedSidebarAccountProfileRoute
+  '/projects/$projectId/editor': typeof AuthenticatedProjectsProjectIdEditorRoute
+  '/projects/$projectId/generate': typeof AuthenticatedProjectsProjectIdGenerateRoute
+  '/account/': typeof AuthenticatedSidebarAccountIndexRoute
+  '/projects/$projectId/skill-market/$skillId': typeof AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute
+  '/projects/$projectId/video-editor/$fileNodeId': typeof AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute
+  '/projects/$projectId/skill-market/': typeof AuthenticatedProjectsProjectIdSkillMarketIndexRoute
+  '/projects/$projectId/video-editor/': typeof AuthenticatedProjectsProjectIdVideoEditorIndexRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute
-  "/auth-error": typeof AuthErrorRoute
-  "/sign-in": typeof SignInRoute
-  "/sign-up": typeof SignUpRoute
-  "/admin/commands": typeof AdminCommandsRoute
-  "/admin/content-categories": typeof AdminContentCategoriesRoute
-  "/admin/skills": typeof AdminSkillsRoute
-  "/admin/vendors": typeof AdminVendorsRoute
-  "/dashboard/main": typeof DashboardMainRouteWithChildren
-  "/admin": typeof AdminIndexRoute
-  "/dashboard": typeof DashboardIndexRoute
-  "/admin/categories/content": typeof AdminCategoriesContentRoute
-  "/admin/categories/models": typeof AdminCategoriesModelsRoute
-  "/admin/models/$modelId": typeof AdminModelsModelIdRoute
-  "/admin/parameters/$parameterId": typeof AdminParametersParameterIdRoute
-  "/dashboard/main/projects": typeof DashboardMainProjectsRoute
-  "/dashboard/projects/$projectId": typeof DashboardProjectsProjectIdRouteWithChildren
-  "/dashboard/projects/new": typeof DashboardProjectsNewRoute
-  "/admin/categories": typeof AdminCategoriesIndexRoute
-  "/admin/models": typeof AdminModelsIndexRoute
-  "/admin/parameters": typeof AdminParametersIndexRoute
-  "/dashboard/projects/$projectId/editor": typeof DashboardProjectsProjectIdEditorRoute
-  "/dashboard/projects/$projectId/generate": typeof DashboardProjectsProjectIdGenerateRoute
-  "/dashboard/projects/$projectId/skill-market/$skillId": typeof DashboardProjectsProjectIdSkillMarketSkillIdRoute
-  "/dashboard/projects/$projectId/video-editor/$fileNodeId": typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
-  "/dashboard/projects/$projectId/skill-market": typeof DashboardProjectsProjectIdSkillMarketIndexRoute
-  "/dashboard/projects/$projectId/video-editor": typeof DashboardProjectsProjectIdVideoEditorIndexRoute
+  '/': typeof AuthenticatedSidebarIndexRoute
+  '/auth-error': typeof AuthErrorRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/admin/commands': typeof AdminCommandsRoute
+  '/admin/content-categories': typeof AdminContentCategoriesRoute
+  '/admin/skills': typeof AdminSkillsRoute
+  '/admin/vendors': typeof AdminVendorsRoute
+  '/admin': typeof AdminIndexRoute
+  '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
+  '/admin/categories/content': typeof AdminCategoriesContentRoute
+  '/admin/categories/models': typeof AdminCategoriesModelsRoute
+  '/admin/models/$modelId': typeof AdminModelsModelIdRoute
+  '/admin/parameters/$parameterId': typeof AdminParametersParameterIdRoute
+  '/admin/categories': typeof AdminCategoriesIndexRoute
+  '/admin/models': typeof AdminModelsIndexRoute
+  '/admin/parameters': typeof AdminParametersIndexRoute
+  '/account/billing': typeof AuthenticatedSidebarAccountBillingRoute
+  '/account/organization': typeof AuthenticatedSidebarAccountOrganizationRoute
+  '/account/profile': typeof AuthenticatedSidebarAccountProfileRoute
+  '/projects/$projectId/editor': typeof AuthenticatedProjectsProjectIdEditorRoute
+  '/projects/$projectId/generate': typeof AuthenticatedProjectsProjectIdGenerateRoute
+  '/account': typeof AuthenticatedSidebarAccountIndexRoute
+  '/projects/$projectId/skill-market/$skillId': typeof AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute
+  '/projects/$projectId/video-editor/$fileNodeId': typeof AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute
+  '/projects/$projectId/skill-market': typeof AuthenticatedProjectsProjectIdSkillMarketIndexRoute
+  '/projects/$projectId/video-editor': typeof AuthenticatedProjectsProjectIdVideoEditorIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  "/": typeof IndexRoute
-  "/admin": typeof AdminRouteWithChildren
-  "/auth-error": typeof AuthErrorRoute
-  "/dashboard": typeof DashboardRouteWithChildren
-  "/sign-in": typeof SignInRoute
-  "/sign-up": typeof SignUpRoute
-  "/admin/commands": typeof AdminCommandsRoute
-  "/admin/content-categories": typeof AdminContentCategoriesRoute
-  "/admin/models": typeof AdminModelsRouteWithChildren
-  "/admin/parameters": typeof AdminParametersRouteWithChildren
-  "/admin/skills": typeof AdminSkillsRoute
-  "/admin/vendors": typeof AdminVendorsRoute
-  "/dashboard/main": typeof DashboardMainRouteWithChildren
-  "/admin/": typeof AdminIndexRoute
-  "/dashboard/": typeof DashboardIndexRoute
-  "/admin/categories/content": typeof AdminCategoriesContentRoute
-  "/admin/categories/models": typeof AdminCategoriesModelsRoute
-  "/admin/models/$modelId": typeof AdminModelsModelIdRoute
-  "/admin/parameters/$parameterId": typeof AdminParametersParameterIdRoute
-  "/dashboard/main/projects": typeof DashboardMainProjectsRoute
-  "/dashboard/projects/$projectId": typeof DashboardProjectsProjectIdRouteWithChildren
-  "/dashboard/projects/new": typeof DashboardProjectsNewRoute
-  "/admin/categories/": typeof AdminCategoriesIndexRoute
-  "/admin/models/": typeof AdminModelsIndexRoute
-  "/admin/parameters/": typeof AdminParametersIndexRoute
-  "/dashboard/projects/$projectId/editor": typeof DashboardProjectsProjectIdEditorRoute
-  "/dashboard/projects/$projectId/generate": typeof DashboardProjectsProjectIdGenerateRoute
-  "/dashboard/projects/$projectId/skill-market/$skillId": typeof DashboardProjectsProjectIdSkillMarketSkillIdRoute
-  "/dashboard/projects/$projectId/video-editor/$fileNodeId": typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
-  "/dashboard/projects/$projectId/skill-market/": typeof DashboardProjectsProjectIdSkillMarketIndexRoute
-  "/dashboard/projects/$projectId/video-editor/": typeof DashboardProjectsProjectIdVideoEditorIndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/admin': typeof AdminRouteWithChildren
+  '/auth-error': typeof AuthErrorRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/_authenticated/_sidebar': typeof AuthenticatedSidebarRouteWithChildren
+  '/admin/commands': typeof AdminCommandsRoute
+  '/admin/content-categories': typeof AdminContentCategoriesRoute
+  '/admin/models': typeof AdminModelsRouteWithChildren
+  '/admin/parameters': typeof AdminParametersRouteWithChildren
+  '/admin/skills': typeof AdminSkillsRoute
+  '/admin/vendors': typeof AdminVendorsRoute
+  '/admin/': typeof AdminIndexRoute
+  '/_authenticated/_sidebar/account': typeof AuthenticatedSidebarAccountRouteWithChildren
+  '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
+  '/admin/categories/content': typeof AdminCategoriesContentRoute
+  '/admin/categories/models': typeof AdminCategoriesModelsRoute
+  '/admin/models/$modelId': typeof AdminModelsModelIdRoute
+  '/admin/parameters/$parameterId': typeof AdminParametersParameterIdRoute
+  '/_authenticated/_sidebar/': typeof AuthenticatedSidebarIndexRoute
+  '/admin/categories/': typeof AdminCategoriesIndexRoute
+  '/admin/models/': typeof AdminModelsIndexRoute
+  '/admin/parameters/': typeof AdminParametersIndexRoute
+  '/_authenticated/_sidebar/account/billing': typeof AuthenticatedSidebarAccountBillingRoute
+  '/_authenticated/_sidebar/account/organization': typeof AuthenticatedSidebarAccountOrganizationRoute
+  '/_authenticated/_sidebar/account/profile': typeof AuthenticatedSidebarAccountProfileRoute
+  '/_authenticated/projects/$projectId/editor': typeof AuthenticatedProjectsProjectIdEditorRoute
+  '/_authenticated/projects/$projectId/generate': typeof AuthenticatedProjectsProjectIdGenerateRoute
+  '/_authenticated/_sidebar/account/': typeof AuthenticatedSidebarAccountIndexRoute
+  '/_authenticated/projects/$projectId/skill-market/$skillId': typeof AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute
+  '/_authenticated/projects/$projectId/video-editor/$fileNodeId': typeof AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute
+  '/_authenticated/projects/$projectId/skill-market/': typeof AuthenticatedProjectsProjectIdSkillMarketIndexRoute
+  '/_authenticated/projects/$projectId/video-editor/': typeof AuthenticatedProjectsProjectIdVideoEditorIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | "/"
-    | "/admin"
-    | "/auth-error"
-    | "/dashboard"
-    | "/sign-in"
-    | "/sign-up"
-    | "/admin/commands"
-    | "/admin/content-categories"
-    | "/admin/models"
-    | "/admin/parameters"
-    | "/admin/skills"
-    | "/admin/vendors"
-    | "/dashboard/main"
-    | "/admin/"
-    | "/dashboard/"
-    | "/admin/categories/content"
-    | "/admin/categories/models"
-    | "/admin/models/$modelId"
-    | "/admin/parameters/$parameterId"
-    | "/dashboard/main/projects"
-    | "/dashboard/projects/$projectId"
-    | "/dashboard/projects/new"
-    | "/admin/categories/"
-    | "/admin/models/"
-    | "/admin/parameters/"
-    | "/dashboard/projects/$projectId/editor"
-    | "/dashboard/projects/$projectId/generate"
-    | "/dashboard/projects/$projectId/skill-market/$skillId"
-    | "/dashboard/projects/$projectId/video-editor/$fileNodeId"
-    | "/dashboard/projects/$projectId/skill-market/"
-    | "/dashboard/projects/$projectId/video-editor/"
+    | '/'
+    | '/admin'
+    | '/auth-error'
+    | '/sign-in'
+    | '/sign-up'
+    | '/admin/commands'
+    | '/admin/content-categories'
+    | '/admin/models'
+    | '/admin/parameters'
+    | '/admin/skills'
+    | '/admin/vendors'
+    | '/admin/'
+    | '/account'
+    | '/projects/$projectId'
+    | '/admin/categories/content'
+    | '/admin/categories/models'
+    | '/admin/models/$modelId'
+    | '/admin/parameters/$parameterId'
+    | '/admin/categories/'
+    | '/admin/models/'
+    | '/admin/parameters/'
+    | '/account/billing'
+    | '/account/organization'
+    | '/account/profile'
+    | '/projects/$projectId/editor'
+    | '/projects/$projectId/generate'
+    | '/account/'
+    | '/projects/$projectId/skill-market/$skillId'
+    | '/projects/$projectId/video-editor/$fileNodeId'
+    | '/projects/$projectId/skill-market/'
+    | '/projects/$projectId/video-editor/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | "/"
-    | "/auth-error"
-    | "/sign-in"
-    | "/sign-up"
-    | "/admin/commands"
-    | "/admin/content-categories"
-    | "/admin/skills"
-    | "/admin/vendors"
-    | "/dashboard/main"
-    | "/admin"
-    | "/dashboard"
-    | "/admin/categories/content"
-    | "/admin/categories/models"
-    | "/admin/models/$modelId"
-    | "/admin/parameters/$parameterId"
-    | "/dashboard/main/projects"
-    | "/dashboard/projects/$projectId"
-    | "/dashboard/projects/new"
-    | "/admin/categories"
-    | "/admin/models"
-    | "/admin/parameters"
-    | "/dashboard/projects/$projectId/editor"
-    | "/dashboard/projects/$projectId/generate"
-    | "/dashboard/projects/$projectId/skill-market/$skillId"
-    | "/dashboard/projects/$projectId/video-editor/$fileNodeId"
-    | "/dashboard/projects/$projectId/skill-market"
-    | "/dashboard/projects/$projectId/video-editor"
+    | '/'
+    | '/auth-error'
+    | '/sign-in'
+    | '/sign-up'
+    | '/admin/commands'
+    | '/admin/content-categories'
+    | '/admin/skills'
+    | '/admin/vendors'
+    | '/admin'
+    | '/projects/$projectId'
+    | '/admin/categories/content'
+    | '/admin/categories/models'
+    | '/admin/models/$modelId'
+    | '/admin/parameters/$parameterId'
+    | '/admin/categories'
+    | '/admin/models'
+    | '/admin/parameters'
+    | '/account/billing'
+    | '/account/organization'
+    | '/account/profile'
+    | '/projects/$projectId/editor'
+    | '/projects/$projectId/generate'
+    | '/account'
+    | '/projects/$projectId/skill-market/$skillId'
+    | '/projects/$projectId/video-editor/$fileNodeId'
+    | '/projects/$projectId/skill-market'
+    | '/projects/$projectId/video-editor'
   id:
-    | "__root__"
-    | "/"
-    | "/admin"
-    | "/auth-error"
-    | "/dashboard"
-    | "/sign-in"
-    | "/sign-up"
-    | "/admin/commands"
-    | "/admin/content-categories"
-    | "/admin/models"
-    | "/admin/parameters"
-    | "/admin/skills"
-    | "/admin/vendors"
-    | "/dashboard/main"
-    | "/admin/"
-    | "/dashboard/"
-    | "/admin/categories/content"
-    | "/admin/categories/models"
-    | "/admin/models/$modelId"
-    | "/admin/parameters/$parameterId"
-    | "/dashboard/main/projects"
-    | "/dashboard/projects/$projectId"
-    | "/dashboard/projects/new"
-    | "/admin/categories/"
-    | "/admin/models/"
-    | "/admin/parameters/"
-    | "/dashboard/projects/$projectId/editor"
-    | "/dashboard/projects/$projectId/generate"
-    | "/dashboard/projects/$projectId/skill-market/$skillId"
-    | "/dashboard/projects/$projectId/video-editor/$fileNodeId"
-    | "/dashboard/projects/$projectId/skill-market/"
-    | "/dashboard/projects/$projectId/video-editor/"
+    | '__root__'
+    | '/_authenticated'
+    | '/admin'
+    | '/auth-error'
+    | '/sign-in'
+    | '/sign-up'
+    | '/_authenticated/_sidebar'
+    | '/admin/commands'
+    | '/admin/content-categories'
+    | '/admin/models'
+    | '/admin/parameters'
+    | '/admin/skills'
+    | '/admin/vendors'
+    | '/admin/'
+    | '/_authenticated/_sidebar/account'
+    | '/_authenticated/projects/$projectId'
+    | '/admin/categories/content'
+    | '/admin/categories/models'
+    | '/admin/models/$modelId'
+    | '/admin/parameters/$parameterId'
+    | '/_authenticated/_sidebar/'
+    | '/admin/categories/'
+    | '/admin/models/'
+    | '/admin/parameters/'
+    | '/_authenticated/_sidebar/account/billing'
+    | '/_authenticated/_sidebar/account/organization'
+    | '/_authenticated/_sidebar/account/profile'
+    | '/_authenticated/projects/$projectId/editor'
+    | '/_authenticated/projects/$projectId/generate'
+    | '/_authenticated/_sidebar/account/'
+    | '/_authenticated/projects/$projectId/skill-market/$skillId'
+    | '/_authenticated/projects/$projectId/video-editor/$fileNodeId'
+    | '/_authenticated/projects/$projectId/skill-market/'
+    | '/_authenticated/projects/$projectId/video-editor/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AuthErrorRoute: typeof AuthErrorRoute
-  DashboardRoute: typeof DashboardRouteWithChildren
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/": {
-      id: "/"
-      path: "/"
-      fullPath: "/"
-      preLoaderRoute: typeof IndexRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    "/admin": {
-      id: "/admin"
-      path: "/admin"
-      fullPath: "/admin"
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    "/auth-error": {
-      id: "/auth-error"
-      path: "/auth-error"
-      fullPath: "/auth-error"
+    '/auth-error': {
+      id: '/auth-error'
+      path: '/auth-error'
+      fullPath: '/auth-error'
       preLoaderRoute: typeof AuthErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
-    "/dashboard": {
-      id: "/dashboard"
-      path: "/dashboard"
-      fullPath: "/dashboard"
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    "/sign-in": {
-      id: "/sign-in"
-      path: "/sign-in"
-      fullPath: "/sign-in"
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
-    "/sign-up": {
-      id: "/sign-up"
-      path: "/sign-up"
-      fullPath: "/sign-up"
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
       preLoaderRoute: typeof SignUpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    "/admin/": {
-      id: "/admin/"
-      path: "/"
-      fullPath: "/admin/"
+    '/_authenticated/_sidebar': {
+      id: '/_authenticated/_sidebar'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedSidebarRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    "/admin/commands": {
-      id: "/admin/commands"
-      path: "/commands"
-      fullPath: "/admin/commands"
+    '/admin/commands': {
+      id: '/admin/commands'
+      path: '/commands'
+      fullPath: '/admin/commands'
       preLoaderRoute: typeof AdminCommandsRouteImport
       parentRoute: typeof AdminRoute
     }
-    "/admin/content-categories": {
-      id: "/admin/content-categories"
-      path: "/content-categories"
-      fullPath: "/admin/content-categories"
+    '/admin/content-categories': {
+      id: '/admin/content-categories'
+      path: '/content-categories'
+      fullPath: '/admin/content-categories'
       preLoaderRoute: typeof AdminContentCategoriesRouteImport
       parentRoute: typeof AdminRoute
     }
-    "/admin/models": {
-      id: "/admin/models"
-      path: "/models"
-      fullPath: "/admin/models"
+    '/admin/models': {
+      id: '/admin/models'
+      path: '/models'
+      fullPath: '/admin/models'
       preLoaderRoute: typeof AdminModelsRouteImport
       parentRoute: typeof AdminRoute
     }
-    "/admin/parameters": {
-      id: "/admin/parameters"
-      path: "/parameters"
-      fullPath: "/admin/parameters"
+    '/admin/parameters': {
+      id: '/admin/parameters'
+      path: '/parameters'
+      fullPath: '/admin/parameters'
       preLoaderRoute: typeof AdminParametersRouteImport
       parentRoute: typeof AdminRoute
     }
-    "/admin/skills": {
-      id: "/admin/skills"
-      path: "/skills"
-      fullPath: "/admin/skills"
+    '/admin/skills': {
+      id: '/admin/skills'
+      path: '/skills'
+      fullPath: '/admin/skills'
       preLoaderRoute: typeof AdminSkillsRouteImport
       parentRoute: typeof AdminRoute
     }
-    "/admin/vendors": {
-      id: "/admin/vendors"
-      path: "/vendors"
-      fullPath: "/admin/vendors"
+    '/admin/vendors': {
+      id: '/admin/vendors'
+      path: '/vendors'
+      fullPath: '/admin/vendors'
       preLoaderRoute: typeof AdminVendorsRouteImport
       parentRoute: typeof AdminRoute
     }
-    "/dashboard/": {
-      id: "/dashboard/"
-      path: "/"
-      fullPath: "/dashboard/"
-      preLoaderRoute: typeof DashboardIndexRouteImport
-      parentRoute: typeof DashboardRoute
+    '/_authenticated/_sidebar/': {
+      id: '/_authenticated/_sidebar/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedSidebarIndexRouteImport
+      parentRoute: typeof AuthenticatedSidebarRoute
     }
-    "/dashboard/main": {
-      id: "/dashboard/main"
-      path: "/main"
-      fullPath: "/dashboard/main"
-      preLoaderRoute: typeof DashboardMainRouteImport
-      parentRoute: typeof DashboardRoute
+    '/_authenticated/_sidebar/account': {
+      id: '/_authenticated/_sidebar/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthenticatedSidebarAccountRouteImport
+      parentRoute: typeof AuthenticatedSidebarRoute
     }
-    "/admin/categories/": {
-      id: "/admin/categories/"
-      path: "/categories"
-      fullPath: "/admin/categories/"
+    '/_authenticated/projects/$projectId': {
+      id: '/_authenticated/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/admin/categories/': {
+      id: '/admin/categories/'
+      path: '/categories'
+      fullPath: '/admin/categories/'
       preLoaderRoute: typeof AdminCategoriesIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    "/admin/categories/content": {
-      id: "/admin/categories/content"
-      path: "/categories/content"
-      fullPath: "/admin/categories/content"
+    '/admin/categories/content': {
+      id: '/admin/categories/content'
+      path: '/categories/content'
+      fullPath: '/admin/categories/content'
       preLoaderRoute: typeof AdminCategoriesContentRouteImport
       parentRoute: typeof AdminRoute
     }
-    "/admin/categories/models": {
-      id: "/admin/categories/models"
-      path: "/categories/models"
-      fullPath: "/admin/categories/models"
+    '/admin/categories/models': {
+      id: '/admin/categories/models'
+      path: '/categories/models'
+      fullPath: '/admin/categories/models'
       preLoaderRoute: typeof AdminCategoriesModelsRouteImport
       parentRoute: typeof AdminRoute
     }
-    "/admin/models/": {
-      id: "/admin/models/"
-      path: "/"
-      fullPath: "/admin/models/"
+    '/admin/models/': {
+      id: '/admin/models/'
+      path: '/'
+      fullPath: '/admin/models/'
       preLoaderRoute: typeof AdminModelsIndexRouteImport
       parentRoute: typeof AdminModelsRoute
     }
-    "/admin/models/$modelId": {
-      id: "/admin/models/$modelId"
-      path: "/$modelId"
-      fullPath: "/admin/models/$modelId"
+    '/admin/models/$modelId': {
+      id: '/admin/models/$modelId'
+      path: '/$modelId'
+      fullPath: '/admin/models/$modelId'
       preLoaderRoute: typeof AdminModelsModelIdRouteImport
       parentRoute: typeof AdminModelsRoute
     }
-    "/admin/parameters/": {
-      id: "/admin/parameters/"
-      path: "/"
-      fullPath: "/admin/parameters/"
+    '/admin/parameters/': {
+      id: '/admin/parameters/'
+      path: '/'
+      fullPath: '/admin/parameters/'
       preLoaderRoute: typeof AdminParametersIndexRouteImport
       parentRoute: typeof AdminParametersRoute
     }
-    "/admin/parameters/$parameterId": {
-      id: "/admin/parameters/$parameterId"
-      path: "/$parameterId"
-      fullPath: "/admin/parameters/$parameterId"
+    '/admin/parameters/$parameterId': {
+      id: '/admin/parameters/$parameterId'
+      path: '/$parameterId'
+      fullPath: '/admin/parameters/$parameterId'
       preLoaderRoute: typeof AdminParametersParameterIdRouteImport
       parentRoute: typeof AdminParametersRoute
     }
-    "/dashboard/main/projects": {
-      id: "/dashboard/main/projects"
-      path: "/projects"
-      fullPath: "/dashboard/main/projects"
-      preLoaderRoute: typeof DashboardMainProjectsRouteImport
-      parentRoute: typeof DashboardMainRoute
+    '/_authenticated/_sidebar/account/': {
+      id: '/_authenticated/_sidebar/account/'
+      path: '/'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AuthenticatedSidebarAccountIndexRouteImport
+      parentRoute: typeof AuthenticatedSidebarAccountRoute
     }
-    "/dashboard/projects/$projectId": {
-      id: "/dashboard/projects/$projectId"
-      path: "/projects/$projectId"
-      fullPath: "/dashboard/projects/$projectId"
-      preLoaderRoute: typeof DashboardProjectsProjectIdRouteImport
-      parentRoute: typeof DashboardRoute
+    '/_authenticated/_sidebar/account/billing': {
+      id: '/_authenticated/_sidebar/account/billing'
+      path: '/billing'
+      fullPath: '/account/billing'
+      preLoaderRoute: typeof AuthenticatedSidebarAccountBillingRouteImport
+      parentRoute: typeof AuthenticatedSidebarAccountRoute
     }
-    "/dashboard/projects/new": {
-      id: "/dashboard/projects/new"
-      path: "/projects/new"
-      fullPath: "/dashboard/projects/new"
-      preLoaderRoute: typeof DashboardProjectsNewRouteImport
-      parentRoute: typeof DashboardRoute
+    '/_authenticated/_sidebar/account/organization': {
+      id: '/_authenticated/_sidebar/account/organization'
+      path: '/organization'
+      fullPath: '/account/organization'
+      preLoaderRoute: typeof AuthenticatedSidebarAccountOrganizationRouteImport
+      parentRoute: typeof AuthenticatedSidebarAccountRoute
     }
-    "/dashboard/projects/$projectId/editor": {
-      id: "/dashboard/projects/$projectId/editor"
-      path: "/editor"
-      fullPath: "/dashboard/projects/$projectId/editor"
-      preLoaderRoute: typeof DashboardProjectsProjectIdEditorRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+    '/_authenticated/_sidebar/account/profile': {
+      id: '/_authenticated/_sidebar/account/profile'
+      path: '/profile'
+      fullPath: '/account/profile'
+      preLoaderRoute: typeof AuthenticatedSidebarAccountProfileRouteImport
+      parentRoute: typeof AuthenticatedSidebarAccountRoute
     }
-    "/dashboard/projects/$projectId/generate": {
-      id: "/dashboard/projects/$projectId/generate"
-      path: "/generate"
-      fullPath: "/dashboard/projects/$projectId/generate"
-      preLoaderRoute: typeof DashboardProjectsProjectIdGenerateRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+    '/_authenticated/projects/$projectId/editor': {
+      id: '/_authenticated/projects/$projectId/editor'
+      path: '/editor'
+      fullPath: '/projects/$projectId/editor'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdEditorRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
-    "/dashboard/projects/$projectId/skill-market/": {
-      id: "/dashboard/projects/$projectId/skill-market/"
-      path: "/skill-market"
-      fullPath: "/dashboard/projects/$projectId/skill-market/"
-      preLoaderRoute: typeof DashboardProjectsProjectIdSkillMarketIndexRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+    '/_authenticated/projects/$projectId/generate': {
+      id: '/_authenticated/projects/$projectId/generate'
+      path: '/generate'
+      fullPath: '/projects/$projectId/generate'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdGenerateRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
-    "/dashboard/projects/$projectId/skill-market/$skillId": {
-      id: "/dashboard/projects/$projectId/skill-market/$skillId"
-      path: "/skill-market/$skillId"
-      fullPath: "/dashboard/projects/$projectId/skill-market/$skillId"
-      preLoaderRoute: typeof DashboardProjectsProjectIdSkillMarketSkillIdRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+    '/_authenticated/projects/$projectId/skill-market/': {
+      id: '/_authenticated/projects/$projectId/skill-market/'
+      path: '/skill-market'
+      fullPath: '/projects/$projectId/skill-market/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdSkillMarketIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
-    "/dashboard/projects/$projectId/video-editor/": {
-      id: "/dashboard/projects/$projectId/video-editor/"
-      path: "/video-editor"
-      fullPath: "/dashboard/projects/$projectId/video-editor/"
-      preLoaderRoute: typeof DashboardProjectsProjectIdVideoEditorIndexRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+    '/_authenticated/projects/$projectId/skill-market/$skillId': {
+      id: '/_authenticated/projects/$projectId/skill-market/$skillId'
+      path: '/skill-market/$skillId'
+      fullPath: '/projects/$projectId/skill-market/$skillId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdSkillMarketSkillIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
-    "/dashboard/projects/$projectId/video-editor/$fileNodeId": {
-      id: "/dashboard/projects/$projectId/video-editor/$fileNodeId"
-      path: "/video-editor/$fileNodeId"
-      fullPath: "/dashboard/projects/$projectId/video-editor/$fileNodeId"
-      preLoaderRoute: typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
+    '/_authenticated/projects/$projectId/video-editor/': {
+      id: '/_authenticated/projects/$projectId/video-editor/'
+      path: '/video-editor'
+      fullPath: '/projects/$projectId/video-editor/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdVideoEditorIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/video-editor/$fileNodeId': {
+      id: '/_authenticated/projects/$projectId/video-editor/$fileNodeId'
+      path: '/video-editor/$fileNodeId'
+      fullPath: '/projects/$projectId/video-editor/$fileNodeId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
   }
 }
+
+interface AuthenticatedSidebarAccountRouteChildren {
+  AuthenticatedSidebarAccountBillingRoute: typeof AuthenticatedSidebarAccountBillingRoute
+  AuthenticatedSidebarAccountOrganizationRoute: typeof AuthenticatedSidebarAccountOrganizationRoute
+  AuthenticatedSidebarAccountProfileRoute: typeof AuthenticatedSidebarAccountProfileRoute
+  AuthenticatedSidebarAccountIndexRoute: typeof AuthenticatedSidebarAccountIndexRoute
+}
+
+const AuthenticatedSidebarAccountRouteChildren: AuthenticatedSidebarAccountRouteChildren =
+  {
+    AuthenticatedSidebarAccountBillingRoute:
+      AuthenticatedSidebarAccountBillingRoute,
+    AuthenticatedSidebarAccountOrganizationRoute:
+      AuthenticatedSidebarAccountOrganizationRoute,
+    AuthenticatedSidebarAccountProfileRoute:
+      AuthenticatedSidebarAccountProfileRoute,
+    AuthenticatedSidebarAccountIndexRoute:
+      AuthenticatedSidebarAccountIndexRoute,
+  }
+
+const AuthenticatedSidebarAccountRouteWithChildren =
+  AuthenticatedSidebarAccountRoute._addFileChildren(
+    AuthenticatedSidebarAccountRouteChildren,
+  )
+
+interface AuthenticatedSidebarRouteChildren {
+  AuthenticatedSidebarAccountRoute: typeof AuthenticatedSidebarAccountRouteWithChildren
+  AuthenticatedSidebarIndexRoute: typeof AuthenticatedSidebarIndexRoute
+}
+
+const AuthenticatedSidebarRouteChildren: AuthenticatedSidebarRouteChildren = {
+  AuthenticatedSidebarAccountRoute:
+    AuthenticatedSidebarAccountRouteWithChildren,
+  AuthenticatedSidebarIndexRoute: AuthenticatedSidebarIndexRoute,
+}
+
+const AuthenticatedSidebarRouteWithChildren =
+  AuthenticatedSidebarRoute._addFileChildren(AuthenticatedSidebarRouteChildren)
+
+interface AuthenticatedProjectsProjectIdRouteChildren {
+  AuthenticatedProjectsProjectIdEditorRoute: typeof AuthenticatedProjectsProjectIdEditorRoute
+  AuthenticatedProjectsProjectIdGenerateRoute: typeof AuthenticatedProjectsProjectIdGenerateRoute
+  AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute: typeof AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute
+  AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute: typeof AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute
+  AuthenticatedProjectsProjectIdSkillMarketIndexRoute: typeof AuthenticatedProjectsProjectIdSkillMarketIndexRoute
+  AuthenticatedProjectsProjectIdVideoEditorIndexRoute: typeof AuthenticatedProjectsProjectIdVideoEditorIndexRoute
+}
+
+const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectIdRouteChildren =
+  {
+    AuthenticatedProjectsProjectIdEditorRoute:
+      AuthenticatedProjectsProjectIdEditorRoute,
+    AuthenticatedProjectsProjectIdGenerateRoute:
+      AuthenticatedProjectsProjectIdGenerateRoute,
+    AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute:
+      AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute,
+    AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute:
+      AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute,
+    AuthenticatedProjectsProjectIdSkillMarketIndexRoute:
+      AuthenticatedProjectsProjectIdSkillMarketIndexRoute,
+    AuthenticatedProjectsProjectIdVideoEditorIndexRoute:
+      AuthenticatedProjectsProjectIdVideoEditorIndexRoute,
+  }
+
+const AuthenticatedProjectsProjectIdRouteWithChildren =
+  AuthenticatedProjectsProjectIdRoute._addFileChildren(
+    AuthenticatedProjectsProjectIdRouteChildren,
+  )
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedSidebarRoute: typeof AuthenticatedSidebarRouteWithChildren
+  AuthenticatedProjectsProjectIdRoute: typeof AuthenticatedProjectsProjectIdRouteWithChildren
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedSidebarRoute: AuthenticatedSidebarRouteWithChildren,
+  AuthenticatedProjectsProjectIdRoute:
+    AuthenticatedProjectsProjectIdRouteWithChildren,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
 
 interface AdminModelsRouteChildren {
   AdminModelsModelIdRoute: typeof AdminModelsModelIdRoute
@@ -686,71 +802,10 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
-interface DashboardMainRouteChildren {
-  DashboardMainProjectsRoute: typeof DashboardMainProjectsRoute
-}
-
-const DashboardMainRouteChildren: DashboardMainRouteChildren = {
-  DashboardMainProjectsRoute: DashboardMainProjectsRoute,
-}
-
-const DashboardMainRouteWithChildren = DashboardMainRoute._addFileChildren(
-  DashboardMainRouteChildren,
-)
-
-interface DashboardProjectsProjectIdRouteChildren {
-  DashboardProjectsProjectIdEditorRoute: typeof DashboardProjectsProjectIdEditorRoute
-  DashboardProjectsProjectIdGenerateRoute: typeof DashboardProjectsProjectIdGenerateRoute
-  DashboardProjectsProjectIdSkillMarketSkillIdRoute: typeof DashboardProjectsProjectIdSkillMarketSkillIdRoute
-  DashboardProjectsProjectIdVideoEditorFileNodeIdRoute: typeof DashboardProjectsProjectIdVideoEditorFileNodeIdRoute
-  DashboardProjectsProjectIdSkillMarketIndexRoute: typeof DashboardProjectsProjectIdSkillMarketIndexRoute
-  DashboardProjectsProjectIdVideoEditorIndexRoute: typeof DashboardProjectsProjectIdVideoEditorIndexRoute
-}
-
-const DashboardProjectsProjectIdRouteChildren: DashboardProjectsProjectIdRouteChildren =
-  {
-    DashboardProjectsProjectIdEditorRoute:
-      DashboardProjectsProjectIdEditorRoute,
-    DashboardProjectsProjectIdGenerateRoute:
-      DashboardProjectsProjectIdGenerateRoute,
-    DashboardProjectsProjectIdSkillMarketSkillIdRoute:
-      DashboardProjectsProjectIdSkillMarketSkillIdRoute,
-    DashboardProjectsProjectIdVideoEditorFileNodeIdRoute:
-      DashboardProjectsProjectIdVideoEditorFileNodeIdRoute,
-    DashboardProjectsProjectIdSkillMarketIndexRoute:
-      DashboardProjectsProjectIdSkillMarketIndexRoute,
-    DashboardProjectsProjectIdVideoEditorIndexRoute:
-      DashboardProjectsProjectIdVideoEditorIndexRoute,
-  }
-
-const DashboardProjectsProjectIdRouteWithChildren =
-  DashboardProjectsProjectIdRoute._addFileChildren(
-    DashboardProjectsProjectIdRouteChildren,
-  )
-
-interface DashboardRouteChildren {
-  DashboardMainRoute: typeof DashboardMainRouteWithChildren
-  DashboardIndexRoute: typeof DashboardIndexRoute
-  DashboardProjectsProjectIdRoute: typeof DashboardProjectsProjectIdRouteWithChildren
-  DashboardProjectsNewRoute: typeof DashboardProjectsNewRoute
-}
-
-const DashboardRouteChildren: DashboardRouteChildren = {
-  DashboardMainRoute: DashboardMainRouteWithChildren,
-  DashboardIndexRoute: DashboardIndexRoute,
-  DashboardProjectsProjectIdRoute: DashboardProjectsProjectIdRouteWithChildren,
-  DashboardProjectsNewRoute: DashboardProjectsNewRoute,
-}
-
-const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
-  DashboardRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AuthErrorRoute: AuthErrorRoute,
-  DashboardRoute: DashboardRouteWithChildren,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
 }
@@ -758,9 +813,9 @@ export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from "./router.tsx"
-import type { createStart } from "@tanstack/react-start"
-declare module "@tanstack/react-start" {
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>

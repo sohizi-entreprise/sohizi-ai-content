@@ -174,6 +174,7 @@ export const createModel = async (input: CreateModelInput) => {
     description: input.description,
     enabled: input.enabled,
     pricing: input.pricing,
+    contextWindow: input.contextWindow,
   })
   await modelsRepo.replaceModelCategories(created.id, categoryIds)
   return getModel(created.id)

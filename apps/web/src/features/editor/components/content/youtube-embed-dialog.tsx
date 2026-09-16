@@ -57,7 +57,10 @@ export function YoutubeEmbedDialog({
         onOpenChange(nextOpen)
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>Embed YouTube video</DialogTitle>
         </DialogHeader>
