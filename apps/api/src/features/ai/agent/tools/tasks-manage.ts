@@ -1,12 +1,16 @@
 import { z } from "zod"
 import { buildBaseTool } from "./tool-definition"
-import { v4 as uuidv4 } from "uuid"
 import { failure, success } from "./utils"
 import { TodoItem } from "@/type"
 
+const taskSchema = z.object({
+  id: z.string().describe("ID for the task. ex: task_1"),
+  task: z.string().describe("A concise description of the task to perform"),
+})
+
 const addTodoSchema = z.object({
   action: z.literal("add").describe("Add new tasks to the todo list."),
-  tasks: z.array(z.string()).describe("The tasks to add to the todo list."),
+  tasks: z.array(taskSchema).describe("The tasks to add to the todo list."),
 })
 
 const completeTodoSchema = z.object({
@@ -57,8 +61,7 @@ export const manageTodoListTool = buildBaseTool({
     switch (input.action) {
       case "add": {
         const newTodos = input.tasks.map((task) => ({
-          id: `task-${uuidv4().slice(0, 8)}`,
-          task,
+          ...task,
           status: "pending" as const,
         }))
         state.setTodos([...state.todos, ...newTodos])

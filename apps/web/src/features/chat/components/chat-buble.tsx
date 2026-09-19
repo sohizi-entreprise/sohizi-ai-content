@@ -1,5 +1,6 @@
 import { useMemo } from "react"
-import { ChatToolCall } from "./chat-tool-call"
+import { ChatToolCall, isVisibleToolCall } from "./chat-tool-call"
+import { useChatRun } from "./chat-run-context"
 import type { Message, MsgToolCallPart, MsgToolResultPart } from "../types"
 import type { AttachmentData } from "@/components/ai-elements/attachments"
 import {
@@ -117,6 +118,17 @@ function RenderUserMessage({ message }: { message: Message }) {
 function RenderAssistantMessage({ message }: { message: Message }) {
   const { content, reasoning, reasoningStreaming, toolCalls } =
     aggregateAssistant(message)
+  const { tasks, firstAddToolCallId } = useChatRun()
+  const visibleToolCalls = toolCalls.filter((toolCall) =>
+    isVisibleToolCall(toolCall, {
+      firstAddToolCallId,
+      hasTasks: tasks.length > 0,
+    }),
+  )
+
+  if (!content && !reasoning && visibleToolCalls.length === 0) {
+    return null
+  }
 
   return (
     <UIMessage from="assistant">
@@ -131,9 +143,9 @@ function RenderAssistantMessage({ message }: { message: Message }) {
         {/* Text accompanying tool calls is a progress update, so it precedes them. */}
         {content ? <MessageResponse>{content}</MessageResponse> : null}
 
-        {toolCalls.length > 0 ? (
+        {visibleToolCalls.length > 0 ? (
           <div className="flex flex-col gap-2">
-            {toolCalls.map((toolCall) => (
+            {visibleToolCalls.map((toolCall) => (
               <ChatToolCall
                 key={toolCall.toolCallId}
                 toolCall={toolCall}

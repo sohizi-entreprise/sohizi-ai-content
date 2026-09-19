@@ -16,9 +16,10 @@ import {
   createCommandMentionSuggestion,
 } from "@/features/editor/extensions/command-mention"
 import {
-  FileMention,
-  createFileMentionSuggestion,
-} from "@/features/editor/extensions/file-mention"
+  FileLinkSuggestion,
+  createFileLinkSuggestion,
+} from "@/features/editor/extensions/file-link-suggestion"
+import { EditorLink } from "@/features/editor/extensions/editor-link"
 
 type ChatTextareaProps = {
   projectId: string
@@ -51,8 +52,8 @@ export default function ChatTextarea(props: ChatTextareaProps) {
     onSubmitRef.current = onSubmit
   }, [onSubmit])
 
-  const fileMentionSuggestion = useMemo(
-    () => createFileMentionSuggestion(searchFiles),
+  const fileLinkSuggestion = useMemo(
+    () => createFileLinkSuggestion(searchFiles),
     [searchFiles],
   )
 
@@ -109,17 +110,14 @@ export default function ChatTextarea(props: ChatTextareaProps) {
         orderedList: false,
         strike: false,
         bold: false,
+        link: false,
       }),
+      EditorLink,
       Placeholder.configure({
         placeholder: placeholder ?? "Write your prompt ...",
       }),
-      FileMention.configure({
-        HTMLAttributes: {
-          class:
-            "inline-flex rounded bg-white/10 px-1 py-0 text-zinc-100 ring-1 ring-white/10",
-        },
-        enableClick: true,
-        suggestion: fileMentionSuggestion,
+      FileLinkSuggestion.configure({
+        suggestion: fileLinkSuggestion,
       }),
       CommandMention.configure({
         HTMLAttributes: {

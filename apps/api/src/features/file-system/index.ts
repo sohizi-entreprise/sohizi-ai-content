@@ -114,6 +114,17 @@ export const fileSystemRoutes = new Elysia({
     },
   )
   .get(
+    "/by-path",
+    ({ params, query }) => {
+      return fileService.getFileNodeByPath(params.projectId, query.path)
+    },
+    {
+      query: z.object({
+        path: z.string().trim().min(1, "Path is required"),
+      }),
+    },
+  )
+  .get(
     "/assets",
     ({ params, query }) => {
       return fileService.listAssetsFolder({
@@ -156,6 +167,9 @@ export const fileSystemRoutes = new Elysia({
       }),
     },
   )
+  .get("/:id/node", ({ params }) => {
+    return fileService.getFileNodeById(params.projectId, params.id)
+  })
   .get("/:id", ({ params }) => {
     return fileService.getFileContent(params.projectId, params.id)
   })

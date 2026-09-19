@@ -1,30 +1,20 @@
-import { ModelMessage, UserModelMessage } from "ai"
+import { ModelMessage } from "ai"
 import { billingService, withBillingStream } from "@/features/billing"
 import {
   BillableLlmInput,
   createBillableLlmClient,
-  type ModelConfig,
 } from "../utils/llm-client"
-import { LlmChunk } from "../utils/llm-response"
+import { LlmChunk, streamEvents } from "../utils/llm-response"
 import { estimateInputTokens } from "../utils/estimate-token"
-import {
-  buildEvaluatorInput,
-  DEFAULT_EVALUATOR_OUTPUT_TOKENS,
-  drainStreamForComplete,
-  parseEvaluatorResponse,
-  StopEvaluation,
-} from "./stop-evaluator"
+import { TokenUsage } from "@/type"
 import { Session } from "./session"
 import { AgentStateManager } from "./state-manager"
 import { extractTextFromContent } from "../utils/message-content"
-import { withEvaluatorObservation } from "../utils/tracing"
 
 export type ContextManagerConfig = {
   maxContextTokens: number
   session: Session
   summaryModelId: string
-  evaluatorModelId: string
-  evaluatorModelConfig?: Pick<ModelConfig, "reasoningEffort">
   vendor: string
   threshold?: number
   pruneMaxLength?: number
@@ -78,26 +68,19 @@ export class ContextManager {
   private readonly keepLast: number
   private readonly session: Session
   private readonly summaryModelId: string
-  private readonly evaluatorModelId: string
-  private readonly evaluatorModelConfig:
-    Pick<ModelConfig, "reasoningEffort"> | undefined
   private readonly vendor: string
   private summaryStream: BilledLlmStream | null | undefined
-  private evaluatorStream: BilledLlmStream | null | undefined
 
   constructor(config: ContextManagerConfig) {
     this.maxContextTokens = config.maxContextTokens
     this.session = config.session
     this.summaryModelId = config.summaryModelId
-    this.evaluatorModelId = config.evaluatorModelId
-    this.evaluatorModelConfig = config.evaluatorModelConfig
     this.vendor = config.vendor
     this.threshold = config.threshold ?? DEFAULT_THRESHOLD
     this.pruneMaxLength = config.pruneMaxLength ?? DEFAULT_PRUNE_MAX_LENGTH
     this.keepFirst = config.keepFirst ?? DEFAULT_KEEP_FIRST
     this.keepLast = config.keepLast ?? DEFAULT_KEEP_LAST
     this.summaryStream = undefined
-    this.evaluatorStream = undefined
   }
 
   /**
@@ -139,54 +122,6 @@ export class ContextManager {
       : this.pruneMessages(messages)
 
     stateManager.replaceMessages(compressed)
-  }
-
-  async evaluateStop(
-    stateManager: AgentStateManager,
-    userMessage: UserModelMessage,
-    lastAssistantText: string,
-    abortSignal: AbortSignal,
-    runId: string,
-  ): Promise<StopEvaluation> {
-    try {
-      return await withEvaluatorObservation(lastAssistantText, async () => {
-        const evaluatorStream = await this.getEvaluatorStream()
-        if (!evaluatorStream) {
-          return { isDone: true, instruction: "" }
-        }
-
-        const evaluatorInput = buildEvaluatorInput({
-          userMessage,
-          lastAssistantText,
-        })
-        const billedStream = evaluatorStream(
-          {
-            ...evaluatorInput,
-            telemetryFunctionId: "evaluate-stop",
-          },
-          {
-            organizationId: this.session.organizationId,
-            userId: this.session.userId,
-            signal: abortSignal,
-            metadata: {
-              sessionId: this.session.id,
-              conversationId: this.session.conversationId,
-              runId,
-            },
-          },
-        )
-
-        const result = await drainStreamForComplete(billedStream)
-        if (!result) {
-          return { isDone: true, instruction: "" }
-        }
-
-        stateManager.incrementUsage(result.usage)
-        return parseEvaluatorResponse(result.text)
-      })
-    } catch {
-      return { isDone: true, instruction: "" }
-    }
   }
 
   getConsumption(inputTokens: number): ConsumptionInfo {
@@ -490,29 +425,16 @@ export class ContextManager {
     this.summaryStream = withBillingStream(summaryClient, billingService)
     return this.summaryStream
   }
+}
 
-  private async getEvaluatorStream(): Promise<BilledLlmStream | null> {
-    if (this.evaluatorStream !== undefined) {
-      return this.evaluatorStream
+async function drainStreamForComplete(
+  stream: AsyncGenerator<LlmChunk, void, unknown>,
+): Promise<{ text: string; usage: TokenUsage } | null> {
+  let result: { text: string; usage: TokenUsage } | null = null
+  for await (const chunk of stream) {
+    if (chunk.type === streamEvents.complete) {
+      result = { text: chunk.text, usage: chunk.usage }
     }
-
-    const model = await this.session.resolveModel(
-      this.evaluatorModelId,
-      this.vendor,
-    )
-    if (!model) {
-      this.evaluatorStream = null
-      return null
-    }
-
-    const evaluatorClient = createBillableLlmClient({
-      model,
-      modelConfig: {
-        reasoningEffort: this.evaluatorModelConfig?.reasoningEffort ?? "low",
-        maxOutputTokens: DEFAULT_EVALUATOR_OUTPUT_TOKENS,
-      },
-    })
-    this.evaluatorStream = withBillingStream(evaluatorClient, billingService)
-    return this.evaluatorStream
   }
+  return result
 }

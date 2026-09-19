@@ -57,7 +57,5 @@ export async function createAgentFromDefinition(
     maxContextTokens: model.contextWindow ?? DEFAULT_CONTEXT_WINDOW,
     contextThreshold: definition.contextThreshold,
     summaryModelId: definition.summaryModelId,
-    evaluatorModelId: definition.evaluatorModelId,
-    evaluatorModelConfig: definition.evaluatorModelConfig,
   })
 }

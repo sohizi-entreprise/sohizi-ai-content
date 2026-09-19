@@ -3,15 +3,7 @@ import { formatFileTag } from "@/lib/file-tag"
 
 const fileTagExample = formatFileTag({
   displayName: "my-file",
-  fileId: "5p9477a5-3634-44ec-b47d-fa2e63bd74c4",
-  format: "markdown",
-})
-
-const chatCitationExample = formatFileTag({
-  displayName: "my-file",
-  fileId: "5p9477a5-3634-44ec-b47d-fa2e63bd74c4",
-  format: "markdown",
-  lines: "L2-L5",
+  path: "/root/scripts/my-file",
 })
 
 export const fileSystemPrompt = `
@@ -64,12 +56,11 @@ You can combine operators for highly targeted searches.
 
 1. File Reference Syntax:
 Universal file tag (documents, skills, and chat):
-@[Display Name](file:FILE_ID?format=FORMAT)
+[Display Name](/root/path/to/file)
 
-Optional chat-citation query param: \`lines\` (e.g. L2-L5). The full selected text is provided separately in \`<attached_selections>\` — do not treat the compact file tag as the complete citation.
+The full selected text is provided separately in \`<attached_selections>\` — do not treat the compact file tag as the complete citation.
 
 example (file mention): ${fileTagExample}
-example (chat citation): ${chatCitationExample}
 
 2. Diff Syntax (for diffs):
 The user needs to either accept or reject the changes you suggested.

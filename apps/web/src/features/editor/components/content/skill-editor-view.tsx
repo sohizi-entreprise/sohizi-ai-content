@@ -13,10 +13,10 @@ import TextEditorBubbleMenu from "../text-editor-extensions/bubble-menu"
 import { useSkillAutosave } from "../../hooks/use-autosave"
 import { serializeMarkdownWithTextAlign } from "../../extensions/markdown-text-align"
 import {
-  FileMention,
-  createFileMentionSuggestion,
-  preprocessFileMentions,
-} from "../../extensions/file-mention"
+  FileLinkSuggestion,
+  createFileLinkSuggestion,
+} from "../../extensions/file-link-suggestion"
+import { EditorLink } from "../../extensions/editor-link"
 import { ImageLayout } from "../../extensions/image-layout"
 import { MarkdownHighlight } from "../../extensions/markdown-highlight"
 import { SlashCommandExtension } from "../../extensions/slash-command"
@@ -133,6 +133,7 @@ function isEmptySkillDescription(editor: Editor, pos: number) {
 const markdownContentExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
+    link: false,
   }),
   TableKit.configure({
     table: {
@@ -144,7 +145,7 @@ const markdownContentExtensions = [
   TextAlign.configure({
     types: ["heading", "paragraph"],
   }),
-  FileMention,
+  EditorLink,
   ImageLayout,
   MarkdownHighlight,
 ]
@@ -166,7 +167,9 @@ const skillEditorExtensions = [
     heading: { levels: [1, 2, 3] },
     // Doc-level TrailingNode can't insert into the fixed skill schema; use NestedTrailingNode.
     trailingNode: false,
+    link: false,
   }),
+  EditorLink,
   NestedTrailingNode.configure({
     containers: ["skillDescription", "skillInstruction"],
   }),
@@ -263,8 +266,7 @@ function markdownToBlocks(markdown: string): Array<JSONContent> {
     return [{ type: "paragraph" }]
   }
 
-  const preprocessed = preprocessFileMentions(markdown)
-  const blocks = markdownManager.parse(preprocessed).content ?? [
+  const blocks = markdownManager.parse(markdown).content ?? [
     { type: "paragraph" },
   ]
 
@@ -325,8 +327,8 @@ export function SkillEditorView({
   const clearEditor = useEditorInputBridge((state) => state.clearEditor)
 
   const searchFiles = useFileMentionSearch(projectId)
-  const fileMentionSuggestion = useMemo(
-    () => createFileMentionSuggestion(searchFiles),
+  const fileLinkSuggestion = useMemo(
+    () => createFileLinkSuggestion(searchFiles),
     [searchFiles],
   )
 
@@ -334,11 +336,8 @@ export function SkillEditorView({
     immediatelyRender: true,
     extensions: [
       ...skillEditorExtensions,
-      FileMention.configure({
-        HTMLAttributes: {
-          class: "file-mention",
-        },
-        suggestion: fileMentionSuggestion,
+      FileLinkSuggestion.configure({
+        suggestion: fileLinkSuggestion,
       }),
     ],
     content: createSkillContent(props),
@@ -386,7 +385,12 @@ export function SkillEditorView({
           <TextEditorBubbleMenu
             editor={editor}
             scrollContainer={scrollContainer}
-            file={{ id: tab.id, name: tab.name, format: tab.format ?? "skill" }}
+            file={{
+              id: tab.id,
+              name: tab.name,
+              format: tab.format ?? "skill",
+              path: tab.path,
+            }}
           />
         </div>
       </div>

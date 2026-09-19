@@ -6,6 +6,7 @@ import { searchFilesByName } from "@/features/projects/request"
 export type FileMentionItem = {
   id: string
   display: string
+  path: string
   format: string
 }
 
@@ -21,10 +22,11 @@ export function useFileMentionSearch(projectId: string) {
         })
 
         return files
-          .filter((file) => !file.directory)
+          .filter((file) => !file.directory && Boolean(file.path))
           .map((file) => ({
             id: file.id,
             display: file.name,
+            path: file.path,
             format: file.format ?? "markdown",
           }))
       },

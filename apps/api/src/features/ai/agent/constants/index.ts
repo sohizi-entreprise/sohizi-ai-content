@@ -2,6 +2,6 @@ export const supportedAgents = [
   "media-generator",
   "main-agent",
   "explorer",
-  "researcher",
+  "web-searcher",
   "motion-graphic",
 ] as const

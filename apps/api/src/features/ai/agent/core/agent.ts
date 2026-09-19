@@ -30,6 +30,11 @@ import { estimateInputTokens } from "../utils/estimate-token"
 import { ContextManager } from "./context-manager"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { observeToolExecution } from "../utils/tracing"
+import {
+  extractStatusUpdateMessage,
+  PROVIDE_STATUS_UPDATE_TOOL_NAME,
+} from "../tools/progress-update"
+import { isOpenRouterServerTool } from "../tools/openrouter-server-tools"
 
 const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096
 
@@ -49,8 +54,6 @@ type AgentConfig = {
   maxContextTokens: number
   contextThreshold?: number
   summaryModelId: string
-  evaluatorModelId: string
-  evaluatorModelConfig?: Pick<ModelConfig, "reasoningEffort">
 }
 
 type BilledLlmStream = ReturnType<
@@ -68,7 +71,6 @@ export class Agent {
   private readonly model: ResolvedVendorModel
   private readonly contextManager: ContextManager
   private lastInputTokens: number
-  private userMessage: UserModelMessage | null
   public artifacts: Map<string, unknown>
 
   constructor(config: AgentConfig) {
@@ -84,14 +86,11 @@ export class Agent {
     this.modelConfig = config.modelConfig
     this.model = config.model
     this.lastInputTokens = 0
-    this.userMessage = null
     this.contextManager = new ContextManager({
       maxContextTokens: config.maxContextTokens,
       threshold: config.contextThreshold,
       session: config.session,
       summaryModelId: config.summaryModelId,
-      evaluatorModelId: config.evaluatorModelId,
-      evaluatorModelConfig: config.evaluatorModelConfig,
       vendor: config.vendor,
     })
     this.artifacts = new Map()
@@ -109,7 +108,6 @@ export class Agent {
         billingService,
       )
 
-      this.userMessage = ursMsg
       this.initializeState(this.agentParams.systemPrompt)
       this.registerMessage(ursMsg)
 
@@ -149,6 +147,7 @@ export class Agent {
     // Future persist messages to the database [checkpoints]
     this.runId = uuidv4()
     const tool_calls: ToolCall[] = []
+    const statusUpdateToolCallIds = new Set<string>()
     let reasoning_text = ""
     let text = ""
     let stepError: string | null = null
@@ -217,13 +216,52 @@ export class Agent {
             reasoning_text = chunk.reasoningText ?? reasoning_text
             if (chunk.finishReason === "error") {
               stepError = chunk.error ?? "Unknown agent error"
-              console.log("stepError", stepError)
               this.captureStepError(stepError)
             }
             break
+          case streamEvents.toolCallStart:
+            if (chunk.toolName === PROVIDE_STATUS_UPDATE_TOOL_NAME) {
+              statusUpdateToolCallIds.add(chunk.toolCallId)
+            } else {
+              yield this.buildEvent(chunk)
+            }
+            break
+          case streamEvents.toolCallDelta:
+            if (statusUpdateToolCallIds.has(chunk.toolCallId)) {
+              const message = extractStatusUpdateMessage(chunk.input)
+              if (message !== null) {
+                yield this.buildEvent({
+                  type: streamEvents.progressUpdate,
+                  toolCallId: chunk.toolCallId,
+                  text: message,
+                })
+              }
+            } else {
+              yield this.buildEvent(chunk)
+            }
+            break
+          case streamEvents.toolCallEnd:
+            if (!statusUpdateToolCallIds.has(chunk.toolCallId)) {
+              yield this.buildEvent(chunk)
+            }
+            break
           case streamEvents.toolCall:
-            tool_calls.push(chunk)
-            yield this.buildEvent(chunk)
+            if (!isOpenRouterServerTool(chunk.toolName)) {
+              tool_calls.push(chunk)
+            }
+            if (chunk.toolName === PROVIDE_STATUS_UPDATE_TOOL_NAME) {
+              statusUpdateToolCallIds.add(chunk.toolCallId)
+              const message = extractStatusUpdateMessage(chunk.input)
+              if (message !== null) {
+                yield this.buildEvent({
+                  type: streamEvents.progressUpdate,
+                  toolCallId: chunk.toolCallId,
+                  text: message,
+                })
+              }
+            } else {
+              yield this.buildEvent(chunk)
+            }
             break
           default:
             yield this.buildEvent(chunk)
@@ -235,33 +273,8 @@ export class Agent {
       if (tool_calls.length > 0 && !stepError) {
         toolCallsStarted = true
         yield* this.runToolCalls(tool_calls, abortSignal)
-      }
-
-      if (
-        tool_calls.length === 0 &&
-        !stepError &&
-        !this.stateManager.isExitStatus &&
-        this.userMessage
-      ) {
-        const evaluation = await this.contextManager.evaluateStop(
-          this.stateManager,
-          this.userMessage,
-          text,
-          abortSignal,
-          this.ensureRunId(),
-        )
-        if (evaluation.isDone) {
-          this.stateManager.finishRun()
-        } else {
-          console.log("evaluation", evaluation)
-          this.registerMessage(
-            {
-              role: "user",
-              content: [{ type: "text", text: evaluation.instruction }],
-            },
-            true,
-          )
-        }
+      } else if (!stepError && !this.stateManager.isExitStatus) {
+        this.stateManager.finishRun()
       }
     } catch (error) {
       console.log("runStep error", error)
@@ -333,6 +346,9 @@ export class Agent {
     const validToolCalls: ToolCall[] = []
     const completedToolCallIds = new Set<string>()
     for (const tool_call of tool_calls) {
+      if (isOpenRouterServerTool(tool_call.toolName)) {
+        continue
+      }
       const tool = getTool(tool_call.toolName)
       if (!tool) {
         invalidTools.push({
@@ -351,6 +367,7 @@ export class Agent {
             state: this.stateManager,
             abortSignal,
             artifacts: this.artifacts,
+            runId: this.ensureRunId(),
           }),
         ),
       )
@@ -528,7 +545,7 @@ export class Agent {
 
   private ensureRunId(): string {
     if (!this.runId) {
-      this.runId = uuidv4()
+      this.runId = this.session.runId
     }
     return this.runId
   }

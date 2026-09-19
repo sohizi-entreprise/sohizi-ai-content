@@ -38,3 +38,16 @@
   font-size: 12pt;
   line-height: 1;
 }
+
+a.file-tag-link,
+a.file-tag-link:hover,
+a.file-tag-link:focus,
+a.file-tag-link:visited {
+  background-color: color-mix(in oklch, var(--primary) 20%, transparent);
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 0.25rem;
+  padding: 0.1em 0.3em;
+  cursor: pointer;
+}

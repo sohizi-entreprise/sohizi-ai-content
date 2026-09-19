@@ -26,6 +26,7 @@ import { Button } from "@sohizi/ui/button"
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react"
 import type { UIMessage } from "ai"
 import { cn } from "@/lib/utils"
+import { FilePathLink } from "@/features/editor/components/file-path-link"
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"]
@@ -34,8 +35,10 @@ export type MessageProps = HTMLAttributes<HTMLDivElement> & {
 export const Message = ({ className, from, ...props }: MessageProps) => (
   <div
     className={cn(
-      "group flex w-full max-w-[95%] flex-col gap-2",
-      from === "user" ? "is-user ml-auto justify-end" : "is-assistant",
+      "group flex w-full flex-col gap-2",
+      from === "user"
+        ? "is-user ml-auto max-w-[95%] justify-end"
+        : "is-assistant max-w-full",
       className,
     )}
     {...props}
@@ -329,6 +332,7 @@ export const MessageResponse = memo(
       )}
       plugins={streamdownPlugins}
       {...props}
+      components={{ a: FilePathLink, ...props.components }}
     />
   ),
   (prevProps, nextProps) =>

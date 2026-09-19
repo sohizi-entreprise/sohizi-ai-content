@@ -9,6 +9,7 @@ import { timelineEditTool } from "./timeline-edit"
 import { editFileTool } from "./file-edit"
 import { processSpeechTool } from "./process-speech"
 import { endExecutionLoopTool, finishTool } from "./loop-end"
+import { provideStatusUpdateTool } from "./progress-update"
 import {
   listModelsTool,
   getModelSchemaTool,
@@ -24,7 +25,7 @@ import {
   youtubeAnalyzerTool,
 } from "./media-analyzer"
 
-const toolRegistry = new Map<string, BaseTool<z.ZodSchema>>()
+const toolRegistry = new Map<string, BaseTool<z.ZodType>>()
 
 const registerTool = (tool: BaseTool<z.ZodType>): void => {
   toolRegistry.set(tool.params.name, tool)
@@ -52,6 +53,7 @@ export const allTools = {
   submitHtmlCompositionTool,
   loadSkillTool,
   assignTaskTool,
+  provideStatusUpdateTool,
   imageAnalyzerTool,
   videoAnalyzerTool,
   youtubeAnalyzerTool,
@@ -60,25 +62,3 @@ export const allTools = {
 for (const tool of Object.values(allTools)) {
   registerTool(tool)
 }
-
-// registerTool(endExecutionLoopTool)
-// registerTool(editFileTool)
-// registerTool(exploreFileTool)
-// registerTool(searchFileTool)
-// registerTool(manageTodoListTool)
-// registerTool(generateImageTool)
-// registerTool(finishTool)
-// registerTool(timelineExploreTool)
-// registerTool(timelineEditTool)
-// registerTool(processSpeechTool)
-// registerTool(listModelsTool)
-// registerTool(getModelSchemaTool)
-// registerTool(submitRequestTool)
-// registerTool(cancelRequestTool)
-// registerTool(submitHtmlCompositionTool)
-// registerTool(loadSkillTool)
-// registerTool(assignTaskTool)
-
-// registerTool(imageAnalyzerTool)
-// registerTool(videoAnalyzerTool)
-// registerTool(youtubeAnalyzerTool)

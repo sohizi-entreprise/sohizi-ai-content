@@ -70,6 +70,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   const deleteMutation = useMutation(deleteFileNodeMutationOptions(projectId))
   const openFile = useEditorStore((s) => s.openFile)
   const closeTab = useEditorStore((s) => s.closeTab)
+  const updateTab = useEditorStore((s) => s.updateTab)
 
   const createFileNode = useCallback(
     (
@@ -144,7 +145,19 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
       name: name.trim(),
     })
     try {
-      await renameMutation.mutateAsync({ fileId: id, name: name.trim() })
+      const updated = await renameMutation.mutateAsync({
+        fileId: id,
+        name: name.trim(),
+      })
+      updateNodeInCache(queryClient, projectId, parentId, id, {
+        name: updated.name,
+        path: updated.path,
+      })
+      updateTab(id, {
+        name: updated.name,
+        path: updated.path,
+        oldPath: node.path,
+      })
     } catch (err) {
       console.error("Failed to rename:", err)
       updateNodeInCache(queryClient, projectId, parentId, id, {
@@ -207,11 +220,23 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
     }
 
     try {
-      await moveMutation.mutateAsync({
+      const updated = await moveMutation.mutateAsync({
         fileId,
         parentId: resolvedParentId,
         anchorId,
         position,
+      })
+      if (parentWasLoaded) {
+        updateNodeInCache(queryClient, projectId, resolvedParentId, fileId, {
+          path: updated.path,
+          name: updated.name,
+          parentId: resolvedParentId,
+        })
+      }
+      updateTab(fileId, {
+        name: updated.name,
+        path: updated.path,
+        oldPath: node.path,
       })
     } catch (err) {
       console.error("Failed to move:", err)

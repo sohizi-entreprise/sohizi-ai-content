@@ -97,26 +97,6 @@ export async function withAgentTrace<T>(
   }
 }
 
-export async function withEvaluatorObservation<T>(
-  input: string,
-  fn: () => Promise<T>,
-): Promise<T> {
-  if (!isLangfuseEnabled()) {
-    return fn()
-  }
-
-  return startActiveObservation(
-    "evaluate-stop",
-    async (observation) => {
-      observation.update({ input })
-      const result = await fn()
-      observation.update({ output: result })
-      return result
-    },
-    { asType: "evaluator" },
-  )
-}
-
 export async function withSubAgentObservation<T>(
   agentName: string,
   instructions: string,
@@ -186,6 +166,12 @@ export function textFromAgentChunk(chunk: {
   text?: string
 }): string | undefined {
   if (chunk.type === streamEvents.textDelta && typeof chunk.text === "string") {
+    return chunk.text
+  }
+  if (
+    chunk.type === streamEvents.progressUpdate &&
+    typeof chunk.text === "string"
+  ) {
     return chunk.text
   }
   return undefined

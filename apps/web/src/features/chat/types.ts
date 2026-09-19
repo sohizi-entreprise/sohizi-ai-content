@@ -59,6 +59,7 @@ export type MsgToolCallPart = {
   toolCallId: string
   input: unknown
   isStreaming?: boolean
+  currentSubToolName?: string
 }
 
 export type ToolResult =
@@ -368,9 +369,11 @@ export type FilePendingOperation =
 export type ChatStreamChunk = {
   name: string
   runId: string
+  source?: "subAgent"
 } & (
   | { type: "text_delta"; text: string }
   | { type: "reasoning_delta"; text: string }
+  | { type: "progress_update"; toolCallId: string; text: string }
   | { type: "usage"; usage: StreamTokenUsage }
   | { type: "tool_call_delta"; toolCallId: string; input: string }
   | {

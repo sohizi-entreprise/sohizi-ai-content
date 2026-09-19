@@ -1,11 +1,12 @@
 import { create } from "zustand"
 import { toast } from "sonner"
+import { useFileTreeStore } from "./file-tree-store"
 import type { EditorTab, FileTreeNode } from "../types"
+import { getFileNodeById, getFileNodeByPath } from "@/features/projects/request"
+import { toProjectFilePath } from "@/lib/file-tag"
 
 export type ChatChromeContext =
-  | "file-system"
-  | "video-editor"
-  | "media-generator"
+  "file-system" | "video-editor" | "media-generator"
 
 export function getChatChromeContext(pathname: string): ChatChromeContext {
   if (pathname.includes("/video-editor")) return "video-editor"
@@ -26,11 +27,12 @@ interface EditorState {
   setSavingStatus: (tabId: string, status: "saving" | "saved" | "error") => void
   initLastSavedAt: (tabId: string, updatedAt: string) => void
   openFile: (node: FileTreeNode) => void
-  openFileFromMention: (mention: {
-    id: string
-    label: string
-    format: string
-  }) => void
+  openFileByPath: (path: string) => Promise<void>
+  openFileById: (fileId: string) => Promise<void>
+  updateTab: (
+    fileId: string,
+    patch: { name?: string; path?: string; oldPath?: string },
+  ) => void
   closeTab: (tabId: string) => void
   closeAllTabs: () => void
   setActiveTab: (tabId: string) => void
@@ -78,17 +80,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   openFile: (node) => {
     if (node.directory) return
     const { openTabs } = get()
-    const existing = openTabs.find((t) => t.id === node.id)
+    const existing = openTabs.find(
+      (t) => t.id === node.id || (node.path !== "" && t.path === node.path),
+    )
     if (existing) {
       set({
-        activeTabId: node.id,
-        selectedFileId: node.id,
+        activeTabId: existing.id,
+        selectedFileId: existing.id,
       })
       return
     }
     const newTab: EditorTab = {
       id: node.id,
       name: node.name,
+      path: node.path,
       extension: getFileExtension(node.name),
       format: node.format,
     }
@@ -99,33 +104,103 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })
   },
 
-  openFileFromMention: (mention) => {
-    if (!mention.id || !mention.format) {
-      toast.error("Invalid file mention")
+  openFileByPath: async (path) => {
+    const normalized = toProjectFilePath(path) ?? path.trim()
+    if (!normalized) {
+      toast.error("Invalid file path")
       return
     }
 
-    const { openTabs } = get()
-    const existing = openTabs.find((t) => t.id === mention.id)
+    const existing = get().openTabs.find((tab) => tab.path === normalized)
     if (existing) {
       set({
-        activeTabId: mention.id,
-        selectedFileId: mention.id,
+        activeTabId: existing.id,
+        selectedFileId: existing.id,
       })
       return
     }
 
-    const newTab: EditorTab = {
-      id: mention.id,
-      name: mention.label,
-      extension: getFileExtension(mention.label),
-      format: mention.format,
+    const projectId = useFileTreeStore.getState().projectId
+    if (!projectId) {
+      toast.error("No project selected")
+      return
     }
 
+    try {
+      const node = await getFileNodeByPath(projectId, normalized)
+      if (node.directory) {
+        set({ selectedFileId: node.id })
+        return
+      }
+      get().openFile(node)
+    } catch {
+      toast.error("File not found")
+    }
+  },
+
+  openFileById: async (fileId) => {
+    const existing = get().openTabs.find((tab) => tab.id === fileId)
+    if (existing) {
+      set({
+        activeTabId: existing.id,
+        selectedFileId: existing.id,
+      })
+      return
+    }
+
+    const projectId = useFileTreeStore.getState().projectId
+    if (!projectId) {
+      toast.error("No project selected")
+      return
+    }
+
+    try {
+      const node = await getFileNodeById(projectId, fileId)
+      if (node.directory) {
+        set({ selectedFileId: node.id })
+        return
+      }
+      get().openFile(node)
+    } catch {
+      toast.error("File not found")
+    }
+  },
+
+  updateTab: (fileId, patch) => {
+    const { openTabs } = get()
+    const current = openTabs.find((tab) => tab.id === fileId)
+    const oldPath = patch.oldPath ?? current?.path
+    const newPath = patch.path
+
     set({
-      openTabs: [...openTabs, newTab],
-      activeTabId: mention.id,
-      selectedFileId: mention.id,
+      openTabs: openTabs.map((tab) => {
+        if (tab.id === fileId) {
+          return {
+            ...tab,
+            ...(patch.name !== undefined
+              ? {
+                  name: patch.name,
+                  extension: getFileExtension(patch.name),
+                }
+              : {}),
+            ...(newPath !== undefined ? { path: newPath } : {}),
+          }
+        }
+
+        if (
+          oldPath &&
+          newPath &&
+          oldPath !== "" &&
+          tab.path.startsWith(`${oldPath}/`)
+        ) {
+          return {
+            ...tab,
+            path: `${newPath}${tab.path.slice(oldPath.length)}`,
+          }
+        }
+
+        return tab
+      }),
     })
   },
 

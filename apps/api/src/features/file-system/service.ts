@@ -25,7 +25,7 @@ import { Asset } from "@/db/schema"
 import * as storage from "../media-engine/storage"
 import { CursorPaginationOptions } from "@/type"
 import * as videoEditorRepo from "../video-editor/repo"
-import { serializeFileNode, toApiPath } from "./utils"
+import { fromApiPath, serializeFileNode, toApiPath } from "./utils"
 
 // List file trees -> ok
 // rename file
@@ -202,6 +202,28 @@ function applyCompactTextDiff(content: string, diff: CompactTextDiff) {
   }
 
   return nextContent
+}
+
+export const getFileNodeByPath = async (projectId: string, apiPath: string) => {
+  await validateProject(projectId)
+  const ltreePath = fromApiPath(apiPath)
+  if (!ltreePath) {
+    throw new BadRequest("Invalid path")
+  }
+  const fileNode = await fileSystemRepo.getFileNodeByPath(projectId, ltreePath)
+  if (!fileNode) {
+    throw new NotFound("File not found")
+  }
+  return serializeFileNode(fileNode)
+}
+
+export const getFileNodeById = async (projectId: string, fileId: string) => {
+  await validateProject(projectId)
+  const fileNode = await fileSystemRepo.getFileNodeById(projectId, fileId)
+  if (!fileNode) {
+    throw new NotFound("File not found")
+  }
+  return serializeFileNode(fileNode)
 }
 
 export const listFileTreePerLevel = async (

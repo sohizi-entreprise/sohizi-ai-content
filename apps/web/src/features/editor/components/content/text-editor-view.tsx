@@ -15,10 +15,9 @@ import { useAutoSave } from "../../hooks/use-autosave"
 import TextEditorBubbleMenu from "../text-editor-extensions/bubble-menu"
 import { useEditorInputBridge } from "../../bridge/use-editor-input-bridge"
 import {
-  FileMention,
-  createFileMentionSuggestion,
-  preprocessFileMentions,
-} from "../../extensions/file-mention"
+  FileLinkSuggestion,
+  createFileLinkSuggestion,
+} from "../../extensions/file-link-suggestion"
 import { ImageLayout } from "../../extensions/image-layout"
 import { MAX_CHARACTER_COUNT } from "../../constants"
 import { MarkdownHighlight } from "../../extensions/markdown-highlight"
@@ -146,8 +145,8 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
     deletePendingOperationMutationOptions(projectId, tab.id),
   )
 
-  const fileMentionSuggestion = useMemo(
-    () => createFileMentionSuggestion(searchFiles),
+  const fileLinkSuggestion = useMemo(
+    () => createFileLinkSuggestion(searchFiles),
     [searchFiles],
   )
 
@@ -155,12 +154,8 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
     immediatelyRender: true,
     extensions: [
       ...editorExtensions,
-      FileMention.configure({
-        HTMLAttributes: {
-          class: "file-mention",
-        },
-        enableClick: true,
-        suggestion: fileMentionSuggestion,
+      FileLinkSuggestion.configure({
+        suggestion: fileLinkSuggestion,
       }),
       Markdown.configure({
         markedOptions: {
@@ -284,6 +279,7 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
               id: tab.id,
               name: tab.name,
               format: tab.format ?? "markdown",
+              path: tab.path,
             }}
           />
           {pendingOperation && (
@@ -337,7 +333,7 @@ function toEditorContent(markdown: string): {
   }
 
   return {
-    content: preprocessFileMentions(sliced),
+    content: sliced,
     contentType: "markdown",
   }
 }

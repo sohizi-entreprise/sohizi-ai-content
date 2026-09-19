@@ -4,6 +4,7 @@ import { TextShimmerCss } from "@sohizi/ui/loaders"
 import { useBufferChunks } from "../hooks/use-buffer-chunks"
 import { useChatStore } from "../store/chat-store"
 import ChatBuble from "./chat-buble"
+import { ChatRunProvider } from "./chat-run-context"
 import type { AgentRunBlock, FilePendingOperation, Message } from "../types"
 import { fileTreeKey } from "@/features/projects/query-mutation"
 import { getFilePendingKey } from "@/features/editor/query-mutations"
@@ -20,15 +21,19 @@ export const ChatRunBlock = ({ run }: { run: AgentRunBlock }) => {
     if (status === "finished" || status === "error") {
       patchConversation({ isStreaming: false })
     } else {
-      patchConversation({ isStreaming: true })
+      patchConversation({ isStreaming: true, activeRunId: run.id })
     }
-  }, [status])
+  }, [status, run.id, patchConversation])
 
   if (status === "pending" || status === "running") {
     return <PendingRunBlock run={run} />
   }
 
-  return <RenderMessages messages={messages} />
+  return (
+    <ChatRunProvider runId={run.id} messages={messages}>
+      <RenderMessages messages={messages} />
+    </ChatRunProvider>
+  )
 }
 
 function PendingRunBlock({ run }: { run: AgentRunBlock }) {
@@ -65,10 +70,12 @@ function PendingRunBlock({ run }: { run: AgentRunBlock }) {
   })
 
   return (
-    <div className="space-y-2">
-      <RenderMessages messages={messages} />
-      {!isFinished && <TextShimmerCss text="Processing..." />}
-    </div>
+    <ChatRunProvider runId={run.id} messages={messages}>
+      <div className="space-y-2">
+        <RenderMessages messages={messages} />
+        {!isFinished && <TextShimmerCss text="Processing..." />}
+      </div>
+    </ChatRunProvider>
   )
 }
 

@@ -25,6 +25,7 @@ export type FileNode = FileTreeNode
 export interface EditorTab {
   id: string
   name: string
+  path: string
   extension: string
   format: FileTreeNode["format"]
   content?: string

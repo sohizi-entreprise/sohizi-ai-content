@@ -107,6 +107,21 @@ export const listAgentRunsInfiniteQueryOptions = (
     placeholderData: conversationId ? keepPreviousData : undefined,
   })
 
+export const cancelChatRunMutationOptions = (projectId: string) =>
+  mutationOptions({
+    mutationFn: async (input: { conversationId: string; runId: string }) => {
+      const result = await requests.cancelChatRun(
+        projectId,
+        input.conversationId,
+        input.runId,
+      )
+      if (!result.ok) {
+        throw new Error(result.error ?? "Failed to cancel generation")
+      }
+      return result
+    },
+  })
+
 export const submitChatCompletionMutationOptions = (projectId: string) =>
   mutationOptions({
     mutationFn: (data: ChatCompletionRequest) => {

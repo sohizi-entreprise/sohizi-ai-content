@@ -39,8 +39,15 @@ export function ChatInput({
 
   const editorRef = useRef<Editor | null>(null)
 
-  const { sendMessage, loadingState, disableSendButton } =
-    useSendMessage(projectId)
+  const {
+    sendMessage,
+    cancelGeneration,
+    loadingState,
+    disableSendButton,
+    isStreaming,
+    isCancelling,
+    submitStatus,
+  } = useSendMessage(projectId)
   const { getInputProps, onRemoveFile, openFileDialog } =
     useHandleUploadedFiles({ projectId })
 
@@ -125,8 +132,9 @@ export function ChatInput({
           </PromptInputTools>
 
           <PromptInputSubmit
-            status={loadingState ? "submitted" : undefined}
-            disabled={disableSendButton}
+            status={submitStatus}
+            disabled={isStreaming ? isCancelling : disableSendButton}
+            onStop={cancelGeneration}
             className="rounded-full"
           />
         </PromptInputFooter>

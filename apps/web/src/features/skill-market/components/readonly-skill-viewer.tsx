@@ -6,10 +6,7 @@ import { Markdown, MarkdownManager } from "@tiptap/markdown"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import type { JSONContent } from "@tiptap/react"
-import {
-  FileMention,
-  preprocessFileMentions,
-} from "@/features/editor/extensions/file-mention"
+import { EditorLink } from "@/features/editor/extensions/editor-link"
 import { ImageLayout } from "@/features/editor/extensions/image-layout"
 import { MarkdownHighlight } from "@/features/editor/extensions/markdown-highlight"
 import "@/features/editor/components/content/text-editor.css"
@@ -95,6 +92,7 @@ const SkillInstruction = Node.create({
 const markdownContentExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
+    link: false,
   }),
   TableKit.configure({
     table: {
@@ -106,7 +104,7 @@ const markdownContentExtensions = [
   TextAlign.configure({
     types: ["heading", "paragraph"],
   }),
-  FileMention,
+  EditorLink,
   ImageLayout,
   MarkdownHighlight,
 ]
@@ -126,6 +124,7 @@ const skillViewerExtensions = [
   StarterKit.configure({
     document: false,
     heading: { levels: [1, 2, 3] },
+    link: false,
   }),
   TableKit.configure({
     table: {
@@ -143,12 +142,7 @@ const skillViewerExtensions = [
   }),
   ImageLayout,
   MarkdownHighlight,
-  FileMention.configure({
-    HTMLAttributes: {
-      class: "file-mention",
-    },
-    enableClick: false,
-  }),
+  EditorLink,
   Markdown.configure({
     markedOptions: {
       gfm: true,
@@ -161,8 +155,7 @@ function markdownToBlocks(markdown: string): Array<JSONContent> {
     return [{ type: "paragraph" }]
   }
 
-  const preprocessed = preprocessFileMentions(markdown)
-  const blocks = markdownManager.parse(preprocessed).content ?? [
+  const blocks = markdownManager.parse(markdown).content ?? [
     { type: "paragraph" },
   ]
   return blocks.length > 0 ? blocks : [{ type: "paragraph" }]

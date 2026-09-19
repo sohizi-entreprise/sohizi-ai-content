@@ -26,6 +26,7 @@ import {
 import { Shimmer } from "./shimmer"
 import type { ComponentProps, ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { FilePathLink } from "@/features/editor/components/file-path-link"
 
 interface ReasoningContextValue {
   isStreaming: boolean
@@ -216,7 +217,9 @@ export const ReasoningContent = memo(
       )}
       {...props}
     >
-      <Streamdown plugins={streamdownPlugins}>{children}</Streamdown>
+      <Streamdown plugins={streamdownPlugins} components={{ a: FilePathLink }}>
+        {children}
+      </Streamdown>
     </CollapsibleContent>
   ),
 )

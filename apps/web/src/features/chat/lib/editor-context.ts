@@ -75,17 +75,16 @@ function adjacentWords(text: string, fromEnd: boolean): string | undefined {
 }
 
 function tabToFileTag(tab: EditorTab): string | null {
-  if (!tab.format) return null
+  if (!tab.path) return null
   return formatFileTag({
     displayName: tab.name,
-    fileId: tab.id,
-    format: tab.format,
+    path: tab.path,
   })
 }
 
 export function buildAttachedSelection(params: {
   editor: Editor
-  file: { id: string; name: string; format: string }
+  file: { id: string; name: string; format: string; path: string }
   from: number
   to: number
 }): AttachedSelection | null {
@@ -110,8 +109,7 @@ export function buildAttachedSelection(params: {
   return {
     file: formatFileTag({
       displayName: file.name,
-      fileId: file.id,
-      format: file.format,
+      path: file.path,
     }),
     startLine: textBeforeDoc.split("\n").length,
     endLine: textThroughSelection.split("\n").length,
@@ -144,9 +142,12 @@ function collectSelectionsFromChatEditor(
   if (!editor) return []
   const selections: Array<AttachedSelection> = []
   editor.state.doc.descendants((node) => {
-    if (node.type.name !== "fileMention") return
-    if (isAttachedSelection(node.attrs.selection)) {
-      selections.push(node.attrs.selection)
+    if (!node.isText) return
+    for (const mark of node.marks) {
+      if (mark.type.name !== "link") continue
+      if (isAttachedSelection(mark.attrs.selection)) {
+        selections.push(mark.attrs.selection)
+      }
     }
   })
   return selections

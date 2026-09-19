@@ -101,6 +101,24 @@ export const searchCommands = async (
   return response.data
 }
 
+export const getFileNodeByPath = async (
+  projectId: string,
+  path: string,
+): Promise<FileNode> => {
+  const response = await api.get(`/projects/${projectId}/files/by-path`, {
+    params: { path },
+  })
+  return response.data
+}
+
+export const getFileNodeById = async (
+  projectId: string,
+  fileId: string,
+): Promise<FileNode> => {
+  const response = await api.get(`/projects/${projectId}/files/${fileId}/node`)
+  return response.data
+}
+
 export const searchFilesByName = async (
   projectId: string,
   name: string,

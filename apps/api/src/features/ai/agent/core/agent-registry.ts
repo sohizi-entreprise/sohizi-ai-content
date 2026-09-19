@@ -9,10 +9,13 @@ import { DEFAULT_AGENT_VENDOR } from "./vendor"
 import { supportedAgents } from "../constants"
 import {
   explorerPrompt,
+  webSearcherPrompt,
   mainAgentPrompt,
   fileSystemPrompt,
   navigateContextPrompt,
+  progressUpdatePrompt,
 } from "../prompts"
+import { getOpenRouterServerTools } from "../tools/openrouter-server-tools"
 
 export type AgentName = (typeof supportedAgents)[number]
 
@@ -25,8 +28,6 @@ export type AgentDefinition = {
   vendor: string
   contextThreshold?: number // 0-1, defaults to 0.8 in the ContextManager
   summaryModelId: string // dedicated summarizer model
-  evaluatorModelId: string // dedicated stop-condition evaluator model
-  evaluatorModelConfig?: Pick<ModelConfig, "reasoningEffort">
   subAgents: AgentName[]
 }
 
@@ -58,7 +59,9 @@ registerAgent({
     "\n\n" +
     fileSystemPrompt +
     "\n\n" +
-    navigateContextPrompt,
+    navigateContextPrompt +
+    "\n\n" +
+    progressUpdatePrompt,
   modelConfig: {
     tools: getSchemas([
       allTools.exploreFileTool,
@@ -73,6 +76,7 @@ registerAgent({
       allTools.assignTaskTool,
       allTools.loadSkillTool,
       allTools.generateImageTool,
+      allTools.provideStatusUpdateTool,
     ]),
     reasoningEffort: "medium",
     reasoningSummary: "auto",
@@ -82,8 +86,7 @@ registerAgent({
   vendor: DEFAULT_AGENT_VENDOR,
   contextThreshold: 0.8,
   summaryModelId: "openai/gpt-5-nano",
-  evaluatorModelId: "openai/gpt-5-nano",
-  subAgents: ["media-generator", "explorer"],
+  subAgents: ["media-generator", "explorer", "web-searcher"],
 })
 
 registerAgent({
@@ -110,7 +113,6 @@ registerAgent({
   vendor: DEFAULT_AGENT_VENDOR,
   contextThreshold: 0.8,
   summaryModelId: "openai/gpt-5-nano",
-  evaluatorModelId: "openai/gpt-5-nano",
   subAgents: [],
 })
 
@@ -132,7 +134,6 @@ registerAgent({
   vendor: DEFAULT_AGENT_VENDOR,
   contextThreshold: 0.8,
   summaryModelId: "openai/gpt-5-nano",
-  evaluatorModelId: "openai/gpt-5-nano",
   subAgents: [],
 })
 
@@ -142,7 +143,10 @@ registerAgent({
   baseSystemPrompt:
     explorerPrompt + "\n\n" + fileSystemPrompt + "\n\n" + navigateContextPrompt,
   modelConfig: {
-    tools: getSchemas([allTools.exploreFileTool]),
+    tools: getSchemas([
+      allTools.exploreFileTool,
+      allTools.provideStatusUpdateTool,
+    ]),
     reasoningEffort: "low",
     reasoningSummary: "auto",
     maxOutputTokens: 3000,
@@ -151,6 +155,23 @@ registerAgent({
   vendor: DEFAULT_AGENT_VENDOR,
   contextThreshold: 0.8,
   summaryModelId: "openai/gpt-5-nano",
-  evaluatorModelId: "openai/gpt-5-nano",
+  subAgents: [],
+})
+
+registerAgent({
+  name: "web-searcher",
+  description:
+    "Search the live web and fetch public pages for current, cited information.",
+  baseSystemPrompt: webSearcherPrompt,
+  modelConfig: {
+    tools: getOpenRouterServerTools(),
+    reasoningEffort: "medium",
+    reasoningSummary: "auto",
+    maxOutputTokens: 4000,
+  },
+  modelId: "openai/gpt-5.2",
+  vendor: DEFAULT_AGENT_VENDOR,
+  contextThreshold: 0.8,
+  summaryModelId: "openai/gpt-5-nano",
   subAgents: [],
 })

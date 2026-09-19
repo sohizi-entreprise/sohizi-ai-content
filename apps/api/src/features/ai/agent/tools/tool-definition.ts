@@ -38,6 +38,8 @@ type ToolExecutionOptions = {
   state: AgentStateManager
   abortSignal: AbortSignal
   artifacts: Map<string, unknown>
+  toolCallId: string
+  runId: string
 }
 
 interface BaseToolDefinition<T extends z.ZodType> {
@@ -66,7 +68,7 @@ export class BaseTool<T extends z.ZodType> {
 
   async *execute(
     toolCall: ToolCall,
-    options: ToolExecutionOptions,
+    options: Omit<ToolExecutionOptions, "toolCallId">,
   ): AsyncGenerator<
     ToolResultComplete | AgentChunk | OperationChunk,
     void,
@@ -76,7 +78,10 @@ export class BaseTool<T extends z.ZodType> {
       const args = this.validateInput(toolCall.input as z.infer<T>)
       const isGenerator =
         this.params.execute.constructor.name === "AsyncGeneratorFunction"
-      const result = await this.params.execute(args, options)
+      const result = await this.params.execute(args, {
+        ...options,
+        toolCallId: toolCall.toolCallId,
+      })
       if (isGenerator) {
         for await (const chunk of result as AsyncGenerator<
           AgenticToolResult,
@@ -168,7 +173,7 @@ export class LlmTool<T extends z.ZodType> extends BaseTool<T> {
   }
   async *execute(
     toolCall: ToolCall,
-    options: ToolExecutionOptions,
+    options: Omit<ToolExecutionOptions, "toolCallId">,
   ): AsyncGenerator<ToolResultComplete, void, unknown> {
     const { session, abortSignal } = options
     const result: ToolResultComplete = {

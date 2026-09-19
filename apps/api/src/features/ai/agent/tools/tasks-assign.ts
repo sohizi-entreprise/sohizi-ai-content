@@ -2,10 +2,10 @@ import { z } from "zod"
 import { buildBaseTool } from "./tool-definition"
 import { supportedAgents } from "../constants"
 import { success, failure } from "./utils"
-import { createCancellableController } from "@/features/generation-request/abort-manager"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { streamEvents } from "../utils/llm-response"
 import { withSubAgentObservation } from "../utils/tracing"
+import { writeStreamData } from "@/features/generation-request/stream-handler"
 
 const assignTaskInputSchema = z.object({
   subAgent: z
@@ -23,11 +23,8 @@ export const assignTaskTool = buildBaseTool({
   description:
     "Delegates a focused, heavy-lifting task to a specialized sub-agent.",
   inputSchema: assignTaskInputSchema,
-  execute: async (input, { session }) => {
+  execute: async (input, { session, abortSignal, toolCallId, runId }) => {
     const { subAgent, instructions } = input
-    const { controller, cleanup } = await createCancellableController(
-      session.runId,
-    )
 
     try {
       // Lazy import avoids circular init: tasks-assign → agent-factory → agent → tool-registry → tasks-assign
@@ -66,19 +63,31 @@ export const assignTaskTool = buildBaseTool({
         subAgent,
         instructions,
         async () => {
-          const chunks = agent.runLoop(msg, controller.signal, 100)
+          const chunks = agent.runLoop(msg, abortSignal, 100)
           let text = ""
-
-          console.log("started agents")
 
           for await (const chunk of chunks) {
             if (chunk.type === streamEvents.textDelta) {
               text = chunk.text
+            } else if (
+              chunk.type === streamEvents.toolCall ||
+              chunk.type === streamEvents.toolCallStart ||
+              chunk.type === streamEvents.toolCallEnd
+            ) {
+              const subAgentChunk = {
+                ...chunk,
+                source: "subAgent",
+                toolCallId,
+                runId,
+              }
+              await writeStreamData(session.runId, {
+                runId: session.runId,
+                event: "chunk",
+                source: "subAgent",
+                chunk: subAgentChunk,
+              })
             }
-            console.log(chunk)
           }
-
-          console.log("finished agents")
           return text
         },
       )
@@ -87,8 +96,6 @@ export const assignTaskTool = buildBaseTool({
     } catch (error) {
       console.error(error)
       return failure(getErrorMessage(error, "An unknown error occurred"))
-    } finally {
-      cleanup()
     }
   },
 })

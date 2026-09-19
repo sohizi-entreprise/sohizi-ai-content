@@ -40,20 +40,23 @@ export const useEditorInputBridge = create<
     const { editor, chatEditor } = get()
     if (!chatEditor) return
 
-    const { displayName, fileId, format, lines, selection } = command.mention
+    const { displayName, path, selection } = command.mention
     chatEditor
       .chain()
       .focus()
       .insertContent(" ")
       .insertContent({
-        type: "fileMention",
-        attrs: {
-          id: fileId,
-          label: displayName,
-          format,
-          lines: lines ?? null,
-          selection: selection ?? null,
-        },
+        type: "text",
+        text: displayName,
+        marks: [
+          {
+            type: "link",
+            attrs: {
+              href: path,
+              selection: selection ?? null,
+            },
+          },
+        ],
       })
       .insertContent(" ")
       .run()
@@ -75,9 +78,7 @@ const insertMentionCommand = z.object({
   type: z.literal("insertMention"),
   mention: z.object({
     displayName: z.string(),
-    fileId: z.string(),
-    format: z.string(),
-    lines: z.string().optional(),
+    path: z.string(),
     selection: attachedSelectionSchema.optional(),
   }),
 })

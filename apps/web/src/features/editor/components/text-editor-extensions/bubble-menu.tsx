@@ -18,6 +18,7 @@ type TextEditorBubbleMenuProps = {
     id: string
     name: string
     format: string
+    path: string
   }
 }
 
@@ -56,19 +57,12 @@ export default function TextEditorBubbleMenu({
     const selection = buildAttachedSelection({ editor, file, from, to })
     if (!selection) return
 
-    const lines =
-      selection.startLine === selection.endLine
-        ? `L${selection.startLine}`
-        : `L${selection.startLine}-L${selection.endLine}`
-
     isSuppressedRef.current = true
     runCommand({
       type: "insertMention",
       mention: {
         displayName: file.name,
-        fileId: file.id,
-        format: file.format,
-        lines,
+        path: file.path,
         selection,
       },
     })

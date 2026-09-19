@@ -9,7 +9,7 @@ import {
   type Experimental_DownloadFunction,
 } from "ai"
 import { openai } from "@/lib/llm-providers"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { getOpenRouterProvider } from "./openrouter-provider"
 import { z } from "zod"
 import { LlmChunk, LlmCompleteChunk, streamEvents } from "./llm-response"
 import { TokenUsage, CompleteReason } from "@/type"
@@ -362,9 +362,7 @@ export class LlmClient {
       if (!apiKey) {
         throw new Error("OPENROUTER_API_KEY is not set")
       }
-      const openrouter = createOpenRouter({
-        apiKey: process.env.OPENROUTER_API_KEY,
-      })
+      const openrouter = getOpenRouterProvider()
       // OpenRouter converts video/* file parts → video_url, but its AI SDK
       // provider never declares video/* in supportedUrls. Without this patch,
       // streamText downloads YouTube pages as bytes and Google 400s.

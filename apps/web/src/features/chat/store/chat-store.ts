@@ -22,6 +22,7 @@ export type ActiveStreamEntry = {
 export type StoreConversation = Conversation & {
   isStreaming?: boolean
   isNew?: boolean
+  activeRunId?: string | null
 }
 
 type ChatState = {

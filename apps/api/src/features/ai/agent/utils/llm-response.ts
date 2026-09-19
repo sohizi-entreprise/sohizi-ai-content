@@ -14,6 +14,7 @@ export const streamEvents = {
   toolResultDelta: "tool_result_delta",
   toolResultComplete: "tool_result_complete",
   operation: "operation",
+  progressUpdate: "progress_update",
 } as const
 
 export type ToolResultDelta = {
@@ -70,14 +71,14 @@ type ToolCallDelta = {
   input: string
 }
 
-type ToolCallStart = {
+export type ToolCallStart = {
   type: typeof streamEvents.toolCallStart
   toolCallId: string
   toolName: string
   input: string
 }
 
-type ToolCallEnd = {
+export type ToolCallEnd = {
   type: typeof streamEvents.toolCallEnd
   toolCallId: string
 }
@@ -87,6 +88,12 @@ export type ToolCall = {
   toolCallId: string
   toolName: string
   input: unknown
+}
+
+export type ProgressUpdate = {
+  type: typeof streamEvents.progressUpdate
+  toolCallId: string
+  text: string
 }
 
 type ErrorChunk = {
@@ -111,5 +118,6 @@ export type LlmChunk =
   | ToolCallDelta
   | ToolCallEnd
   | ToolCall
+  | ProgressUpdate
   | ErrorChunk
   | LlmCompleteChunk

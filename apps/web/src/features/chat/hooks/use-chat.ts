@@ -1,12 +1,18 @@
 import { useShallow } from "zustand/shallow"
 import { useMutation } from "@tanstack/react-query"
+import { toast } from "sonner"
 import { useChatStore } from "../store/chat-store"
-import { submitChatCompletionMutationOptions } from "../query-mutation"
+import {
+  cancelChatRunMutationOptions,
+  submitChatCompletionMutationOptions,
+} from "../query-mutation"
 import { buildEditorContext } from "../lib/editor-context"
 import type { ChatCompletionRequest, FilePart, ImagePart } from "../types"
 import type { AttachedFile } from "@/components/widgets/file-attachments"
 import { cleanMediaType } from "@/utils/clean-mediaType"
 import { useEditorInputBridge } from "@/features/editor/bridge/use-editor-input-bridge"
+import { getErrorMessage } from "@/lib/errors"
+import type { ChatStatus } from "ai"
 
 export const useSendMessage = (projectId: string) => {
   const clearInput = useChatStore((state) => state.clearInput)
@@ -19,15 +25,26 @@ export const useSendMessage = (projectId: string) => {
   const setActiveConversation = useChatStore(
     (state) => state.setActiveConversation,
   )
+  const patchActiveConversation = useChatStore(
+    (state) => state.patchActiveConversation,
+  )
 
   const { mutate: sendMessageMutation, isPending } = useMutation(
     submitChatCompletionMutationOptions(projectId),
   )
+  const { mutate: cancelRunMutation, isPending: isCancelling } = useMutation(
+    cancelChatRunMutationOptions(projectId),
+  )
 
-  const disableSendButton =
-    !userPrompt || !modelId || isPending || conversation?.isStreaming
-  const loadingState = isPending || conversation?.isStreaming || false
+  const isStreaming = conversation?.isStreaming ?? false
+  const disableSendButton = !userPrompt || !modelId || isPending || isStreaming
+  const loadingState = isPending || isStreaming
   const conversationId = conversation?.id ?? null
+  const submitStatus: ChatStatus | undefined = isStreaming
+    ? "streaming"
+    : isPending
+      ? "submitted"
+      : undefined
 
   const sendMessage = () => {
     if (disableSendButton) return
@@ -54,13 +71,42 @@ export const useSendMessage = (projectId: string) => {
           ...data.conversation,
           isStreaming: true,
           isNew: false,
+          activeRunId: data.run.id,
         })
         clearInput()
       },
     })
   }
 
-  return { sendMessage, loadingState, disableSendButton }
+  const cancelGeneration = () => {
+    const runId = conversation?.activeRunId
+    if (!conversationId || !runId || isCancelling) return
+
+    cancelRunMutation(
+      { conversationId, runId },
+      {
+        onSuccess: () => {
+          patchActiveConversation({
+            isStreaming: false,
+            activeRunId: null,
+          })
+        },
+        onError: (error) => {
+          toast.error(getErrorMessage(error, "Failed to cancel generation"))
+        },
+      },
+    )
+  }
+
+  return {
+    sendMessage,
+    cancelGeneration,
+    loadingState,
+    disableSendButton,
+    isStreaming,
+    isCancelling,
+    submitStatus,
+  }
 }
 
 function buildFilesPayload(

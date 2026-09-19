@@ -253,7 +253,7 @@ async function runAgent(payload: RunAgentPayload) {
           await writeStreamData(runId, { runId, event: "chunk", chunk })
         }
 
-        if (shouldGenerateTitle) {
+        if (shouldGenerateTitle && !controller.signal.aborted) {
           const conversationTitle = await handleTitleGeneration(
             userPrompt,
             project.organizationId,

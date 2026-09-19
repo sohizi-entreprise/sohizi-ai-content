@@ -29,6 +29,7 @@ export function EditorTabs({ tabs, activeTabId }: EditorTabsProps) {
         {tabs.map((tab) => (
           <div
             key={tab.id}
+            title={tab.path || undefined}
             className={cn(
               "group relative flex h-9 cursor-pointer items-center gap-1.5 px-3 text-xs transition-colors",
               activeTabId === tab.id

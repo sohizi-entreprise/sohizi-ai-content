@@ -74,3 +74,19 @@ export const submitChatCompletion = async (
   const response = await api.post(`/chats/${projectId}/conversations`, data)
   return response.data
 }
+
+export type CancelChatRunResponse = {
+  ok: boolean
+  error: string | null
+}
+
+export const cancelChatRun = async (
+  projectId: string,
+  conversationId: string,
+  runId: string,
+): Promise<CancelChatRunResponse> => {
+  const response = await api.delete(
+    `/chats/${projectId}/conversations/${conversationId}/runs/${runId}`,
+  )
+  return response.data
+}
