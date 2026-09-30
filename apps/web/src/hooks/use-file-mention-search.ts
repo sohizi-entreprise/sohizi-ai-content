@@ -27,7 +27,7 @@ export function useFileMentionSearch(projectId: string) {
             id: file.id,
             display: file.name,
             path: file.path,
-            format: file.format ?? "markdown",
+            format: file.type ?? file.format ?? "markdown",
           }))
       },
       [projectId],

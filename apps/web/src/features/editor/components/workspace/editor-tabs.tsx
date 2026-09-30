@@ -38,7 +38,7 @@ export function EditorTabs({ tabs, activeTabId }: EditorTabsProps) {
             )}
             onClick={handleTabClick(tab.id)}
           >
-            {getFileIcon(tab.format ?? "", tab.name)}
+            {getFileIcon(tab.type, tab.format, tab.name)}
             <span className="truncate max-w-[120px]">{tab.name}</span>
             <button
               className="ml-1 flex size-4 items-center justify-center rounded-sm opacity-0 transition-opacity hover:bg-accent/50 group-hover:opacity-100"

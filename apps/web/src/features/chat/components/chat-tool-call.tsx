@@ -4,6 +4,7 @@ import { Spinner } from "@sohizi/ui/spinner"
 import {
   IconCircle,
   IconCircleCheckFilled,
+  IconCircleRectangleFilled,
   IconTextScan2,
 } from "@tabler/icons-react"
 import {
@@ -159,9 +160,11 @@ function ManageTasksToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
             <IconCircleCheckFilled className="relative text-muted-foreground top-0.5 size-4 shrink-0" />
           ) : task.status === "pending" ? (
             <IconCircle className="relative text-muted-foreground top-0.5 size-4 shrink-0" />
-          ) : task.status === "in_progress" ? (
+          ) : task.status === "in_progress" && toolCall.isStreaming ? (
             <Spinner className="relative text-muted-foreground top-0.5 size-4 shrink-0" />
-          ) : null}
+          ) : (
+            <IconCircleRectangleFilled className="relative text-muted-foreground top-0.5 size-4 shrink-0" />
+          )}
           <span
             className={cn(
               "text-sm text-muted-foreground",
@@ -363,7 +366,7 @@ function EditFileToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
     command?.content ?? command?.newText ?? JSON.stringify(command, null, 2)
   const cmdName = command?.cmd ?? ""
   const { from, to, name } = getEditFileRefs(command)
-  const defaultOpen = cmdName === "write" || cmdName === "patch"
+  const defaultOpen = false // cmdName === "write" || cmdName === "patch"
   const fromText = from ? fileRefLabel(from) : null
   const toText = to ? fileRefLabel(to) : null
 

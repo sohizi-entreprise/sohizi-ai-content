@@ -1,7 +1,7 @@
 export const videoExplorerPrompt = `
-## How to Explore a Video Timeline (file of format: video-editor)
+## How to Explore a Video Timeline (file of type: video-editor)
 
-Video files (format: video-editor) contain timeline compositions with tracks and clips. Do NOT use exploreFile to read them.
+Video-editor files (type: video-editor, format: json) contain timeline compositions with tracks and clips. Do NOT use exploreFile to read them.
 
 ### Exploring a Timeline (timelineExplore)
 1. Start with \`overview\` to see composition settings and track summary

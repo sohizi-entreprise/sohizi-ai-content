@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { ProseDocument, ProseNode } from "@/type"
-import { FILE_FORMATS } from "./constants"
+import { FILE_FORMATS, FILE_TYPES } from "./constants"
 
 const proseTextNodeSchema = z.object({
   type: z.literal("text"),
@@ -30,15 +30,16 @@ export const fileCreationRequestSchema = z
     directory: z.boolean(),
     parentId: z.string(),
     position: z.number().gte(0, "Position must be greater than 0"),
-    format: z.enum(FILE_FORMATS).nullable(),
+    type: z.enum(FILE_TYPES).nullable().optional(),
+    format: z.enum(FILE_FORMATS).nullable().optional(),
     editable: z.boolean().default(true),
   })
   .superRefine((data, ctx) => {
-    if (!data.directory && !data.format) {
+    if (!data.directory && !data.type && !data.format) {
       ctx.addIssue({
         code: "custom",
-        message: "Format is required for files",
-        path: ["format"],
+        message: "Type is required for files",
+        path: ["type"],
       })
     }
   })

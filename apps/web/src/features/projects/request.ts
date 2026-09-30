@@ -68,6 +68,7 @@ export const listFileTreePerDirectory = async (
 type SearchFilesByNameOptions = {
   signal?: AbortSignal
   directory?: boolean
+  type?: string
   format?: string
 }
 
@@ -130,6 +131,7 @@ export const searchFilesByName = async (
       name,
       limit,
       directory: options?.directory,
+      type: options?.type,
       format: options?.format,
     },
     signal: options?.signal,
@@ -137,14 +139,14 @@ export const searchFilesByName = async (
   return response.data
 }
 
-export const listFilesByFormat = async (
+export const listFilesByType = async (
   projectId: string,
-  format: string,
+  type: string,
   limit = 100,
   options?: { signal?: AbortSignal },
 ): Promise<Array<FileNode>> => {
-  const response = await api.get(`/projects/${projectId}/files/by-format`, {
-    params: { format, limit },
+  const response = await api.get(`/projects/${projectId}/files/by-type`, {
+    params: { type, limit },
     signal: options?.signal,
   })
   return response.data
@@ -152,7 +154,7 @@ export const listFilesByFormat = async (
 
 export type ListProjectAssetsOptions = {
   name?: string
-  format?: "image" | "video" | "audio"
+  type?: "image" | "video" | "audio"
   limit?: number
   signal?: AbortSignal
 }
@@ -164,7 +166,7 @@ export const listProjectAssets = async (
   const response = await api.get(`/projects/${projectId}/files/assets`, {
     params: {
       name: options?.name,
-      format: options?.format,
+      type: options?.type,
       limit: options?.limit,
     },
     signal: options?.signal,
@@ -183,7 +185,7 @@ export const listFolderMedia = async (
   projectId: string,
   folderId: string,
   options?: {
-    format?: "image" | "video" | "audio"
+    type?: "image" | "video" | "audio"
     limit?: number
     signal?: AbortSignal
   },
@@ -192,7 +194,7 @@ export const listFolderMedia = async (
     `/projects/${projectId}/files/${folderId}/media`,
     {
       params: {
-        format: options?.format,
+        type: options?.type,
         limit: options?.limit,
       },
       signal: options?.signal,
@@ -208,6 +210,7 @@ export const createFileNode = async (
     directory: boolean
     parentId: string
     position: number
+    type: string | null
     format: string | null
   },
 ): Promise<FileNode> => {

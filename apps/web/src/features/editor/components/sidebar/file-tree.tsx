@@ -19,8 +19,11 @@ import type {
   MoveHandler,
   NodeRendererProps,
   RenameHandler,
+  RowRendererProps,
 } from "react-arborist"
-import type { FileNodeFormat, FileTreeNode, NodeProps } from "../../types"
+import type { FileNodeType, FileTreeNode, NodeProps } from "../../types"
+import { defaultFormatForType } from "../../utils/file-kind"
+import { cn } from "@/lib/utils"
 import {
   createFileNodeMutationOptions,
   deleteFileNodeMutationOptions,
@@ -43,6 +46,28 @@ function Node(props: NodeProps) {
   }
 
   return <DocumentNode {...props} />
+}
+
+export function FileTreeRow({
+  node,
+  innerRef,
+  attrs,
+  children,
+}: RowRendererProps<FileTreeNode>) {
+  const { style, className, ...rest } = attrs
+
+  return (
+    <div
+      {...rest}
+      ref={innerRef}
+      onFocus={(event) => event.stopPropagation()}
+      onClick={node.handleClick}
+      className={cn("min-w-0 overflow-hidden", className)}
+      style={{ ...style, minWidth: 0, width: "100%" }}
+    >
+      {children}
+    </div>
+  )
 }
 
 export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
@@ -77,12 +102,12 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
       parentId: string,
       index: number,
       isDir: boolean = false,
-      format?: FileNodeFormat,
+      type?: FileNodeType,
     ) => {
       runCommand(
         {
           type: "create",
-          data: { projectId, parentId, index, isDir, format },
+          data: { projectId, parentId, index, isDir, fileType: type },
         },
         queryClient,
       )
@@ -112,7 +137,10 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
         directory: node.directory,
         parentId,
         position,
-        format: node.directory ? null : (node.format ?? "markdown"),
+        type: node.directory ? null : (node.type ?? "document"),
+        format: node.directory
+          ? null
+          : (node.format ?? defaultFormatForType(node.type ?? "document")),
         // editable: node.editable
       }
 
@@ -278,7 +306,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
 
   const nodeRenderer = useCallback(
     (props: NodeRendererProps<FileTreeNode>) => (
-      <div>
+      <div className="min-w-0 w-full overflow-hidden">
         <Node {...props} onCreateFile={createFileNode} />
       </div>
     ),
@@ -307,7 +335,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   if (!storeRootFolderId) return null
 
   return (
-    <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden">
+    <div ref={containerRef} className="min-h-0 min-w-0 flex-1 overflow-hidden">
       <Tree<FileTreeNode>
         ref={setTree}
         dndManager={dndManager}
@@ -325,7 +353,8 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
         onRename={onRename}
         onMove={onMove}
         onDelete={onDelete}
-        className="scrollbar-hide"
+        renderRow={FileTreeRow}
+        className="scrollbar-hide overflow-x-hidden"
       >
         {nodeRenderer}
       </Tree>

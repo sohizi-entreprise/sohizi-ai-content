@@ -51,7 +51,7 @@ import {
   VendorRateLimit,
   ChatMetadata,
 } from "@/type"
-import { FileFormat } from "@/features/file-system/constants"
+import { FileFormat, FileType } from "@/features/file-system/constants"
 
 type FileNodeRelationshipType =
   "appears_in" | "derived_from" | "wears" | "located_in" | "uses" | "depends_on"
@@ -181,8 +181,10 @@ export const fileNodes = pgTable(
     position: integer("position").default(0).notNull(),
     editable: boolean("editable").default(true).notNull(), // If you can rename/delete the file itself
     contentEditable: boolean("content_editable").default(true).notNull(), // If you can edit the content of the file
+    type: varchar("type", { length: 50 }).$type<FileType>(),
     format: varchar("format", { length: 50 }).$type<FileFormat>(),
     path: ltree("path").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     ...timestamps,
   },
   (table) => [
@@ -216,6 +218,12 @@ export const fileNodes = pgTable(
       "gin",
       table.name.op("gin_trgm_ops"),
     ),
+    index("file_nodes_skill_status_visibility_idx")
+      .on(
+        sql`(${table.metadata} ->> 'status')`,
+        sql`(${table.metadata} ->> 'visibility')`,
+      )
+      .where(sql`${table.type} = 'skill'`),
   ],
 )
 

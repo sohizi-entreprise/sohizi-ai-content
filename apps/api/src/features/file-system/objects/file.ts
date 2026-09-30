@@ -23,10 +23,16 @@ import {
   serializeFileContent,
 } from "../utils"
 import * as fileSystemRepo from "../repo"
-import { fileFormat } from "../constants"
+import {
+  fileFormat,
+  fileType,
+  type FileFormat,
+  type FileType,
+} from "../constants"
 import { getCompositionByFileNodeId } from "@/features/video-editor/repo"
 import { getAssetByFileNodeId } from "@/features/media-engine/repo"
 import { getErrorMessage } from "@/utils/get-error-message"
+import { serializeSkillDocument } from "../skill-document"
 
 type FileObjectResponse<T> = {
   ok: boolean
@@ -46,10 +52,6 @@ export type FileContentPayload =
   | {
       type: "image" | "video" | "document" | "audio" | "html"
       data: Asset
-    }
-  | {
-      type: "ai-generated"
-      data: null
     }
   | {
       type: "video-editor"
@@ -86,6 +88,10 @@ export class FileObject {
 
   get format() {
     return this.fileNode.format
+  }
+
+  get type() {
+    return this.fileNode.type
   }
 
   get id() {
@@ -135,7 +141,7 @@ export class FileObject {
         this.fileNode.projectId,
         this.fileNode.id,
       )
-      return ok(children.map((child: unknown) => new FileObject(child)))
+      return ok(children.map((child) => new FileObject(child)))
     } catch (error) {
       return err(
         getErrorMessage(
@@ -382,6 +388,7 @@ export class FileObject {
     const text = serializeFileContent(this.fileNode, content)
     return ok({
       type: "file",
+      fileType: this.fileNode.type ?? "unknown",
       format: this.fileNode.format ?? "unknown",
       lines: countLines(text),
       words: countWords(text),
@@ -407,6 +414,7 @@ export class FileObject {
     }
     return ok({
       type: "file",
+      fileType: this.fileNode.type ?? "unknown",
       format: this.fileNode.format ?? "unknown",
       isEditable: this.fileNode.editable,
       lastUpdated: this.fileNode.updatedAt,
@@ -426,53 +434,76 @@ export class FileObject {
     if (this.isDirectory) {
       return err(`Cannot get content of a directory ${this.fileNode.id}`)
     }
-    if (!this.format) {
-      return err(`This file format is corrupted. It cannot be read.`)
+    if (!this.type) {
+      return err(`This file type is corrupted. It cannot be read.`)
     }
 
-    switch (this.format) {
-      case fileFormat.MARKDOWN: {
+    switch (this.type) {
+      case fileType.STORYBOARD:
+      case fileType.DOCUMENT: {
+        if (
+          this.format === fileFormat.FILE ||
+          this.format === fileFormat.PDF ||
+          this.format === fileFormat.HTML
+        ) {
+          const asset = await getAssetByFileNodeId(
+            this.fileNode.projectId,
+            this.fileNode.id,
+          )
+          if (!asset) {
+            content = null
+          } else {
+            content = {
+              type: asset.type,
+              data: asset,
+            }
+          }
+          break
+        }
         const fileContent = await fileSystemRepo.getFileContentById(
           this.fileNode.projectId,
           this.fileNode.id,
         )
-        content = {
-          type: "markdown",
-          data: fileContent?.content ?? "",
+        if (this.format === fileFormat.JSON) {
+          content = {
+            type: "json",
+            data: fileContent?.jsonContent ?? {},
+          }
+        } else {
+          content = {
+            type: "markdown",
+            data: fileContent?.content ?? "",
+          }
         }
         break
       }
-      case fileFormat.JSON: {
+      case fileType.SKILL: {
         const fileContent = await fileSystemRepo.getFileContentById(
           this.fileNode.projectId,
           this.fileNode.id,
         )
-        content = {
-          type: "json",
-          data: fileContent?.jsonContent ?? {},
+        if (fileContent?.content != null) {
+          content = {
+            type: "markdown",
+            data: fileContent.content,
+          }
+          break
         }
-        break
-      }
-      case fileFormat.SKILL: {
         const skill = await fileSystemRepo.getSkillByFileID(this.id)
         if (!skill) {
           content = null
         } else {
           content = {
-            type: "skill",
-            data: skill,
+            type: "markdown",
+            data: serializeSkillDocument({
+              description: skill.description,
+              instructions: skill.instructions,
+            }),
           }
         }
         break
       }
-      case fileFormat.AI_GENERATED: {
-        content = {
-          type: "ai-generated",
-          data: null,
-        }
-        break
-      }
-      case fileFormat.VIDEO_EDITOR: {
+      case fileType.VIDEO_EDITOR: {
         const composition = await getCompositionByFileNodeId(this.fileNode.id)
         if (!composition) {
           content = null
@@ -484,11 +515,9 @@ export class FileObject {
         }
         break
       }
-      case fileFormat.IMAGE:
-      case fileFormat.VIDEO:
-      case fileFormat.DOCUMENT:
-      case fileFormat.AUDIO:
-      case fileFormat.HTML: {
+      case fileType.IMAGE:
+      case fileType.VIDEO:
+      case fileType.AUDIO: {
         const asset = await getAssetByFileNodeId(
           this.fileNode.projectId,
           this.fileNode.id,
@@ -506,7 +535,7 @@ export class FileObject {
 
       default:
         return err(
-          `File with format: ${this.fileNode.format} is not yet supported.`,
+          `File with type: ${this.fileNode.type} is not yet supported.`,
         )
     }
 
@@ -522,12 +551,67 @@ export class FileObject {
   }
 
   updateFileContentCache(content: FileContentPayload | null | undefined): void {
-    if (content?.type !== this.format) {
+    if (!isCompatibleContentCacheType(this.type, this.format, content?.type)) {
       console.error(
-        `Setting cache failed due to format mismatch. Expected: ${this.format}, Got: ${content?.type}`,
+        `Setting cache failed due to type mismatch. Expected: ${this.type}/${this.format}, Got: ${content?.type}`,
       )
       return
     }
     this.fileContentCache = content
   }
+}
+
+/**
+ * Storyboard files are stored and edited as markdown text, so a `markdown`
+ * payload is valid for storyboard files.
+ */
+export function isCompatibleContentCacheType(
+  type: FileType | null | undefined,
+  format: FileFormat | null | undefined,
+  contentType: FileContentPayload["type"] | undefined,
+): boolean {
+  if (!type || !contentType) return false
+  if (type === fileType.STORYBOARD && contentType === "markdown") return true
+  if (
+    type === fileType.DOCUMENT &&
+    format === fileFormat.MARKDOWN &&
+    contentType === "markdown"
+  ) {
+    return true
+  }
+  if (
+    type === fileType.DOCUMENT &&
+    format === fileFormat.JSON &&
+    contentType === "json"
+  ) {
+    return true
+  }
+  if (type === fileType.SKILL && contentType === "markdown") return true
+  if (type === fileType.SKILL && contentType === "skill") return true
+  if (type === fileType.VIDEO_EDITOR && contentType === "video-editor") {
+    return true
+  }
+  if (
+    (type === fileType.IMAGE ||
+      type === fileType.VIDEO ||
+      type === fileType.AUDIO) &&
+    contentType === type
+  ) {
+    return true
+  }
+  if (
+    type === fileType.DOCUMENT &&
+    format === fileFormat.HTML &&
+    contentType === "html"
+  ) {
+    return true
+  }
+  if (
+    type === fileType.DOCUMENT &&
+    (format === fileFormat.PDF || format === fileFormat.FILE) &&
+    contentType === "document"
+  ) {
+    return true
+  }
+  return false
 }

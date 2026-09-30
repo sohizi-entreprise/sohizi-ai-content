@@ -119,12 +119,24 @@ export type ChatMetadata = {
 }
 
 export type AgentState = {
+  jobs: AgentJob[]
   messages: ModelMessage[]
   usage: TokenUsage | null
   status: Runstatus
   finishReason: CompleteReason | "need-approval" | null
   error: string | null
   todos: TodoItem[]
+}
+
+export type AgentJob = {
+  jobId: string // generation_requests.id
+  kind: "image" | "video" | "audio" | "speech"
+  status: "queued" | "running" | "completed" | "failed"
+  toolCallId: string // the submit call that created it
+  label: string // "hero portrait", "scene 3 vo"
+  result?: string
+  error?: string
+  notified?: boolean
 }
 
 export type ProseNode = {
@@ -453,6 +465,12 @@ export type RefreshOperation = {
 export type PatchOperation = {
   type: "patch"
   content: string
+  /**
+   * Accepted markdown at the time the first pending suggestion was created.
+   * Later AI edits reuse this snapshot so reject can restore (or merge against)
+   * the original document instead of an intermediate proposal.
+   */
+  baseContent: string
   fileId: string
   fileName: string
 }

@@ -13,7 +13,7 @@ import {
 import { Skeleton } from "@sohizi/ui/skeleton"
 import { VideoEditorCard } from "./video-editor-card"
 import { CreateVideoEditorModal } from "./create-video-editor-modal"
-import { listFilesByFormatQueryOptions } from "@/features/projects/query-mutation"
+import { listFilesByTypeQueryOptions } from "@/features/projects/query-mutation"
 
 export function VideoEditorListPage() {
   const { projectId } = useParams({
@@ -26,7 +26,7 @@ export function VideoEditorListPage() {
     isLoading,
     isError,
     refetch,
-  } = useQuery(listFilesByFormatQueryOptions(projectId, "video-editor"))
+  } = useQuery(listFilesByTypeQueryOptions(projectId, "video-editor"))
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">

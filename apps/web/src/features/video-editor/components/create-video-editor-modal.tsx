@@ -17,7 +17,7 @@ import { Label } from "@sohizi/ui/label"
 import {
   createFileNodeMutationOptions,
   fileTreeKey,
-  filesByFormatKey,
+  filesByTypeKey,
 } from "@/features/projects/query-mutation"
 import { listFileTreePerDirectory } from "@/features/projects/request"
 import { useFolderSearch } from "@/hooks/use-folder-search"
@@ -80,12 +80,13 @@ export function CreateVideoEditorModal({
         directory: false,
         parentId: selectedFolder.id,
         position,
-        format: "video-editor",
+        type: "video-editor",
+        format: "json",
       })
 
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: filesByFormatKey(projectId, "video-editor"),
+          queryKey: filesByTypeKey(projectId, "video-editor"),
         }),
         queryClient.invalidateQueries({
           queryKey: fileTreeKey(projectId, selectedFolder.id),

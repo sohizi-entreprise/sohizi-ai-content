@@ -1,6 +1,7 @@
 import { buildBaseTool } from "./tool-definition"
 import { z } from "zod"
-import { success } from "./utils"
+import { failure, success } from "./utils"
+import { applyFinishGuard } from "./job-status"
 
 const endExecutionLoopSchema = z.object({
   reason: z
@@ -16,7 +17,10 @@ export const endExecutionLoopTool = buildBaseTool({
     "Call this tool to signal that the user's request is completely fulfilled, permanently blocked or needs clarification/confirmation, and the execution loop should end. CRITICAL: You MUST call this tool exactly once at the end of your execution loop after you have provided your final response to the user.",
   inputSchema: endExecutionLoopSchema,
   execute: async (_, { state }) => {
-    state.finishRun()
+    const result = applyFinishGuard(state)
+    if (!result.allowed) {
+      return failure(result.output)
+    }
     return success("The execution loop has ended.")
   },
 })
@@ -38,7 +42,10 @@ export const finishTool = buildBaseTool({
       ),
   }),
   execute: async (_, { state }) => {
-    state.finishRun()
+    const result = applyFinishGuard(state)
+    if (!result.allowed) {
+      return failure(result.output)
+    }
     return success("The user is been notified of the result.")
   },
 })

@@ -8,7 +8,7 @@ import {
 import { v4 as uuid4 } from "uuid"
 import { billingService, withBilling } from "@/features/billing"
 import { Session } from "../core/session"
-import { fileFormat } from "@/features/file-system/constants"
+import { fileFormat, fileType } from "@/features/file-system/constants"
 import { createAssetWithFileNode } from "@/features/media-engine/repo"
 import { createFileWithContentAtPosition } from "@/features/file-system/repo"
 import * as storage from "@/features/media-engine/storage"
@@ -161,8 +161,8 @@ async function speechToText(
     if (!file) {
       return failure(`File not found.`)
     }
-    if (file.format !== fileFormat.AUDIO) {
-      return failure(`File is not an "${fileFormat.AUDIO}" format.`)
+    if (file.type !== fileType.AUDIO) {
+      return failure(`File is not an "${fileType.AUDIO}" type.`)
     }
     const content = await file.getFileContent()
     if (!content.ok || content.data === null) {
@@ -229,6 +229,7 @@ async function speechToText(
           name: command.fileName,
           directory: false,
           parentId: folder.id,
+          type: fileType.DOCUMENT,
           format: isMarkdown ? fileFormat.MARKDOWN : fileFormat.JSON,
           editable: isMarkdown,
           projectId: session.projectId,

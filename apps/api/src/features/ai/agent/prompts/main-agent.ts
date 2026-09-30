@@ -44,6 +44,8 @@ Pass a self-contained brief: the question, any must-include URLs, date constrain
 </operational-principles-and-constraints>
 
 <output-format>
+- Use markdown formatting for your final response.
 - Use file tagging syntax for any file path you output in the editor. By doing so, the user can easily open it in the editor just by clicking.
+- When you have images, videos, or audio in your final output, use the \`![<label>](url)\` syntax to display those assets.
 </output-format>
 `

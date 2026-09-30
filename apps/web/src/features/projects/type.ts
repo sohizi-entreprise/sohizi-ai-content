@@ -12,6 +12,7 @@ export type FileNode = {
   name: string
   directory: boolean
   projectId: string
+  type: string | null
   format: string | null
   parentId: string | null
   position: number

@@ -8,9 +8,10 @@ import {
 } from "../constants"
 import {
   defaultAgentParameterValues,
+  parseAgentReferences,
   serializeAgentReferences,
 } from "./agent-settings"
-import { isPickerAssetType } from "./parameter-assets"
+import { isPickerAssetType, parseParameterAssetUrls } from "./parameter-assets"
 import type { AttachedFile } from "@/components/widgets/file-attachments"
 import type { GenerationSubtype, GenerationType, MediaRunMode } from "../types"
 
@@ -29,6 +30,30 @@ export type RequestSettingsRow = {
   key: string
   value: string
 }
+
+export type GenerationDetailTile = {
+  label: string
+  value: string
+}
+
+export type GenerationDetailReference = {
+  label: string
+  url: string
+  type: "image" | "video"
+}
+
+export type GenerationDetails = {
+  prompt: string
+  meta: Array<GenerationDetailTile>
+  parameters: Array<GenerationDetailTile>
+  references: Array<GenerationDetailReference>
+}
+
+const SUBTYPE_LABELS = [...IMAGE_SUBTYPES, ...VIDEO_SUBTYPES, ...AUDIO_SUBTYPES]
+const MEDIA_FIELD_PATTERN =
+  /(image|video|thumbnail|poster|frame|mask|reference)/i
+const IMAGE_URL_PATTERN = /\.(png|jpe?g|webp|gif|avif|bmp|svg)(\?|#|$)/i
+const VIDEO_URL_PATTERN = /\.(mp4|webm|mov|m4v|avi|mkv)(\?|#|$)/i
 
 const GENERATION_TYPE_SET = new Set<string>(
   GENERATION_TYPES.map((type) => type.value),
@@ -167,4 +192,136 @@ export function flattenRequestSettings(
   })
 
   return rows
+}
+
+export function humanizeSettingKey(key: string): string {
+  return key
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (character) => character.toUpperCase())
+}
+
+function isPresentSettingValue(value: string): boolean {
+  return value !== "" && value !== "[]" && value !== "{}"
+}
+
+export function getGenerationDetails(
+  request: Record<string, unknown> | null,
+): GenerationDetails | null {
+  const parsed = parseStoredRequest(request)
+  if (!parsed) return null
+
+  const typeLabel =
+    GENERATION_TYPES.find((type) => type.value === parsed.generationType)
+      ?.label ?? parsed.generationType
+  const subtypeLabel = parsed.generationSubtype
+    ? (SUBTYPE_LABELS.find(
+        (subtype) => subtype.value === parsed.generationSubtype,
+      )?.label ?? parsed.generationSubtype)
+    : null
+
+  const meta: Array<GenerationDetailTile> = []
+  if (parsed.selectedModelId) {
+    meta.push({ label: "Model", value: parsed.selectedModelId })
+  }
+  meta.push({ label: "Type", value: typeLabel })
+  if (subtypeLabel) {
+    meta.push({ label: "Mode", value: subtypeLabel })
+  }
+  meta.push({
+    label: "Run mode",
+    value: parsed.runMode === "agent" ? "Agent" : "Direct",
+  })
+  if (parsed.voice) {
+    meta.push({ label: "Voice", value: parsed.voice })
+  }
+
+  const parameters: Array<GenerationDetailTile> = []
+  const references: Array<GenerationDetailReference> = []
+
+  for (const [key, value] of Object.entries(parsed.parameterValues)) {
+    if (!isPresentSettingValue(value)) continue
+
+    const mediaReferences = extractMediaReferences(key, value)
+    if (mediaReferences.length > 0) {
+      references.push(...mediaReferences)
+      continue
+    }
+
+    parameters.push({ label: humanizeSettingKey(key), value })
+  }
+
+  parsed.attachments.forEach((attachment, index) => {
+    if (attachment.status !== "uploaded") return
+    const type = inferMediaType(attachment.url, attachment.type)
+    if (!type) return
+    references.push({
+      label: `Reference ${index + 1}`,
+      url: attachment.url,
+      type,
+    })
+  })
+
+  return {
+    prompt: parsed.prompt,
+    meta,
+    parameters,
+    references: dedupeReferences(references),
+  }
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === "http:" || url.protocol === "https:"
+  } catch {
+    return false
+  }
+}
+
+function inferMediaType(url: string, hint: string): "image" | "video" | null {
+  if (VIDEO_URL_PATTERN.test(url) || /video/i.test(hint)) return "video"
+  if (
+    IMAGE_URL_PATTERN.test(url) ||
+    /image|thumbnail|poster|frame|mask/i.test(hint)
+  ) {
+    return "image"
+  }
+  if (MEDIA_FIELD_PATTERN.test(hint) && isHttpUrl(url)) return "image"
+  return null
+}
+
+function extractMediaReferences(
+  key: string,
+  value: string,
+): Array<GenerationDetailReference> {
+  const label = humanizeSettingKey(key)
+
+  if (key === "references") {
+    return parseAgentReferences(value).flatMap((reference) => {
+      const type = inferMediaType(reference.url, reference.type)
+      if (!type) return []
+      return [{ label, url: reference.url, type }]
+    })
+  }
+
+  return parseParameterAssetUrls(value).flatMap((url) => {
+    const type = inferMediaType(url, key)
+    if (!type) return []
+    return [{ label, url, type }]
+  })
+}
+
+function dedupeReferences(
+  references: Array<GenerationDetailReference>,
+): Array<GenerationDetailReference> {
+  const seen = new Set<string>()
+  return references.filter((reference) => {
+    const key = `${reference.url}:${reference.type}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }

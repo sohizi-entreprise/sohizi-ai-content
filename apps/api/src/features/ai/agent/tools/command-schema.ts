@@ -1,4 +1,8 @@
-import { FILE_FORMATS } from "@/features/file-system/constants"
+import {
+  FILE_FORMATS,
+  FILE_TYPES,
+  fileType,
+} from "@/features/file-system/constants"
 import { z } from "zod"
 /*
 USE this repo: https://github.com/forscht/PGFs/blob/main/fs.sql
@@ -70,8 +74,8 @@ export const listCommandSchema = z
   .describe(
     `
     Returns: enumerated list of files and directories under the specified directory path.
-    Example: {"cmd": "list", "filepathOrId": "/folder"} => 1. [ID: 9514ac94-7ca8-4efc-a330-8c67bd4c2ee5] - (file) - Name: file-name-1 [format: json] \n 2. [ID: 9514ac94-7ca8-4efc-a330-8c67bd4c2ee6] - (directory) - Name: folder-name-2
-    Example: {"cmd": "list", "filepathOrId": "9514ac94-7ca8-4efc-a330-8c67bd4c2ee5"} => 1. [ID: 9514ac94-7ca8-4efc-a330-8c67bd4c2ee5] - (file) - Name: file-name-1 [format: json]
+    Example: {"cmd": "list", "filepathOrId": "/folder"} => 1. [ID: 9514ac94-7ca8-4efc-a330-8c67bd4c2ee5] - (file) - Name: file-name-1 [type: document, format: json] \n 2. [ID: 9514ac94-7ca8-4efc-a330-8c67bd4c2ee6] - (directory) - Name: folder-name-2
+    Example: {"cmd": "list", "filepathOrId": "9514ac94-7ca8-4efc-a330-8c67bd4c2ee5"} => 1. [ID: 9514ac94-7ca8-4efc-a330-8c67bd4c2ee5] - (file) - Name: file-name-1 [type: document, format: json]
 `.trim(),
   )
 
@@ -80,21 +84,31 @@ export const describeCommandSchema = z
     cmd: z
       .literal("describe")
       .describe(
-        "Returns information about a file or directory by filepath or file ID. For a file it returns its format and other metadata. For a directory it returns the number of files and directories inside it.",
+        "Returns information about a file or directory by filepath or file ID. For a file it returns its type, format, and other metadata. For a directory it returns the number of files and directories inside it.",
       ),
     filePathOrId: z.string().describe("Absolute file path or file ID (uuid)."),
   })
   .describe(
     `
-    Returns: file [format, is editable, last updated, created at] or directory [children count, is editable, last updated, created at].
-    Example: {"cmd": "describe", "filepathOrId": "/folder/file"} => format: text, is editable: true, last updated: 2021-01-01, created at: 2021-01-01
-    Example: {"cmd": "describe", "filepathOrId": "9514ac94-7ca8-4efc-a330-8c67bd4c2ee5"} => format: text, is editable: true, last updated: 2021-01-01, created at: 2021-01-01
+    Returns: file [type, format, is editable, last updated, created at] or directory [children count, is editable, last updated, created at].
+    Example: {"cmd": "describe", "filepathOrId": "/folder/file"} => type: document, format: markdown, is editable: true, last updated: 2021-01-01, created at: 2021-01-01
+    Example: {"cmd": "describe", "filepathOrId": "9514ac94-7ca8-4efc-a330-8c67bd4c2ee5"} => type: document, format: markdown, is editable: true, last updated: 2021-01-01, created at: 2021-01-01
 `.trim(),
   )
 
 export const createCommandSchema = z
   .object({
     cmd: z.literal("create-file").describe("Creates a new file or directory"),
+    type: z
+      .enum(FILE_TYPES)
+      .default(fileType.DOCUMENT)
+      .describe("The kind of file to create. Default is document."),
+    format: z
+      .enum(FILE_FORMATS)
+      .optional()
+      .describe(
+        "The syntax used to store the file. Defaults from type: document/skill/storyboard → markdown, image/video/audio → file, video-editor → json.",
+      ),
     parentPathOrId: z
       .string()
       .describe(
@@ -311,16 +325,24 @@ export const findCommandSchema = z
     cmd: z
       .literal("find")
       .describe(
-        "Help find a file or directory by name or by format. By format is only supported for files.",
+        "Help find a file or directory by name, type, or format. Type and format are only supported for files.",
       ),
     name: z
       .string()
       .optional()
       .describe("The name of the file or directory to search for."),
+    type: z
+      .enum(FILE_TYPES)
+      .optional()
+      .describe(
+        "The kind of file to search for (document, skill, storyboard, image, video, audio, video-editor).",
+      ),
     format: z
       .enum(FILE_FORMATS)
       .optional()
-      .describe("The format of the file to search for."),
+      .describe(
+        "The syntax of the file to search for (markdown, json, html, pdf, file).",
+      ),
     limit: z
       .number()
       .int()
@@ -330,9 +352,9 @@ export const findCommandSchema = z
   })
   .describe(
     `
-    Returns: a list of files and directories that match the name or format.
-    Example: {"cmd": "find", "name": "file-name", "limit": 10} => 1. (file) file-name-1 [format: json] \n 2. (directory) folder-name-2
-    Example: {"cmd": "find", "format": "markdown", "limit": 10} => 1. (file) file-name-1 [format: markdown]
+    Returns: a list of files and directories that match the name, type, or format.
+    Example: {"cmd": "find", "name": "file-name", "limit": 10} => 1. (file) file-name-1 [type: document, format: json] \n 2. (directory) folder-name-2
+    Example: {"cmd": "find", "type": "storyboard", "limit": 10} => 1. (file) file-name-1 [type: storyboard, format: markdown]
 `.trim(),
   )
 

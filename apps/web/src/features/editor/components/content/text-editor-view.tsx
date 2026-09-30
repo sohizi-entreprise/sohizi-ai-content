@@ -8,10 +8,9 @@ import { TableKit } from "@tiptap/extension-table"
 import { CharacterCount } from "@tiptap/extension-character-count"
 import { Markdown } from "@tiptap/markdown"
 import { useParams } from "@tanstack/react-router"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useMutation, useQuery } from "@tanstack/react-query"
-import { toast } from "sonner"
+import { useMemo, useRef, useState } from "react"
 import { useAutoSave } from "../../hooks/use-autosave"
+import { usePendingMarkdownChanges } from "../../hooks/use-pending-markdown-changes"
 import TextEditorBubbleMenu from "../text-editor-extensions/bubble-menu"
 import { useEditorInputBridge } from "../../bridge/use-editor-input-bridge"
 import {
@@ -21,25 +20,15 @@ import {
 import { ImageLayout } from "../../extensions/image-layout"
 import { MAX_CHARACTER_COUNT } from "../../constants"
 import { MarkdownHighlight } from "../../extensions/markdown-highlight"
-import { MarkdownDiffExtensions } from "../../extensions/markdown-diff"
-import {
-  deletePendingOperationMutationOptions,
-  getPendingOperationQueryOptions,
-  saveFileContentMutationOptions,
-} from "../../query-mutations"
 import { SlashCommandExtension } from "../../extensions/slash-command"
 import { YoutubeEmbed } from "../../extensions/youtube-embed"
 import { EditorLink } from "../../extensions/editor-link"
-import {
-  acceptDiffMarkdown,
-  asDiffMarkdown,
-  buildDiff,
-  rejectDiffMarkdown,
-} from "../../diff-markdown"
 import { EditorTopChrome } from "./editor-top-chrome"
+import { MarkdownDiffChangesPanel } from "./markdown-diff-changes-panel"
+import { MarkdownPendingChangesBar } from "./markdown-pending-changes-bar"
 import "./text-editor.css"
 import type { Editor, JSONContent } from "@tiptap/react"
-import type { EditorTab, PendingFileOperation } from "../../types"
+import type { EditorTab } from "../../types"
 import { useFileMentionSearch } from "@/hooks/use-file-mention-search"
 
 const editorExtensions = [
@@ -90,7 +79,6 @@ const editorExtensions = [
   CharacterCount.configure({
     limit: MAX_CHARACTER_COUNT,
   }),
-  ...MarkdownDiffExtensions,
   MarkdownHighlight,
   SlashCommandExtension,
 ]
@@ -115,7 +103,6 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
     null,
   )
   const appliedDiffRef = useRef(false)
-  const visualizedPendingKeyRef = useRef<string | null>(null)
   const isApplyingVisualDiffRef = useRef(false)
 
   const autosave = useAutoSave({
@@ -131,19 +118,6 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
   const clearEditor = useEditorInputBridge((state) => state.clearEditor)
 
   const searchFiles = useFileMentionSearch(projectId)
-
-  // Get the pending operations so we can apply the diffs
-  const { data, isLoading: isLoadingPendingOperation } = useQuery(
-    getPendingOperationQueryOptions(projectId, tab.id),
-  )
-  const pendingOperation = data?.operation ?? null
-
-  const { mutateAsync: saveFileContent } = useMutation(
-    saveFileContentMutationOptions(projectId, tab.id),
-  )
-  const { mutateAsync: deletePendingOperation } = useMutation(
-    deletePendingOperationMutationOptions(projectId, tab.id),
-  )
 
   const fileLinkSuggestion = useMemo(
     () => createFileLinkSuggestion(searchFiles),
@@ -185,79 +159,24 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
     },
   })
 
-  useEffect(() => {
-    if (!pendingOperation) {
-      visualizedPendingKeyRef.current = null
-      appliedDiffRef.current = false
-    }
-  }, [pendingOperation])
-
-  useEffect(() => {
-    if (!pendingOperation || isLoadingPendingOperation) return
-    if (pendingOperation.diffApplied) return
-
-    const payload = pendingOperation.payload
-    if (payload.type !== "patch") return
-
-    const pendingKey = getPendingOperationKey(pendingOperation)
-    if (visualizedPendingKeyRef.current === pendingKey) return
-
-    visualizedPendingKeyRef.current = pendingKey
-    isApplyingVisualDiffRef.current = true
-
-    const markdownDiff = buildDiff(baseMarkdown, payload.content)
-    setEditorMarkdownContent(editor, markdownDiff)
-    appliedDiffRef.current = true
-    isApplyingVisualDiffRef.current = false
-
-    autosave({
-      content: editor.getMarkdown(),
-      diffApplied: true,
-    })
-  }, [
+  const {
     pendingOperation,
+    pendingPatch,
+    changeHunks,
+    changesOpen,
+    setChangesOpen,
+    handleAcceptChanges,
+    handleRejectChanges,
+  } = usePendingMarkdownChanges({
     editor,
-    isLoadingPendingOperation,
+    projectId,
+    fileId: tab.id,
     baseMarkdown,
     autosave,
-  ])
-
-  const resolvePendingChanges = useCallback(
-    async (content: string) => {
-      if (!pendingOperation) return
-
-      isApplyingVisualDiffRef.current = true
-      setEditorMarkdownContent(editor, content)
-      appliedDiffRef.current = false
-      visualizedPendingKeyRef.current = null
-      isApplyingVisualDiffRef.current = false
-
-      try {
-        await saveFileContent({ content })
-        await deletePendingOperation()
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to save changes",
-        )
-        console.error(error)
-      }
-    },
-    [editor, pendingOperation, saveFileContent, deletePendingOperation],
-  )
-
-  // Resolve from the current editor content (not the stored proposal) so any
-  // edits the user made while the diff was pending are preserved.
-  const handleAcceptChanges = useCallback(() => {
-    void resolvePendingChanges(
-      acceptDiffMarkdown(asDiffMarkdown(editor.getMarkdown())),
-    )
-  }, [editor, resolvePendingChanges])
-
-  const handleRejectChanges = useCallback(() => {
-    void resolvePendingChanges(
-      rejectDiffMarkdown(asDiffMarkdown(editor.getMarkdown())),
-    )
-  }, [editor, resolvePendingChanges])
+    setMarkdownContent: setEditorMarkdownContent,
+    appliedDiffRef,
+    isApplyingVisualDiffRef,
+  })
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
@@ -278,39 +197,27 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
             file={{
               id: tab.id,
               name: tab.name,
-              format: tab.format ?? "markdown",
+              format: tab.type ?? tab.format ?? "markdown",
               path: tab.path,
             }}
           />
           {pendingOperation && (
-            <div className="mt-4 border border-gray-200 bg-black/50 rounded-xl p-2 flex items-center justify-between backdrop-blur-sm absolute bottom-8 left-1/2 -translate-x-1/2 z-10 w-100">
-              <h3 className="text-sm font-medium">Pending Operations</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="bg-blue-500 text-white py-2 px-4 rounded-md text-sm"
-                  onClick={handleAcceptChanges}
-                >
-                  Accept
-                </button>
-                <button
-                  type="button"
-                  className="bg-red-500 text-white py-2 px-4 rounded-md text-sm"
-                  onClick={handleRejectChanges}
-                >
-                  Reject
-                </button>
-              </div>
-            </div>
+            <MarkdownPendingChangesBar
+              changesOpen={changesOpen}
+              onToggleChanges={() => setChangesOpen((open) => !open)}
+              onAccept={handleAcceptChanges}
+              onReject={handleRejectChanges}
+            />
           )}
         </div>
       </div>
+      <MarkdownDiffChangesPanel
+        open={Boolean(pendingPatch) && changesOpen}
+        onOpenChange={setChangesOpen}
+        hunks={changeHunks}
+      />
     </div>
   )
-}
-
-function getPendingOperationKey(operation: PendingFileOperation) {
-  return `${operation.fileNodeId}:${operation.updatedAt}`
 }
 
 const EMPTY_EDITOR_DOC: JSONContent = {
@@ -345,38 +252,3 @@ function setEditorMarkdownContent(editor: Editor, markdown: string) {
     next.contentType ? { contentType: next.contentType } : undefined,
   )
 }
-
-// function buildDiff(text1: string, text2: string) {
-//   const base = acceptDiffMarkdown(text1)
-//   const next = acceptDiffMarkdown(text2)
-//   const wordsDiff = diffWords(base, next)
-
-//   return wordsDiff
-//     .map((item) => {
-//       if (!item.added && !item.removed) {
-//         return item.value;
-//       }
-
-//       const marker = item.added ? '+' : '-';
-//       const openMarker = item.added ? '{' : '[';
-//       const closeMarker = item.added ? '}' : ']';
-
-//       return item.value
-//         .split(/(\n+)/)
-//         .map((part) => {
-//           // Newline chunks stay outside markers
-//           if (/^\n+$/.test(part)) return part;
-
-//           // Trim leading/trailing spaces, keep them outside markers
-//           const leading = part.match(/^ */)?.[0] ?? '';
-//           const trailing = part.match(/ *$/)?.[0] ?? '';
-//           const inner = part.slice(leading.length, part.length - trailing.length);
-
-//           if (!inner) return part;
-
-//           return `${leading}${openMarker}${marker}${inner}${marker}${closeMarker}${trailing}`;
-//         })
-//         .join('');
-//     })
-//     .join('');
-// }

@@ -1,6 +1,7 @@
 import {
   AssistantContent,
   ModelMessage,
+  SystemModelMessage,
   ToolModelMessage,
   UserModelMessage,
 } from "ai"
@@ -22,7 +23,7 @@ import { v4 as uuidv4 } from "uuid"
 import { getTool } from "../tools/tool-registry"
 import { mergeGenerators } from "../utils/merge-generators"
 import { Session } from "./session"
-import { AgentState, CompleteReason, TokenUsage } from "@/type"
+import { AgentJob, AgentState, CompleteReason, TokenUsage } from "@/type"
 import { billingService, withBillingStream } from "@/features/billing"
 import { AgentStateManager } from "./state-manager"
 import { Persistence } from "./persistence"
@@ -35,6 +36,11 @@ import {
   PROVIDE_STATUS_UPDATE_TOOL_NAME,
 } from "../tools/progress-update"
 import { isOpenRouterServerTool } from "../tools/openrouter-server-tools"
+import { refreshAgentJobs } from "../tools/job-sync"
+import {
+  formatJobUpdateNote,
+  formatPendingJobReminder,
+} from "../tools/job-status"
 
 const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096
 
@@ -97,7 +103,7 @@ export class Agent {
   }
 
   async *runLoop(
-    ursMsg: UserModelMessage,
+    ursMsg: UserModelMessage | (UserModelMessage | SystemModelMessage)[],
     abortSignal: AbortSignal,
     maxSteps: number = 25,
   ): AsyncGenerator<AgentChunk, void, unknown> {
@@ -111,11 +117,29 @@ export class Agent {
       this.initializeState(this.agentParams.systemPrompt)
       this.registerMessage(ursMsg)
 
+      let pendingJobReminderSent = false
       for (let step = 1; step <= maxSteps; step++) {
         if (this.stateManager.isExitStatus) {
           break
         }
         yield* this.runStep(billedLlmStream, abortSignal, step)
+        yield* this.drainCompletedJobs()
+
+        if (
+          this.stateManager.isExitStatus &&
+          this.stateManager.hasPendingJobs() &&
+          !pendingJobReminderSent &&
+          !abortSignal.aborted &&
+          this.stateManager.status !== "error"
+        ) {
+          pendingJobReminderSent = true
+          this.stateManager.startRun()
+          this.stateManager.setFinishReason(null)
+          this.injectJobNote(
+            formatPendingJobReminder(this.stateManager.getPendingJobs()),
+          )
+        }
+
         await this.contextManager.maybeCompress(
           this.stateManager,
           this.lastInputTokens,
@@ -132,6 +156,7 @@ export class Agent {
       const errorMessage = this.captureStepError(error)
       yield this.buildErrorEvent(errorMessage)
     } finally {
+      this.stateManager.dropNotifiedTerminalJobs()
       // Persist optionally based on the agent config
       await this.persistence?.persist(this.stateManager.getState())
       yield this.buildUsageEvent()
@@ -316,6 +341,7 @@ export class Agent {
       error: null,
       status: "idle",
       todos: [],
+      jobs: [],
       usage: null,
     }
     if (existingState) {
@@ -325,6 +351,7 @@ export class Agent {
       state = {
         ...existingState,
         status: "idle",
+        jobs: existingState.jobs ?? [],
         messages: [{ role: "system", content: systemPrompt }, ...messages],
       }
     }
@@ -495,6 +522,40 @@ export class Agent {
     this.registerMessage(msgs)
   }
 
+  private async *drainCompletedJobs(): AsyncGenerator<
+    AgentChunk,
+    void,
+    unknown
+  > {
+    if (this.stateManager.getState().jobs.length === 0) {
+      return
+    }
+
+    await refreshAgentJobs(this.session.projectId, this.stateManager)
+    const completed = this.stateManager.getUnnotifiedTerminalJobs()
+    if (completed.length === 0) {
+      return
+    }
+
+    this.injectJobNote(formatJobUpdateNote(completed))
+    this.stateManager.markJobsNotified(completed.map((job) => job.jobId))
+
+    for (const job of completed) {
+      yield this.buildEvent({
+        type: streamEvents.progressUpdate,
+        toolCallId: job.toolCallId,
+        text: progressTextForJob(job),
+      })
+    }
+  }
+
+  private injectJobNote(text: string) {
+    this.registerMessage({
+      role: "user",
+      content: text,
+    })
+  }
+
   private registerMessage(
     message: ModelMessage | ModelMessage[],
     stateOnly: boolean = false,
@@ -556,4 +617,13 @@ export class Agent {
       modelConfig: this.modelConfig,
     })
   }
+}
+
+function progressTextForJob(job: AgentJob): string {
+  if (job.status === "failed") {
+    return job.error
+      ? `Job ${job.label} failed: ${job.error}`
+      : `Job ${job.label} failed`
+  }
+  return `Job ${job.label} completed`
 }

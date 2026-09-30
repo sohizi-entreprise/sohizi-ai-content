@@ -1,6 +1,7 @@
 import { BadRequest, Conflict, InternalServerError, NotFound } from "../error"
 import * as projectRepo from "../project/repo"
-import { FileFormat, fileFormat } from "./constants"
+import { FileFormat, FileType, fileFormat, fileType } from "./constants"
+import { isAssetFileKind } from "./file-kind"
 import {
   FileSystemConflictError,
   FileSystemInputError,
@@ -26,6 +27,11 @@ import * as storage from "../media-engine/storage"
 import { CursorPaginationOptions } from "@/type"
 import * as videoEditorRepo from "../video-editor/repo"
 import { fromApiPath, serializeFileNode, toApiPath } from "./utils"
+import {
+  parseSkillDocument,
+  resolveSkillFileMetadata,
+  serializeSkillDocument,
+} from "./skill-document"
 
 // List file trees -> ok
 // rename file
@@ -38,11 +44,21 @@ import { fromApiPath, serializeFileNode, toApiPath } from "./utils"
 export const createFileNode = async (data: FileCreationRequest) => {
   try {
     const fileNode = await createFileNodeFn(data)
-    if (!data.directory && data.format === fileFormat.MARKDOWN) {
+    if (
+      !data.directory &&
+      (data.type === fileType.DOCUMENT ||
+        data.type === fileType.STORYBOARD ||
+        data.type === fileType.SKILL) &&
+      data.format === fileFormat.MARKDOWN
+    ) {
+      const createdContent = await fileSystemRepo.getFileContentById(
+        data.projectId,
+        fileNode.id,
+      )
       await ingestFileContentChunks({
         projectId: data.projectId,
         fileNodeId: fileNode.id,
-        content: "",
+        content: createdContent?.content ?? "",
       })
     }
     return serializeFileNode(fileNode)
@@ -67,14 +83,7 @@ export const deleteFileNode = async (projectId: string, fileId: string) => {
     if (!fileNode.editable) {
       throw new BadRequest("Cannot delete a built-in file")
     }
-    const assetFormats: Partial<FileFormat>[] = [
-      fileFormat.AUDIO,
-      fileFormat.VIDEO,
-      fileFormat.IMAGE,
-      fileFormat.DOCUMENT,
-    ]
-    const isAssetFile =
-      !fileNode.directory && assetFormats.includes(fileNode.format!)
+    const isAssetFile = isAssetFileKind(fileNode.type, fileNode.format)
     let asset: Asset | null = null
     if (isAssetFile) {
       asset = await mediaRepo.getAssetByFileNodeId(projectId, fileId)
@@ -115,6 +124,11 @@ export const updateFileContent = async (
   data: UpdateTextFileContentRequest,
 ) => {
   try {
+    const fileNode = await fileSystemRepo.getFileNodeById(projectId, fileNodeId)
+    if (!fileNode) {
+      throw new NotFound("File not found")
+    }
+
     if (data.diff) {
       const fileContent = await getFileContentFn(projectId, fileNodeId)
       const baseRevision = data.baseRevision
@@ -129,6 +143,7 @@ export const updateFileContent = async (
       }
 
       const content = applyCompactTextDiff(fileContent.content ?? "", data.diff)
+      assertValidSkillContent(fileNode.type, content)
       const updated = await fileSystemRepo.updateFileContentAtRevision(
         projectId,
         fileNodeId,
@@ -145,21 +160,29 @@ export const updateFileContent = async (
         fileNodeId,
         content: updated.content ?? content,
       })
+      await mirrorSkillContentIfNeeded(
+        fileNode.type,
+        fileNodeId,
+        updated.content ?? content,
+      )
 
       return updated
     }
 
+    const content = data.content ?? ""
+    assertValidSkillContent(fileNode.type, content)
     const updatedFileContent = await updateFileContentFn(
       projectId,
       fileNodeId,
-      { content: data.content ?? "" },
+      { content },
     )
     if (data.diffApplied) {
       await fileSystemRepo.markPendingFileOperationDiffApplied(fileNodeId)
     }
+    await mirrorSkillContentIfNeeded(fileNode.type, fileNodeId, content)
     return updatedFileContent
   } catch (error) {
-    if (error instanceof Conflict) {
+    if (error instanceof Conflict || error instanceof NotFound) {
       throw error
     }
     if (error instanceof FileSystemInputError) {
@@ -245,7 +268,7 @@ export const listFileTreePerLevel = async (
 export const getFileContent = async (
   projectId: string,
   fileNodeId: string,
-  paginationOptions?: CursorPaginationOptions,
+  _paginationOptions?: CursorPaginationOptions,
 ) => {
   const fileNode = await fileSystemRepo.getFileNodeById(projectId, fileNodeId)
   if (!fileNode) {
@@ -261,8 +284,23 @@ export const getFileContent = async (
     path: toApiPath(fileNode.path),
   }
 
-  switch (fileNode.format) {
-    case fileFormat.MARKDOWN: {
+  switch (fileNode.type) {
+    case fileType.STORYBOARD:
+    case fileType.DOCUMENT: {
+      if (isAssetFileKind(fileNode.type, fileNode.format)) {
+        const asset = await mediaRepo.getAssetByFileNodeId(
+          projectId,
+          fileNodeId,
+        )
+        return {
+          type: asset.type,
+          ...fileMeta,
+          url: asset.url,
+          name: asset.name,
+          metadata: asset.metadata,
+          storageKey: asset.storageKey,
+        }
+      }
       const textContent = await fileSystemRepo.getFileContentById(
         projectId,
         fileNodeId,
@@ -270,18 +308,29 @@ export const getFileContent = async (
       if (!textContent) {
         throw new NotFound("File content not found")
       }
+      if (fileNode.format === fileFormat.JSON) {
+        return {
+          type: "json" as const,
+          ...fileMeta,
+          content: textContent.jsonContent ?? {},
+          revision: textContent.revision,
+          updatedAt: textContent.updatedAt,
+        }
+      }
       return {
-        type: "markdown" as const,
+        type:
+          fileNode.type === fileType.STORYBOARD
+            ? ("storyboard" as const)
+            : ("markdown" as const),
         ...fileMeta,
         content: textContent.content,
         revision: textContent.revision,
         updatedAt: textContent.updatedAt,
       }
     }
-    case fileFormat.AUDIO:
-    case fileFormat.VIDEO:
-    case fileFormat.IMAGE:
-    case fileFormat.DOCUMENT: {
+    case fileType.AUDIO:
+    case fileType.VIDEO:
+    case fileType.IMAGE: {
       const asset = await mediaRepo.getAssetByFileNodeId(projectId, fileNodeId)
       return {
         type: asset.type,
@@ -292,27 +341,35 @@ export const getFileContent = async (
         storageKey: asset.storageKey,
       }
     }
-    case fileFormat.AI_GENERATED: {
-      const aiGeneratedAssets = await mediaRepo.listAiGeneratedAssets(
+    case fileType.SKILL: {
+      const textContent = await fileSystemRepo.getFileContentById(
         projectId,
-        paginationOptions,
+        fileNodeId,
       )
-      return {
-        type: "ai-generated-assets" as const,
-        ...fileMeta,
-        data: aiGeneratedAssets.data,
-        nextCursor: aiGeneratedAssets.nextCursor,
-        hasMore: aiGeneratedAssets.hasMore,
-      }
-    }
-    case fileFormat.SKILL: {
       const skill = await fileSystemRepo.getSkillByFileID(fileNodeId)
-      if (!skill) {
+      const content =
+        textContent?.content ??
+        (skill
+          ? serializeSkillDocument({
+              description: skill.description,
+              instructions: skill.instructions,
+            })
+          : null)
+      if (content === null) {
         throw new NotFound("Skill not found")
       }
-      return { type: "skill" as const, ...fileMeta, data: skill }
+      const flags = resolveSkillFileMetadata(fileNode.metadata, skill)
+      return {
+        type: "skill" as const,
+        ...fileMeta,
+        content,
+        revision: textContent?.revision ?? 1,
+        updatedAt: textContent?.updatedAt ?? skill?.updatedAt,
+        status: flags.status,
+        visibility: flags.visibility,
+      }
     }
-    case fileFormat.VIDEO_EDITOR: {
+    case fileType.VIDEO_EDITOR: {
       const videoEditor =
         await videoEditorRepo.getFullCompositionByFileNodeId(fileNodeId)
       if (!videoEditor) {
@@ -321,7 +378,7 @@ export const getFileContent = async (
       return { type: "video-editor" as const, ...fileMeta, data: videoEditor }
     }
     default:
-      throw new BadRequest("Unsupported file format")
+      throw new BadRequest("Unsupported file type")
   }
 }
 
@@ -341,6 +398,7 @@ export const searchFilesByName = async (request: {
   name: string
   limit?: number
   directory?: boolean
+  type?: FileType
   format?: FileFormat
 }) => {
   await validateProject(request.projectId)
@@ -350,8 +408,23 @@ export const searchFilesByName = async (request: {
     request.limit ?? 15,
     {
       directory: request.directory,
+      type: request.type,
       format: request.format,
     },
+  )
+  return files.map(serializeFileNode)
+}
+
+export const listFilesByType = async (request: {
+  projectId: string
+  type: FileType
+  limit?: number
+}) => {
+  await validateProject(request.projectId)
+  const files = await fileSystemRepo.searchFileNodesByType(
+    request.projectId,
+    request.type,
+    request.limit ?? 100,
   )
   return files.map(serializeFileNode)
 }
@@ -373,7 +446,7 @@ export const listFilesByFormat = async (request: {
 export const listFolderMedia = async (
   projectId: string,
   folderId: string,
-  options?: { format?: FileFormat; limit?: number },
+  options?: { type?: FileType; limit?: number },
 ) => {
   await validateProject(projectId)
   const folder = await fileSystemRepo.getFileNodeById(projectId, folderId)
@@ -396,7 +469,7 @@ export const listFolderMedia = async (
 export const listAssetsFolder = async (request: {
   projectId: string
   name?: string
-  format?: FileFormat
+  type?: FileType
   limit?: number
 }) => {
   await validateProject(request.projectId)
@@ -407,7 +480,7 @@ export const listAssetsFolder = async (request: {
   return fileSystemRepo
     .listFileNodesUnderFolder(request.projectId, assetsFolder.id, {
       name: request.name,
-      format: request.format,
+      type: request.type,
       limit: request.limit ?? 100,
     })
     .then((files) => files.map(serializeFileNode))
@@ -491,6 +564,27 @@ export const deletePendingFileOperation = async (
   return {
     ok: await fileSystemRepo.deletePendingFileOperation(fileNodeId),
   }
+}
+
+function assertValidSkillContent(
+  type: FileType | null | undefined,
+  content: string,
+) {
+  if (type !== fileType.SKILL) return
+  if (!parseSkillDocument(content)) {
+    throw new FileSystemInputError(
+      "Skill files must use a description frontmatter block.",
+    )
+  }
+}
+
+async function mirrorSkillContentIfNeeded(
+  type: FileType | null | undefined,
+  fileNodeId: string,
+  content: string,
+) {
+  if (type !== fileType.SKILL) return
+  await fileSystemRepo.mirrorSkillRowFromContent(fileNodeId, content)
 }
 
 // ============================== HELPER FUNCTIONS ==============================

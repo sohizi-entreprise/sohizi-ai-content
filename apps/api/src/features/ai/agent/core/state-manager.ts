@@ -4,6 +4,7 @@ import {
   Runstatus,
   TodoItem,
   TokenUsage,
+  AgentJob,
 } from "@/type"
 
 export class AgentStateManager {
@@ -12,6 +13,7 @@ export class AgentStateManager {
   constructor(initialState?: AgentState) {
     this.state = initialState ?? {
       status: "idle",
+      jobs: [],
       error: null,
       finishReason: null,
       todos: [],
@@ -40,7 +42,10 @@ export class AgentStateManager {
     return this.state.status === "running"
   }
   setState(state: AgentState): void {
-    this.state = state
+    this.state = {
+      ...state,
+      jobs: state.jobs ?? [],
+    }
   }
   startRun(): void {
     this.state.status = "running"
@@ -89,5 +94,67 @@ export class AgentStateManager {
       total: this.state.usage.total + usage.total || 0,
       cost: this.state.usage.cost + usage.cost || 0,
     }
+  }
+
+  getPendingJobs() {
+    return this.state.jobs.filter(
+      (job) => job.status === "queued" || job.status === "running",
+    )
+  }
+
+  hasPendingJobs() {
+    return this.getPendingJobs().length > 0
+  }
+
+  getUnnotifiedTerminalJobs() {
+    return this.state.jobs.filter(
+      (job) =>
+        (job.status === "completed" || job.status === "failed") &&
+        job.notified !== true,
+    )
+  }
+
+  markJobsNotified(jobIds: string[]) {
+    const ids = new Set(jobIds)
+    this.state.jobs = this.state.jobs.map((job) => {
+      if (ids.has(job.jobId)) {
+        return { ...job, notified: true }
+      }
+      return job
+    })
+  }
+
+  dropNotifiedTerminalJobs() {
+    this.state.jobs = this.state.jobs.filter(
+      (job) =>
+        !(
+          (job.status === "completed" || job.status === "failed") &&
+          job.notified === true
+        ),
+    )
+  }
+
+  updateJob(
+    data: Pick<AgentJob, "jobId"> &
+      Partial<Pick<AgentJob, "status" | "result" | "error" | "notified">>,
+  ) {
+    this.state.jobs = this.state.jobs.map((job) => {
+      if (job.jobId === data.jobId) {
+        return { ...job, ...data }
+      }
+      return job
+    })
+  }
+
+  addJob(job: Omit<AgentJob, "status" | "result" | "error">) {
+    this.state.jobs.push({ ...job, status: "queued" })
+  }
+
+  clearJobs() {
+    this.state.jobs = []
+  }
+
+  getJob(jobId: string) {
+    return this.state.jobs.find((job) => job.jobId === jobId)
   }
 }

@@ -176,6 +176,7 @@ export const getProjectWithRootFiles = async (id: string) => {
         position: fileNodes.position,
         editable: fileNodes.editable,
         contentEditable: fileNodes.contentEditable,
+        type: fileNodes.type,
         format: fileNodes.format,
         path: fileNodes.path,
       })
@@ -477,6 +478,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
       parentId: coreFolder.id,
       position: ORDER_GAP,
       editable: false,
+      type: "document",
       format: "markdown",
       path: joinLtree(coreFolder.path, "context"),
     })
@@ -533,6 +535,7 @@ async function createFileFromTemplate(
           : null,
         position: file.position,
         editable: file.editable,
+        type: file.type,
         format: file.format,
         path: file.path,
       })),
@@ -575,7 +578,12 @@ async function createSecondaryFiles(
 ) {
   const files = [
     // {name: 'media-generator', format: 'ai-generated', position: ORDER_GAP * 2},
-    { name: "video-editor", format: "video-editor", position: ORDER_GAP * 3 },
+    {
+      name: "video-editor",
+      type: "video-editor" as const,
+      format: "json" as const,
+      position: ORDER_GAP * 3,
+    },
   ] as const
 
   for (const file of files) {
@@ -588,12 +596,13 @@ async function createSecondaryFiles(
         parentId: rootFolderId,
         position: file.position,
         editable: false,
+        type: file.type,
         format: file.format,
         path: joinLtree("root", file.name),
       })
       .returning()
     const fileNode = response[0]
-    if (fileNode.format === "video-editor") {
+    if (fileNode.type === "video-editor") {
       await tx.insert(videoCompositions).values({
         projectId: projectId,
         fileNodeId: fileNode.id,

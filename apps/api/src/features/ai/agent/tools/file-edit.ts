@@ -17,7 +17,9 @@ import { failure, success } from "./utils"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { PatchOperation, RefreshOperation } from "@/type"
 import { Session } from "../core/session"
-import { FileFormat, fileFormat } from "@/features/file-system/constants"
+import { fileType } from "@/features/file-system/constants"
+import { isMarkdownEditable } from "@/features/file-system/file-kind"
+import { validateStoryboardSyntax } from "@/features/file-system/storyboard-syntax"
 
 const toolSchema = z.discriminatedUnion("cmd", [
   writeCommandSchema,
@@ -61,8 +63,6 @@ export const editFileTool = buildBaseTool({
   },
 })
 
-const EDIT_SUPPORTED_FORMATS: Partial<FileFormat>[] = [fileFormat.MARKDOWN]
-
 async function executeWriteCommand(
   input: z.infer<typeof writeCommandSchema>,
   session: Session,
@@ -76,18 +76,15 @@ async function executeWriteCommand(
   if (fileObject.isDirectory) {
     return failure(`Cannot write to directory.`)
   }
-  if (fileObject.format === null) {
-    return failure(`The file format is corrupted. You cannot write to it.`)
+  if (fileObject.type === null || fileObject.format === null) {
+    return failure(`The file type is corrupted. You cannot write to it.`)
   }
 
-  if (!EDIT_SUPPORTED_FORMATS.includes(fileObject.format)) {
+  if (!isMarkdownEditable(fileObject.type, fileObject.format)) {
     return failure(
-      `The file format ${fileObject.format} is not supported for editing.`,
+      `The file type ${fileObject.type} (${fileObject.format}) is not supported for editing.`,
     )
   }
-
-  let finalContent = ""
-  let newContentPayload: FileContentPayload | undefined
 
   const fileContent = await fileObject.getFileContent()
   if (!fileContent.ok || fileContent.data === null) {
@@ -96,22 +93,29 @@ async function executeWriteCommand(
     )
   }
 
-  if (fileContent.data.type === "markdown") {
-    const currentContent = fileContent.data.data
-    finalContent = buildContent(strategy, currentContent, content)
-    newContentPayload = {
-      type: "markdown",
-      data: finalContent,
-    }
-  } else {
+  if (fileContent.data.type !== "markdown") {
     return failure(
       `The file content type ${fileContent.data.type} is not supported for editing.`,
     )
   }
 
+  const currentContent = fileContent.data.data
+  const finalContent = buildContent(strategy, currentContent, content)
+  const syntaxError = rejectInvalidStoryboardSyntax(
+    fileObject.type,
+    finalContent,
+  )
+  if (syntaxError) return syntaxError
+
+  const newContentPayload: FileContentPayload = {
+    type: "markdown",
+    data: finalContent,
+  }
+
   const operation: PatchOperation = {
     type: "patch",
     content: finalContent,
+    baseContent: currentContent,
     fileId: fileObject.id,
     fileName: fileObject.name,
   }
@@ -143,8 +147,14 @@ async function executePatchCommand(
   if (fileObject.isDirectory) {
     return failure(`Cannot patch directory.`)
   }
-  if (fileObject.format === null) {
-    return failure(`The file format is corrupted. You cannot patch it.`)
+  if (fileObject.type === null || fileObject.format === null) {
+    return failure(`The file type is corrupted. You cannot patch it.`)
+  }
+
+  if (!isMarkdownEditable(fileObject.type, fileObject.format)) {
+    return failure(
+      `The file type ${fileObject.type} (${fileObject.format}) is not supported for editing.`,
+    )
   }
 
   const fileContent = await fileObject.getFileContent()
@@ -167,9 +177,16 @@ async function executePatchCommand(
     finalContent = finalContent.replace(oldText, newText)
   }
 
+  const syntaxError = rejectInvalidStoryboardSyntax(
+    fileObject.type,
+    finalContent,
+  )
+  if (syntaxError) return syntaxError
+
   const operation: PatchOperation = {
     type: "patch",
     content: finalContent,
+    baseContent: fileContent.data.data,
     fileName: fileObject.name,
     fileId: fileObject.id,
   }
@@ -204,8 +221,8 @@ async function executeDeleteCommand(
   if (fileObject.isDirectory) {
     return failure(`Cannot delete directory.`)
   }
-  if (fileObject.format === null) {
-    return failure(`The file format is corrupted. You cannot delete it.`)
+  if (fileObject.type === null) {
+    return failure(`The file type is corrupted. You cannot delete it.`)
   }
 
   const response = await fileObject.delete()
@@ -344,7 +361,7 @@ async function executeCreateCommand(
   input: z.infer<typeof createCommandSchema>,
   session: Session,
 ): Promise<ToolResult> {
-  const { parentPathOrId, dir, name, position } = input
+  const { parentPathOrId, dir, name, position, type, format } = input
 
   try {
     const parentFolder = await session.resolveFileByPathOrId(parentPathOrId)
@@ -378,7 +395,8 @@ async function executeCreateCommand(
         parentId,
         position: 0,
         editable: true,
-        format: "markdown",
+        type,
+        format,
       },
       anchorId,
       position.insertMode,
@@ -395,7 +413,7 @@ async function executeCreateCommand(
       fileName: parentFolder.name,
     }
 
-    let msg = `Created ${dir ? "directory" : "file"} [ID: ${newFileNode.id}]${dir ? "" : " (format: " + newFileNode.format + ")"} successfully.`
+    let msg = `Created ${dir ? "directory" : "file"} [ID: ${newFileNode.id}]${dir ? "" : ` (type: ${newFileNode.type}, format: ${newFileNode.format})`} successfully.`
     msg += `\nThe file name has been normalized to '${normalizedName}' to avoid special characters and spaces.`
 
     return success(msg, [operation])
@@ -443,6 +461,16 @@ function normalizeAndValidateName(name: string) {
   return normalizedName
 }
 
+function rejectInvalidStoryboardSyntax(
+  type: string | null,
+  content: string,
+): ToolResult | null {
+  if (type !== fileType.STORYBOARD) return null
+  const result = validateStoryboardSyntax(content)
+  if (result.ok) return null
+  return failure(result.error ?? "Storyboard syntax is invalid.")
+}
+
 function buildContent(
   strategy: "overwrite" | "append",
   currentContent: string,
@@ -451,7 +479,7 @@ function buildContent(
   if (strategy === "overwrite") {
     return newContent
   } else if (strategy === "append") {
-    return currentContent + " " + newContent
+    return currentContent + "\n" + newContent
   }
   return currentContent
 }

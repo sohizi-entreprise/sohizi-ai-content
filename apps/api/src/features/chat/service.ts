@@ -230,7 +230,7 @@ async function runAgent(payload: RunAgentPayload) {
           projectSkills,
           definition.subAgents,
           invokedCommands,
-          editorContext,
+          // editorContext,
         ),
     })
 
@@ -242,7 +242,12 @@ async function runAgent(payload: RunAgentPayload) {
         input: userPromptText,
       },
       async (updateOutput) => {
-        const chunks = agent.runLoop(userPrompt, controller.signal, 250)
+        const editorContextState = {
+          role: "system" as const,
+          content: buildEditorContextPrompt(editorContext),
+        }
+        const messages = [editorContextState, userPrompt]
+        const chunks = agent.runLoop(messages, controller.signal, 250)
         let outputText = ""
 
         for await (const chunk of chunks) {

@@ -1,31 +1,13 @@
 import { useState } from "react"
-import {
-  Download,
-  Eye,
-  FilePlus2,
-  Folder,
-  RotateCcw,
-  Trash2,
-  X,
-} from "lucide-react"
+import { Download, Eye, FilePlus2, Play, RotateCcw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
-import { Button } from "@sohizi/ui/button"
-import { Input } from "@sohizi/ui/input"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@sohizi/ui/dialog"
 import { Checkbox } from "@sohizi/ui/checkbox"
 import { useAssetMenu } from "../hooks/use-asset-menu"
+import { AssetDetailSheet } from "./asset-detail-sheet"
 import AudioPlayer from "./audio-player"
 import { RenderHtml } from "./html-asset-preview"
 import { MediaCardMenu } from "./media-card-menu"
+import { MoveAssetDialog } from "./move-asset-dialog"
 import { RequestSettingsDialog } from "./request-settings-dialog"
 import type { MediaAsset } from "../requests"
 import { cn } from "@/lib/utils"
@@ -33,7 +15,6 @@ import {
   buildOptimizeddImageUrl,
   imageUrlTransforms,
 } from "@/utils/transform-url"
-import { useFolderSearch } from "@/hooks/use-folder-search"
 
 type MediaCardProps = {
   item: MediaAsset
@@ -42,12 +23,54 @@ type MediaCardProps = {
   onSelectedChange?: (assetId: string, selected: boolean) => void
 }
 
+function canPreviewInSheet(asset: MediaAsset) {
+  return asset.type === "image" || asset.type === "video"
+}
+
 export function MediaCard({
   item,
   projectId,
   selected = false,
   onSelectedChange,
 }: MediaCardProps) {
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
+  const { onDelete, onReuseSettings, onDownload, onMoveToFolder } =
+    useAssetMenu(projectId, item)
+  const previewInSheet = canPreviewInSheet(item)
+
+  const openSheet = () => setSheetOpen(true)
+
+  const handleReuse = () => {
+    onReuseSettings()
+    setSheetOpen(false)
+  }
+
+  const handleDownload = async () => {
+    const { ok } = await onDownload()
+    if (!ok) {
+      toast.error("Failed to download asset")
+    }
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(item.url)
+      toast.success("Link copied")
+    } catch {
+      toast.error("Failed to copy link")
+    }
+  }
+
+  const handleViewSettings = () => {
+    if (previewInSheet) {
+      openSheet()
+      return
+    }
+    setSettingsDialogOpen(true)
+  }
+
   return (
     <div className="group overflow-hidden rounded-md border aspect-4/3 relative">
       <div
@@ -67,22 +90,70 @@ export function MediaCard({
           className="border-white/80 bg-white/10 text-white data-[state=checked]:border-primary data-[state=checked]:bg-primary"
         />
       </div>
-      <RouteMediaAsset item={item} />
-      <CardMenu
-        asset={item}
-        projectId={projectId}
-        className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 transition-opacity duration-300"
+      <RouteMediaAsset
+        item={item}
+        onOpen={previewInSheet ? openSheet : undefined}
       />
+      <CardMenu
+        className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 transition-opacity duration-300"
+        onMove={() => setMoveDialogOpen(true)}
+        onReuse={handleReuse}
+        onViewSettings={handleViewSettings}
+        onDownload={handleDownload}
+        onDelete={onDelete}
+      />
+      {previewInSheet ? (
+        <AssetDetailSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          asset={item}
+          onMove={() => setMoveDialogOpen(true)}
+          onDownload={handleDownload}
+          onCopyLink={handleCopyLink}
+          onReuse={handleReuse}
+        >
+          {sheetOpen ? (
+            <MoveAssetDialog
+              open={moveDialogOpen}
+              onOpenChange={setMoveDialogOpen}
+              projectId={projectId}
+              assetName={item.name}
+              onMoveToFolder={onMoveToFolder}
+            />
+          ) : null}
+        </AssetDetailSheet>
+      ) : (
+        <RequestSettingsDialog
+          open={settingsDialogOpen}
+          onOpenChange={setSettingsDialogOpen}
+          request={item.generationRequest?.request ?? null}
+        />
+      )}
+      {!sheetOpen ? (
+        <MoveAssetDialog
+          open={moveDialogOpen}
+          onOpenChange={setMoveDialogOpen}
+          projectId={projectId}
+          assetName={item.name}
+          onMoveToFolder={onMoveToFolder}
+        />
+      ) : null}
     </div>
   )
 }
 
-function RouteMediaAsset({ item }: { item: MediaAsset }) {
+function RouteMediaAsset({
+  item,
+  onOpen,
+}: {
+  item: MediaAsset
+  onOpen?: () => void
+}) {
   switch (item.type) {
     case "image":
-      return <RenderImage item={item} />
+      return <RenderImage item={item} onOpen={onOpen} />
     case "video":
-      return <RenderVideo item={item} />
+      return <RenderVideo item={item} onOpen={onOpen} />
     case "audio":
       return <RenderAudio item={item} />
     case "html":
@@ -90,11 +161,13 @@ function RouteMediaAsset({ item }: { item: MediaAsset }) {
   }
 }
 
-function RenderImage({ item }: { item: MediaAsset }) {
-  const previewUrl = buildOptimizeddImageUrl(
-    item.url,
-    imageUrlTransforms.previews.contentCard,
-  )
+function RenderImage({
+  item,
+  onOpen,
+}: {
+  item: MediaAsset
+  onOpen?: () => void
+}) {
   const thumbnailUrl = buildOptimizeddImageUrl(
     item.url,
     imageUrlTransforms.thumbnails.large,
@@ -104,50 +177,46 @@ function RenderImage({ item }: { item: MediaAsset }) {
     imageUrlTransforms.blurryPlaceholder,
   )
   return (
-    <Dialog>
-      <DialogTrigger className="size-full">
-        <div
-          className="size-full bg-cover bg-center"
-          style={{ backgroundImage: `url(${blurryPlaceholderUrl})` }}
-        >
-          <img
-            className="size-full object-contain"
-            src={thumbnailUrl}
-            alt={item.name}
-          />
-        </div>
-      </DialogTrigger>
-      <DialogContent
-        className="md:max-w-6xl bg-surface/30 backdrop-blur-sm"
-        showCloseButton={false}
+    <button type="button" className="size-full" onClick={onOpen}>
+      <div
+        className="size-full bg-cover bg-center"
+        style={{ backgroundImage: `url(${blurryPlaceholderUrl})` }}
       >
-        <div className="aspect-video w-full">
-          <img
-            className="size-full object-contain"
-            src={previewUrl}
-            alt={item.name}
-          />
-        </div>
-        <DialogClose asChild>
-          <Button
-            size="icon"
-            className="absolute -top-4 -right-4 rounded-full bg-surface border backdrop-blur-sm hover:bg-surface hover:scale-105 transition-all duration-300"
-          >
-            <X className="size-4 text-foreground" />
-          </Button>
-        </DialogClose>
-      </DialogContent>
-    </Dialog>
+        <img
+          className="size-full object-contain"
+          src={thumbnailUrl}
+          alt={item.name}
+        />
+      </div>
+    </button>
   )
 }
 
-function RenderVideo({ item }: { item: MediaAsset }) {
+function RenderVideo({
+  item,
+  onOpen,
+}: {
+  item: MediaAsset
+  onOpen?: () => void
+}) {
   return (
-    <div className="size-full">
-      <video className="size-full object-contain" src={item.url} controls />
-    </div>
+    <button type="button" className="relative size-full" onClick={onOpen}>
+      <video
+        className="size-full object-contain"
+        src={item.url}
+        muted
+        playsInline
+        preload="metadata"
+      />
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span className="flex size-10 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur">
+          <Play className="size-4 fill-current" />
+        </span>
+      </span>
+    </button>
   )
 }
+
 function RenderAudio({ item }: { item: MediaAsset }) {
   return (
     <div className="size-full flex items-center justify-center">
@@ -158,73 +227,39 @@ function RenderAudio({ item }: { item: MediaAsset }) {
 
 function CardMenu({
   className,
-  asset,
-  projectId,
+  onMove,
+  onReuse,
+  onViewSettings,
+  onDownload,
+  onDelete,
 }: {
   className?: string
-  asset: MediaAsset
-  projectId: string
+  onMove: () => void
+  onReuse: () => void
+  onViewSettings: () => void
+  onDownload: () => void
+  onDelete: () => void
 }) {
-  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
-  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
-  const { onDelete, onReuseSettings, onDownload, onMoveToFolder } =
-    useAssetMenu(projectId, asset)
-  const {
-    folderQuery,
-    setFolderQuery,
-    trimmedDebouncedFolderQuery,
-    folderOptions,
-    isSearchingFolders,
-  } = useFolderSearch(projectId, moveDialogOpen)
-  const selectedFolder = folderOptions.find(
-    (folder) => folder.id === selectedFolderId,
-  )
-
-  const openMoveDialog = () => {
-    setFolderQuery("")
-    setSelectedFolderId(null)
-    setMoveDialogOpen(true)
-  }
-
-  const confirmMove = async () => {
-    if (!selectedFolder) return
-
-    const { ok } = await onMoveToFolder(selectedFolder.id)
-    if (!ok) {
-      toast.error("Failed to move asset")
-      return
-    }
-
-    toast.success(`Moved ${asset.name} to ${selectedFolder.name}`)
-    setMoveDialogOpen(false)
-  }
-
   const options = [
     {
       label: "Move to folder",
       icon: FilePlus2,
-      onClick: openMoveDialog,
+      onClick: onMove,
     },
     {
       label: "Reuse settings",
       icon: RotateCcw,
-      onClick: onReuseSettings,
+      onClick: onReuse,
     },
     {
       label: "View settings",
       icon: Eye,
-      onClick: () => setSettingsDialogOpen(true),
+      onClick: onViewSettings,
     },
     {
       label: "Download",
       icon: Download,
-      onClick: async () => {
-        const { ok } = await onDownload()
-        if (!ok) {
-          toast.error("Failed to download asset")
-        }
-      },
+      onClick: onDownload,
     },
     {
       label: "Delete",
@@ -233,69 +268,5 @@ function CardMenu({
     },
   ]
 
-  return (
-    <>
-      <MediaCardMenu className={className} options={options} />
-      <RequestSettingsDialog
-        open={settingsDialogOpen}
-        onOpenChange={setSettingsDialogOpen}
-        request={asset.generationRequest?.request ?? null}
-      />
-      <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
-        <DialogContent onCloseAutoFocus={(event) => event.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Move to folder</DialogTitle>
-            <DialogDescription>
-              Search for a folder and confirm where this asset should be moved.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              value={folderQuery}
-              onChange={(event) => {
-                setFolderQuery(event.target.value)
-                setSelectedFolderId(null)
-              }}
-              placeholder="Search folders..."
-            />
-            <div className="max-h-64 space-y-1 overflow-y-auto rounded-md p-1">
-              {folderOptions.length === 0 ? (
-                <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  {!trimmedDebouncedFolderQuery
-                    ? "Start typing to search folders"
-                    : isSearchingFolders
-                      ? "Searching folders..."
-                      : "No folders found"}
-                </div>
-              ) : (
-                folderOptions.map((folder) => (
-                  <button
-                    key={folder.id}
-                    type="button"
-                    onClick={() => setSelectedFolderId(folder.id)}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
-                      selectedFolderId === folder.id &&
-                        "bg-accent text-accent-foreground",
-                    )}
-                  >
-                    <Folder className="size-4 text-muted-foreground" />
-                    <span className="truncate">{folder.name}</span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMoveDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button disabled={!selectedFolder} onClick={confirmMove}>
-              Confirm move
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  )
+  return <MediaCardMenu className={className} options={options} />
 }

@@ -9,7 +9,7 @@ import {
 } from "./payload"
 import { assertProjectAccess } from "@/lib/authorize"
 import { authMiddleware } from "@/lib/auth-middleware"
-import { fileFormat } from "./constants"
+import { FILE_FORMATS, FILE_TYPES, MEDIA_FILE_TYPES } from "./constants"
 
 const projectParams = z.object({
   projectId: z.uuid("Invalid project id"),
@@ -60,6 +60,7 @@ export const fileSystemRoutes = new Elysia({
         name: query.name,
         limit: query.limit,
         directory: query.directory,
+        type: query.type,
         format: query.format,
       })
     },
@@ -71,19 +72,24 @@ export const fileSystemRoutes = new Elysia({
           .enum(["true", "false"])
           .transform((value) => value === "true")
           .optional(),
-        format: z
-          .enum([
-            fileFormat.MARKDOWN,
-            fileFormat.JSON,
-            fileFormat.IMAGE,
-            fileFormat.VIDEO,
-            fileFormat.AUDIO,
-            fileFormat.DOCUMENT,
-            fileFormat.VIDEO_EDITOR,
-            fileFormat.AI_GENERATED,
-            fileFormat.SKILL,
-          ])
-          .optional(),
+        type: z.enum(FILE_TYPES).optional(),
+        format: z.enum(FILE_FORMATS).optional(),
+      }),
+    },
+  )
+  .get(
+    "/by-type",
+    ({ params, query }) => {
+      return fileService.listFilesByType({
+        projectId: params.projectId,
+        type: query.type,
+        limit: query.limit,
+      })
+    },
+    {
+      query: z.object({
+        type: z.enum(FILE_TYPES),
+        limit: z.coerce.number().int().positive().optional(),
       }),
     },
   )
@@ -98,17 +104,7 @@ export const fileSystemRoutes = new Elysia({
     },
     {
       query: z.object({
-        format: z.enum([
-          fileFormat.MARKDOWN,
-          fileFormat.JSON,
-          fileFormat.IMAGE,
-          fileFormat.VIDEO,
-          fileFormat.AUDIO,
-          fileFormat.DOCUMENT,
-          fileFormat.VIDEO_EDITOR,
-          fileFormat.AI_GENERATED,
-          fileFormat.SKILL,
-        ]),
+        format: z.enum(FILE_FORMATS),
         limit: z.coerce.number().int().positive().optional(),
       }),
     },
@@ -130,16 +126,14 @@ export const fileSystemRoutes = new Elysia({
       return fileService.listAssetsFolder({
         projectId: params.projectId,
         name: query.name,
-        format: query.format,
+        type: query.type,
         limit: query.limit,
       })
     },
     {
       query: z.object({
         name: z.string().trim().min(1).optional(),
-        format: z
-          .enum([fileFormat.IMAGE, fileFormat.VIDEO, fileFormat.AUDIO])
-          .optional(),
+        type: z.enum(MEDIA_FILE_TYPES).optional(),
         limit: z.coerce.number().int().positive().optional(),
       }),
     },
@@ -154,15 +148,13 @@ export const fileSystemRoutes = new Elysia({
     "/:id/media",
     ({ params, query }) => {
       return fileService.listFolderMedia(params.projectId, params.id, {
-        format: query.format,
+        type: query.type,
         limit: query.limit,
       })
     },
     {
       query: z.object({
-        format: z
-          .enum([fileFormat.IMAGE, fileFormat.VIDEO, fileFormat.AUDIO])
-          .optional(),
+        type: z.enum(MEDIA_FILE_TYPES).optional(),
         limit: z.coerce.number().int().positive().optional(),
       }),
     },

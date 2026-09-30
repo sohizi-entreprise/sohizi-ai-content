@@ -95,6 +95,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       name: node.name,
       path: node.path,
       extension: getFileExtension(node.name),
+      type: node.type,
       format: node.format,
     }
     set({

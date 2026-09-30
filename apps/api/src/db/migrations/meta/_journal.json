@@ -260,6 +260,20 @@
       "when": 1789485256935,
       "tag": "0036_pink_skaar",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1790427385992,
+      "tag": "0037_loose_sir_ram",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790509084097,
+      "tag": "0038_yummy_cobalt_man",
+      "breakpoints": true
     }
   ]
 }

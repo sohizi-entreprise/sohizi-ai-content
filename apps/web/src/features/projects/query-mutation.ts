@@ -18,22 +18,22 @@ const keysFactory = {
     "file-tree",
     parentId,
   ],
-  filesByFormat: (projectId: string, format: string) => [
+  filesByType: (projectId: string, type: string) => [
     "project",
     projectId,
-    "files-by-format",
-    format,
+    "files-by-type",
+    type,
   ],
   projectAssets: (
     projectId: string,
-    params: { name?: string; format?: string },
+    params: { name?: string; type?: string },
   ) => ["project", projectId, "assets-folder", params],
-  folderMedia: (projectId: string, folderId: string, format?: string) => [
+  folderMedia: (projectId: string, folderId: string, type?: string) => [
     "project",
     projectId,
     "folder-media",
     folderId,
-    format,
+    type,
   ],
   projectOptions: () => ["projectOptions"],
   templates: () => ["templates"],
@@ -103,18 +103,18 @@ export const getlistFileTreePerDirectoryOptions = (
     refetchOnReconnect: true,
   })
 
-export const filesByFormatKey = (projectId: string, format: string) =>
-  keysFactory.filesByFormat(projectId, format)
+export const filesByTypeKey = (projectId: string, type: string) =>
+  keysFactory.filesByType(projectId, type)
 
-export const listFilesByFormatQueryOptions = (
+export const listFilesByTypeQueryOptions = (
   projectId: string,
-  format: string,
+  type: string,
   limit = 100,
 ) =>
   queryOptions({
-    queryKey: keysFactory.filesByFormat(projectId, format),
+    queryKey: keysFactory.filesByType(projectId, type),
     queryFn: ({ signal }) =>
-      requests.listFilesByFormat(projectId, format, limit, { signal }),
+      requests.listFilesByType(projectId, type, limit, { signal }),
     staleTime: 1000 * 60 * 1,
   })
 
@@ -126,19 +126,19 @@ export const listProjectAssetsQueryOptions = (
   projectId: string,
   options?: {
     name?: string
-    format?: "image" | "video" | "audio"
+    type?: "image" | "video" | "audio"
     limit?: number
   },
 ) =>
   queryOptions({
     queryKey: keysFactory.projectAssets(projectId, {
       name: options?.name,
-      format: options?.format,
+      type: options?.type,
     }),
     queryFn: ({ signal }) =>
       requests.listProjectAssets(projectId, {
         name: options?.name,
-        format: options?.format,
+        type: options?.type,
         limit: options?.limit,
         signal,
       }),
@@ -148,17 +148,17 @@ export const listProjectAssetsQueryOptions = (
 export const listFolderMediaQueryOptions = (
   projectId: string,
   folderId: string | null,
-  options?: { format?: "image" | "video" | "audio"; limit?: number },
+  options?: { type?: "image" | "video" | "audio"; limit?: number },
 ) =>
   queryOptions({
     queryKey: keysFactory.folderMedia(
       projectId,
       folderId ?? "",
-      options?.format,
+      options?.type,
     ),
     queryFn: ({ signal }) =>
       requests.listFolderMedia(projectId, folderId!, {
-        format: options?.format,
+        type: options?.type,
         limit: options?.limit,
         signal,
       }),
@@ -173,6 +173,7 @@ export const createFileNodeMutationOptions = (projectId: string) =>
       directory: boolean
       parentId: string
       position: number
+      type: string | null
       format: string | null
     }) => requests.createFileNode(projectId, data),
   })

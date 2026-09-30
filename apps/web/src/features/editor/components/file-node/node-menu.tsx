@@ -5,14 +5,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sohizi/ui/dropdown-menu"
-import type { FileNodeFormat } from "../../types"
+import type { FileNodeType } from "../../types"
 
-export const FILE_FORMAT_OPTIONS: Array<{
+export const FILE_TYPE_OPTIONS: Array<{
   label: string
-  value: FileNodeFormat
+  value: FileNodeType
 }> = [
-  { label: "Document", value: "markdown" },
+  { label: "Document", value: "document" },
   { label: "Skill", value: "skill" },
+  { label: "Storyboard", value: "storyboard" },
 ]
 
 type Props = {

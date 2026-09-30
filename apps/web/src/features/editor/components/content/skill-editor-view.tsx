@@ -1,4 +1,5 @@
-import { Node, mergeAttributes } from "@tiptap/core"
+import { Extension, Node, mergeAttributes } from "@tiptap/core"
+import { Plugin } from "@tiptap/pm/state"
 import Placeholder from "@tiptap/extension-placeholder"
 import { TableKit } from "@tiptap/extension-table"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
@@ -10,8 +11,13 @@ import StarterKit from "@tiptap/starter-kit"
 import { CharacterCount } from "@tiptap/extension-character-count"
 import { useMemo, useRef, useState } from "react"
 import TextEditorBubbleMenu from "../text-editor-extensions/bubble-menu"
-import { useSkillAutosave } from "../../hooks/use-autosave"
+import { useAutoSave } from "../../hooks/use-autosave"
+import { usePendingMarkdownChanges } from "../../hooks/use-pending-markdown-changes"
 import { serializeMarkdownWithTextAlign } from "../../extensions/markdown-text-align"
+import {
+  parseSkillDocument,
+  serializeSkillDocument,
+} from "../../skill-document"
 import {
   FileLinkSuggestion,
   createFileLinkSuggestion,
@@ -24,6 +30,8 @@ import { NestedTrailingNode } from "../../extensions/nested-trailing-node"
 import { useEditorInputBridge } from "../../bridge/use-editor-input-bridge"
 import { MAX_CHARACTER_COUNT } from "../../constants"
 import { EditorTopChrome } from "./editor-top-chrome"
+import { MarkdownDiffChangesPanel } from "./markdown-diff-changes-panel"
+import { MarkdownPendingChangesBar } from "./markdown-pending-changes-bar"
 import { SkillMetaBadges } from "./skill-meta-badges"
 import type { EditorTab, Skill } from "../../types"
 import type { Editor, JSONContent } from "@tiptap/react"
@@ -108,8 +116,42 @@ const SkillInstruction = Node.create({
   },
 })
 
+// Placeholder decorations are built inside EditorState.apply, while
+// `editor.state` still points at the pre-transaction document. A new list
+// item can sit past that document's end, and resolving it throws
+// "Position out of range", which aborts Enter.
+const docsForPlaceholder = new WeakMap<Editor, Editor["state"]["doc"]>()
+
+const PlaceholderDocTracker = Extension.create({
+  name: "placeholderDocTracker",
+  addProseMirrorPlugins() {
+    const editor = this.editor
+    return [
+      new Plugin({
+        state: {
+          init(_config, state) {
+            docsForPlaceholder.set(editor, state.doc)
+            return null
+          },
+          apply(_tr, value, _oldState, newState) {
+            docsForPlaceholder.set(editor, newState.doc)
+            return value
+          },
+        },
+      }),
+    ]
+  },
+})
+
+function resolveSkillPos(editor: Editor, pos: number) {
+  const doc = docsForPlaceholder.get(editor) ?? editor.state?.doc
+  if (!doc || pos < 0 || pos > doc.content.size) return null
+  return doc.resolve(pos)
+}
+
 function getSkillSection(editor: Editor, pos: number) {
-  const $pos = editor.state.doc.resolve(pos)
+  const $pos = resolveSkillPos(editor, pos)
+  if (!$pos) return null
   for (let depth = $pos.depth; depth >= 0; depth -= 1) {
     const nodeName = $pos.node(depth).type.name
     if (nodeName === "skillDescription" || nodeName === "skillInstruction") {
@@ -120,7 +162,8 @@ function getSkillSection(editor: Editor, pos: number) {
 }
 
 function isEmptySkillDescription(editor: Editor, pos: number) {
-  const $pos = editor.state.doc.resolve(pos)
+  const $pos = resolveSkillPos(editor, pos)
+  if (!$pos) return false
   for (let depth = $pos.depth; depth >= 0; depth -= 1) {
     const parent = $pos.node(depth)
     if (parent.type.name === "skillDescription") {
@@ -157,7 +200,7 @@ const markdownManager = new MarkdownManager({
   },
 })
 
-const skillEditorExtensions = [
+export const skillEditorExtensions = [
   SkillDocument,
   SkillDescription,
   SkillSeparator,
@@ -201,6 +244,8 @@ const skillEditorExtensions = [
       gfm: true,
     },
   }),
+  // Must be registered before Placeholder so its state field runs first.
+  PlaceholderDocTracker,
   Placeholder.configure({
     showOnlyCurrent: false,
     includeChildren: true,
@@ -230,13 +275,12 @@ const skillEditorExtensions = [
 
 interface SkillEditorViewProps {
   tab: EditorTab
-  description?: string
-  instruction?: string
+  initialContent?: string
   status?: Skill["status"]
   visibility?: Skill["visibility"]
 }
 
-function createSkillContent({
+export function createSkillContent({
   description = "",
   instruction = "",
 }: {
@@ -302,11 +346,36 @@ function blocksToMarkdown(blocks: Array<JSONContent>) {
   ).trim()
 }
 
+function fieldsFromSkillMarkdown(content: string) {
+  const parsed = parseSkillDocument(content)
+  if (!parsed) {
+    return { description: "", instruction: content }
+  }
+  return {
+    description: parsed.description,
+    instruction: parsed.instructions,
+  }
+}
+
+function skillEditorToMarkdown(editor: Editor) {
+  const json = editor.getJSON()
+  return serializeSkillDocument({
+    description: getNodeMarkdown(json, "skillDescription"),
+    instructions: getNodeMarkdown(json, "skillInstruction"),
+  })
+}
+
+function setSkillMarkdownContent(editor: Editor, markdown: string) {
+  editor.commands.setContent(
+    createSkillContent(fieldsFromSkillMarkdown(markdown)),
+  )
+}
+
 export function SkillEditorView({
   tab,
+  initialContent = "",
   status = "draft",
   visibility = "private",
-  ...props
 }: SkillEditorViewProps) {
   const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(
     null,
@@ -314,14 +383,17 @@ export function SkillEditorView({
   const { projectId } = useParams({
     from: "/_authenticated/projects/$projectId/editor",
   })
-  const saveSkill = useSkillAutosave({
+  const baseMarkdown = initialContent
+  const appliedDiffRef = useRef(false)
+  const isApplyingVisualDiffRef = useRef(false)
+  const autosave = useAutoSave({
     duration: 2000,
     projectId,
     fileId: tab.id,
+    onSaveComplete: () => {
+      appliedDiffRef.current = false
+    },
   })
-  // TipTap does not refresh onUpdate when deps change — always call the latest saver.
-  const saveSkillRef = useRef(saveSkill)
-  saveSkillRef.current = saveSkill
 
   const setEditor = useEditorInputBridge((state) => state.setEditor)
   const clearEditor = useEditorInputBridge((state) => state.clearEditor)
@@ -340,20 +412,17 @@ export function SkillEditorView({
         suggestion: fileLinkSuggestion,
       }),
     ],
-    content: createSkillContent(props),
+    content: createSkillContent(fieldsFromSkillMarkdown(baseMarkdown)),
     editorProps: {
       attributes: {
         class: "tiptap-editor-content focus:outline-none",
       },
     },
     onUpdate: ({ editor: updatedEditor }) => {
-      // Defer JSON/markdown serialization until the autosave debounce fires.
-      saveSkillRef.current(() => {
-        const json = updatedEditor.getJSON()
-        return {
-          description: getNodeMarkdown(json, "skillDescription"),
-          instructions: getNodeMarkdown(json, "skillInstruction"),
-        }
+      if (isApplyingVisualDiffRef.current) return
+      autosave({
+        content: skillEditorToMarkdown(updatedEditor),
+        diffApplied: appliedDiffRef.current,
       })
     },
     onCreate: ({ editor: createdEditor }) => {
@@ -362,6 +431,26 @@ export function SkillEditorView({
     onDestroy: () => {
       clearEditor(editor)
     },
+  })
+
+  const {
+    pendingOperation,
+    pendingPatch,
+    changeHunks,
+    changesOpen,
+    setChangesOpen,
+    handleAcceptChanges,
+    handleRejectChanges,
+  } = usePendingMarkdownChanges({
+    editor,
+    projectId,
+    fileId: tab.id,
+    baseMarkdown,
+    autosave,
+    setMarkdownContent: setSkillMarkdownContent,
+    getMarkdown: skillEditorToMarkdown,
+    appliedDiffRef,
+    isApplyingVisualDiffRef,
   })
 
   return (
@@ -388,12 +477,25 @@ export function SkillEditorView({
             file={{
               id: tab.id,
               name: tab.name,
-              format: tab.format ?? "skill",
+              format: tab.type ?? tab.format ?? "skill",
               path: tab.path,
             }}
           />
+          {pendingOperation && (
+            <MarkdownPendingChangesBar
+              changesOpen={changesOpen}
+              onToggleChanges={() => setChangesOpen((open) => !open)}
+              onAccept={handleAcceptChanges}
+              onReject={handleRejectChanges}
+            />
+          )}
         </div>
       </div>
+      <MarkdownDiffChangesPanel
+        open={Boolean(pendingPatch) && changesOpen}
+        onOpenChange={setChangesOpen}
+        hunks={changeHunks}
+      />
     </div>
   )
 }

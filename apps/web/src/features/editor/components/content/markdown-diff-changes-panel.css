@@ -1,0 +1,39 @@
+.markdown-diff-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.85rem 0;
+}
+
+.markdown-diff-panel-hunk {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.markdown-diff-panel-empty {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.markdown-diff-panel-item {
+  margin: 0;
+  padding: 0.55rem 1rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.markdown-diff-panel-item--insert {
+  background: oklch(0.55 0.15 145 / 0.16);
+}
+
+.markdown-diff-panel-item--delete {
+  background: oklch(0.55 0.2 25 / 0.16);
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.55 0.2 25);
+}

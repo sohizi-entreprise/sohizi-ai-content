@@ -6,7 +6,7 @@ import {
   readCommandSchema,
   describeCommandSchema,
 } from "./command-schema"
-import { failure, success, formatSkill } from "./utils"
+import { failure, success } from "./utils"
 import { FileContentPayload } from "@/features/file-system/objects/file"
 import { Session } from "../core/session"
 
@@ -62,7 +62,7 @@ async function executeListCommand(
   let output = `Total files: ${children.length}\n---\n`
   for (let i = 0; i < children.length; i++) {
     const file = children[i]
-    output += `${i + 1}. [ID: ${file.id}] - (${file.isDirectory ? "directory" : "file"}) - Name: ${file.name} ${file.format ? `- [format: ${file.format}]` : ""}\n`
+    output += `${i + 1}. [ID: ${file.id}] - (${file.isDirectory ? "directory" : "file"}) - Name: ${file.name} ${file.type ? `- [type: ${file.type}, format: ${file.format ?? "unknown"}]` : ""}\n`
   }
   return success(output)
 }
@@ -90,10 +90,14 @@ async function executeReadCommand(
   }
 
   if (fileObject.isDirectory) {
-    return failure(`You cannot read the content of a directory.`)
+    return failure(
+      `You cannot read the content of a directory. Use the list command instead.`,
+    )
   }
-  if (fileObject.format === null) {
-    return failure(`The format of the file is not supported.`)
+  if (fileObject.type === null) {
+    return failure(
+      `The file you're trying to read might be corrupted due to its invalid type.`,
+    )
   }
 
   const content = await fileObject.getFileContent()
@@ -122,13 +126,9 @@ function formatFileContent(data: FileContentPayload): string {
   switch (data.type) {
     case "markdown":
       return data.data
-    case "skill":
-      return formatSkill(data.data)
     case "json":
       return JSON.stringify(data.data, null, 2)
-    case "ai-generated":
-      return "Reading the content of ai-generated files is not yet supported."
     default:
-      return `File of format: ${data.type} is not supported by this tool.`
+      return `File of type: ${data.type} is not supported by this tool.`
   }
 }

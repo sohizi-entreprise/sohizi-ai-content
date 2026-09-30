@@ -39,7 +39,6 @@ import { Route as AuthenticatedSidebarAccountProfileRouteImport } from './routes
 import { Route as AuthenticatedProjectsProjectIdEditorRouteImport } from './routes/_authenticated/projects/$projectId/editor'
 import { Route as AuthenticatedProjectsProjectIdGenerateRouteImport } from './routes/_authenticated/projects/$projectId/generate'
 import { Route as AuthenticatedProjectsProjectIdSkillMarketIndexRouteImport } from './routes/_authenticated/projects/$projectId/skill-market/index'
-import { Route as AuthenticatedProjectsProjectIdSkillMarketSkillIdRouteImport } from './routes/_authenticated/projects/$projectId/skill-market/$skillId'
 import { Route as AuthenticatedProjectsProjectIdVideoEditorIndexRouteImport } from './routes/_authenticated/projects/$projectId/video-editor/index'
 import { Route as AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRouteImport } from './routes/_authenticated/projects/$projectId/video-editor/$fileNodeId'
 
@@ -202,12 +201,6 @@ const AuthenticatedProjectsProjectIdSkillMarketIndexRoute =
     path: '/skill-market/',
     getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
-const AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute =
-  AuthenticatedProjectsProjectIdSkillMarketSkillIdRouteImport.update({
-    id: '/skill-market/$skillId',
-    path: '/skill-market/$skillId',
-    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
-  } as any)
 const AuthenticatedProjectsProjectIdVideoEditorIndexRoute =
   AuthenticatedProjectsProjectIdVideoEditorIndexRouteImport.update({
     id: '/video-editor/',
@@ -249,7 +242,6 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/editor': typeof AuthenticatedProjectsProjectIdEditorRoute
   '/projects/$projectId/generate': typeof AuthenticatedProjectsProjectIdGenerateRoute
   '/account/': typeof AuthenticatedSidebarAccountIndexRoute
-  '/projects/$projectId/skill-market/$skillId': typeof AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute
   '/projects/$projectId/video-editor/$fileNodeId': typeof AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute
   '/projects/$projectId/skill-market/': typeof AuthenticatedProjectsProjectIdSkillMarketIndexRoute
   '/projects/$projectId/video-editor/': typeof AuthenticatedProjectsProjectIdVideoEditorIndexRoute
@@ -278,7 +270,6 @@ export interface FileRoutesByTo {
   '/projects/$projectId/editor': typeof AuthenticatedProjectsProjectIdEditorRoute
   '/projects/$projectId/generate': typeof AuthenticatedProjectsProjectIdGenerateRoute
   '/account': typeof AuthenticatedSidebarAccountIndexRoute
-  '/projects/$projectId/skill-market/$skillId': typeof AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute
   '/projects/$projectId/video-editor/$fileNodeId': typeof AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute
   '/projects/$projectId/skill-market': typeof AuthenticatedProjectsProjectIdSkillMarketIndexRoute
   '/projects/$projectId/video-editor': typeof AuthenticatedProjectsProjectIdVideoEditorIndexRoute
@@ -314,7 +305,6 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId/editor': typeof AuthenticatedProjectsProjectIdEditorRoute
   '/_authenticated/projects/$projectId/generate': typeof AuthenticatedProjectsProjectIdGenerateRoute
   '/_authenticated/_sidebar/account/': typeof AuthenticatedSidebarAccountIndexRoute
-  '/_authenticated/projects/$projectId/skill-market/$skillId': typeof AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute
   '/_authenticated/projects/$projectId/video-editor/$fileNodeId': typeof AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute
   '/_authenticated/projects/$projectId/skill-market/': typeof AuthenticatedProjectsProjectIdSkillMarketIndexRoute
   '/_authenticated/projects/$projectId/video-editor/': typeof AuthenticatedProjectsProjectIdVideoEditorIndexRoute
@@ -349,7 +339,6 @@ export interface FileRouteTypes {
     | '/projects/$projectId/editor'
     | '/projects/$projectId/generate'
     | '/account/'
-    | '/projects/$projectId/skill-market/$skillId'
     | '/projects/$projectId/video-editor/$fileNodeId'
     | '/projects/$projectId/skill-market/'
     | '/projects/$projectId/video-editor/'
@@ -378,7 +367,6 @@ export interface FileRouteTypes {
     | '/projects/$projectId/editor'
     | '/projects/$projectId/generate'
     | '/account'
-    | '/projects/$projectId/skill-market/$skillId'
     | '/projects/$projectId/video-editor/$fileNodeId'
     | '/projects/$projectId/skill-market'
     | '/projects/$projectId/video-editor'
@@ -413,7 +401,6 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId/editor'
     | '/_authenticated/projects/$projectId/generate'
     | '/_authenticated/_sidebar/account/'
-    | '/_authenticated/projects/$projectId/skill-market/$skillId'
     | '/_authenticated/projects/$projectId/video-editor/$fileNodeId'
     | '/_authenticated/projects/$projectId/skill-market/'
     | '/_authenticated/projects/$projectId/video-editor/'
@@ -639,13 +626,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdSkillMarketIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
-    '/_authenticated/projects/$projectId/skill-market/$skillId': {
-      id: '/_authenticated/projects/$projectId/skill-market/$skillId'
-      path: '/skill-market/$skillId'
-      fullPath: '/projects/$projectId/skill-market/$skillId'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectIdSkillMarketSkillIdRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
-    }
     '/_authenticated/projects/$projectId/video-editor/': {
       id: '/_authenticated/projects/$projectId/video-editor/'
       path: '/video-editor'
@@ -704,7 +684,6 @@ const AuthenticatedSidebarRouteWithChildren =
 interface AuthenticatedProjectsProjectIdRouteChildren {
   AuthenticatedProjectsProjectIdEditorRoute: typeof AuthenticatedProjectsProjectIdEditorRoute
   AuthenticatedProjectsProjectIdGenerateRoute: typeof AuthenticatedProjectsProjectIdGenerateRoute
-  AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute: typeof AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute
   AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute: typeof AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute
   AuthenticatedProjectsProjectIdSkillMarketIndexRoute: typeof AuthenticatedProjectsProjectIdSkillMarketIndexRoute
   AuthenticatedProjectsProjectIdVideoEditorIndexRoute: typeof AuthenticatedProjectsProjectIdVideoEditorIndexRoute
@@ -716,8 +695,6 @@ const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectI
       AuthenticatedProjectsProjectIdEditorRoute,
     AuthenticatedProjectsProjectIdGenerateRoute:
       AuthenticatedProjectsProjectIdGenerateRoute,
-    AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute:
-      AuthenticatedProjectsProjectIdSkillMarketSkillIdRoute,
     AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute:
       AuthenticatedProjectsProjectIdVideoEditorFileNodeIdRoute,
     AuthenticatedProjectsProjectIdSkillMarketIndexRoute:

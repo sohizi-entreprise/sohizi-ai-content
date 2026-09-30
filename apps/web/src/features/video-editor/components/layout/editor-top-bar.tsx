@@ -8,7 +8,7 @@ import { Input } from "@sohizi/ui/input"
 import { useVideoEditorUiStore } from "../../store/ui-store"
 import { useVideoExport } from "../../hooks/use-video-export"
 import {
-  listFilesByFormatQueryOptions,
+  listFilesByTypeQueryOptions,
   renameFileNodeMutationOptions,
 } from "@/features/projects/query-mutation"
 
@@ -46,7 +46,7 @@ export function EditorTopBar({ projectId, fileNodeId }: EditorTopBarProps) {
 
 function useCompositionName(projectId: string, fileNodeId: string): string {
   const { data: files } = useQuery(
-    listFilesByFormatQueryOptions(projectId, "video-editor"),
+    listFilesByTypeQueryOptions(projectId, "video-editor"),
   )
   return files?.find((file) => file.id === fileNodeId)?.name ?? ""
 }
@@ -125,7 +125,7 @@ function CompositionTitle({ projectId, fileNodeId }: EditorTopBarProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState("")
 
-  const filesQueryOptions = listFilesByFormatQueryOptions(
+  const filesQueryOptions = listFilesByTypeQueryOptions(
     projectId,
     "video-editor",
   )

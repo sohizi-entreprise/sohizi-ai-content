@@ -7,6 +7,7 @@ import { getFileContentQueryOptions } from "../../query-mutations"
 import { useEditorStore } from "../../stores/editor-store"
 import AssetViewer from "../content/asset-viewer"
 import { SkillEditorView } from "../content/skill-editor-view"
+import { StoryboardEditorView } from "../content/storyboard-editor-view"
 import type { EditorTab } from "../../types"
 import { VideoEditor } from "@/features/video-editor"
 import { MediaGenerator } from "@/features/media-generator"
@@ -22,7 +23,7 @@ export function ContentRouter({ tab }: ContentRouterProps) {
 
   const isMediaGenerator = tab.name === "media-generator"
 
-  if (tab.name === "video-editor" || tab.format === "video-editor") {
+  if (tab.name === "video-editor" || tab.type === "video-editor") {
     return (
       <VideoEditor projectId={projectId} fileNodeId={tab.id} key={tab.id} />
     )
@@ -46,18 +47,25 @@ function ServerRenderedContent({
   useEffect(() => {
     if (!data) return
 
-    if (data.type === "markdown" && data.updatedAt) {
+    if (
+      (data.type === "markdown" || data.type === "storyboard") &&
+      data.updatedAt
+    ) {
       initLastSavedAt(tab.id, data.updatedAt)
       return
     }
 
-    if (data.type === "skill" && data.data.updatedAt) {
-      initLastSavedAt(tab.id, data.data.updatedAt)
+    if (data.type === "skill" && data.updatedAt) {
+      initLastSavedAt(tab.id, data.updatedAt)
     }
   }, [data, initLastSavedAt, tab.id])
 
   if (isLoading) {
-    if (tab.format === "markdown" || tab.format === "skill") {
+    if (
+      tab.type === "document" ||
+      tab.type === "skill" ||
+      tab.type === "storyboard"
+    ) {
       return (
         <div className="h-full w-full overflow-hidden">
           <div className="mx-auto min-w-2xl max-w-3xl px-6 pb-8 pt-12 space-y-4">
@@ -88,15 +96,22 @@ function ServerRenderedContent({
           key={tab.id}
         />
       )
+    case "storyboard":
+      return (
+        <StoryboardEditorView
+          tab={tab}
+          initialContent={data.content}
+          key={tab.id}
+        />
+      )
     case "skill":
       return (
         <SkillEditorView
           key={tab.id}
           tab={tab}
-          description={data.data.description}
-          instruction={data.data.instructions}
-          status={data.data.status}
-          visibility={data.data.visibility}
+          initialContent={data.content}
+          status={data.status}
+          visibility={data.visibility}
         />
       )
     case "audio":

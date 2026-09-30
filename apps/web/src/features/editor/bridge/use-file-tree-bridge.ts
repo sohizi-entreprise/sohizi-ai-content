@@ -1,7 +1,8 @@
 import { z } from "zod"
 import { create } from "zustand"
 import { insertNodeAt as insertNodeInCache } from "../stores/file-tree-cache"
-import type { FileNodeFormat, FileTreeNode } from "../types"
+import type { FileNodeType, FileTreeNode } from "../types"
+import { defaultFormatForType } from "../utils/file-kind"
 import type { TreeApi } from "react-arborist"
 import type { QueryClient } from "@tanstack/react-query"
 
@@ -14,7 +15,7 @@ const createCommand = z.object({
     parentId: z.string(),
     index: z.number(),
     isDir: z.boolean(),
-    format: z.string().optional(),
+    fileType: z.string().optional(),
   }),
 })
 const deleteCommand = z.object({
@@ -50,13 +51,13 @@ const useFileTreeBridgeStore = create<FileTreeBridgeState>((set, get) => ({
 
     switch (command.type) {
       case "create": {
-        const { projectId, parentId, index, isDir, format } = command.data
+        const { projectId, parentId, index, isDir, fileType } = command.data
         const tempNode = createTempNode(
           projectId,
           parentId,
           index,
           isDir,
-          format,
+          fileType,
         )
         insertNodeInCache(queryClient, projectId, parentId, tempNode, index)
         setTimeout(() => {
@@ -75,7 +76,7 @@ function createTempNode(
   parentId: string,
   index: number,
   isDir: boolean = false,
-  format: FileNodeFormat = "markdown",
+  fileType: FileNodeType = "document",
 ) {
   const tempId = `temp-${Date.now()}`
   const tempNode: FileTreeNode = {
@@ -83,7 +84,8 @@ function createTempNode(
     name: "",
     directory: isDir,
     projectId,
-    format: isDir ? null : format,
+    type: isDir ? null : fileType,
+    format: isDir ? null : defaultFormatForType(fileType),
     parentId,
     position: index * 1000,
     editable: true,

@@ -61,3 +61,5 @@ count.txt
 todos.json
 .vscode
 .pnpm-store
+
+apps/remotion-package

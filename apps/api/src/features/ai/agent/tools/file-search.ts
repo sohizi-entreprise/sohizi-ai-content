@@ -7,6 +7,7 @@ import { failure, success } from "./utils"
 import {
   searchFileNodesByFormat,
   searchFileNodesByName,
+  searchFileNodesByType,
   searchProjectChunksByKeyword,
 } from "@/features/file-system/repo"
 import { FileNode } from "@/db/schema"
@@ -56,20 +57,23 @@ async function executeFindCommand(
   input: z.infer<typeof findCommandSchema>,
   session: Session,
 ) {
-  const { name, format, limit } = input
+  const { name, type, format, limit } = input
   const { projectId } = session
 
-  if (!name && !format) {
-    return failure("Either name or format is required.")
+  if (!name && !type && !format) {
+    return failure("Either name, type, or format is required.")
   }
 
   let files: FileNode[] = []
 
   if (name) {
-    files = await searchFileNodesByName(projectId, name, limit)
-  }
-
-  if (format) {
+    files = await searchFileNodesByName(projectId, name, limit, {
+      type,
+      format,
+    })
+  } else if (type) {
+    files = await searchFileNodesByType(projectId, type, limit)
+  } else if (format) {
     files = await searchFileNodesByFormat(projectId, format, limit)
   }
 
@@ -80,7 +84,10 @@ async function executeFindCommand(
   let output = `Total files: ${files.length}\n---\n`
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
-    output += `${i + 1}. (${file.directory ? "directory" : "file"}) ${toApiPath(file.path)} ${file.format ? `[format: ${file.format}]` : ""}\n`
+    const kindLabel = file.directory
+      ? ""
+      : `[type: ${file.type ?? "unknown"}, format: ${file.format ?? "unknown"}]`
+    output += `${i + 1}. (${file.directory ? "directory" : "file"}) ${toApiPath(file.path)} ${kindLabel}\n`
   }
   return success(output)
 }

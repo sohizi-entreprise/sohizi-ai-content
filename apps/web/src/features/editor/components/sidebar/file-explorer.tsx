@@ -54,7 +54,7 @@ export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-w-0 flex-col overflow-hidden">
       <div className="flex h-9 shrink-0 items-center justify-between px-3">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Files
@@ -71,7 +71,7 @@ export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
           </FileNodeMenu>
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-1">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-1">
         <FileTree projectId={projectId} rootFolderId={rootFolderId} />
       </div>
     </div>

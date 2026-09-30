@@ -45,7 +45,7 @@ export function AssetsPanel({ projectId }: AssetsPanelProps) {
     isFetching,
   } = useQuery(
     listProjectAssetsQueryOptions(projectId, {
-      format,
+      type: format,
       name: debouncedSearch || undefined,
     }),
   )

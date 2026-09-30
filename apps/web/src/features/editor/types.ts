@@ -7,13 +7,14 @@ export interface FileTreeNode extends BackendFileNode {
 }
 
 export type FileNodeFormat = NonNullable<FileTreeNode["format"]>
+export type FileNodeType = NonNullable<FileTreeNode["type"]>
 
 export interface NodeProps extends NodeRendererProps<FileTreeNode> {
   onCreateFile: (
     parentId: string,
     index: number,
     isDir: boolean,
-    format?: FileNodeFormat,
+    type?: FileNodeType,
   ) => void
 }
 
@@ -27,6 +28,7 @@ export interface EditorTab {
   name: string
   path: string
   extension: string
+  type: FileTreeNode["type"]
   format: FileTreeNode["format"]
   content?: string
 }
@@ -39,6 +41,13 @@ export type FileContentBase = {
 
 export type MarkdownContent = FileContentBase & {
   type: "markdown"
+  content: string
+  revision: number
+  updatedAt: string
+}
+
+export type StoryboardContent = FileContentBase & {
+  type: "storyboard"
   content: string
   revision: number
   updatedAt: string
@@ -78,11 +87,19 @@ export type Skill = {
 
 export type SkillContent = FileContentBase & {
   type: "skill"
-  data: Skill
+  content: string
+  revision: number
+  updatedAt: string
+  status: Skill["status"]
+  visibility: Skill["visibility"]
 }
 
 export type FileContentResponse =
-  MarkdownContent | AssetContent | AiGeneratedAssetsContent | SkillContent
+  | MarkdownContent
+  | StoryboardContent
+  | AssetContent
+  | AiGeneratedAssetsContent
+  | SkillContent
 
 // ==================
 
@@ -184,6 +201,11 @@ export type VideoClips = {
 export type PatchOperation = {
   type: "patch"
   content: string
+  /**
+   * Accepted markdown captured when the first pending suggestion was created.
+   * Optional for older pending rows that predate this field.
+   */
+  baseContent?: string
   fileId: string
   fileName: string
 }

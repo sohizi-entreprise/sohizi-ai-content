@@ -1,27 +1,9 @@
-import { diffLines, diffWordsWithSpace } from "diff"
-
-const INSERT_OPEN = "{+"
-const INSERT_CLOSE = "+}"
-const DELETE_OPEN = "[-"
-const DELETE_CLOSE = "-]"
-const ESCAPE = "\\"
-
-const RESERVED_SEQUENCES = [
-  INSERT_OPEN,
-  INSERT_CLOSE,
-  DELETE_OPEN,
-  DELETE_CLOSE,
-] as const
-
-declare const diffMarkdownBrand: unique symbol
-
-/**
- * Branded so ordinary Markdown is less likely to be accidentally passed
- * to acceptDiffMarkdown or rejectDiffMarkdown.
- */
-export type DiffMarkdown = string & {
-  readonly [diffMarkdownBrand]: true
-}
+import {
+  applyPatch,
+  diffLines,
+  diffWordsWithSpace,
+  structuredPatch,
+} from "diff"
 
 export type DiffPartKind = "equal" | "insert" | "delete"
 
@@ -68,7 +50,6 @@ export interface BuildDiffOptions {
 
 export interface MarkdownDiff {
   parts: Array<DiffPart>
-  markdown: DiffMarkdown
 
   /**
    * True when the top-level line diff exceeded its configured limits and
@@ -91,21 +72,19 @@ interface LibraryChange {
   removed?: boolean
 }
 
-export class DiffSyntaxError extends Error {
-  readonly index: number
-
-  constructor(message: string, index: number) {
-    super(`${message} at character ${index}.`)
-    this.name = "DiffSyntaxError"
-    this.index = index
+export class RejectMergeConflictError extends Error {
+  constructor(
+    message = "Could not keep your edits while rejecting the suggestion.",
+  ) {
+    super(message)
+    this.name = "RejectMergeConflictError"
   }
 }
 
 /**
  * Main entry point.
  *
- * Both arguments must be plain, resolved Markdown—not annotated diff
- * Markdown.
+ * Both arguments must be plain, resolved Markdown.
  */
 export function createMarkdownDiff(
   previousMarkdown: string,
@@ -121,7 +100,6 @@ export function createMarkdownDiff(
 
     return {
       parts,
-      markdown: serializeDiffParts(parts),
       usedFallback: false,
     }
   }
@@ -134,22 +112,19 @@ export function createMarkdownDiff(
   })
 
   if (!lineChanges) {
-    const parts = assignChangeIds(
-      compactParts([
-        {
-          kind: "delete",
-          text: previousMarkdown,
-        },
-        {
-          kind: "insert",
-          text: nextMarkdown,
-        },
-      ]),
-    )
-
     return {
-      parts,
-      markdown: serializeDiffParts(parts),
+      parts: assignChangeIds(
+        compactParts([
+          {
+            kind: "delete",
+            text: previousMarkdown,
+          },
+          {
+            kind: "insert",
+            text: nextMarkdown,
+          },
+        ]),
+      ),
       usedFallback: true,
     }
   }
@@ -182,24 +157,115 @@ export function createMarkdownDiff(
     parts.push(changeToPart(current))
   }
 
-  const finalizedParts = assignChangeIds(compactParts(parts))
-
   return {
-    parts: finalizedParts,
-    markdown: serializeDiffParts(finalizedParts),
+    parts: assignChangeIds(compactParts(parts)),
     usedFallback: false,
   }
 }
 
-/**
- * Convenience wrapper when only the serialized syntax is needed.
- */
-export function buildDiff(
+export interface DiffHunk {
+  id: string
+  deleted: string
+  inserted: string
+}
+
+export function getMarkdownChangeParts(
   previousMarkdown: string,
   nextMarkdown: string,
   options: BuildDiffOptions = {},
-): DiffMarkdown {
-  return createMarkdownDiff(previousMarkdown, nextMarkdown, options).markdown
+): Array<DiffPart> {
+  return createMarkdownDiff(
+    previousMarkdown,
+    nextMarkdown,
+    options,
+  ).parts.filter((part) => part.kind !== "equal")
+}
+
+const MAX_BRIDGE_CHARS = 48
+const MAX_BRIDGE_WORDS = 4
+
+/**
+ * Groups nearby word-level fragments into reviewable hunks.
+ *
+ * Wrapping `confident` as `**confident**` becomes one replacement instead of
+ * two isolated `**` insertions.
+ */
+export function getMarkdownChangeHunks(
+  previousMarkdown: string,
+  nextMarkdown: string,
+  options: BuildDiffOptions = {},
+): Array<DiffHunk> {
+  const parts = createMarkdownDiff(
+    previousMarkdown,
+    nextMarkdown,
+    options,
+  ).parts
+  const hunks: Array<DiffHunk> = []
+  let cluster: Array<DiffPart> = []
+  let pendingBridge: DiffPart | null = null
+
+  const flush = () => {
+    if (cluster.length === 0) return
+
+    const deleted = cluster
+      .filter((part) => part.kind !== "insert")
+      .map((part) => part.text)
+      .join("")
+    const inserted = cluster
+      .filter((part) => part.kind !== "delete")
+      .map((part) => part.text)
+      .join("")
+
+    if (deleted || inserted) {
+      hunks.push({
+        id: `hunk-${hunks.length}-${hashString(`${deleted}\u0000${inserted}`)}`,
+        deleted,
+        inserted,
+      })
+    }
+
+    cluster = []
+    pendingBridge = null
+  }
+
+  for (const part of parts) {
+    if (part.kind !== "equal") {
+      if (pendingBridge) {
+        cluster.push(pendingBridge)
+        pendingBridge = null
+      }
+      cluster.push(part)
+      continue
+    }
+
+    if (cluster.length === 0) {
+      continue
+    }
+
+    if (isLocalBridge(part.text)) {
+      pendingBridge = part
+      continue
+    }
+
+    flush()
+  }
+
+  flush()
+
+  return hunks
+}
+
+function isLocalBridge(text: string): boolean {
+  if (!text || /[\r\n]/.test(text)) {
+    return false
+  }
+
+  if (text.length > MAX_BRIDGE_CHARS) {
+    return false
+  }
+
+  const words = text.trim().split(/\s+/).filter(Boolean)
+  return words.length <= MAX_BRIDGE_WORDS
 }
 
 function refineReplacement(
@@ -345,290 +411,55 @@ function changeToPart(change: LibraryChange): DiffPart {
 }
 
 /**
- * Serializes structured parts to:
+ * Restores the accepted document while keeping unrelated manual edits.
  *
- *   {+inserted+}
- *   [-deleted-]
- *
- * Literal marker sequences and backslashes are escaped reversibly.
+ * The user delta is derived from `proposal → current` and applied to
+ * `baseContent`. Overlapping edits throw instead of dropping work.
  */
-export function serializeDiffParts(
-  parts: ReadonlyArray<DiffPart>,
-): DiffMarkdown {
-  const value = parts
-    .map((part) => {
-      const escapedText = escapeDiffText(part.text)
+export function rejectPendingMarkdown(args: {
+  baseContent: string
+  proposal: string
+  current: string
+}): string {
+  const baseContent = normalizeMarkdown(args.baseContent)
+  const proposal = normalizeMarkdown(args.proposal)
+  const current = normalizeMarkdown(args.current)
 
-      switch (part.kind) {
-        case "equal":
-          return escapedText
-
-        case "insert":
-          return `${INSERT_OPEN}${escapedText}${INSERT_CLOSE}`
-
-        case "delete":
-          return `${DELETE_OPEN}${escapedText}${DELETE_CLOSE}`
-
-        default:
-          return assertNever(part.kind)
-      }
-    })
-    .join("")
-
-  return value as DiffMarkdown
-}
-
-/**
- * Escaping examples:
- *
- *   {+          -> \{+
- *   +}          -> \+}
- *   [-          -> \[-
- *   -]          -> \-]
- *   \           -> \\
- *
- * This means AI-generated content may contain any marker sequence.
- */
-export function escapeDiffText(text: string): string {
-  let result = ""
-  let index = 0
-
-  while (index < text.length) {
-    if (text[index] === ESCAPE) {
-      result += `${ESCAPE}${ESCAPE}`
-      index += 1
-      continue
-    }
-
-    const reserved = getReservedSequenceAt(text, index)
-
-    if (reserved) {
-      result += `${ESCAPE}${reserved}`
-      index += reserved.length
-      continue
-    }
-
-    result += text[index]
-    index += 1
+  if (current === proposal || current === baseContent) {
+    return restoreMarkdownShape(baseContent, args.baseContent)
   }
 
-  return result
-}
-
-/**
- * TipTap escapes `*` and `_` in text nodes before wrapping them in diff
- * markers, so `{+**+}word{+**+}` serializes as `{+\*\*+}word{+\*\*+}`.
- * Undo that only inside `{+ +}` / `[- -]` so wrap inserts stay real emphasis.
- */
-export function unescapeEmphasisInDiffMarkers(markdown: string): string {
-  return markdown.replace(
-    /(\{\+|\[-)([\s\S]*?)(\+}|-\])/g,
-    (_match, open: string, inner: string, close: string) =>
-      `${open}${inner.replace(/\\([*_])/g, "$1")}${close}`,
+  const patch = structuredPatch(
+    "proposal",
+    "current",
+    proposal,
+    current,
+    undefined,
+    undefined,
+    { context: 0 },
   )
-}
+  const merged = applyPatch(baseContent, patch)
 
-/**
- * Parses serialized diff Markdown back into structured parts.
- */
-export function parseDiffMarkdown(markdown: string): Array<DiffPart> {
-  markdown = unescapeEmphasisInDiffMarkers(markdown)
-  const parts: Array<DiffPart> = []
-  let equalBuffer = ""
-  let index = 0
-
-  const flushEqual = () => {
-    if (!equalBuffer) {
-      return
-    }
-
-    parts.push({
-      kind: "equal",
-      text: equalBuffer,
-    })
-
-    equalBuffer = ""
+  if (merged === false) {
+    throw new RejectMergeConflictError()
   }
 
-  while (index < markdown.length) {
-    const escaped = decodeEscapeAt(markdown, index)
+  return restoreMarkdownShape(merged, args.baseContent)
+}
 
-    if (escaped) {
-      equalBuffer += escaped.value
-      index = escaped.nextIndex
-      continue
-    }
+function normalizeMarkdown(value: string): string {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\n+$/, "")
+}
 
-    if (markdown.startsWith(INSERT_OPEN, index)) {
-      flushEqual()
-
-      const parsed = readMarkedPayload(
-        markdown,
-        index + INSERT_OPEN.length,
-        INSERT_CLOSE,
-        "insert",
-      )
-
-      parts.push({
-        kind: "insert",
-        text: parsed.text,
-      })
-
-      index = parsed.nextIndex
-      continue
-    }
-
-    if (markdown.startsWith(DELETE_OPEN, index)) {
-      flushEqual()
-
-      const parsed = readMarkedPayload(
-        markdown,
-        index + DELETE_OPEN.length,
-        DELETE_CLOSE,
-        "delete",
-      )
-
-      parts.push({
-        kind: "delete",
-        text: parsed.text,
-      })
-
-      index = parsed.nextIndex
-      continue
-    }
-
-    equalBuffer += markdown[index]
-    index += 1
+function restoreMarkdownShape(merged: string, original: string): string {
+  if (original.endsWith("\n") && !merged.endsWith("\n")) {
+    return `${merged}\n`
   }
 
-  flushEqual()
-
-  return assignChangeIds(compactParts(parts))
-}
-
-function readMarkedPayload(
-  markdown: string,
-  startIndex: number,
-  closingMarker: typeof INSERT_CLOSE | typeof DELETE_CLOSE,
-  kind: "insert" | "delete",
-): {
-  text: string
-  nextIndex: number
-} {
-  let text = ""
-  let index = startIndex
-
-  while (index < markdown.length) {
-    const escaped = decodeEscapeAt(markdown, index)
-
-    if (escaped) {
-      text += escaped.value
-      index = escaped.nextIndex
-      continue
-    }
-
-    if (markdown.startsWith(closingMarker, index)) {
-      return {
-        text,
-        nextIndex: index + closingMarker.length,
-      }
-    }
-
-    text += markdown[index]
-    index += 1
-  }
-
-  throw new DiffSyntaxError(`Unclosed ${kind} marker`, startIndex - 2)
-}
-
-function decodeEscapeAt(
-  value: string,
-  index: number,
-):
-  | {
-      value: string
-      nextIndex: number
-    }
-  | undefined {
-  if (value[index] !== ESCAPE) {
-    return undefined
-  }
-
-  if (value[index + 1] === ESCAPE) {
-    return {
-      value: ESCAPE,
-      nextIndex: index + 2,
-    }
-  }
-
-  for (const reserved of RESERVED_SEQUENCES) {
-    if (value.startsWith(`${ESCAPE}${reserved}`, index)) {
-      return {
-        value: reserved,
-        nextIndex: index + ESCAPE.length + reserved.length,
-      }
-    }
-  }
-
-  /*
-   * Unknown escapes are preserved.
-   *
-   * This is useful for ordinary Markdown such as \* or \[ and makes the
-   * parser tolerant of manually-authored content.
-   */
-  return {
-    value: ESCAPE,
-    nextIndex: index + 1,
-  }
-}
-
-function getReservedSequenceAt(
-  text: string,
-  index: number,
-): (typeof RESERVED_SEQUENCES)[number] | undefined {
-  return RESERVED_SEQUENCES.find((sequence) => text.startsWith(sequence, index))
-}
-
-/**
- * Materializes either the accepted or rejected document.
- */
-export function resolveDiffParts(
-  parts: ReadonlyArray<DiffPart>,
-  decision: "accept" | "reject" | ((part: DiffPart) => "accept" | "reject"),
-): string {
-  return parts
-    .filter((part) => {
-      if (part.kind === "equal") {
-        return true
-      }
-
-      const resolvedDecision =
-        typeof decision === "function" ? decision(part) : decision
-
-      if (part.kind === "insert") {
-        return resolvedDecision === "accept"
-      }
-
-      return resolvedDecision === "reject"
-    })
-    .map((part) => part.text)
-    .join("")
-}
-
-export function acceptDiffMarkdown(markdown: DiffMarkdown): string {
-  return resolveDiffParts(parseDiffMarkdown(markdown), "accept")
-}
-
-export function rejectDiffMarkdown(markdown: DiffMarkdown): string {
-  return resolveDiffParts(parseDiffMarkdown(markdown), "reject")
-}
-
-/**
- * Validate and brand a diff string loaded from storage or an API.
- */
-export function asDiffMarkdown(markdown: string): DiffMarkdown {
-  parseDiffMarkdown(markdown)
-  return markdown as DiffMarkdown
+  return merged
 }
 
 function compactParts(parts: ReadonlyArray<DiffPart>): Array<DiffPart> {
@@ -741,8 +572,4 @@ function positiveInteger(value: number | undefined, fallback: number): number {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value))
-}
-
-function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${String(value)}`)
 }

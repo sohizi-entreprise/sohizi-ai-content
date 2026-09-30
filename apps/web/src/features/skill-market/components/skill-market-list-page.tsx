@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Link, useParams } from "@tanstack/react-router"
+import { useParams } from "@tanstack/react-router"
 import { Search } from "lucide-react"
 import { Badge } from "@sohizi/ui/badge"
 import { Button } from "@sohizi/ui/button"
@@ -17,6 +17,7 @@ import {
   listMarketSkillsQueryOptions,
 } from "../query-mutation"
 import { SkillMarketCard } from "./skill-market-card"
+import { SkillMarketDetailSheet } from "./skill-market-detail-sheet"
 import { useDebouncedValue } from "@/hooks/use-debounced-value"
 import { cn } from "@/lib/utils"
 
@@ -25,6 +26,7 @@ export function SkillMarketListPage() {
     from: "/_authenticated/projects/$projectId",
   })
   const [search, setSearch] = useState("")
+  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   )
@@ -118,19 +120,27 @@ export function SkillMarketListPage() {
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {skills.map((skill) => (
-              <Link
+              <button
                 key={skill.id}
-                to="/projects/$projectId/skill-market/$skillId"
-                params={{ projectId, skillId: skill.id }}
-                className="block"
-                preload={false}
+                type="button"
+                className="block w-full appearance-none border-0 bg-transparent p-0 text-left"
+                onClick={() => setSelectedSkillId(skill.id)}
               >
                 <SkillMarketCard skill={skill} />
-              </Link>
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      <SkillMarketDetailSheet
+        projectId={projectId}
+        skillId={selectedSkillId}
+        open={selectedSkillId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedSkillId(null)
+        }}
+      />
     </div>
   )
 }

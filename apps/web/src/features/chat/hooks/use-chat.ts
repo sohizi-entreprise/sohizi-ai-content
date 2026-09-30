@@ -9,10 +9,10 @@ import {
 import { buildEditorContext } from "../lib/editor-context"
 import type { ChatCompletionRequest, FilePart, ImagePart } from "../types"
 import type { AttachedFile } from "@/components/widgets/file-attachments"
+import type { ChatStatus } from "ai"
 import { cleanMediaType } from "@/utils/clean-mediaType"
 import { useEditorInputBridge } from "@/features/editor/bridge/use-editor-input-bridge"
 import { getErrorMessage } from "@/lib/errors"
-import type { ChatStatus } from "ai"
 
 export const useSendMessage = (projectId: string) => {
   const clearInput = useChatStore((state) => state.clearInput)
@@ -64,6 +64,8 @@ export const useSendMessage = (projectId: string) => {
       ),
       isNew: conversation?.isNew ?? true,
     }
+    // console.log("payload", payload)
+    // return
 
     sendMessageMutation(payload, {
       onSuccess: (data) => {

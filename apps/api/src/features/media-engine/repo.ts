@@ -24,6 +24,7 @@ import type {
 } from "@/type"
 import { and, eq, desc, lt, isNull, max, inArray, or, sql } from "drizzle-orm"
 import { ORDER_GAP } from "../file-system/repo"
+import { classifyFileKindFromAsset } from "../file-system/file-kind"
 import { joinLtree, normalizeFileName } from "../file-system/utils"
 import {
   createGenerationRequest,
@@ -125,10 +126,12 @@ export const createAssetWithFileNode = async (
         throw new Error("Cannot overwrite a directory with an asset")
       }
 
+      const kind = classifyFileKindFromAsset(type, metadata.contentType)
       const updatedFileNodeResponse = await tx
         .update(fileNodes)
         .set({
-          format: type,
+          type: kind.type,
+          format: kind.format,
           editable: true,
         })
         .where(
@@ -182,11 +185,13 @@ export const createAssetWithFileNode = async (
       throw new Error("Folder not found")
     }
 
+    const kind = classifyFileKindFromAsset(type, metadata.contentType)
     const filePayload = {
       projectId,
       name: normalizedName,
       parentId: folderId,
-      format: type,
+      type: kind.type,
+      format: kind.format,
       editable: true,
       position: filePosition,
       path: joinLtree(folder.path, normalizedName),
@@ -607,13 +612,18 @@ export const attachAssetToFileNode = async ({
       throw new Error("Folder not found")
     }
     const fileName = normalizeFileName(asset.name) || asset.name
+    const kind = classifyFileKindFromAsset(
+      asset.type,
+      asset.metadata?.contentType,
+    )
     const res2 = await tx
       .insert(fileNodes)
       .values({
         projectId,
         name: fileName,
         parentId: folderId,
-        format: asset.type,
+        type: kind.type,
+        format: kind.format,
         editable: true,
         position: maxPosition + ORDER_GAP,
         path: joinLtree(folder.path, fileName),
@@ -679,11 +689,16 @@ export const attachAssetsToFileNodes = async ({
 
     const fileNodeRows = orderedAssets.map((asset, index) => {
       const fileName = normalizeFileName(asset.name) || asset.name
+      const kind = classifyFileKindFromAsset(
+        asset.type,
+        asset.metadata?.contentType,
+      )
       return {
         projectId,
         name: fileName,
         parentId: folderId,
-        format: asset.type,
+        type: kind.type,
+        format: kind.format,
         editable: true,
         position: maxPosition + ORDER_GAP * (index + 1),
         path: joinLtree(folder.path, fileName),

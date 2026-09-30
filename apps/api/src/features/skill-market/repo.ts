@@ -180,7 +180,7 @@ export const findProjectSkillByName = async (
     .where(
       and(
         eq(fileNodes.projectId, projectId),
-        eq(fileNodes.format, "skill"),
+        eq(fileNodes.type, "skill"),
         eq(fileNodes.directory, false),
         eq(fileNodes.name, name),
       ),

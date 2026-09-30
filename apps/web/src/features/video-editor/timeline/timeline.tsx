@@ -669,7 +669,7 @@ export function VideoTimeline() {
       return {
         id: node.id,
         name: node.name,
-        format: node.format,
+        format: node.type,
       }
     },
     [queryClient],
@@ -880,12 +880,12 @@ function findClipById<TClip extends { id: string }>(
 
 function isMediaFileNode(
   node: FileTreeNode | null | undefined,
-): node is FileTreeNode & { format: MediaClipKind } {
+): node is FileTreeNode & { type: MediaClipKind } {
   return (
     !!node &&
     !node.directory &&
-    !!node.format &&
-    ["video", "audio", "image"].includes(node.format)
+    !!node.type &&
+    ["video", "audio", "image"].includes(node.type)
   )
 }
 

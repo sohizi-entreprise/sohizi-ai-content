@@ -47,7 +47,7 @@ export function AssetPickerFolderTab({
     listFolderMediaQueryOptions(
       projectId,
       selectedFolderId,
-      queryType ? { format: queryType } : undefined,
+      queryType ? { type: queryType } : undefined,
     ),
   )
 

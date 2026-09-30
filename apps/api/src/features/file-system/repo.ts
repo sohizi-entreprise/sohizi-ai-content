@@ -18,8 +18,23 @@ import {
   UpdateFileRequest,
   UpdateSkillRequest,
 } from "./payload"
-import { FileFormat } from "./constants"
+import {
+  DEFAULT_STORYBOARD_CONTENT,
+  FileFormat,
+  FileType,
+  MEDIA_FILE_TYPES,
+  fileFormat,
+  fileType,
+} from "./constants"
 import { FilePendingOperation } from "@/type"
+import { preservePatchBaseContent } from "./pending-patch"
+import { resolveCreatedFileKind } from "./file-kind"
+import {
+  DEFAULT_SKILL_METADATA,
+  EMPTY_SKILL_CONTENT,
+  parseSkillDocument,
+  serializeSkillDocument,
+} from "./skill-document"
 import { joinLtree, toApiPath, ltreeDepth } from "./utils"
 
 export const ORDER_GAP = 1000
@@ -180,6 +195,7 @@ export const getFileNodeByPath = async (
 
 type SearchFileNodesByNameOptions = {
   directory?: boolean
+  type?: FileType
   format?: FileFormat
 }
 
@@ -210,6 +226,9 @@ export const searchFileNodesByName = async (
         options?.directory === undefined
           ? undefined
           : eq(fileNodes.directory, options.directory),
+        options?.type === undefined
+          ? undefined
+          : eq(fileNodes.type, options.type),
         options?.format === undefined
           ? undefined
           : eq(fileNodes.format, options.format),
@@ -228,6 +247,18 @@ export const searchFileNodesByName = async (
     .limit(limit)
 }
 
+export const searchFileNodesByType = async (
+  projectId: string,
+  type: FileType,
+  limit = 15,
+): Promise<FileNode[]> => {
+  return db
+    .select()
+    .from(fileNodes)
+    .where(and(eq(fileNodes.projectId, projectId), eq(fileNodes.type, type)))
+    .limit(limit)
+}
+
 export const searchFileNodesByFormat = async (
   projectId: string,
   format: FileFormat,
@@ -242,14 +273,9 @@ export const searchFileNodesByFormat = async (
     .limit(limit)
 }
 
-const MEDIA_ASSET_FORMATS = [
-  "image",
-  "video",
-  "audio",
-] as const satisfies ReadonlyArray<FileFormat>
-
 type ListAssetsFolderOptions = {
   name?: string
+  type?: FileType
   format?: FileFormat
   limit?: number
 }
@@ -269,7 +295,7 @@ export const listFileNodesUnderFolder = async (
   options?: ListAssetsFolderOptions,
 ): Promise<AssetFolderFileNode[]> => {
   const limit = options?.limit ?? 100
-  const formats = options?.format ? [options.format] : [...MEDIA_ASSET_FORMATS]
+  const types = options?.type ? [options.type] : [...MEDIA_FILE_TYPES]
   const normalizedName = options?.name?.trim() ?? ""
 
   const nameFilter = normalizedName
@@ -310,6 +336,7 @@ export const listFileNodesUnderFolder = async (
             fn.position,
             fn.editable,
             fn.content_editable AS "contentEditable",
+            fn.type,
             fn.format,
             fn.path,
             fn.created_at AS "createdAt",
@@ -323,8 +350,8 @@ export const listFileNodesUnderFolder = async (
           AND fn.path <@ ${folder.path}::ltree
           AND fn.path <> ${folder.path}::ltree
           AND fn.directory = false
-          AND fn.format IN (${sql.join(
-            formats.map((format) => sql`${format}`),
+          AND fn.type IN (${sql.join(
+            types.map((type) => sql`${type}`),
             sql`, `,
           )})
           ${nameFilter}
@@ -340,16 +367,16 @@ export type FolderMediaFile = {
   name: string
   path: string
   url: string
-  type: (typeof MEDIA_ASSET_FORMATS)[number]
+  type: (typeof MEDIA_FILE_TYPES)[number]
 }
 
 export const listFolderMedia = async (
   projectId: string,
   folderId: string,
-  options?: { format?: FileFormat; limit?: number },
+  options?: { type?: FileType; limit?: number },
 ): Promise<FolderMediaFile[]> => {
   const limit = options?.limit ?? 100
-  const formats = options?.format ? [options.format] : [...MEDIA_ASSET_FORMATS]
+  const types = options?.type ? [options.type] : [...MEDIA_FILE_TYPES]
 
   const rows = await db
     .select({
@@ -357,7 +384,7 @@ export const listFolderMedia = async (
       name: fileNodes.name,
       path: fileNodes.path,
       url: assets.url,
-      type: fileNodes.format,
+      type: fileNodes.type,
     })
     .from(fileNodes)
     .innerJoin(
@@ -369,7 +396,7 @@ export const listFolderMedia = async (
         eq(fileNodes.projectId, projectId),
         eq(fileNodes.parentId, folderId),
         eq(fileNodes.directory, false),
-        inArray(fileNodes.format, formats),
+        inArray(fileNodes.type, types),
       ),
     )
     .orderBy(asc(fileNodes.position))
@@ -379,7 +406,7 @@ export const listFolderMedia = async (
     (row): row is FolderMediaFile =>
       Boolean(row.url) &&
       row.type !== null &&
-      MEDIA_ASSET_FORMATS.includes(row.type as FolderMediaFile["type"]),
+      MEDIA_FILE_TYPES.includes(row.type as FolderMediaFile["type"]),
   )
 }
 
@@ -445,9 +472,10 @@ export const createFileNode = async (data: FileCreationRequest) => {
     data.parentId,
     data.name,
   )
+  const kind = resolveCreatedFileKind(data)
   const result = await db
     .insert(fileNodes)
-    .values({ ...data, path })
+    .values({ ...data, ...kind, path })
     .onConflictDoNothing()
     .returning()
   if (result.length === 0) {
@@ -818,9 +846,18 @@ export const createFileWithContentAtPosition = async (
     )
     const provisionalPosition = getNextPositionFromSiblings(siblings)
     const path = await resolveChildPath(tx, projectId, data.parentId, data.name)
+    const kind = resolveCreatedFileKind(data)
+    const metadata =
+      kind.type === fileType.SKILL ? DEFAULT_SKILL_METADATA : undefined
     const file = await tx
       .insert(fileNodes)
-      .values({ ...data, position: provisionalPosition, path })
+      .values({
+        ...data,
+        ...kind,
+        position: provisionalPosition,
+        path,
+        ...(metadata ? { metadata } : {}),
+      })
       .onConflictDoNothing()
       .returning()
     if (file.length === 0) {
@@ -867,15 +904,43 @@ async function createContentBasedOnFormat(
   projectId: string,
   initialContent?: InitialFileContent,
 ) {
-  switch (fileNode.format) {
-    case "markdown":
+  switch (fileNode.type) {
+    case fileType.SKILL: {
+      const description = initialContent?.skill?.description ?? ""
+      const instructions = initialContent?.skill?.instructions ?? ""
+      await tx.insert(skills).values({
+        name: fileNode.name,
+        fileNodeId: fileNode.id,
+        description,
+        instructions,
+      })
       await tx.insert(fileNodeContents).values({
         projectId,
         fileNodeId: fileNode.id,
-        content: initialContent?.markdown ?? "",
+        content:
+          description || instructions
+            ? serializeSkillDocument({ description, instructions })
+            : EMPTY_SKILL_CONTENT,
       })
-      break
-    case "json":
+      return
+    }
+    case fileType.VIDEO_EDITOR:
+      await tx.insert(videoCompositions).values({
+        projectId,
+        fileNodeId: fileNode.id,
+      })
+      return
+    case fileType.STORYBOARD:
+      await tx.insert(fileNodeContents).values({
+        projectId,
+        fileNodeId: fileNode.id,
+        content: initialContent?.markdown ?? DEFAULT_STORYBOARD_CONTENT,
+      })
+      return
+  }
+
+  switch (fileNode.format) {
+    case fileFormat.JSON:
       await tx.insert(fileNodeContents).values({
         projectId,
         fileNodeId: fileNode.id,
@@ -883,18 +948,12 @@ async function createContentBasedOnFormat(
         content: "",
       })
       break
-    case "skill":
-      await tx.insert(skills).values({
-        name: fileNode.name,
-        fileNodeId: fileNode.id,
-        description: initialContent?.skill?.description ?? "",
-        instructions: initialContent?.skill?.instructions ?? "",
-      })
-      break
-    case "video-editor":
-      await tx.insert(videoCompositions).values({
+    case fileFormat.MARKDOWN:
+    default:
+      await tx.insert(fileNodeContents).values({
         projectId,
         fileNodeId: fileNode.id,
+        content: initialContent?.markdown ?? "",
       })
       break
   }
@@ -1245,24 +1304,67 @@ export const updateSkill = async (
   fileId: string,
   request: UpdateSkillRequest,
 ) => {
-  const payload = {
-    ...(request.description !== undefined
-      ? { description: request.description }
-      : {}),
-    ...(request.instructions !== undefined
-      ? { instructions: request.instructions }
-      : {}),
-    ...(request.status !== undefined ? { status: request.status } : {}),
-    ...(request.visibility !== undefined
-      ? { visibility: request.visibility }
-      : {}),
-  }
+  return db.transaction(async (tx) => {
+    const payload = {
+      ...(request.description !== undefined
+        ? { description: request.description }
+        : {}),
+      ...(request.instructions !== undefined
+        ? { instructions: request.instructions }
+        : {}),
+      ...(request.status !== undefined ? { status: request.status } : {}),
+      ...(request.visibility !== undefined
+        ? { visibility: request.visibility }
+        : {}),
+    }
+    const response = await tx
+      .update(skills)
+      .set(payload)
+      .where(and(eq(skills.fileNodeId, fileId)))
+      .returning()
+    const skill = response[0]
+    if (!skill) return undefined
+
+    if (request.status !== undefined || request.visibility !== undefined) {
+      const file = await tx
+        .select({ metadata: fileNodes.metadata })
+        .from(fileNodes)
+        .where(eq(fileNodes.id, fileId))
+        .limit(1)
+      const current = file[0]?.metadata ?? {}
+      await tx
+        .update(fileNodes)
+        .set({
+          metadata: {
+            ...current,
+            ...(request.status !== undefined ? { status: request.status } : {}),
+            ...(request.visibility !== undefined
+              ? { visibility: request.visibility }
+              : {}),
+          },
+        })
+        .where(eq(fileNodes.id, fileId))
+    }
+
+    return skill
+  })
+}
+
+export const mirrorSkillRowFromContent = async (
+  fileNodeId: string,
+  content: string,
+) => {
+  const parsed = parseSkillDocument(content)
+  if (!parsed) return null
   const response = await db
     .update(skills)
-    .set(payload)
-    .where(and(eq(skills.fileNodeId, fileId)))
+    .set({
+      description: parsed.description,
+      instructions: parsed.instructions,
+    })
+    .where(eq(skills.fileNodeId, fileNodeId))
     .returning()
-  return response[0]
+  return response[0] ?? null
 }
 
 export const upsertPendingFileOperation = async (
@@ -1270,19 +1372,22 @@ export const upsertPendingFileOperation = async (
   fileNodeId: string,
   payload: FilePendingOperation,
 ) => {
+  const existing = await getPendingFileOperation(fileNodeId)
+  const nextPayload = preservePatchBaseContent(payload, existing?.payload)
+
   const response = await db
     .insert(pendingFileOperations)
     .values({
       projectId,
       fileNodeId,
-      operation: payload.type,
-      payload,
+      operation: nextPayload.type,
+      payload: nextPayload,
     })
     .onConflictDoUpdate({
       target: [pendingFileOperations.fileNodeId],
       set: {
-        payload: payload,
-        operation: payload.type,
+        payload: nextPayload,
+        operation: nextPayload.type,
         diffApplied: false,
       },
     })
@@ -1342,7 +1447,7 @@ export const listSkills = async (projectId: string) => {
     .where(
       and(
         eq(fileNodes.projectId, projectId),
-        eq(fileNodes.format, "skill"),
+        eq(fileNodes.type, fileType.SKILL),
         eq(skills.status, "published"),
       ),
     )
@@ -1385,7 +1490,7 @@ export const getSkillByName = async (projectId: string, name: string) => {
       and(
         eq(fileNodes.projectId, projectId),
         eq(fileNodes.name, name),
-        eq(fileNodes.format, "skill"),
+        eq(fileNodes.type, fileType.SKILL),
       ),
     )
   const fileNode = fileResponse[0]

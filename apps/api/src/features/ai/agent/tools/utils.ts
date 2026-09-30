@@ -53,19 +53,3 @@ export async function resolveFileByPathOrId(
   }
   return { success: true, file: fileObjectRef }
 }
-
-export function formatSkill(data: {
-  name: string
-  description: string
-  instructions: string
-}) {
-  return `
-Skill details:
-
----
-name: ${data.name}
-description: ${data.description}
----
-${data.instructions}
-`.trim()
-}

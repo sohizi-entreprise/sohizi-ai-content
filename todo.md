@@ -8,3 +8,14 @@
 [ ] create a skill using the agent
 [ ] create a command that can build an entire video from scratch
 [ ] add youtube link to the slash command
+[ ] add file citation tag
+[ ] add websearch sub-agent
+[ ] display the files that have been listed or read uring tool calling
+[ ] Connect cancel request during chat generation
+[ ] create text editor supported rules for formatting and adding different elements
+[ ] Media generator tool in the main agent
+[ ] Design a kind of story board using the document (we'll need a skill for that)
+
+----
+
+[ ] Add copy asset link into the preview dialog

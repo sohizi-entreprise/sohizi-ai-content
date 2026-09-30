@@ -5,39 +5,44 @@ import {
   IconFileLambda,
   IconFolderFilled,
   IconFolderOpenFilled,
+  IconLayoutGrid,
   IconMovie,
   IconMusic,
 } from "@tabler/icons-react"
 import { Clapperboard, File, FileBadge, FileImage } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export function getFileIcon(format: string, name?: string) {
-  switch (format) {
-    case "markdown":
+export function getFileIcon(
+  type: string | null | undefined,
+  format?: string | null,
+  name?: string,
+) {
+  switch (type) {
+    case "document":
       if (name === "context") {
         return <IconFileAi className="size-4 shrink-0 text-yellow-300" />
+      }
+      if (format === "json") {
+        return <IconFileLambda className="size-4 shrink-0 text-green-400" />
+      }
+      if (format === "pdf" || format === "html" || format === "file") {
+        return <IconFileLambda className="size-4 shrink-0 text-green-400" />
       }
       return <IconFileDescription className="size-4 shrink-0 text-blue-400" />
     case "audio":
       return <IconMusic className="size-4 shrink-0 text-green-400" />
     case "video":
-      // text-purple-400
       return <IconMovie className="size-4 shrink-0 text-green-400" />
     case "image":
-      // text-indigo-400
       return <FileImage className="size-4 shrink-0 text-green-400" />
-    case "document":
-      // text-pink-400
-      return <IconFileLambda className="size-4 shrink-0 text-green-400" />
     case "video-editor":
-      // text-yellow-300
       return <Clapperboard className="size-4 shrink-0 text-pink-300" />
-    case "ai-generated":
-      // text-yellow-300
-      return <IconCameraAi className="size-4 shrink-0 text-yellow-300" />
-
     case "skill":
       return <FileBadge className="size-4 shrink-0 text-yellow-300" />
+    case "storyboard":
+      return <IconLayoutGrid className="size-4 shrink-0 text-orange-300" />
+    case "ai-generated":
+      return <IconCameraAi className="size-4 shrink-0 text-yellow-300" />
     default:
       return <File className="size-4 shrink-0 text-muted-foreground" />
   }

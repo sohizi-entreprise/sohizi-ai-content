@@ -1,5 +1,6 @@
 import type { FileCreationRequest, UpdateFileContentRequest } from "../payload"
 import { MAX_FILE_DEPTH } from "../constants"
+import { resolveCreatedFileKind } from "../file-kind"
 import * as fileSystemRepo from "../repo"
 import type { InitialFileContent } from "../repo"
 import { normalizeFileName, ltreeDepth } from "../utils"
@@ -27,13 +28,14 @@ export const createFileNode = async (
     throw new FileSystemInputError("Invalid parent directory")
   }
 
+  const kind = resolveCreatedFileKind(data)
   if (
     !data.directory &&
-    parentFileNode.format &&
-    data.format !== parentFileNode.format
+    parentFileNode.type &&
+    kind.type !== parentFileNode.type
   ) {
     throw new FileSystemInputError(
-      `This folder only allows files with format "${parentFileNode.format}"`,
+      `This folder only allows files with type "${parentFileNode.type}"`,
     )
   }
 
@@ -49,7 +51,7 @@ export const createFileNode = async (
     throw new FileSystemInputError("Invalid file name")
   }
 
-  const payload = { ...data, name: normalizedName }
+  const payload = { ...data, ...kind, name: normalizedName }
 
   if (data.directory) {
     const fileNode = await fileSystemRepo.createFileNode(payload)

@@ -1,6 +1,8 @@
 export { default as explorerPrompt } from "./explorer"
 export { default as webSearcherPrompt } from "./web-searcher"
 export { default as mainAgentPrompt } from "./main-agent"
+export { default as storyboardMdSyntaxPrompt } from "./storyboard-md-syntax"
+export { default as skillMdSyntaxPrompt } from "./skill-md-syntax"
 export { fileSystemPrompt } from "./file-system-prompt"
 export { navigateContextPrompt } from "./navigate-context"
 export { videoExplorerPrompt } from "./video-explorer-prompt"

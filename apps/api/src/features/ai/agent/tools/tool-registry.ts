@@ -10,6 +10,7 @@ import { editFileTool } from "./file-edit"
 import { processSpeechTool } from "./process-speech"
 import { endExecutionLoopTool, finishTool } from "./loop-end"
 import { provideStatusUpdateTool } from "./progress-update"
+import { fileSyntaxTool } from "./file-syntax"
 import {
   listModelsTool,
   getModelSchemaTool,
@@ -24,6 +25,7 @@ import {
   videoAnalyzerTool,
   youtubeAnalyzerTool,
 } from "./media-analyzer"
+import { getJobStatus, submitAssetGenerationJob, waitForJob } from "./wait-job"
 
 const toolRegistry = new Map<string, BaseTool<z.ZodType>>()
 
@@ -57,6 +59,10 @@ export const allTools = {
   imageAnalyzerTool,
   videoAnalyzerTool,
   youtubeAnalyzerTool,
+  submitAssetGenerationJob,
+  waitForJob,
+  getJobStatus,
+  fileSyntaxTool,
 } as const
 
 for (const tool of Object.values(allTools)) {

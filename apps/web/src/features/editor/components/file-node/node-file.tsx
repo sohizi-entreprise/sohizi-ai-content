@@ -14,8 +14,8 @@ import { useEditorStore } from "../../stores/editor-store"
 import { useFileTreeStore } from "../../stores/file-tree-store"
 import { DirectoryNode } from "../file-node/node-directory"
 import { getFileIcon } from "../../utils/get-file-icon"
-import { FILE_FORMAT_OPTIONS } from "./node-menu"
-import type { FileNodeFormat, FileTreeNode, NodeProps } from "../../types"
+import { FILE_TYPE_OPTIONS } from "./node-menu"
+import type { FileNodeType, FileTreeNode, NodeProps } from "../../types"
 import { cn } from "@/lib/utils"
 
 export function DocumentNode(props: NodeProps) {
@@ -38,17 +38,18 @@ export function DocumentNode(props: NodeProps) {
       ref={dragHandle}
       style={style}
       className={cn(
-        "group flex cursor-pointer items-center gap-1 rounded-sm px-1 py-0.5 text-sm",
+        "group flex min-w-0 w-full cursor-pointer items-center gap-1 overflow-hidden rounded-sm px-1 py-0.5 text-sm",
         isSelected
           ? "bg-accent text-foreground"
           : "text-muted-foreground hover:bg-accent hover:text-foreground",
       )}
       onClick={handleClick}
+      data-type={node.data.type}
       data-format={node.data.format}
       data-fileid={node.data.id}
     >
       <span className="w-4 shrink-0" />
-      {getFileIcon(node.data.format ?? "", node.data.name)}
+      {getFileIcon(node.data.type, node.data.format, node.data.name)}
       {node.isEditing ? (
         <input
           autoFocus
@@ -63,7 +64,9 @@ export function DocumentNode(props: NodeProps) {
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
-        <span className="min-w-0 flex-1 truncate">{node.data.name}</span>
+        <span className="min-w-0 flex-1 truncate" title={node.data.name}>
+          {node.data.name}
+        </span>
       )}
       <FileMenu {...props} />
     </div>
@@ -83,11 +86,11 @@ function FileMenu({ node, tree, onCreateFile }: NodeProps) {
 
   const createSiblingFile = (
     placement: "above" | "below",
-    format: FileNodeFormat,
+    type: FileNodeType,
   ) => {
     const idx = siblings?.findIndex((s) => s.id === node.id) ?? 0
     if (!parentId) return
-    onCreateFile(parentId, placement === "above" ? idx : idx + 1, false, format)
+    onCreateFile(parentId, placement === "above" ? idx : idx + 1, false, type)
   }
 
   const onChange = (action: string) => {
@@ -107,14 +110,14 @@ function FileMenu({ node, tree, onCreateFile }: NodeProps) {
 
   const options = getOptions(node.data)
   const closeInsertSubmenus = () => setActiveInsertSubmenu(null)
-  const parentFormat = node.parent?.data.format
-  const lockedFormatOption = parentFormat
-    ? FILE_FORMAT_OPTIONS.find((format) => format.value === parentFormat)
+  const parentType = node.parent?.data.type
+  const lockedTypeOption = parentType
+    ? FILE_TYPE_OPTIONS.find((option) => option.value === parentType)
     : undefined
 
   return (
     <Menubar
-      className="h-auto border-0 bg-transparent p-0 shadow-none"
+      className="h-auto shrink-0 border-0 bg-transparent p-0 shadow-none"
       onClick={(e) => e.stopPropagation()}
     >
       <MenubarMenu>
@@ -135,23 +138,23 @@ function FileMenu({ node, tree, onCreateFile }: NodeProps) {
           onCloseAutoFocus={(e) => e.preventDefault()}
           onClick={(e) => e.stopPropagation()}
         >
-          {lockedFormatOption ? (
+          {lockedTypeOption ? (
             <>
               <MenubarItem
                 onClick={() =>
-                  createSiblingFile("above", lockedFormatOption.value)
+                  createSiblingFile("above", lockedTypeOption.value)
                 }
               >
                 <ArrowUp className="size-4" />
-                Insert {lockedFormatOption.label} above
+                Insert {lockedTypeOption.label} above
               </MenubarItem>
               <MenubarItem
                 onClick={() =>
-                  createSiblingFile("below", lockedFormatOption.value)
+                  createSiblingFile("below", lockedTypeOption.value)
                 }
               >
                 <ArrowDown className="size-4" />
-                Insert {lockedFormatOption.label} below
+                Insert {lockedTypeOption.label} below
               </MenubarItem>
             </>
           ) : (
@@ -167,12 +170,12 @@ function FileMenu({ node, tree, onCreateFile }: NodeProps) {
                   Insert above
                 </MenubarSubTrigger>
                 <MenubarSubContent onClick={(e) => e.stopPropagation()}>
-                  {FILE_FORMAT_OPTIONS.map((format) => (
+                  {FILE_TYPE_OPTIONS.map((option) => (
                     <MenubarItem
-                      key={format.value}
-                      onClick={() => createSiblingFile("above", format.value)}
+                      key={option.value}
+                      onClick={() => createSiblingFile("above", option.value)}
                     >
-                      {format.label}
+                      {option.label}
                     </MenubarItem>
                   ))}
                 </MenubarSubContent>
@@ -188,12 +191,12 @@ function FileMenu({ node, tree, onCreateFile }: NodeProps) {
                   Insert below
                 </MenubarSubTrigger>
                 <MenubarSubContent onClick={(e) => e.stopPropagation()}>
-                  {FILE_FORMAT_OPTIONS.map((format) => (
+                  {FILE_TYPE_OPTIONS.map((option) => (
                     <MenubarItem
-                      key={format.value}
-                      onClick={() => createSiblingFile("below", format.value)}
+                      key={option.value}
+                      onClick={() => createSiblingFile("below", option.value)}
                     >
-                      {format.label}
+                      {option.label}
                     </MenubarItem>
                   ))}
                 </MenubarSubContent>

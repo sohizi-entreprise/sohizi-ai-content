@@ -119,12 +119,14 @@ export const getGenerationRequestsByIds = async (
   projectId: string,
   requestIds: string[],
 ) => {
+  if (requestIds.length === 0) return []
   return db
     .select({
       id: generationRequests.id,
       status: generationRequests.status,
       type: generationRequests.type,
       request: generationRequests.request,
+      assets: generationRequests.assets,
       error: generationRequests.error,
       createdAt: generationRequests.createdAt,
       updatedAt: generationRequests.updatedAt,

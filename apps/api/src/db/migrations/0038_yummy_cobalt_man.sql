@@ -1,0 +1,2 @@
+ALTER TABLE "file_nodes" ADD COLUMN "metadata" jsonb;--> statement-breakpoint
+CREATE INDEX "file_nodes_skill_status_visibility_idx" ON "file_nodes" USING btree (("metadata" ->> 'status'),("metadata" ->> 'visibility')) WHERE "file_nodes"."type" = 'skill';

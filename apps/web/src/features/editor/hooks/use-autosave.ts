@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import {
-  getFileContentQueryOptions,
-  saveFileContentMutationOptions,
+  markPendingOperationApplied,
+  patchSkillContentCache,
+  writeMarkdownContentCache,
+  writeSkillContentCache,
 } from "../query-mutations"
 import { useEditorStore } from "../stores/editor-store"
-import { saveSkill as saveSkillRequest } from "../requests"
+import { saveFileContent, saveSkill } from "../requests"
 import type { SaveSkillPayload } from "../requests"
 
 export type AutosavePayload = {
@@ -21,9 +23,170 @@ type UseAutosaveOptions = {
   onSaveError?: (error: Error) => void
 }
 
+type SaveContext = { projectId: string; fileId: string }
+
+type AutosaveCoreOptions<TInput, TPayload> = UseAutosaveOptions & {
+  /** Resolve the debounced input into the payload sent to the server. */
+  resolveInput: (input: TInput) => TPayload
+  /** Reflect the payload in the query cache immediately (optimistic). */
+  writeOptimisticCache: (payload: TPayload, ctx: SaveContext) => void
+  /** Persist the payload and update the cache with server data on success. */
+  persist: (payload: TPayload, ctx: SaveContext) => Promise<void>
+}
+
 /**
- * Returns a debounced save function. Call it with the current payload (synopsis or script)
- * whenever the editor content changes; the actual save runs after `duration` ms of no further calls.
+ * Shared autosave engine. It debounces `save()`, but crucially it also FLUSHES
+ * any pending work when the file changes, the editor unmounts (tab switch), or
+ * the page is hidden. Persistence goes through the provided `persist` function
+ * (a raw request, not a component-bound mutation) so a flush that runs during
+ * unmount still completes. Without this, switching tabs before the debounce
+ * fired dropped the edit and left the saving indicator stuck on "saving".
+ */
+function useAutosaveCore<TInput, TPayload>(
+  options: AutosaveCoreOptions<TInput, TPayload>,
+) {
+  const { duration, projectId, fileId } = options
+
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isSavingRef = useRef(false)
+  // The most recent input scheduled by the debounce but not yet sent.
+  const latestInputRef = useRef<TInput | null>(null)
+  // A payload captured while a save is in flight, to send once it settles.
+  const pendingPayloadRef = useRef<TPayload | null>(null)
+
+  const projectIdRef = useRef(projectId)
+  const fileIdRef = useRef(fileId)
+  const durationRef = useRef(duration)
+  const resolveInputRef = useRef(options.resolveInput)
+  const writeOptimisticCacheRef = useRef(options.writeOptimisticCache)
+  const persistRef = useRef(options.persist)
+  const onSaveCompleteRef = useRef(options.onSaveComplete)
+  const onSaveErrorRef = useRef(options.onSaveError)
+
+  projectIdRef.current = projectId
+  fileIdRef.current = fileId
+  durationRef.current = duration
+  resolveInputRef.current = options.resolveInput
+  writeOptimisticCacheRef.current = options.writeOptimisticCache
+  persistRef.current = options.persist
+  onSaveCompleteRef.current = options.onSaveComplete
+  onSaveErrorRef.current = options.onSaveError
+
+  const setSavingStatus = useEditorStore((s) => s.setSavingStatus)
+
+  const runSave = useCallback(
+    async (payload: TPayload, ctx: SaveContext) => {
+      // Always reflect the latest payload in the cache so a switch-away-and-back
+      // remounts from the newest content instead of the last server revision.
+      writeOptimisticCacheRef.current(payload, ctx)
+
+      if (isSavingRef.current) {
+        pendingPayloadRef.current = payload
+        return
+      }
+
+      isSavingRef.current = true
+      setSavingStatus(ctx.fileId, "saving")
+      try {
+        await persistRef.current(payload, ctx)
+        onSaveCompleteRef.current?.()
+        setSavingStatus(ctx.fileId, "saved")
+      } catch (error) {
+        setSavingStatus(ctx.fileId, "error")
+        onSaveErrorRef.current?.(
+          error instanceof Error ? error : new Error(String(error)),
+        )
+      } finally {
+        isSavingRef.current = false
+
+        const next = pendingPayloadRef.current
+        pendingPayloadRef.current = null
+        if (next !== null) {
+          void runSave(next, ctx)
+        }
+      }
+    },
+    [setSavingStatus],
+  )
+
+  // Send whatever is scheduled right now for the given file, cancelling the
+  // debounce. Used by unmount / file-change / pagehide flushes.
+  const flush = useCallback(
+    (ctx: SaveContext) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+
+      const pending = latestInputRef.current
+      latestInputRef.current = null
+      if (pending === null) return
+      if (!ctx.projectId || !ctx.fileId) return
+
+      void runSave(resolveInputRef.current(pending), ctx)
+    },
+    [runSave],
+  )
+
+  const save = useCallback(
+    (input: TInput) => {
+      const activeProjectId = projectIdRef.current
+      const activeFileId = fileIdRef.current
+      if (!activeProjectId || !activeFileId) return
+
+      // Only schedule here; expensive serialization is deferred to flush time.
+      latestInputRef.current = input
+      setSavingStatus(activeFileId, "saving")
+
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = null
+        const pending = latestInputRef.current
+        latestInputRef.current = null
+        if (pending === null) return
+
+        const ctx = {
+          projectId: projectIdRef.current,
+          fileId: fileIdRef.current,
+        }
+        if (!ctx.projectId || !ctx.fileId) return
+        void runSave(resolveInputRef.current(pending), ctx)
+      }, durationRef.current)
+    },
+    [runSave, setSavingStatus],
+  )
+
+  // Flush on unmount (tab switch unmounts the keyed editor) and whenever the
+  // file changes. The cleanup captures the OLD ctx so pending edits are written
+  // to the file they belong to. useLayoutEffect runs its cleanup before the
+  // editor's passive-effect destroy, so a deferred serializer still sees a live
+  // editor.
+  useLayoutEffect(() => {
+    const ctx = { projectId, fileId }
+    return () => {
+      flush(ctx)
+    }
+  }, [projectId, fileId, flush])
+
+  // Persist before the browser tab is closed/reloaded instead of relying on the
+  // debounce, which would otherwise be discarded.
+  useEffect(() => {
+    const handler = () => {
+      flush({ projectId: projectIdRef.current, fileId: fileIdRef.current })
+    }
+    window.addEventListener("pagehide", handler)
+    return () => {
+      window.removeEventListener("pagehide", handler)
+    }
+  }, [flush])
+
+  return save
+}
+
+/**
+ * Returns a debounced save function for markdown / storyboard content. Call it
+ * with the current markdown whenever the editor changes; the save runs after
+ * `duration` ms of quiet, or immediately on tab switch / page hide.
  */
 export function useAutoSave({
   duration,
@@ -32,78 +195,36 @@ export function useAutoSave({
   onSaveComplete,
   onSaveError,
 }: UseAutosaveOptions) {
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isSavingRef = useRef(false)
-  const pendingContentRef = useRef<string | null>(null)
-  const onSaveCompleteRef = useRef(onSaveComplete)
-  const onSaveErrorRef = useRef(onSaveError)
-  const setSavingStatus = useEditorStore((s) => s.setSavingStatus)
-  const { mutateAsync: saveFileContent } = useMutation(
-    saveFileContentMutationOptions(projectId, fileId),
-  )
+  const queryClient = useQueryClient()
 
-  onSaveCompleteRef.current = onSaveComplete
-  onSaveErrorRef.current = onSaveError
-
-  const runSave = useCallback(
-    async (content: string, diffApplied?: boolean) => {
-      if (isSavingRef.current) {
-        pendingContentRef.current = content
-        return
-      }
-
-      isSavingRef.current = true
-      try {
-        await saveFileContent({ content, diffApplied })
-        onSaveCompleteRef.current?.()
-        setSavingStatus(fileId, "saved")
-      } catch (error) {
-        setSavingStatus(fileId, "error")
-        onSaveErrorRef.current?.(
-          error instanceof Error ? error : new Error(String(error)),
-        )
-      } finally {
-        isSavingRef.current = false
-
-        const pendingContent = pendingContentRef.current
-        pendingContentRef.current = null
-
-        if (pendingContent !== null && projectId && fileId) {
-          void runSave(pendingContent, diffApplied)
-        }
+  return useAutosaveCore<AutosavePayload, AutosavePayload>({
+    duration,
+    projectId,
+    fileId,
+    onSaveComplete,
+    onSaveError,
+    resolveInput: (input) => input,
+    writeOptimisticCache: (payload, ctx) => {
+      writeMarkdownContentCache(queryClient, ctx.projectId, ctx.fileId, {
+        content: payload.content,
+      })
+    },
+    persist: async (payload, ctx) => {
+      const result = await saveFileContent(
+        ctx.projectId,
+        ctx.fileId,
+        payload.content,
+        payload.diffApplied,
+      )
+      writeMarkdownContentCache(queryClient, ctx.projectId, ctx.fileId, {
+        content: result.content,
+        revision: result.revision,
+      })
+      if (payload.diffApplied) {
+        markPendingOperationApplied(queryClient, ctx.projectId, ctx.fileId)
       }
     },
-    [fileId, projectId, saveFileContent, setSavingStatus],
-  )
-
-  const save = useCallback(
-    (payload: AutosavePayload) => {
-      const { content, diffApplied } = payload
-
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-
-      if (!projectId || !fileId) return
-
-      setSavingStatus(fileId, "saving")
-
-      timeoutRef.current = setTimeout(() => {
-        timeoutRef.current = null
-        void runSave(content, diffApplied)
-      }, duration)
-    },
-    [duration, fileId, projectId, runSave, setSavingStatus],
-  )
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
-    }
-  }, [])
-
-  return save
+  })
 }
 
 /** Pass a getter so callers can defer expensive serialization until the debounce fires. */
@@ -122,111 +243,21 @@ export function useSkillAutosave({
   onSaveComplete,
   onSaveError,
 }: UseAutosaveOptions) {
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isSavingRef = useRef(false)
-  const pendingSkillRef = useRef<SaveSkillPayload | null>(null)
-  const latestSkillRef = useRef<SkillAutosaveInput | null>(null)
-  const onSaveCompleteRef = useRef(onSaveComplete)
-  const onSaveErrorRef = useRef(onSaveError)
-  const fileIdRef = useRef(fileId)
-  const projectIdRef = useRef(projectId)
   const queryClient = useQueryClient()
-  const setSavingStatus = useEditorStore((s) => s.setSavingStatus)
 
-  fileIdRef.current = fileId
-  projectIdRef.current = projectId
-  onSaveCompleteRef.current = onSaveComplete
-  onSaveErrorRef.current = onSaveError
-
-  const { mutateAsync: saveSkill } = useMutation({
-    mutationFn: (skill: SaveSkillPayload) =>
-      saveSkillRequest(projectIdRef.current, fileIdRef.current, skill),
-    onSuccess: (data) => {
-      queryClient.setQueryData(
-        getFileContentQueryOptions(projectIdRef.current, fileIdRef.current)
-          .queryKey,
-        {
-          type: "skill" as const,
-          data,
-        },
-      )
+  return useAutosaveCore<SkillAutosaveInput, SaveSkillPayload>({
+    duration,
+    projectId,
+    fileId,
+    onSaveComplete,
+    onSaveError,
+    resolveInput: resolveSkillAutosaveInput,
+    writeOptimisticCache: (payload, ctx) => {
+      patchSkillContentCache(queryClient, ctx.projectId, ctx.fileId, payload)
+    },
+    persist: async (payload, ctx) => {
+      const data = await saveSkill(ctx.projectId, ctx.fileId, payload)
+      writeSkillContentCache(queryClient, ctx.projectId, ctx.fileId, data)
     },
   })
-
-  const runSave = useCallback(
-    async (skill: SaveSkillPayload) => {
-      const activeFileId = fileIdRef.current
-      const activeProjectId = projectIdRef.current
-
-      if (isSavingRef.current) {
-        pendingSkillRef.current = skill
-        return
-      }
-
-      isSavingRef.current = true
-      setSavingStatus(activeFileId, "saving")
-      try {
-        await saveSkill(skill)
-        onSaveCompleteRef.current?.()
-        setSavingStatus(activeFileId, "saved")
-      } catch (error) {
-        setSavingStatus(activeFileId, "error")
-        onSaveErrorRef.current?.(
-          error instanceof Error ? error : new Error(String(error)),
-        )
-      } finally {
-        isSavingRef.current = false
-
-        const pendingSkill = pendingSkillRef.current
-        pendingSkillRef.current = null
-
-        if (pendingSkill !== null && activeProjectId && activeFileId) {
-          void runSave(pendingSkill)
-        }
-      }
-    },
-    [saveSkill, setSavingStatus],
-  )
-
-  const save = useCallback(
-    (skill: SkillAutosaveInput) => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-
-      const activeFileId = fileIdRef.current
-      const activeProjectId = projectIdRef.current
-      if (!activeProjectId || !activeFileId) return
-
-      // Keep only a lightweight schedule on each keystroke; serialize when the timer fires.
-      latestSkillRef.current = skill
-
-      timeoutRef.current = setTimeout(() => {
-        timeoutRef.current = null
-        const pending = latestSkillRef.current
-        latestSkillRef.current = null
-        if (!pending) return
-        void runSave(resolveSkillAutosaveInput(pending))
-      }, duration)
-    },
-    [duration, runSave],
-  )
-
-  useEffect(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-      timeoutRef.current = null
-    }
-    pendingSkillRef.current = null
-    latestSkillRef.current = null
-  }, [fileId, projectId])
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
-    }
-  }, [])
-
-  return save
 }

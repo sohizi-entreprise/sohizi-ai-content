@@ -25,8 +25,8 @@ import {
 import { useEditorStore } from "../../stores/editor-store"
 import { insertNodeAt as insertNodeInCache } from "../../stores/file-tree-cache"
 import { getDirectoryIcon } from "../../utils/get-file-icon"
-import { FILE_FORMAT_OPTIONS } from "./node-menu"
-import type { FileNodeFormat, FileTreeNode, NodeProps } from "../../types"
+import { FILE_TYPE_OPTIONS } from "./node-menu"
+import type { FileNodeType, FileTreeNode, NodeProps } from "../../types"
 import { getlistFileTreePerDirectoryOptions } from "@/features/projects/query-mutation"
 import { cn } from "@/lib/utils"
 import { useFileUpload } from "@/hooks/use-file-upload"
@@ -69,12 +69,13 @@ export function DirectoryNode(props: NodeProps) {
       ref={dragHandle}
       style={style}
       className={cn(
-        "group flex cursor-pointer items-center gap-1 rounded-sm px-1 py-0.5 text-sm",
+        "group flex min-w-0 w-full cursor-pointer items-center gap-1 overflow-hidden rounded-sm px-1 py-0.5 text-sm",
         isSelected
           ? "bg-accent text-foreground"
           : "text-muted-foreground hover:bg-accent hover:text-foreground",
       )}
       onClick={handleClick}
+      data-type={node.data.type}
       data-format={node.data.format}
       data-fileid={node.data.id}
     >
@@ -98,7 +99,9 @@ export function DirectoryNode(props: NodeProps) {
           onClick={onInputClick}
         />
       ) : (
-        <span className="min-w-0 flex-1 truncate">{node.data.name}</span>
+        <span className="min-w-0 flex-1 truncate" title={node.data.name}>
+          {node.data.name}
+        </span>
       )}
       <DirectoryMenu {...props} />
     </div>
@@ -120,10 +123,10 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
       getlistFileTreePerDirectoryOptions(node.data.projectId, node.data.id),
     )
 
-  const createFile = async (format: FileNodeFormat) => {
+  const createFile = async (type: FileNodeType) => {
     if (!node.isOpen) node.open()
     await ensureChildrenLoaded()
-    onCreateFile(node.data.id, 0, false, format)
+    onCreateFile(node.data.id, 0, false, type)
   }
 
   const onChange = async (action: string) => {
@@ -155,12 +158,12 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
   const options = getOptions(node.data)
   const [newFolderOption, ...remainingOptions] = options
   const closeNewFileSubmenu = () => setIsNewFileSubmenuOpen(false)
-  const lockedFormatOption = node.data.format
-    ? FILE_FORMAT_OPTIONS.find((format) => format.value === node.data.format)
+  const lockedTypeOption = node.data.type
+    ? FILE_TYPE_OPTIONS.find((option) => option.value === node.data.type)
     : undefined
 
   return (
-    <div>
+    <div className="shrink-0">
       <Menubar
         className="h-auto border-0 bg-transparent p-0 shadow-none"
         onClick={(e) => e.stopPropagation()}
@@ -192,14 +195,14 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
               {newFolderOption.label}
             </MenubarItem>
 
-            {lockedFormatOption ? (
+            {lockedTypeOption ? (
               <MenubarItem
-                onClick={() => createFile(lockedFormatOption.value)}
+                onClick={() => createFile(lockedTypeOption.value)}
                 onFocus={closeNewFileSubmenu}
                 onPointerMove={closeNewFileSubmenu}
               >
                 <FilePlus className="size-4 text-muted-foreground" />
-                New {lockedFormatOption.label}
+                New {lockedTypeOption.label}
               </MenubarItem>
             ) : (
               <MenubarGroup>
@@ -213,12 +216,12 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
                   </MenubarSubTrigger>
                   <MenubarSubContent>
                     <MenubarGroup>
-                      {FILE_FORMAT_OPTIONS.map((format) => (
+                      {FILE_TYPE_OPTIONS.map((option) => (
                         <MenubarItem
-                          key={format.value}
-                          onClick={() => createFile(format.value)}
+                          key={option.value}
+                          onClick={() => createFile(option.value)}
                         >
-                          {format.label}
+                          {option.label}
                         </MenubarItem>
                       ))}
                     </MenubarGroup>

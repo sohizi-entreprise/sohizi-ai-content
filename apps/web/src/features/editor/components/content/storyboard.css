@@ -1,0 +1,838 @@
+/* ==========================================================================
+   Storyboard editor
+   ========================================================================== */
+
+.storyboard-layout {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.storyboard-editor-col {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: none;
+}
+
+.storyboard-editor-inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2.5rem 4.5rem 8.5rem 2rem;
+}
+
+/* ---- Scene ------------------------------------------------------------- */
+
+.storyboard-scene {
+  position: relative;
+  padding: 1.5rem 1.75rem 1.75rem;
+  margin-bottom: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--card);
+}
+
+.storyboard-scene-dragging {
+  opacity: 0.6;
+}
+
+.storyboard-scene-rail {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.1rem;
+  display: flex;
+  flex-direction: row;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 1;
+}
+
+.storyboard-scene:hover .storyboard-scene-rail,
+.storyboard-scene:focus-within .storyboard-scene-rail {
+  opacity: 1;
+}
+
+.storyboard-rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.75rem;
+  width: 1.75rem;
+  border-radius: 0.5rem;
+  color: var(--muted-foreground);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.storyboard-rail-btn:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.storyboard-rail-btn-danger:hover {
+  background: var(--destructive);
+  color: var(--destructive-foreground, #fff);
+}
+
+.storyboard-scene-body {
+  display: block;
+}
+
+/* Atomic "SCENE 01" eyebrow, stacked on its own line above the title. It sits
+   in the same top band as the action rail, but is short and left-aligned so it
+   never collides with the buttons. */
+.storyboard-scene-eyebrow {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 0.625rem;
+  user-select: none;
+}
+
+.storyboard-scene [data-type="scene-title"] {
+  display: block;
+  font-size: 1.375rem;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--foreground);
+  outline: none;
+}
+
+.storyboard-scene [data-type="scene-action"] {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--foreground);
+  outline: none;
+}
+
+.storyboard-scene-field {
+  display: grid;
+  grid-template-columns: 6.75rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  margin-top: 0.7rem;
+}
+
+.storyboard-scene-field-label {
+  padding-top: 0.15rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  user-select: none;
+}
+
+.storyboard-scene-field-value {
+  min-height: 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--foreground);
+  outline: none;
+}
+
+.storyboard-scene-field[data-field="sceneLighting"] {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.storyboard-meta {
+  display: none;
+}
+
+/* ---- Empty-state placeholders (via @tiptap/extension-placeholder) ------ */
+
+.storyboard-scene [data-type="scene-title"].is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  font-weight: 500;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.storyboard-scene [data-type="scene-action"].is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.storyboard-scene-field[data-field="sceneEnvironment"].is-empty
+  .storyboard-scene-field-value::before,
+.storyboard-scene-field[data-field="sceneLighting"].is-empty
+  .storyboard-scene-field-value::before {
+  color: var(--muted-foreground);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.storyboard-scene-field[data-field="sceneEnvironment"].is-empty
+  .storyboard-scene-field-value::before {
+  content: "Location and time of day";
+}
+
+.storyboard-scene-field[data-field="sceneLighting"].is-empty
+  .storyboard-scene-field-value::before {
+  content: "Lighting";
+}
+
+/* ---- Shot grid --------------------------------------------------------- */
+
+.storyboard-shot-grid {
+  margin-top: 1.25rem;
+}
+
+.storyboard-shot-grid-inner {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+  .storyboard-shot-grid-inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .storyboard-shot-grid-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Let the shots participate directly in the grid. Tiptap's React node view
+   nests the editable content in two wrappers (the NodeViewContent element and
+   an inner [data-node-view-content-react] div); both must be flattened with
+   `display: contents` so each shot becomes a direct grid item alongside the
+   trailing "Append Shot" placeholder. */
+.storyboard-shot-grid-content,
+.storyboard-shot-grid-content > [data-node-view-content-react] {
+  display: contents;
+}
+
+.storyboard-shot-grid-over .storyboard-shot-grid-inner {
+  outline: 2px dashed var(--primary);
+  outline-offset: 6px;
+  border-radius: 0.75rem;
+}
+
+/* ---- Shot card --------------------------------------------------------- */
+
+.storyboard-shot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.storyboard-shot:hover {
+  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+}
+
+.storyboard-shot-dragging {
+  opacity: 0.6;
+}
+
+.storyboard-shot-drop-over {
+  outline: 2px dashed var(--primary);
+  outline-offset: 4px;
+}
+
+.storyboard-shot-toolbar {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 1;
+}
+
+.storyboard-shot:hover .storyboard-shot-toolbar {
+  opacity: 1;
+}
+
+.storyboard-shot-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.75rem;
+  width: 1.75rem;
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--background) 70%, transparent);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.storyboard-shot-btn:hover {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.storyboard-shot-btn-danger:hover {
+  background: var(--destructive);
+  color: var(--destructive-foreground, #fff);
+  border-color: var(--destructive);
+}
+
+.storyboard-shot-image {
+  aspect-ratio: var(--storyboard-aspect, 16 / 9);
+  overflow: hidden;
+  background: color-mix(in oklab, var(--muted) 60%, var(--card));
+}
+
+.storyboard-shot-image img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+.storyboard-shot-image-empty {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+}
+
+.storyboard-shot-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card) 85%, var(--background));
+}
+
+.storyboard-shot-desc {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted-foreground) !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- Add-shot placeholder --------------------------------------------- */
+
+.storyboard-shot-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 100%;
+  padding: 1.5rem 1rem;
+  border: 1.5px dashed var(--border);
+  border-radius: 0.75rem;
+  text-align: center;
+  color: var(--muted-foreground);
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.storyboard-shot-placeholder:hover {
+  border-color: color-mix(in oklab, var(--primary) 60%, var(--border));
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--primary) 5%, transparent);
+}
+
+.storyboard-shot-placeholder-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.75rem;
+  width: 2.75rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--muted) 70%, var(--card));
+  color: var(--muted-foreground);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.storyboard-shot-placeholder:hover .storyboard-shot-placeholder-icon {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.storyboard-shot-placeholder-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.storyboard-shot-placeholder-hint {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+/* ---- Scene preview panel ---------------------------------------------- */
+
+/* Floating glass pill, vertically centered on the right. Collapsed it is just
+   a slim stack of thumbs; pointer entry / focus / an in-progress reorder
+   expands it. The edge the pointer crossed stays fixed: entry from the top
+   grows downward, entry from the bottom grows upward. */
+.storyboard-panel-hit {
+  position: absolute;
+  top: 50%;
+  right: calc(0.875rem - 0.65rem);
+  z-index: 20;
+  padding: 0.65rem;
+  transform: translateY(-50%);
+}
+
+.storyboard-panel {
+  display: flex;
+  flex-direction: column;
+  width: 3.25rem;
+  max-height: min(32rem, calc(100% - 3rem));
+  padding: 0.45rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: 1.625rem;
+  background: color-mix(in oklab, var(--card) 38%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 10px 32px
+    color-mix(in oklab, var(--foreground) 10%, transparent);
+  transition:
+    width 0.22s ease,
+    padding 0.22s ease,
+    border-radius 0.22s ease,
+    background 0.22s ease;
+}
+
+.storyboard-panel-hit.is-open .storyboard-panel,
+.storyboard-panel-hit:focus-within .storyboard-panel,
+.storyboard-panel-hit:has(.storyboard-panel-item-dragging) .storyboard-panel {
+  width: 13.5rem;
+  padding: 0.7rem 0.6rem;
+  border-radius: 1.35rem;
+  background: color-mix(in oklab, var(--card) 55%, transparent);
+}
+
+.storyboard-panel-hit:has(.storyboard-panel-item-dragging) .storyboard-panel {
+  overflow: visible;
+}
+
+.storyboard-panel-title {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted-foreground);
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0 0.35rem;
+  pointer-events: none;
+  transition:
+    max-height 0.22s ease,
+    opacity 0.18s ease,
+    padding 0.22s ease;
+}
+
+.storyboard-panel-hit.is-open .storyboard-panel-title,
+.storyboard-panel-hit:focus-within .storyboard-panel-title,
+.storyboard-panel-hit:has(.storyboard-panel-item-dragging)
+  .storyboard-panel-title {
+  max-height: 1.5rem;
+  opacity: 1;
+  padding: 0 0.35rem 0.5rem;
+}
+
+.storyboard-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 0;
+  overflow: auto;
+}
+
+.storyboard-panel-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0.2rem;
+  border-radius: 1.5rem;
+  text-align: left;
+  cursor: grab;
+  transition:
+    background 0.15s ease,
+    gap 0.22s ease,
+    padding 0.22s ease,
+    border-radius 0.22s ease;
+}
+
+.storyboard-panel-hit.is-open .storyboard-panel-item,
+.storyboard-panel-hit:focus-within .storyboard-panel-item,
+.storyboard-panel-hit:has(.storyboard-panel-item-dragging)
+  .storyboard-panel-item {
+  justify-content: flex-start;
+  gap: 0.55rem;
+  padding: 0.3rem;
+  border-radius: 0.75rem;
+}
+
+.storyboard-panel-item:hover {
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+}
+
+.storyboard-panel-item-dragging {
+  opacity: 0.6;
+}
+
+.storyboard-panel-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.15rem;
+  width: 2.15rem;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 1.075rem;
+  background: color-mix(in oklab, var(--muted) 75%, transparent);
+  transition:
+    height 0.22s ease,
+    width 0.22s ease,
+    border-radius 0.22s ease;
+}
+
+.storyboard-panel-hit.is-open .storyboard-panel-thumb,
+.storyboard-panel-hit:focus-within .storyboard-panel-thumb,
+.storyboard-panel-hit:has(.storyboard-panel-item-dragging)
+  .storyboard-panel-thumb {
+  height: 2.4rem;
+  width: 2.4rem;
+  border-radius: 0.55rem;
+}
+
+.storyboard-panel-thumb img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+.storyboard-panel-meta {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    max-width 0.22s ease,
+    opacity 0.16s ease;
+}
+
+.storyboard-panel-hit.is-open .storyboard-panel-meta,
+.storyboard-panel-hit:focus-within .storyboard-panel-meta,
+.storyboard-panel-hit:has(.storyboard-panel-item-dragging)
+  .storyboard-panel-meta {
+  max-width: 9rem;
+  opacity: 1;
+}
+
+.storyboard-panel-index {
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+}
+
+.storyboard-panel-name {
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.storyboard-panel-empty {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  transition:
+    max-height 0.22s ease,
+    opacity 0.18s ease,
+    padding 0.22s ease;
+}
+
+.storyboard-panel-hit.is-open .storyboard-panel-empty,
+.storyboard-panel-hit:focus-within .storyboard-panel-empty {
+  max-height: 2rem;
+  opacity: 1;
+  padding: 0.35rem 0.4rem 0;
+}
+
+/* ---- Bottom toolbar ---------------------------------------------------- */
+
+.storyboard-toolbar {
+  position: absolute;
+  bottom: 1.15rem;
+  left: 50%;
+  z-index: 20;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.storyboard-toolbar-pill {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0.45rem 0.3rem 0.3rem;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--card) 55%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 10px 32px
+    color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.storyboard-toolbar-play,
+.storyboard-toolbar-action,
+.storyboard-sequence-play,
+.storyboard-sequence-nav {
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+
+.storyboard-toolbar-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.25rem;
+  width: 2.25rem;
+  border-radius: 999px;
+  background: #d6f01a;
+  color: #111;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.storyboard-toolbar-play:hover:not(:disabled) {
+  transform: scale(1.04);
+}
+
+.storyboard-toolbar-play:disabled,
+.storyboard-toolbar-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.storyboard-toolbar-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.25rem;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+  transition: background 0.15s ease;
+}
+
+.storyboard-toolbar-action:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+}
+
+.storyboard-toolbar-divider {
+  width: 1px;
+  height: 1.15rem;
+  margin: 0 0.2rem;
+  background: color-mix(in oklab, var(--border) 80%, transparent);
+}
+
+/* ---- Sequence dialog -------------------------------------------------- */
+
+.storyboard-sequence-modes {
+  position: absolute;
+  top: 0.9rem;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  transform: translateX(-50%);
+  border: 1px solid color-mix(in oklab, var(--primary) 45%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--card) 58%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.storyboard-sequence-mode {
+  height: 1.85rem;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.storyboard-sequence-mode:hover:not(.storyboard-sequence-mode-active) {
+  color: var(--foreground);
+}
+
+.storyboard-sequence-mode-active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+
+.storyboard-sequence-slide {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  padding: 3.5rem 1.5rem 5.25rem;
+}
+
+.storyboard-sequence-slide-frame {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  aspect-ratio: var(--storyboard-aspect, 16 / 9);
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: #0a0a0a;
+}
+
+.storyboard-sequence-slide-frame img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.storyboard-sequence-slide-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  height: 100%;
+  min-height: 12rem;
+  color: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
+  font-size: 0.8125rem;
+}
+
+.storyboard-sequence-subtitle {
+  flex: 0 0 auto;
+  margin: 1rem 10% 0;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: pretty;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 55%);
+  white-space: pre-line;
+}
+
+.storyboard-sequence-remote {
+  position: absolute;
+  bottom: 1.15rem;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0.55rem 0.3rem 0.3rem;
+  transform: translateX(-50%);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--card) 58%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 10px 32px
+    color-mix(in oklab, var(--foreground) 12%, transparent);
+}
+
+.storyboard-sequence-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.25rem;
+  width: 2.25rem;
+  border-radius: 999px;
+  background: #d6f01a;
+  color: #111;
+}
+
+.storyboard-sequence-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.85rem;
+  width: 1.85rem;
+  border-radius: 999px;
+  color: var(--foreground);
+}
+
+.storyboard-sequence-nav:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+}
+
+.storyboard-sequence-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.storyboard-sequence-counter {
+  min-width: 8.5rem;
+  padding: 0 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+}
