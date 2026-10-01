@@ -18,13 +18,13 @@ function param(
 
 describe("validateInput", () => {
   it("requires omitted required fields", () => {
-    expect(validateInput([param({ key: "prompt", required: true })], {})).toEqual(
-      {
-        isValid: false,
-        errorMsg:
-          "This field 'prompt' is required. Please provide a value for this field.",
-      },
-    )
+    expect(
+      validateInput([param({ key: "prompt", required: true })], {}),
+    ).toEqual({
+      isValid: false,
+      errorMsg:
+        "This field 'prompt' is required. Please provide a value for this field.",
+    })
   })
 
   it("accepts valid numbers and rejects out-of-range values", () => {

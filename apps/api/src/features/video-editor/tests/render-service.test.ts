@@ -1,13 +1,14 @@
 /**
- * Render job tests — the database and the Cloudflare render service are both
- * replaced with in-memory fakes so the lifecycle, idempotency, ownership and
- * status reconciliation rules can be exercised without infrastructure.
+ * Render job tests — the database, Remotion Lambda, and billing are replaced
+ * with in-memory fakes so the lifecycle, credits, and status reconciliation
+ * rules can be exercised without infrastructure.
  * Run with `bun test`.
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { BadRequest, Conflict, NotFound } from "../../error"
+import { InsufficientCreditsError } from "../../billing/errors"
 import type { VideoRenderJob } from "@/db/schema"
 import type { RemoteRenderJob } from "../render-client"
 import type { CreateRenderInput } from "../render-schema"
@@ -16,6 +17,7 @@ const PROJECT_ID = randomUUID()
 const OTHER_PROJECT_ID = randomUUID()
 const COMPOSITION_ID = randomUUID()
 const USER_ID = "user_1"
+const ORGANIZATION_ID = "org_1"
 
 process.env.RENDER_ALLOWED_MEDIA_HOSTS = "cdn.sohizi.test"
 
@@ -29,8 +31,12 @@ let composition: { id: string; projectId: string; version: number } | null =
   null
 let remoteJobs = new Map<string, RemoteRenderJob>()
 let createRemoteRenderError: Error | null = null
+let reserveError: Error | null = null
 const createdRemoteRenders: string[] = []
 const cancelledRemoteRenders: string[] = []
+const reservedKeys: string[] = []
+const settledReservations: string[] = []
+const refundedReservations: string[] = []
 
 function buildJob(overrides: Partial<VideoRenderJob> = {}): VideoRenderJob {
   const id = overrides.id ?? randomUUID()
@@ -47,6 +53,9 @@ function buildJob(overrides: Partial<VideoRenderJob> = {}): VideoRenderJob {
     durationInFrames: 300,
     fileName: "export.mp4",
     remoteJobId: id,
+    billingReservationId: id,
+    outputBucket: null,
+    functionName: null,
     outputKey: null,
     outputSizeInBytes: null,
     progress: 0,
@@ -101,6 +110,14 @@ mock.module("../repo", () => ({
 
 mock.module("../render-client", () => ({
   parseAllowedMediaHosts: () => ["cdn.sohizi.test"],
+  estimateRenderCost: async () => ({
+    costUsd: 0.05,
+    framesPerLambda: 20,
+    lambdasInvoked: 16,
+    memorySizeInMb: 2048,
+    diskSizeInMb: 2048,
+    region: "us-east-1",
+  }),
   createRemoteRender: async (input: { jobId: string }) => {
     if (createRemoteRenderError) throw createRemoteRenderError
     createdRemoteRenders.push(input.jobId)
@@ -109,6 +126,8 @@ mock.module("../render-client", () => ({
       status: "queued",
       progress: 0,
       renderedFrames: 0,
+      outputBucket: "remotionlambda-test",
+      functionName: "remotion-render-test",
     })
     remoteJobs.set(input.jobId, job)
     return job
@@ -118,12 +137,51 @@ mock.module("../render-client", () => ({
     cancelledRemoteRenders.push(jobId)
     remoteJobs.delete(jobId)
   },
+  presignRenderOutput: async (input: {
+    bucketName: string
+    objectKey: string
+    fileName: string
+  }) => ({
+    url: `https://signed.sohizi.test/${input.bucketName}/${input.objectKey}?name=${encodeURIComponent(input.fileName)}`,
+  }),
 }))
 
-mock.module("../../media-engine/storage", () => ({
-  generateSignedDownloadUrl: async (storageKey: string, fileName: string) => ({
-    url: `https://signed.sohizi.test/${storageKey}?name=${encodeURIComponent(fileName)}`,
-  }),
+mock.module("@/features/billing", () => ({
+  billingService: {
+    reserve: async (input: { idempotencyKey: string; id?: string }) => {
+      if (reserveError) throw reserveError
+      reservedKeys.push(input.idempotencyKey)
+      return {
+        id: input.id ?? randomUUID(),
+        status: "reserved",
+        metadata: { estimatedCostUsd: 0.05 },
+      }
+    },
+    settle: async (input: { reservationId: string }) => {
+      settledReservations.push(input.reservationId)
+      return { id: input.reservationId, status: "settled" }
+    },
+    refund: async (reservationId: string) => {
+      refundedReservations.push(reservationId)
+    },
+    getReservation: async (reservationId: string) => ({
+      id: reservationId,
+      status: "reserved",
+      metadata: { estimatedCostUsd: 0.05 },
+    }),
+    renewIfNearExpiry: async () => undefined,
+  },
+  safeRefund: async (
+    _billing: unknown,
+    reservationId: string | null | undefined,
+  ) => {
+    if (reservationId) refundedReservations.push(reservationId)
+  },
+  InsufficientCreditsError,
+}))
+
+mock.module("@/lib/inngest/client", () => ({
+  inngest: { send: async () => undefined },
 }))
 
 const renderService = await import("../render-service")
@@ -169,14 +227,24 @@ function snapshot(
 }
 
 const create = () =>
-  renderService.createRender(COMPOSITION_ID, PROJECT_ID, USER_ID, snapshot())
+  renderService.createRender(
+    COMPOSITION_ID,
+    PROJECT_ID,
+    USER_ID,
+    ORGANIZATION_ID,
+    snapshot(),
+  )
 
 beforeEach(() => {
   jobs.clear()
   remoteJobs = new Map()
   createRemoteRenderError = null
+  reserveError = null
   createdRemoteRenders.length = 0
   cancelledRemoteRenders.length = 0
+  reservedKeys.length = 0
+  settledReservations.length = 0
+  refundedReservations.length = 0
   composition = { id: COMPOSITION_ID, projectId: PROJECT_ID, version: 7 }
 })
 
@@ -209,9 +277,40 @@ describe("createRender", () => {
     const input = snapshot("https://evil.test/videos/a.mp4")
 
     await expect(
-      renderService.createRender(COMPOSITION_ID, PROJECT_ID, USER_ID, input),
+      renderService.createRender(
+        COMPOSITION_ID,
+        PROJECT_ID,
+        USER_ID,
+        ORGANIZATION_ID,
+        input,
+      ),
     ).rejects.toBeInstanceOf(BadRequest)
     expect(createdRemoteRenders).toHaveLength(0)
+  })
+
+  test("rejects a composition longer than 20 minutes", async () => {
+    const input = snapshot()
+    input.composition.durationInFrames = 30 * 60 * 20 + 1
+
+    await expect(
+      renderService.createRender(
+        COMPOSITION_ID,
+        PROJECT_ID,
+        USER_ID,
+        ORGANIZATION_ID,
+        input,
+      ),
+    ).rejects.toBeInstanceOf(BadRequest)
+    expect(createdRemoteRenders).toHaveLength(0)
+    expect(reservedKeys).toHaveLength(0)
+  })
+
+  test("rejects when the organization cannot cover the estimate", async () => {
+    reserveError = new InsufficientCreditsError(ORGANIZATION_ID, 10n, 0n)
+
+    await expect(create()).rejects.toBeInstanceOf(BadRequest)
+    expect(createdRemoteRenders).toHaveLength(0)
+    expect([...jobs.values()]).toHaveLength(0)
   })
 
   test("returns the in-flight job instead of starting a second render", async () => {
@@ -258,6 +357,7 @@ describe("createRender", () => {
     expect(stored).toHaveLength(1)
     expect(stored[0].status).toBe("failed")
     expect(stored[0].failureCode).toBe("submit_failed")
+    expect(refundedReservations).toHaveLength(1)
   })
 })
 
@@ -296,6 +396,7 @@ describe("getRender", () => {
     expect(jobs.get(job.id)?.outputKey).toBe(
       `renders/${PROJECT_ID}/${job.id}.mp4`,
     )
+    expect(settledReservations).toEqual([job.id])
   })
 
   test("surfaces a sanitized failure", async () => {
@@ -316,6 +417,26 @@ describe("getRender", () => {
       code: "container_error",
       message: "Render crashed",
     })
+    expect(refundedReservations).toEqual([job.id])
+  })
+
+  test("keeps an in-flight job when progress is temporarily unavailable", async () => {
+    const job = await create()
+    remoteJobs.set(
+      job.id,
+      remote({
+        jobId: job.id,
+        status: "rendering",
+        progress: 0.4,
+        stale: true,
+      }),
+    )
+
+    const status = await renderService.getRender(job.id, PROJECT_ID)
+
+    expect(status.status).toBe("rendering")
+    expect(status.error).toBeNull()
+    expect(refundedReservations).toHaveLength(0)
   })
 
   test("fails a job the render service no longer knows about", async () => {
@@ -326,6 +447,7 @@ describe("getRender", () => {
 
     expect(status.status).toBe("failed")
     expect(status.error?.code).toBe("render_lost")
+    expect(refundedReservations).toEqual([job.id])
   })
 
   test("does not poll a job that already reached a terminal state", async () => {
@@ -356,6 +478,7 @@ describe("cancelRender", () => {
     expect(cancelled.status).toBe("cancelled")
     expect(cancelledRemoteRenders).toEqual([job.id])
     expect(jobs.get(job.id)?.finishedAt).not.toBeNull()
+    expect(refundedReservations).toEqual([job.id])
   })
 
   test("refuses to cancel a completed render", async () => {
@@ -373,6 +496,7 @@ describe("getRenderDownload", () => {
     const job = buildJob({
       status: "completed",
       progress: 100,
+      outputBucket: "remotionlambda-test",
       outputKey: `renders/${PROJECT_ID}/out.mp4`,
       outputSizeInBytes: 4096,
     })

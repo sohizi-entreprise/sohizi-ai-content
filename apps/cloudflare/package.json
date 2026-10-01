@@ -16,13 +16,10 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types",
-    "container:build": "docker build --platform linux/amd64 -f Dockerfile -t sohizi-remotion-renderer ../..",
-    "container:smoke": "./scripts/render-smoke-test.sh",
     "rollback": "wrangler rollback",
     "r2-seed": "wrangler r2 object put sohizi-ai-dev/freesound_community.mp3 --file=/Users/sagelokongi/Desktop/freesound_community.mp3"
   },
   "dependencies": {
-    "@cloudflare/containers": "^0.3.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {

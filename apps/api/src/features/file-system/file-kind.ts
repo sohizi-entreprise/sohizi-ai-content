@@ -59,11 +59,7 @@ export function classifyFileKindFromAsset(
   assetType: "image" | "video" | "audio" | "document" | "html",
   contentType?: string,
 ): { type: FileType; format: FileFormat } {
-  if (
-    assetType === "image" ||
-    assetType === "video" ||
-    assetType === "audio"
-  ) {
+  if (assetType === "image" || assetType === "video" || assetType === "audio") {
     return { type: assetType, format: fileFormat.FILE }
   }
   if (assetType === "html") {
@@ -104,9 +100,7 @@ export function migrateLegacyFormat(
       return {
         type: fileType.DOCUMENT,
         format:
-          contentType === "application/pdf"
-            ? fileFormat.PDF
-            : fileFormat.FILE,
+          contentType === "application/pdf" ? fileFormat.PDF : fileFormat.FILE,
       }
     case "video-editor":
       return { type: fileType.VIDEO_EDITOR, format: fileFormat.JSON }

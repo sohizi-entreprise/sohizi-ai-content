@@ -62,4 +62,4 @@ todos.json
 .vscode
 .pnpm-store
 
-apps/remotion-package
+# apps/remotion-package

@@ -3,19 +3,31 @@ import * as repo from "./repo"
 import {
   cancelRemoteRender,
   createRemoteRender,
+  estimateRenderCost,
   getRemoteRender,
   parseAllowedMediaHosts,
+  presignRenderOutput,
   type RemoteRenderJob,
 } from "./render-client"
-import { generateSignedDownloadUrl } from "../media-engine/storage"
+import {
+  EXPORT_TOO_LONG_MESSAGE,
+  isExportTooLong,
+  type CreateRenderInput,
+  type RenderComposition,
+} from "./render-schema"
+import { RENDER_RESERVATION_TTL_MS, lambdaUsdToCredits } from "./render-pricing"
+import { inngest } from "@/lib/inngest/client"
+import {
+  billingService,
+  InsufficientCreditsError,
+  safeRefund,
+} from "@/features/billing"
 import { BadRequest, Conflict, InternalServerError, NotFound } from "../error"
-import type { CreateRenderInput, RenderComposition } from "./render-schema"
 import type { VideoRenderJob } from "@/db/schema"
 
 /**
- * Render jobs are owned by the API: the editor never talks to the Cloudflare
- * render service directly, and finished MP4s stay private in R2 behind a
- * short-lived signed URL.
+ * Render jobs are owned by the API: the editor never talks to Remotion Lambda
+ * directly. Finished MP4s stay private in S3 behind a short-lived signed URL.
  */
 
 export type RenderJobView = {
@@ -39,19 +51,51 @@ export const createRender = async (
   compositionId: string,
   projectId: string,
   userId: string,
+  organizationId: string,
   input: CreateRenderInput,
 ): Promise<RenderJobView> => {
   const composition = await assertCompositionAccess(compositionId, projectId)
   assertMediaHostsAllowed(input.composition)
+  assertExportDuration(input.composition)
 
   const existing = await repo.getActiveRenderJobForComposition(compositionId)
   if (existing) {
     const reconciled = await reconcileRenderJob(existing)
-    // Re-submitting while a render is in flight returns the running job.
     if (isActive(reconciled)) return toView(reconciled)
   }
 
   const jobId = uuidv4()
+  const estimate = await estimateRenderCost(input.composition)
+  const estimatedCredits = lambdaUsdToCredits(estimate.costUsd, {
+    overbook: true,
+  })
+
+  let reservationId: string
+  try {
+    const reservation = await billingService.reserve({
+      organizationId,
+      userId,
+      operation: "video-export",
+      estimatedCredits,
+      ttlMs: RENDER_RESERVATION_TTL_MS,
+      id: jobId,
+      idempotencyKey: `render:${jobId}`,
+      metadata: {
+        projectId,
+        compositionId,
+        estimatedCostUsd: estimate.costUsd,
+      },
+    })
+    reservationId = reservation.id
+  } catch (error) {
+    if (error instanceof InsufficientCreditsError) {
+      throw new BadRequest(
+        "You don't have enough credits to export this video.",
+      )
+    }
+    throw error
+  }
+
   const job = await repo.createRenderJob({
     id: jobId,
     projectId,
@@ -64,6 +108,8 @@ export const createRender = async (
     durationInFrames: input.composition.durationInFrames,
     fileName: input.fileName,
     remoteJobId: jobId,
+    billingReservationId: reservationId,
+    functionName: process.env.REMOTION_FUNCTION_NAME ?? null,
   })
 
   let remote: RemoteRenderJob
@@ -74,8 +120,10 @@ export const createRender = async (
       compositionId,
       fileName: input.fileName,
       composition: input.composition,
+      concurrency: estimate.concurrency,
     })
   } catch (error) {
+    await safeRefund(billingService, reservationId, "render-submit-failed")
     await repo.updateRenderJob(jobId, {
       status: "failed",
       failureCode: "submit_failed",
@@ -86,7 +134,15 @@ export const createRender = async (
     throw error
   }
 
-  return toView(await applyRemoteStatus(job, remote))
+  const submitted = await repo.updateRenderJob(jobId, {
+    remoteJobId: remote.jobId,
+    outputBucket: remote.outputBucket ?? null,
+    functionName: remote.functionName ?? process.env.REMOTION_FUNCTION_NAME,
+  })
+
+  await enqueueRenderPoll(jobId, projectId)
+
+  return toView(await applyRemoteStatus(submitted ?? job, remote))
 }
 
 export const getRender = async (
@@ -116,7 +172,11 @@ export const cancelRender = async (
   }
   if (!isActive(job)) return toView(job)
 
-  await cancelRemoteRender(job.remoteJobId, projectId)
+  await cancelRemoteRender(job.remoteJobId, {
+    bucketName: job.outputBucket,
+    functionName: job.functionName,
+  })
+  await refundRender(job, "render-cancelled")
   const cancelled = await repo.updateRenderJob(job.id, {
     status: "cancelled",
     finishedAt: new Date(),
@@ -130,11 +190,15 @@ export const getRenderDownload = async (
 ): Promise<{ url: string; fileName: string; sizeInBytes: number | null }> => {
   const job = await reconcileRenderJob(await loadJob(renderJobId, projectId))
 
-  if (job.status !== "completed" || !job.outputKey) {
+  if (job.status !== "completed" || !job.outputKey || !job.outputBucket) {
     throw new Conflict("This render is not ready to download")
   }
 
-  const { url } = await generateSignedDownloadUrl(job.outputKey, job.fileName)
+  const { url } = await presignRenderOutput({
+    bucketName: job.outputBucket,
+    objectKey: job.outputKey,
+    fileName: job.fileName,
+  })
   return { url, fileName: job.fileName, sizeInBytes: job.outputSizeInBytes }
 }
 
@@ -146,21 +210,25 @@ function isActive(job: VideoRenderJob): boolean {
   return job.status === "queued" || job.status === "rendering"
 }
 
-/** Pulls the authoritative state from the render service into our own row. */
-async function reconcileRenderJob(
+/** Pulls the authoritative state from Lambda into our own row. */
+export async function reconcileRenderJob(
   job: VideoRenderJob,
 ): Promise<VideoRenderJob> {
   if (!isActive(job)) return job
 
-  const remote = await getRemoteRender(job.remoteJobId, job.projectId)
+  const remote = await getRemoteRender(job.remoteJobId, {
+    bucketName: job.outputBucket,
+    functionName: job.functionName,
+  })
   if (!remote) {
-    // The Workflow instance is gone, so no progress will ever arrive.
-    return await update(job, {
+    const lost = await update(job, {
       status: "failed",
       failureCode: "render_lost",
       failureMessage: "The render service no longer has this job",
       finishedAt: new Date(),
     })
+    await refundRender(lost, "render-lost")
+    return lost
   }
 
   return applyRemoteStatus(job, remote)
@@ -170,40 +238,56 @@ async function applyRemoteStatus(
   job: VideoRenderJob,
   remote: RemoteRenderJob,
 ): Promise<VideoRenderJob> {
+  if (remote.stale) {
+    return update(job, {
+      status: job.status === "queued" ? "rendering" : job.status,
+      startedAt: job.startedAt ?? new Date(),
+    })
+  }
+
   const progress = toPercent(remote.progress)
 
   if (remote.status === "completed") {
     if (!remote.outputKey) {
-      return update(job, {
+      const failed = await update(job, {
         status: "failed",
         failureCode: "missing_output",
         failureMessage: "The render finished without producing a file",
         finishedAt: new Date(),
       })
+      await refundRender(failed, "render-missing-output")
+      return failed
     }
-    return update(job, {
+    const completed = await update(job, {
       status: "completed",
       progress: 100,
       outputKey: remote.outputKey,
+      outputBucket: remote.outputBucket ?? job.outputBucket,
       outputSizeInBytes: remote.sizeInBytes ?? null,
       finishedAt: job.finishedAt ?? new Date(),
     })
+    await settleRender(completed, remote.accruedCostUsd)
+    return completed
   }
 
   if (remote.status === "failed") {
-    return update(job, {
+    const failed = await update(job, {
       status: "failed",
       failureCode: remote.error?.code ?? "render_failed",
       failureMessage: remote.error?.message ?? "The render failed",
       finishedAt: job.finishedAt ?? new Date(),
     })
+    await refundRender(failed, "render-failed")
+    return failed
   }
 
   if (remote.status === "cancelled") {
-    return update(job, {
+    const cancelled = await update(job, {
       status: "cancelled",
       finishedAt: job.finishedAt ?? new Date(),
     })
+    await refundRender(cancelled, "render-cancelled")
+    return cancelled
   }
 
   if (remote.status === "rendering") {
@@ -240,6 +324,56 @@ function toPercent(progress: number): number {
   return Math.min(100, Math.max(0, Math.round(progress * 100)))
 }
 
+async function settleRender(
+  job: VideoRenderJob,
+  accruedCostUsd: number | undefined,
+): Promise<void> {
+  if (!job.billingReservationId) return
+  const reservation = await billingService.getReservation(
+    job.billingReservationId,
+  )
+  if (!reservation || reservation.status !== "reserved") return
+
+  const estimatedCostUsd = Number(reservation.metadata?.estimatedCostUsd)
+  const costUsd =
+    typeof accruedCostUsd === "number" && Number.isFinite(accruedCostUsd)
+      ? accruedCostUsd
+      : Number.isFinite(estimatedCostUsd)
+        ? estimatedCostUsd
+        : 0
+
+  await billingService.settle({
+    reservationId: job.billingReservationId,
+    actualCredits: lambdaUsdToCredits(costUsd, { overbook: false }),
+    metadata: {
+      renderJobId: job.id,
+      accruedCostUsd,
+      estimatedCostUsd,
+    },
+  })
+}
+
+async function refundRender(
+  job: VideoRenderJob,
+  reason: string,
+): Promise<void> {
+  await safeRefund(billingService, job.billingReservationId, reason)
+}
+
+async function enqueueRenderPoll(
+  renderJobId: string,
+  projectId: string,
+): Promise<void> {
+  try {
+    await inngest.send({
+      name: "video-editor/render.poll",
+      data: { renderJobId, projectId },
+    })
+  } catch (error) {
+    console.error("[render] failed to enqueue poller", renderJobId, error)
+  }
+}
+
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -264,6 +398,12 @@ async function assertCompositionAccess(
     throw new NotFound("Composition not found")
   }
   return composition
+}
+
+function assertExportDuration(composition: RenderComposition): void {
+  if (isExportTooLong(composition.durationInFrames, composition.fps)) {
+    throw new BadRequest(EXPORT_TOO_LONG_MESSAGE)
+  }
 }
 
 function assertMediaHostsAllowed(composition: RenderComposition): void {

@@ -127,9 +127,7 @@ describe("classifyFileKindFromAsset", () => {
   })
 
   it("maps document assets to pdf or file from content type", () => {
-    expect(
-      classifyFileKindFromAsset("document", "application/pdf"),
-    ).toEqual({
+    expect(classifyFileKindFromAsset("document", "application/pdf")).toEqual({
       type: fileType.DOCUMENT,
       format: fileFormat.PDF,
     })
@@ -185,20 +183,20 @@ describe("resolveCreatedFileKind", () => {
 
 describe("isMarkdownEditable", () => {
   it("allows markdown documents, storyboards, and skills", () => {
-    expect(
-      isMarkdownEditable(fileType.DOCUMENT, fileFormat.MARKDOWN),
-    ).toBe(true)
-    expect(
-      isMarkdownEditable(fileType.STORYBOARD, fileFormat.MARKDOWN),
-    ).toBe(true)
+    expect(isMarkdownEditable(fileType.DOCUMENT, fileFormat.MARKDOWN)).toBe(
+      true,
+    )
+    expect(isMarkdownEditable(fileType.STORYBOARD, fileFormat.MARKDOWN)).toBe(
+      true,
+    )
     expect(isMarkdownEditable(fileType.SKILL, fileFormat.MARKDOWN)).toBe(true)
   })
 
   it("rejects json, video-editor, and media files", () => {
     expect(isMarkdownEditable(fileType.DOCUMENT, fileFormat.JSON)).toBe(false)
-    expect(
-      isMarkdownEditable(fileType.VIDEO_EDITOR, fileFormat.JSON),
-    ).toBe(false)
+    expect(isMarkdownEditable(fileType.VIDEO_EDITOR, fileFormat.JSON)).toBe(
+      false,
+    )
     expect(isMarkdownEditable(fileType.IMAGE, fileFormat.FILE)).toBe(false)
     expect(isMarkdownEditable(fileType.VIDEO, fileFormat.FILE)).toBe(false)
     expect(isMarkdownEditable(fileType.AUDIO, fileFormat.FILE)).toBe(false)

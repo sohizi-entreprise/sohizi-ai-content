@@ -328,6 +328,9 @@ export type CreateRenderJobData = {
   durationInFrames: number
   fileName: string
   remoteJobId: string
+  billingReservationId?: string | null
+  outputBucket?: string | null
+  functionName?: string | null
 }
 
 export const createRenderJob = async (data: CreateRenderJobData) => {
@@ -375,6 +378,10 @@ export const listRenderJobsForComposition = async (
 export type UpdateRenderJobData = {
   status?: VideoRenderJobStatus
   progress?: number
+  remoteJobId?: string
+  billingReservationId?: string | null
+  outputBucket?: string | null
+  functionName?: string | null
   outputKey?: string | null
   outputSizeInBytes?: number | null
   failureCode?: string | null

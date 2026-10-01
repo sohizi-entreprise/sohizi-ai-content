@@ -19,3 +19,8 @@
 ----
 
 [ ] Add copy asset link into the preview dialog
+<!-- For video rendering scale -->
+[ ] Add a queue in front of the video renderer so that we can control the concurrency
+[ ] Create a pool of lambda function in different regions, so we can have more concurrency quotas
+[ ] Add a cache on the video export in such way that if the composition doesn't change we resolve directly to an existing video if present
+[ ] when we click the export let's open up a dialog where user chooses the setting (fps, where to save the output and how to name the file)

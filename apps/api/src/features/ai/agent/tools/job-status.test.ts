@@ -221,4 +221,3 @@ describe("pendingJobsFinishRefusal", () => {
     expect(state.status).toBe("finished")
   })
 })
-

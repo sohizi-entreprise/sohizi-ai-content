@@ -155,6 +155,18 @@ describe("useVideoExport", () => {
     expect(result.current.isBusy).toBe(true)
   })
 
+  it("refuses to export a video longer than 20 minutes", async () => {
+    useVideoEditorStore.setState({ fps: 30, durationInFrames: 30 * 60 * 20 + 1 })
+
+    const { result } = renderHook(() => useVideoExport(), { wrapper })
+    await act(() => result.current.start("My Video"))
+
+    expect(requests.createRender).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith(
+      "Exports are limited to 20 minutes.",
+    )
+  })
+
   it("refuses to export an empty timeline", async () => {
     useVideoEditorStore.setState({ tracks: [{ ...videoTrack, clips: [] }] })
 

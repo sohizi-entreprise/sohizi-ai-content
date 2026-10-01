@@ -3,8 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { isAxiosError } from "axios"
 import { toast } from "sonner"
 import {
+  EXPORT_TOO_LONG_MESSAGE,
   RENDER_CONTRACT_VERSION,
-  RENDER_LIMITS,
+  isExportTooLong,
 } from "@sohizi/video-composition"
 import { useVideoEditorStore } from "../store/editor-store"
 import { useVideoEditorUiStore } from "../store/ui-store"
@@ -139,8 +140,8 @@ export function useVideoExport(): VideoExportState {
         toast.error("Add something to the timeline before exporting.")
         return
       }
-      if (composition.durationInFrames > RENDER_LIMITS.maxDurationInFrames) {
-        toast.error("This video is too long to export.")
+      if (isExportTooLong(composition.durationInFrames, composition.fps)) {
+        toast.error(EXPORT_TOO_LONG_MESSAGE)
         return
       }
 

@@ -234,11 +234,15 @@ export const videoEditorRoutes = new Elysia({
   .post(
     "/compositions/:compositionId/renders",
     async ({ params, body, user }) => {
-      await assertProjectAccess(user.id, params.projectId)
+      const { organizationId } = await assertProjectAccess(
+        user.id,
+        params.projectId,
+      )
       return renderService.createRender(
         params.compositionId,
         params.projectId,
         user.id,
+        organizationId,
         body,
       )
     },

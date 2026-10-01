@@ -3,11 +3,8 @@ import { z } from "zod"
 /**
  * Snapshot contract for `POST /video-editor/:projectId/compositions/:compositionId/renders`.
  *
- * The Cloudflare Worker re-validates every field strictly before a container ever
- * sees it (see `cloudflare/src/render/contracts.ts`). This layer therefore only
- * enforces what the API itself must know: the contract version, the render
- * limits we are willing to bill for, and enough clip shape to check media hosts.
- * Keep `RENDER_CONTRACT_VERSION` and `RENDER_LIMITS` in step with the Worker.
+ * This layer enforces the contract version, the render limits we are willing
+ * to bill for, and enough clip shape to check media hosts.
  */
 export const RENDER_CONTRACT_VERSION = 1
 
@@ -17,11 +14,24 @@ export const RENDER_LIMITS = {
   minDimension: 16,
   maxDimension: 4096,
   minDurationInFrames: 1,
-  maxDurationInFrames: 72_000,
+  maxDurationSeconds: 20 * 60,
+  maxDurationInFrames: 20 * 60 * 120,
   maxTracks: 100,
   maxClips: 1_000,
   maxPayloadBytes: 8 * 1024 * 1024,
 } as const
+
+export const EXPORT_TOO_LONG_MESSAGE = "Exports are limited to 20 minutes."
+
+export function isExportTooLong(
+  durationInFrames: number,
+  fps: number,
+): boolean {
+  if (!Number.isFinite(durationInFrames) || !Number.isFinite(fps) || fps <= 0) {
+    return true
+  }
+  return durationInFrames / fps > RENDER_LIMITS.maxDurationSeconds
+}
 
 const trackTypes = [
   "video",

@@ -21,7 +21,7 @@ export type RenderCompositionInput = {
 
 /**
  * Guard rails applied by the render service. They exist to keep a single
- * render inside the container's memory, disk and time budget.
+ * render inside Lambda's memory, disk and time budget.
  */
 export const RENDER_LIMITS = {
   minFps: 1,
@@ -29,10 +29,25 @@ export const RENDER_LIMITS = {
   minDimension: 16,
   maxDimension: 4096,
   minDurationInFrames: 1,
-  /** 20 minutes at 60fps. */
-  maxDurationInFrames: 72_000,
+  /** Wall-clock cap enforced before a render is submitted. */
+  maxDurationSeconds: 20 * 60,
+  /** 20 minutes at `maxFps`, so schema validation still accepts that timeline. */
+  maxDurationInFrames: 20 * 60 * 120,
   maxTracks: 100,
   maxClips: 1_000,
   /** Serialized snapshot size, in bytes. */
   maxPayloadBytes: 8 * 1024 * 1024,
 } as const
+
+export const EXPORT_TOO_LONG_MESSAGE = "Exports are limited to 20 minutes."
+
+/** True when the composition is longer than the paid export cap. */
+export function isExportTooLong(
+  durationInFrames: number,
+  fps: number,
+): boolean {
+  if (!Number.isFinite(durationInFrames) || !Number.isFinite(fps) || fps <= 0) {
+    return true
+  }
+  return durationInFrames / fps > RENDER_LIMITS.maxDurationSeconds
+}

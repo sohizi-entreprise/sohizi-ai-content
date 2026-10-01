@@ -794,8 +794,14 @@ export const videoRenderJobs = pgTable(
     height: integer("height").notNull(),
     durationInFrames: integer("duration_in_frames").notNull(),
     fileName: varchar("file_name", { length: 200 }).notNull(),
-    /** Workflow instance id in the Cloudflare render service. */
+    /** Remotion Lambda render id (placeholder UUID until submit succeeds). */
     remoteJobId: varchar("remote_job_id", { length: 100 }).notNull(),
+    billingReservationId: uuid("billing_reservation_id").references(
+      () => billingReservations.id,
+      { onDelete: "set null" },
+    ),
+    outputBucket: text("output_bucket"),
+    functionName: varchar("function_name", { length: 200 }),
     outputKey: text("output_key"),
     outputSizeInBytes: bigint("output_size_in_bytes", { mode: "number" }),
     progress: integer("progress").default(0).notNull(),

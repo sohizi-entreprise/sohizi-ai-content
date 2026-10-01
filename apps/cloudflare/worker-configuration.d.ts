@@ -4,37 +4,18 @@
 interface __BaseEnv_Env {
 	R2_BUCKET: R2Bucket;
 	MAX_MP3_BYTES: "20971520";
-	RENDER_ALLOWED_MEDIA_HOSTS: "media-dev.sohizi.com,cdn.sohizi.com,sohizi-ai-dev.r2.dev" | "cdn.sohizi.com";
-	RENDER_CONCURRENCY: "2" | "4";
-	RENDER_POLL_INTERVAL_SECONDS: "5";
-	RENDER_TIMEOUT_MINUTES: "30" | "45";
-	RENDER_CONTAINER: DurableObjectNamespace<import("./src/index").RemotionRenderContainer>;
-	RENDER_WORKFLOW: Workflow<Parameters<import("./src/index").RenderWorkflow['run']>[0]['payload']>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./src/index");
-		durableNamespaces: "RemotionRenderContainer";
 	}
 	interface DevEnv {
 		R2_BUCKET: R2Bucket;
 		MAX_MP3_BYTES: "20971520";
-		RENDER_ALLOWED_MEDIA_HOSTS: "media-dev.sohizi.com,cdn.sohizi.com,sohizi-ai-dev.r2.dev";
-		RENDER_CONCURRENCY: "2";
-		RENDER_POLL_INTERVAL_SECONDS: "5";
-		RENDER_TIMEOUT_MINUTES: "30";
-		RENDER_CONTAINER: DurableObjectNamespace<import("./src/index").RemotionRenderContainer>;
-		RENDER_WORKFLOW: Workflow<Parameters<import("./src/index").RenderWorkflow['run']>[0]['payload']>;
 	}
 	interface ProdEnv {
 		R2_BUCKET: R2Bucket;
 		MAX_MP3_BYTES: "20971520";
-		RENDER_ALLOWED_MEDIA_HOSTS: "cdn.sohizi.com";
-		RENDER_CONCURRENCY: "4";
-		RENDER_POLL_INTERVAL_SECONDS: "5";
-		RENDER_TIMEOUT_MINUTES: "45";
-		RENDER_CONTAINER: DurableObjectNamespace<import("./src/index").RemotionRenderContainer>;
-		RENDER_WORKFLOW: Workflow<Parameters<import("./src/index").RenderWorkflow['run']>[0]['payload']>;
 	}
 	interface Env extends __BaseEnv_Env {}
 }
@@ -43,7 +24,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "MAX_MP3_BYTES" | "RENDER_ALLOWED_MEDIA_HOSTS" | "RENDER_CONCURRENCY" | "RENDER_POLL_INTERVAL_SECONDS" | "RENDER_TIMEOUT_MINUTES">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "MAX_MP3_BYTES">> {}
 }
 
 // Begin runtime types
