@@ -29,7 +29,6 @@ const getModelSchemaSchema = z.object({
 
 const submitRequestSchema = z.object({
   modelId: z.string().describe("The model ID to use for the generation"),
-  prompt: z.string().min(1).describe("The prompt to generate the media"),
   parameters: z
     .record(z.string(), z.unknown())
     .describe(

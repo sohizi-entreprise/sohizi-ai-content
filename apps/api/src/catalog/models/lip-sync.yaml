@@ -1,0 +1,16 @@
+# Align a video subject's mouth to new audio. per_inference uses WaveSpeed base_price when the price API needs a real file.
+models:
+  - id: sync/lipsync-3
+    name: Sync Lipsync 3
+    provider: sync
+    description: >
+      Current Sync zero-shot lip sync. Prefer to retarget an existing video to new audio. sync_mode handles length mismatch; default cut_off. Listed rate is WaveSpeed base; duration can raise the charge.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.135
+    categories: [lip-sync]
+    parameters:
+      - { id: parameter_video, required: true }
+      - { id: parameter_audio, required: true }
+      - { id: parameter_sync_mode, required: false, defaultValue: cut_off, allowedValues: [bounce, loop, cut_off, silence, remap] }

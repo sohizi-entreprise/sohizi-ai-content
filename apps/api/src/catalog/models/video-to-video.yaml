@@ -1,0 +1,98 @@
+# Instruction-driven video edits. per_inference uses WaveSpeed base_price when the price API needs a real file.
+models:
+  - id: bytedance/seedance-2.5/video-edit
+    name: Seedance 2.5 Edit
+    provider: bytedance
+    description: >
+      Best Seedance instruction edit. Prefer for subject/style changes with optional reference images and audio. Input longer than 30s is trimmed; shorter than 4s is padded. generate_audio false keeps the source track. Listed rate is WaveSpeed base; resolution can raise the charge.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 1.10
+    categories: [video-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_video, required: true }
+      - { id: parameter_reference_images, required: false, constraints: { max: 30 } }
+      - { id: parameter_reference_audios, required: false, constraints: { max: 10 } }
+      - { id: parameter_resolution, required: true, defaultValue: 720p, allowedValues: [480p, 720p, 1080p, 4k] }
+      - { id: parameter_generate_audio, required: false, defaultValue: true }
+
+  - id: bytedance/seedance-2.0/video-edit
+    name: Seedance 2.0 Edit
+    provider: bytedance
+    description: >
+      Previous Seedance edit. Inputs longer than 15s are trimmed. Prefer when 2.5 is unnecessary. Listed rate is WaveSpeed base; duration and resolution can raise the charge.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.75
+    categories: [video-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_video, required: true }
+      - { id: parameter_reference_images, required: false, constraints: { max: 9 } }
+      - { id: parameter_reference_audios, required: false, constraints: { max: 3 } }
+      - { id: parameter_aspect_ratio, required: false, allowedValues: [16:9, 9:16, 4:3, 3:4, 1:1, 21:9] }
+      - { id: parameter_duration, required: true, defaultValue: 5, constraints: { min: 4, max: 15, step: 1 } }
+      - { id: parameter_resolution, required: true, defaultValue: 720p, allowedValues: [480p, 720p, 1080p, 4k] }
+      - { id: parameter_generate_audio, required: false, defaultValue: true }
+
+  - id: kwaivgi/kling-video-o3-pro/video-edit
+    name: Kling O3 Pro Edit
+    provider: kwaivgi
+    description: >
+      Highest Kling O3 video edit. Refer to extras as <<<image_1>>> and the source as <<<video_1>>>. Source 3-15s, trimmed to 15s. Up to 4 reference images. Listed rate is WaveSpeed base.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.84
+    categories: [video-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_video, required: true }
+      - { id: parameter_images, required: false, constraints: { max: 4 } }
+
+  - id: kwaivgi/kling-video-o3-std/video-edit
+    name: Kling O3 Std Edit
+    provider: kwaivgi
+    description: >
+      Cheaper Kling O3 video edit. Same <<<image_n>>> / <<<video_1>>> references as Pro. Prefer for draft edits. Listed rate is WaveSpeed base.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.63
+    categories: [video-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_video, required: true }
+      - { id: parameter_images, required: false, constraints: { max: 4 } }
+
+  - id: google/gemini-omni-1.1-flash/video-edit
+    name: Gemini Omni 1.1 Flash Edit
+    provider: google
+    description: >
+      Newest Gemini Omni video edit with resolution control. Prefer for cheap instruction edits. Listed rate is WaveSpeed base; resolution can raise the charge.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.12
+    categories: [video-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_video, required: true }
+      - { id: parameter_resolution, required: true, defaultValue: 720p, allowedValues: [360p, 720p, 1080p, 4k] }
+
+  - id: google/gemini-omni-flash/video-edit
+    name: Gemini Omni Flash Edit
+    provider: google
+    description: >
+      Previous Gemini Omni video edit. No resolution control. Prefer 1.1 Flash unless this endpoint is required. Listed rate is WaveSpeed base.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.13
+    categories: [video-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_video, required: true }

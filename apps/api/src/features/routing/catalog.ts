@@ -7,7 +7,7 @@ import {
 } from "@/type"
 import {
   hasProviderApiKey,
-  isRegisteredMediaVendor,
+  isRegisteredMediaAdapter,
 } from "@/features/media-engine/providers/factory"
 import type { MediaRoute } from "./types"
 
@@ -20,6 +20,7 @@ export async function listMediaRoutes(modelId: string): Promise<MediaRoute[]> {
     .select({
       modelId: llmModels.id,
       vendorName: llmVendors.name,
+      adapter: llmVendors.adapter,
       apiName: llmVendorsAndModels.apiName,
       priority: llmVendorsAndModels.priority,
       rateLimit: llmVendors.rateLimit,
@@ -41,7 +42,7 @@ export async function listMediaRoutes(modelId: string): Promise<MediaRoute[]> {
 
   const routes: MediaRoute[] = []
   for (const row of rows) {
-    if (!isRegisteredMediaVendor(row.vendorName)) continue
+    if (!isRegisteredMediaAdapter(row.adapter)) continue
     if (!hasProviderApiKey(row.vendorName)) continue
 
     const rateLimit = row.rateLimit ?? DEFAULT_VENDOR_RATE_LIMIT
@@ -49,6 +50,7 @@ export async function listMediaRoutes(modelId: string): Promise<MediaRoute[]> {
     routes.push({
       modelId: row.modelId,
       vendorName: row.vendorName,
+      adapter: row.adapter,
       apiName: row.apiName,
       priority: row.priority,
       rpm: rateLimit.rpm,

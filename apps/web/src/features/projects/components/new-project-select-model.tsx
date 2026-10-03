@@ -5,6 +5,11 @@ import { Spinner } from "@sohizi/ui/spinner"
 import { useNewProjectStore } from "../store/new-project-store"
 import type { LlmModel } from "@/features/chat/types"
 import { listCatalogModelsQueryOptions } from "@/features/chat/query-mutation"
+import { ReasoningEffortSelect } from "@/features/chat/components/reasoning-effort-select"
+import {
+  reasoningEffortLabel,
+  resolveReasoningEffort,
+} from "@/features/chat/lib/reasoning-effort"
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -21,6 +26,12 @@ import {
 export default function NewProjectSelectModel() {
   const modelId = useNewProjectStore((state) => state.modelId)
   const setModelId = useNewProjectStore((state) => state.setModelId)
+  const reasoningEffortByModelId = useNewProjectStore(
+    (state) => state.reasoningEffortByModelId,
+  )
+  const setReasoningEffort = useNewProjectStore(
+    (state) => state.setReasoningEffort,
+  )
   const { data: models = [], isLoading } = useQuery(
     listCatalogModelsQueryOptions(["leading-agent"]),
   )
@@ -48,12 +59,20 @@ export default function NewProjectSelectModel() {
     return map
   }, [models])
 
+  const selectedReasoning = resolveReasoningEffort(
+    selected,
+    reasoningEffortByModelId,
+  )
+  const selectedReasoningLabel = reasoningEffortLabel(
+    selected?.reasoningEffort,
+    selectedReasoning,
+  )
+
   const onSelect = (model: LlmModel) => {
     setModelId(model.id)
     setOpen(false)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 px-2 py-2">
@@ -76,6 +95,11 @@ export default function NewProjectSelectModel() {
                 className="size-3"
               />
               <span className="max-w-30 truncate">{selected.name}</span>
+              {selectedReasoningLabel ? (
+                <span className="text-sm text-muted-foreground/80">
+                  {selectedReasoningLabel}
+                </span>
+              ) : null}
             </>
           ) : (
             "Select Model"
@@ -90,23 +114,40 @@ export default function NewProjectSelectModel() {
           <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
           {[...grouped.entries()].map(([provider, providerModels]) => (
             <ModelSelectorGroup key={provider} heading={provider}>
-              {providerModels.map((model) => (
-                <ModelSelectorItem
-                  key={model.id}
-                  value={model.name}
-                  onSelect={() => onSelect(model)}
-                  className="flex items-center gap-2"
-                >
-                  <ModelSelectorLogo
-                    provider={model.provider}
-                    className="size-4"
-                  />
-                  <ModelSelectorName>{model.name}</ModelSelectorName>
-                  {model.id === selected?.id && (
-                    <Check className="ml-auto size-4 shrink-0 text-primary" />
-                  )}
-                </ModelSelectorItem>
-              ))}
+              {providerModels.map((model) => {
+                const effort = resolveReasoningEffort(
+                  model,
+                  reasoningEffortByModelId,
+                )
+                return (
+                  <ModelSelectorItem
+                    key={model.id}
+                    value={model.name}
+                    onSelect={() => onSelect(model)}
+                    className="flex items-center gap-2"
+                  >
+                    <ModelSelectorLogo
+                      provider={model.provider}
+                      className="size-4"
+                    />
+                    <ModelSelectorName>{model.name}</ModelSelectorName>
+                    <div className="ml-auto flex items-center gap-1">
+                      {model.reasoningEffort ? (
+                        <ReasoningEffortSelect
+                          reasoningEffort={model.reasoningEffort}
+                          value={effort}
+                          onChange={(value) =>
+                            setReasoningEffort(model.id, value)
+                          }
+                        />
+                      ) : null}
+                      {model.id === selected?.id ? (
+                        <Check className="size-4 shrink-0 text-primary" />
+                      ) : null}
+                    </div>
+                  </ModelSelectorItem>
+                )
+              })}
             </ModelSelectorGroup>
           ))}
         </ModelSelectorList>

@@ -1,5 +1,4 @@
 import { ToolSet } from "ai"
-import { mediaGeneratorPrompt } from "../prompts/media-generator"
 import { ModelConfig } from "../utils/llm-client"
 import { BaseTool } from "../tools/tool-definition"
 import { z } from "zod"
@@ -15,7 +14,6 @@ import {
   navigateContextPrompt,
   progressUpdatePrompt,
 } from "../prompts"
-import { getOpenRouterServerTools } from "../tools/openrouter-server-tools"
 
 export type AgentName = (typeof supportedAgents)[number]
 
@@ -91,34 +89,7 @@ registerAgent({
   vendor: DEFAULT_AGENT_VENDOR,
   contextThreshold: 0.8,
   summaryModelId: "openai/gpt-5-nano",
-  subAgents: ["media-generator", "explorer", "web-searcher"],
-})
-
-registerAgent({
-  name: "media-generator",
-  description: "Generate media based on the prompt.",
-  baseSystemPrompt: mediaGeneratorPrompt,
-  modelConfig: {
-    tools: getSchemas([
-      allTools.manageTodoListTool,
-      allTools.exploreFileTool,
-      allTools.searchFileTool,
-      allTools.youtubeAnalyzerTool,
-      allTools.videoAnalyzerTool,
-      allTools.imageAnalyzerTool,
-      allTools.listModelsTool,
-      allTools.getModelSchemaTool,
-      allTools.cancelRequestTool,
-      allTools.submitRequestTool,
-    ]),
-    reasoningEffort: "low",
-    reasoningSummary: "auto",
-  },
-  modelId: "openai/gpt-5.2",
-  vendor: DEFAULT_AGENT_VENDOR,
-  contextThreshold: 0.8,
-  summaryModelId: "openai/gpt-5-nano",
-  subAgents: [],
+  subAgents: ["explorer", "web-searcher"],
 })
 
 registerAgent({
@@ -169,7 +140,7 @@ registerAgent({
     "Search the live web and fetch public pages for current, cited information.",
   baseSystemPrompt: webSearcherPrompt,
   modelConfig: {
-    tools: getOpenRouterServerTools(),
+    tools: getSchemas([allTools.tavilySearchTool, allTools.tavilyExtractTool]),
     reasoningEffort: "medium",
     reasoningSummary: "auto",
     maxOutputTokens: 4000,

@@ -1,0 +1,457 @@
+# Matching image-to-video endpoints. Prices match the text-to-video sibling where measured.
+models:
+  - id: bytedance/seedance-2.5/image-to-video
+    name: Seedance 2.5
+    provider: bytedance
+    description: >
+      Best Seedance image-to-video. Prefer when a start frame (and optional last frame) should lock identity. Same duration/resolution prices as text-to-video. Duration 4-30s.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { duration: 4, resolution: 480p }, usd: 0.72 }
+        - { when: { duration: 4, resolution: 720p }, usd: 1.44 }
+        - { when: { duration: 4, resolution: 1080p }, usd: 3.6 }
+        - { when: { duration: 4, resolution: 4k }, usd: 7.2 }
+        - { when: { duration: 5, resolution: 480p }, usd: 0.9 }
+        - { when: { duration: 5, resolution: 720p }, usd: 1.8 }
+        - { when: { duration: 5, resolution: 1080p }, usd: 4.5 }
+        - { when: { duration: 5, resolution: 4k }, usd: 9 }
+        - { when: { duration: 6, resolution: 480p }, usd: 1.08 }
+        - { when: { duration: 6, resolution: 720p }, usd: 2.16 }
+        - { when: { duration: 6, resolution: 1080p }, usd: 5.4 }
+        - { when: { duration: 6, resolution: 4k }, usd: 10.8 }
+        - { when: { duration: 7, resolution: 480p }, usd: 1.26 }
+        - { when: { duration: 7, resolution: 720p }, usd: 2.52 }
+        - { when: { duration: 7, resolution: 1080p }, usd: 6.3 }
+        - { when: { duration: 7, resolution: 4k }, usd: 12.6 }
+        - { when: { duration: 8, resolution: 480p }, usd: 1.44 }
+        - { when: { duration: 8, resolution: 720p }, usd: 2.88 }
+        - { when: { duration: 8, resolution: 1080p }, usd: 7.2 }
+        - { when: { duration: 8, resolution: 4k }, usd: 14.4 }
+        - { when: { duration: 9, resolution: 480p }, usd: 1.62 }
+        - { when: { duration: 9, resolution: 720p }, usd: 3.24 }
+        - { when: { duration: 9, resolution: 1080p }, usd: 8.1 }
+        - { when: { duration: 9, resolution: 4k }, usd: 16.2 }
+        - { when: { duration: 10, resolution: 480p }, usd: 1.8 }
+        - { when: { duration: 10, resolution: 720p }, usd: 3.6 }
+        - { when: { duration: 10, resolution: 1080p }, usd: 9 }
+        - { when: { duration: 10, resolution: 4k }, usd: 18 }
+        - { when: { duration: 11, resolution: 480p }, usd: 1.98 }
+        - { when: { duration: 11, resolution: 720p }, usd: 3.96 }
+        - { when: { duration: 11, resolution: 1080p }, usd: 9.9 }
+        - { when: { duration: 11, resolution: 4k }, usd: 19.8 }
+        - { when: { duration: 12, resolution: 480p }, usd: 2.16 }
+        - { when: { duration: 12, resolution: 720p }, usd: 4.32 }
+        - { when: { duration: 12, resolution: 1080p }, usd: 10.8 }
+        - { when: { duration: 12, resolution: 4k }, usd: 21.6 }
+        - { when: { duration: 13, resolution: 480p }, usd: 2.34 }
+        - { when: { duration: 13, resolution: 720p }, usd: 4.68 }
+        - { when: { duration: 13, resolution: 1080p }, usd: 11.7 }
+        - { when: { duration: 13, resolution: 4k }, usd: 23.4 }
+        - { when: { duration: 14, resolution: 480p }, usd: 2.52 }
+        - { when: { duration: 14, resolution: 720p }, usd: 5.04 }
+        - { when: { duration: 14, resolution: 1080p }, usd: 12.6 }
+        - { when: { duration: 14, resolution: 4k }, usd: 25.2 }
+        - { when: { duration: 15, resolution: 480p }, usd: 2.7 }
+        - { when: { duration: 15, resolution: 720p }, usd: 5.4 }
+        - { when: { duration: 15, resolution: 1080p }, usd: 13.5 }
+        - { when: { duration: 15, resolution: 4k }, usd: 27 }
+        - { when: { duration: 16, resolution: 480p }, usd: 2.88 }
+        - { when: { duration: 16, resolution: 720p }, usd: 5.76 }
+        - { when: { duration: 16, resolution: 1080p }, usd: 14.4 }
+        - { when: { duration: 16, resolution: 4k }, usd: 28.8 }
+        - { when: { duration: 17, resolution: 480p }, usd: 3.06 }
+        - { when: { duration: 17, resolution: 720p }, usd: 6.12 }
+        - { when: { duration: 17, resolution: 1080p }, usd: 15.3 }
+        - { when: { duration: 17, resolution: 4k }, usd: 30.6 }
+        - { when: { duration: 18, resolution: 480p }, usd: 3.24 }
+        - { when: { duration: 18, resolution: 720p }, usd: 6.48 }
+        - { when: { duration: 18, resolution: 1080p }, usd: 16.2 }
+        - { when: { duration: 18, resolution: 4k }, usd: 32.4 }
+        - { when: { duration: 19, resolution: 480p }, usd: 3.42 }
+        - { when: { duration: 19, resolution: 720p }, usd: 6.84 }
+        - { when: { duration: 19, resolution: 1080p }, usd: 17.1 }
+        - { when: { duration: 19, resolution: 4k }, usd: 34.2 }
+        - { when: { duration: 20, resolution: 480p }, usd: 3.6 }
+        - { when: { duration: 20, resolution: 720p }, usd: 7.2 }
+        - { when: { duration: 20, resolution: 1080p }, usd: 18 }
+        - { when: { duration: 20, resolution: 4k }, usd: 36 }
+        - { when: { duration: 21, resolution: 480p }, usd: 3.78 }
+        - { when: { duration: 21, resolution: 720p }, usd: 7.56 }
+        - { when: { duration: 21, resolution: 1080p }, usd: 18.9 }
+        - { when: { duration: 21, resolution: 4k }, usd: 37.8 }
+        - { when: { duration: 22, resolution: 480p }, usd: 3.96 }
+        - { when: { duration: 22, resolution: 720p }, usd: 7.92 }
+        - { when: { duration: 22, resolution: 1080p }, usd: 19.8 }
+        - { when: { duration: 22, resolution: 4k }, usd: 39.6 }
+        - { when: { duration: 23, resolution: 480p }, usd: 4.14 }
+        - { when: { duration: 23, resolution: 720p }, usd: 8.28 }
+        - { when: { duration: 23, resolution: 1080p }, usd: 20.7 }
+        - { when: { duration: 23, resolution: 4k }, usd: 41.4 }
+        - { when: { duration: 24, resolution: 480p }, usd: 4.32 }
+        - { when: { duration: 24, resolution: 720p }, usd: 8.64 }
+        - { when: { duration: 24, resolution: 1080p }, usd: 21.6 }
+        - { when: { duration: 24, resolution: 4k }, usd: 43.2 }
+        - { when: { duration: 25, resolution: 480p }, usd: 4.5 }
+        - { when: { duration: 25, resolution: 720p }, usd: 9 }
+        - { when: { duration: 25, resolution: 1080p }, usd: 22.5 }
+        - { when: { duration: 25, resolution: 4k }, usd: 45 }
+        - { when: { duration: 26, resolution: 480p }, usd: 4.68 }
+        - { when: { duration: 26, resolution: 720p }, usd: 9.36 }
+        - { when: { duration: 26, resolution: 1080p }, usd: 23.4 }
+        - { when: { duration: 26, resolution: 4k }, usd: 46.8 }
+        - { when: { duration: 27, resolution: 480p }, usd: 4.86 }
+        - { when: { duration: 27, resolution: 720p }, usd: 9.72 }
+        - { when: { duration: 27, resolution: 1080p }, usd: 24.3 }
+        - { when: { duration: 27, resolution: 4k }, usd: 48.6 }
+        - { when: { duration: 28, resolution: 480p }, usd: 5.04 }
+        - { when: { duration: 28, resolution: 720p }, usd: 10.08 }
+        - { when: { duration: 28, resolution: 1080p }, usd: 25.2 }
+        - { when: { duration: 28, resolution: 4k }, usd: 50.4 }
+        - { when: { duration: 29, resolution: 480p }, usd: 5.22 }
+        - { when: { duration: 29, resolution: 720p }, usd: 10.44 }
+        - { when: { duration: 29, resolution: 1080p }, usd: 26.1 }
+        - { when: { duration: 29, resolution: 4k }, usd: 52.2 }
+        - { when: { duration: 30, resolution: 480p }, usd: 5.4 }
+        - { when: { duration: 30, resolution: 720p }, usd: 10.8 }
+        - { when: { duration: 30, resolution: 1080p }, usd: 27 }
+        - { when: { duration: 30, resolution: 4k }, usd: 54 }
+    categories: [image-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_image, required: true }
+      - { id: parameter_last_image, required: false }
+      - { id: parameter_duration, required: true, defaultValue: 5, constraints: { min: 4, max: 30, step: 1 } }
+      - { id: parameter_resolution, required: true, defaultValue: 720p, allowedValues: [480p, 720p, 1080p, 4k] }
+      - { id: parameter_generate_audio, required: false, defaultValue: true }
+
+  - id: bytedance/seedance-2.0/image-to-video
+    name: Seedance 2.0
+    provider: bytedance
+    description: >
+      Previous Seedance image-to-video. Prefer when 2.5 is unnecessary. Optional last frame. Duration 4-15s. Same prices as Seedance 2.0 text-to-video.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { duration: 4, resolution: 480p }, usd: 0.48 }
+        - { when: { duration: 4, resolution: 720p }, usd: 0.96 }
+        - { when: { duration: 4, resolution: 1080p }, usd: 2.4 }
+        - { when: { duration: 4, resolution: 4k }, usd: 4.8 }
+        - { when: { duration: 5, resolution: 480p }, usd: 0.6 }
+        - { when: { duration: 5, resolution: 720p }, usd: 1.2 }
+        - { when: { duration: 5, resolution: 1080p }, usd: 3 }
+        - { when: { duration: 5, resolution: 4k }, usd: 6 }
+        - { when: { duration: 6, resolution: 480p }, usd: 0.72 }
+        - { when: { duration: 6, resolution: 720p }, usd: 1.44 }
+        - { when: { duration: 6, resolution: 1080p }, usd: 3.6 }
+        - { when: { duration: 6, resolution: 4k }, usd: 7.2 }
+        - { when: { duration: 7, resolution: 480p }, usd: 0.84 }
+        - { when: { duration: 7, resolution: 720p }, usd: 1.68 }
+        - { when: { duration: 7, resolution: 1080p }, usd: 4.2 }
+        - { when: { duration: 7, resolution: 4k }, usd: 8.4 }
+        - { when: { duration: 8, resolution: 480p }, usd: 0.96 }
+        - { when: { duration: 8, resolution: 720p }, usd: 1.92 }
+        - { when: { duration: 8, resolution: 1080p }, usd: 4.8 }
+        - { when: { duration: 8, resolution: 4k }, usd: 9.6 }
+        - { when: { duration: 9, resolution: 480p }, usd: 1.08 }
+        - { when: { duration: 9, resolution: 720p }, usd: 2.16 }
+        - { when: { duration: 9, resolution: 1080p }, usd: 5.4 }
+        - { when: { duration: 9, resolution: 4k }, usd: 10.8 }
+        - { when: { duration: 10, resolution: 480p }, usd: 1.2 }
+        - { when: { duration: 10, resolution: 720p }, usd: 2.4 }
+        - { when: { duration: 10, resolution: 1080p }, usd: 6 }
+        - { when: { duration: 10, resolution: 4k }, usd: 12 }
+        - { when: { duration: 11, resolution: 480p }, usd: 1.32 }
+        - { when: { duration: 11, resolution: 720p }, usd: 2.64 }
+        - { when: { duration: 11, resolution: 1080p }, usd: 6.6 }
+        - { when: { duration: 11, resolution: 4k }, usd: 13.2 }
+        - { when: { duration: 12, resolution: 480p }, usd: 1.44 }
+        - { when: { duration: 12, resolution: 720p }, usd: 2.88 }
+        - { when: { duration: 12, resolution: 1080p }, usd: 7.2 }
+        - { when: { duration: 12, resolution: 4k }, usd: 14.4 }
+        - { when: { duration: 13, resolution: 480p }, usd: 1.56 }
+        - { when: { duration: 13, resolution: 720p }, usd: 3.12 }
+        - { when: { duration: 13, resolution: 1080p }, usd: 7.8 }
+        - { when: { duration: 13, resolution: 4k }, usd: 15.6 }
+        - { when: { duration: 14, resolution: 480p }, usd: 1.68 }
+        - { when: { duration: 14, resolution: 720p }, usd: 3.36 }
+        - { when: { duration: 14, resolution: 1080p }, usd: 8.4 }
+        - { when: { duration: 14, resolution: 4k }, usd: 16.8 }
+        - { when: { duration: 15, resolution: 480p }, usd: 1.8 }
+        - { when: { duration: 15, resolution: 720p }, usd: 3.6 }
+        - { when: { duration: 15, resolution: 1080p }, usd: 9 }
+        - { when: { duration: 15, resolution: 4k }, usd: 18 }
+    categories: [image-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_image, required: true }
+      - { id: parameter_last_image, required: false }
+      - { id: parameter_aspect_ratio, required: false, allowedValues: [16:9, 9:16, 4:3, 3:4, 1:1, 21:9] }
+      - { id: parameter_duration, required: true, defaultValue: 5, constraints: { min: 4, max: 15, step: 1 } }
+      - { id: parameter_resolution, required: true, defaultValue: 720p, allowedValues: [480p, 720p, 1080p, 4k] }
+      - { id: parameter_generate_audio, required: false, defaultValue: true }
+
+  - id: bytedance/seedance-2.0-fast/image-to-video
+    name: Seedance 2.0 Fast
+    provider: bytedance
+    description: >
+      Speed-tier Seedance image-to-video. Prefer for start-frame previews. Duration 4-15s. Lowest Seedance per-second rate.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { duration: 4, resolution: 480p }, usd: 0.4 }
+        - { when: { duration: 4, resolution: 720p }, usd: 0.8 }
+        - { when: { duration: 4, resolution: 1080p }, usd: 2 }
+        - { when: { duration: 4, resolution: 4k }, usd: 4 }
+        - { when: { duration: 5, resolution: 480p }, usd: 0.5 }
+        - { when: { duration: 5, resolution: 720p }, usd: 1 }
+        - { when: { duration: 5, resolution: 1080p }, usd: 2.5 }
+        - { when: { duration: 5, resolution: 4k }, usd: 5 }
+        - { when: { duration: 6, resolution: 480p }, usd: 0.6 }
+        - { when: { duration: 6, resolution: 720p }, usd: 1.2 }
+        - { when: { duration: 6, resolution: 1080p }, usd: 3 }
+        - { when: { duration: 6, resolution: 4k }, usd: 6 }
+        - { when: { duration: 7, resolution: 480p }, usd: 0.7 }
+        - { when: { duration: 7, resolution: 720p }, usd: 1.4 }
+        - { when: { duration: 7, resolution: 1080p }, usd: 3.5 }
+        - { when: { duration: 7, resolution: 4k }, usd: 7 }
+        - { when: { duration: 8, resolution: 480p }, usd: 0.8 }
+        - { when: { duration: 8, resolution: 720p }, usd: 1.6 }
+        - { when: { duration: 8, resolution: 1080p }, usd: 4 }
+        - { when: { duration: 8, resolution: 4k }, usd: 8 }
+        - { when: { duration: 9, resolution: 480p }, usd: 0.9 }
+        - { when: { duration: 9, resolution: 720p }, usd: 1.8 }
+        - { when: { duration: 9, resolution: 1080p }, usd: 4.5 }
+        - { when: { duration: 9, resolution: 4k }, usd: 9 }
+        - { when: { duration: 10, resolution: 480p }, usd: 1 }
+        - { when: { duration: 10, resolution: 720p }, usd: 2 }
+        - { when: { duration: 10, resolution: 1080p }, usd: 5 }
+        - { when: { duration: 10, resolution: 4k }, usd: 10 }
+        - { when: { duration: 11, resolution: 480p }, usd: 1.1 }
+        - { when: { duration: 11, resolution: 720p }, usd: 2.2 }
+        - { when: { duration: 11, resolution: 1080p }, usd: 5.5 }
+        - { when: { duration: 11, resolution: 4k }, usd: 11 }
+        - { when: { duration: 12, resolution: 480p }, usd: 1.2 }
+        - { when: { duration: 12, resolution: 720p }, usd: 2.4 }
+        - { when: { duration: 12, resolution: 1080p }, usd: 6 }
+        - { when: { duration: 12, resolution: 4k }, usd: 12 }
+        - { when: { duration: 13, resolution: 480p }, usd: 1.3 }
+        - { when: { duration: 13, resolution: 720p }, usd: 2.6 }
+        - { when: { duration: 13, resolution: 1080p }, usd: 6.5 }
+        - { when: { duration: 13, resolution: 4k }, usd: 13 }
+        - { when: { duration: 14, resolution: 480p }, usd: 1.4 }
+        - { when: { duration: 14, resolution: 720p }, usd: 2.8 }
+        - { when: { duration: 14, resolution: 1080p }, usd: 7 }
+        - { when: { duration: 14, resolution: 4k }, usd: 14 }
+        - { when: { duration: 15, resolution: 480p }, usd: 1.5 }
+        - { when: { duration: 15, resolution: 720p }, usd: 3 }
+        - { when: { duration: 15, resolution: 1080p }, usd: 7.5 }
+        - { when: { duration: 15, resolution: 4k }, usd: 15 }
+    categories: [image-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_image, required: true }
+      - { id: parameter_last_image, required: false }
+      - { id: parameter_aspect_ratio, required: false, allowedValues: [16:9, 9:16, 4:3, 3:4, 1:1, 21:9] }
+      - { id: parameter_duration, required: true, defaultValue: 5, constraints: { min: 4, max: 15, step: 1 } }
+      - { id: parameter_resolution, required: true, defaultValue: 720p, allowedValues: [480p, 720p, 1080p, 4k] }
+      - { id: parameter_generate_audio, required: false, defaultValue: true }
+
+  - id: kwaivgi/kling-video-o3-pro/image-to-video
+    name: Kling O3 Pro
+    provider: kwaivgi
+    description: >
+      Highest Kling O3 image-to-video. Prefer when a first frame (and optional last frame) must stay on-model. $0.112/s, 3-15s. No aspect-ratio control; follow the start image.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { duration: 3 }, usd: 0.336 }
+        - { when: { duration: 4 }, usd: 0.448 }
+        - { when: { duration: 5 }, usd: 0.56 }
+        - { when: { duration: 6 }, usd: 0.672 }
+        - { when: { duration: 7 }, usd: 0.784 }
+        - { when: { duration: 8 }, usd: 0.896 }
+        - { when: { duration: 9 }, usd: 1.008 }
+        - { when: { duration: 10 }, usd: 1.12 }
+        - { when: { duration: 11 }, usd: 1.232 }
+        - { when: { duration: 12 }, usd: 1.344 }
+        - { when: { duration: 13 }, usd: 1.456 }
+        - { when: { duration: 14 }, usd: 1.568 }
+        - { when: { duration: 15 }, usd: 1.68 }
+    categories: [image-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_image, required: true }
+      - { id: parameter_last_image, required: false }
+      - { id: parameter_duration, required: true, defaultValue: 5, constraints: { min: 3, max: 15, step: 1 } }
+      - { id: parameter_generate_audio, required: false, defaultValue: false }
+
+  - id: kwaivgi/kling-video-o3-std/image-to-video
+    name: Kling O3 Std
+    provider: kwaivgi
+    description: >
+      Cheaper Kling O3 image-to-video. Prefer for start-frame drafts before Pro. $0.084/s, 3-15s.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { duration: 3 }, usd: 0.252 }
+        - { when: { duration: 4 }, usd: 0.336 }
+        - { when: { duration: 5 }, usd: 0.42 }
+        - { when: { duration: 6 }, usd: 0.504 }
+        - { when: { duration: 7 }, usd: 0.588 }
+        - { when: { duration: 8 }, usd: 0.672 }
+        - { when: { duration: 9 }, usd: 0.756 }
+        - { when: { duration: 10 }, usd: 0.84 }
+        - { when: { duration: 11 }, usd: 0.924 }
+        - { when: { duration: 12 }, usd: 1.008 }
+        - { when: { duration: 13 }, usd: 1.092 }
+        - { when: { duration: 14 }, usd: 1.176 }
+        - { when: { duration: 15 }, usd: 1.26 }
+    categories: [image-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_image, required: true }
+      - { id: parameter_last_image, required: false }
+      - { id: parameter_duration, required: true, defaultValue: 5, constraints: { min: 3, max: 15, step: 1 } }
+      - { id: parameter_generate_audio, required: false, defaultValue: false }
+
+  - id: kwaivgi/kling-v3.0-pro/image-to-video
+    name: Kling V3.0 Pro
+    provider: kwaivgi
+    description: >
+      Kling V3.0 image-to-video with negative prompt. Last frame cannot combine with multi-shot. $0.112/s, 3-15s.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { duration: 3 }, usd: 0.336 }
+        - { when: { duration: 4 }, usd: 0.448 }
+        - { when: { duration: 5 }, usd: 0.56 }
+        - { when: { duration: 6 }, usd: 0.672 }
+        - { when: { duration: 7 }, usd: 0.784 }
+        - { when: { duration: 8 }, usd: 0.896 }
+        - { when: { duration: 9 }, usd: 1.008 }
+        - { when: { duration: 10 }, usd: 1.12 }
+        - { when: { duration: 11 }, usd: 1.232 }
+        - { when: { duration: 12 }, usd: 1.344 }
+        - { when: { duration: 13 }, usd: 1.456 }
+        - { when: { duration: 14 }, usd: 1.568 }
+        - { when: { duration: 15 }, usd: 1.68 }
+    categories: [image-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_image, required: true }
+      - { id: parameter_last_image, required: false }
+      - { id: parameter_duration, required: true, defaultValue: 5, constraints: { min: 3, max: 15, step: 1 } }
+      - { id: parameter_generate_audio, required: false, defaultValue: false }
+      - { id: parameter_negative_prompt, required: false }
+
+  - id: kwaivgi/kling-v3.0-std/image-to-video
+    name: Kling V3.0 Std
+    provider: kwaivgi
+    description: >
+      Cheaper Kling V3.0 image-to-video. Prefer for volume start-frame tests. $0.084/s, 3-15s.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { duration: 3 }, usd: 0.252 }
+        - { when: { duration: 4 }, usd: 0.336 }
+        - { when: { duration: 5 }, usd: 0.42 }
+        - { when: { duration: 6 }, usd: 0.504 }
+        - { when: { duration: 7 }, usd: 0.588 }
+        - { when: { duration: 8 }, usd: 0.672 }
+        - { when: { duration: 9 }, usd: 0.756 }
+        - { when: { duration: 10 }, usd: 0.84 }
+        - { when: { duration: 11 }, usd: 0.924 }
+        - { when: { duration: 12 }, usd: 1.008 }
+        - { when: { duration: 13 }, usd: 1.092 }
+        - { when: { duration: 14 }, usd: 1.176 }
+        - { when: { duration: 15 }, usd: 1.26 }
+    categories: [image-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_image, required: true }
+      - { id: parameter_last_image, required: false }
+      - { id: parameter_duration, required: true, defaultValue: 5, constraints: { min: 3, max: 15, step: 1 } }
+      - { id: parameter_generate_audio, required: false, defaultValue: false }
+      - { id: parameter_negative_prompt, required: false }
+
+  - id: google/gemini-omni-1.1-flash/image-to-video
+    name: Gemini Omni 1.1 Flash
+    provider: google
+    description: >
+      Newest Gemini Omni image-to-video. Prefer for cheap start-frame animation with optional last frame and resolution control. Same per-second rates as text-to-video.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { duration: 3, resolution: 360p }, usd: 0.09 }
+        - { when: { duration: 3, resolution: 720p }, usd: 0.3 }
+        - { when: { duration: 3, resolution: 1080p }, usd: 0.45 }
+        - { when: { duration: 3, resolution: 4k }, usd: 0.9 }
+        - { when: { duration: 4, resolution: 360p }, usd: 0.12 }
+        - { when: { duration: 4, resolution: 720p }, usd: 0.4 }
+        - { when: { duration: 4, resolution: 1080p }, usd: 0.6 }
+        - { when: { duration: 4, resolution: 4k }, usd: 1.2 }
+        - { when: { duration: 5, resolution: 360p }, usd: 0.15 }
+        - { when: { duration: 5, resolution: 720p }, usd: 0.5 }
+        - { when: { duration: 5, resolution: 1080p }, usd: 0.75 }
+        - { when: { duration: 5, resolution: 4k }, usd: 1.5 }
+        - { when: { duration: 6, resolution: 360p }, usd: 0.18 }
+        - { when: { duration: 6, resolution: 720p }, usd: 0.6 }
+        - { when: { duration: 6, resolution: 1080p }, usd: 0.9 }
+        - { when: { duration: 6, resolution: 4k }, usd: 1.8 }
+        - { when: { duration: 7, resolution: 360p }, usd: 0.21 }
+        - { when: { duration: 7, resolution: 720p }, usd: 0.7 }
+        - { when: { duration: 7, resolution: 1080p }, usd: 1.05 }
+        - { when: { duration: 7, resolution: 4k }, usd: 2.1 }
+        - { when: { duration: 8, resolution: 360p }, usd: 0.24 }
+        - { when: { duration: 8, resolution: 720p }, usd: 0.8 }
+        - { when: { duration: 8, resolution: 1080p }, usd: 1.2 }
+        - { when: { duration: 8, resolution: 4k }, usd: 2.4 }
+        - { when: { duration: 9, resolution: 360p }, usd: 0.27 }
+        - { when: { duration: 9, resolution: 720p }, usd: 0.9 }
+        - { when: { duration: 9, resolution: 1080p }, usd: 1.35 }
+        - { when: { duration: 9, resolution: 4k }, usd: 2.7 }
+        - { when: { duration: 10, resolution: 360p }, usd: 0.3 }
+        - { when: { duration: 10, resolution: 720p }, usd: 1 }
+        - { when: { duration: 10, resolution: 1080p }, usd: 1.5 }
+        - { when: { duration: 10, resolution: 4k }, usd: 3 }
+    categories: [image-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_image, required: true }
+      - { id: parameter_last_image, required: false }
+      - { id: parameter_aspect_ratio, required: false, defaultValue: 16:9, allowedValues: [16:9, 9:16] }
+      - { id: parameter_duration, required: true, defaultValue: 8, constraints: { min: 3, max: 10, step: 1 } }
+      - { id: parameter_resolution, required: true, defaultValue: 720p, allowedValues: [360p, 720p, 1080p, 4k] }
+
+  - id: google/gemini-omni-flash/image-to-video
+    name: Gemini Omni Flash
+    provider: google
+    description: >
+      Previous Gemini Omni image-to-video. No last-frame or resolution control. Prefer 1.1 Flash unless this endpoint is required. $0.13/s.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { duration: 3 }, usd: 0.39 }
+        - { when: { duration: 4 }, usd: 0.52 }
+        - { when: { duration: 5 }, usd: 0.65 }
+        - { when: { duration: 6 }, usd: 0.78 }
+        - { when: { duration: 7 }, usd: 0.91 }
+        - { when: { duration: 8 }, usd: 1.04 }
+        - { when: { duration: 9 }, usd: 1.17 }
+        - { when: { duration: 10 }, usd: 1.3 }
+    categories: [image-to-video]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_image, required: true }
+      - { id: parameter_aspect_ratio, required: false, defaultValue: 16:9, allowedValues: [16:9, 9:16] }
+      - { id: parameter_duration, required: true, defaultValue: 8, constraints: { min: 3, max: 10, step: 1 } }

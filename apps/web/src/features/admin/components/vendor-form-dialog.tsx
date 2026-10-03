@@ -34,6 +34,7 @@ type Props = {
 
 const emptyForm = {
   name: "",
+  adapter: "",
   kind: "llm" as VendorKind,
   enabled: true,
   rpm: 60,
@@ -55,6 +56,7 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
     if (vendor) {
       setForm({
         name: vendor.name,
+        adapter: vendor.adapter,
         kind: vendor.kind,
         enabled: vendor.enabled,
         rpm: vendor.rateLimit.rpm,
@@ -72,6 +74,10 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
     setError(null)
     const input = {
       name: form.name.trim(),
+      adapter:
+        form.kind === "media"
+          ? form.adapter
+          : form.adapter.trim() || form.name.trim(),
       kind: form.kind,
       enabled: form.enabled,
       rateLimit: {
@@ -113,10 +119,10 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                 setForm((prev) => ({
                   ...prev,
                   kind: kind as VendorKind,
-                  name:
+                  adapter:
                     kind === "media" && slugs.length === 1
                       ? slugs[0]
-                      : prev.name,
+                      : prev.adapter,
                 }))
               }
             >
@@ -131,13 +137,27 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="vendor-name">Name</Label>
-            {form.kind === "media" ? (
+            <Input
+              id="vendor-name"
+              value={form.name}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, name: event.target.value }))
+              }
+              placeholder="wavespeed-b"
+              required
+            />
+          </div>
+          {form.kind === "media" ? (
+            <div className="space-y-2">
+              <Label htmlFor="vendor-adapter">Adapter</Label>
               <Select
-                value={form.name || undefined}
-                onValueChange={(name) => setForm((prev) => ({ ...prev, name }))}
+                value={form.adapter || undefined}
+                onValueChange={(adapter) =>
+                  setForm((prev) => ({ ...prev, adapter }))
+                }
               >
-                <SelectTrigger id="vendor-name" className="w-full">
-                  <SelectValue placeholder="Select provider slug" />
+                <SelectTrigger id="vendor-adapter" className="w-full">
+                  <SelectValue placeholder="Select adapter" />
                 </SelectTrigger>
                 <SelectContent>
                   {slugs.map((slug) => (
@@ -147,18 +167,8 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-            ) : (
-              <Input
-                id="vendor-name"
-                value={form.name}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, name: event.target.value }))
-                }
-                placeholder="openrouter"
-                required
-              />
-            )}
-          </div>
+            </div>
+          ) : null}
           {form.kind === "media" ? (
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
@@ -227,7 +237,12 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={pending || !form.name}>
+            <Button
+              type="submit"
+              disabled={
+                pending || !form.name || (form.kind === "media" && !form.adapter)
+              }
+            >
               {pending ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>

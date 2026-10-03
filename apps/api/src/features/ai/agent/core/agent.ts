@@ -35,7 +35,6 @@ import {
   extractStatusUpdateMessage,
   PROVIDE_STATUS_UPDATE_TOOL_NAME,
 } from "../tools/progress-update"
-import { isOpenRouterServerTool } from "../tools/openrouter-server-tools"
 import { refreshAgentJobs } from "../tools/job-sync"
 import {
   formatJobUpdateNote,
@@ -271,9 +270,7 @@ export class Agent {
             }
             break
           case streamEvents.toolCall:
-            if (!isOpenRouterServerTool(chunk.toolName)) {
-              tool_calls.push(chunk)
-            }
+            tool_calls.push(chunk)
             if (chunk.toolName === PROVIDE_STATUS_UPDATE_TOOL_NAME) {
               statusUpdateToolCallIds.add(chunk.toolCallId)
               const message = extractStatusUpdateMessage(chunk.input)
@@ -373,9 +370,6 @@ export class Agent {
     const validToolCalls: ToolCall[] = []
     const completedToolCallIds = new Set<string>()
     for (const tool_call of tool_calls) {
-      if (isOpenRouterServerTool(tool_call.toolName)) {
-        continue
-      }
       const tool = getTool(tool_call.toolName)
       if (!tool) {
         invalidTools.push({

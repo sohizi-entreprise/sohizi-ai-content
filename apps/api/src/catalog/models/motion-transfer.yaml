@@ -1,0 +1,19 @@
+# Drive a character image with a reference video. per_inference uses WaveSpeed base_price when the price API needs a real file.
+models:
+  - id: kwaivgi/kling-v3.0-pro/motion-control
+    name: Kling 3.0 Pro Motion
+    provider: kwaivgi
+    description: >
+      Highest Kling 3.0 motion transfer. Drive a character image with a reference video. Output length follows the driving video: 3-30s when character_orientation is video, 3-10s when image; longer clips are trimmed. keep_original_sound true keeps the source track. Listed rate is WaveSpeed base; duration can raise the charge.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.84
+    categories: [motion-transfer]
+    parameters:
+      - { id: parameter_image, required: true }
+      - { id: parameter_video, required: true }
+      - { id: parameter_prompt, required: false }
+      - { id: parameter_negative_prompt, required: false }
+      - { id: parameter_character_orientation, required: false, defaultValue: video, allowedValues: [image, video] }
+      - { id: parameter_keep_original_sound, required: false, defaultValue: true }

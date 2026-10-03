@@ -44,6 +44,8 @@ export const mediaGeneratorKeys = {
   googleVoices: ["media", "google-voices"] as const,
   modelParameters: (modelId: string) =>
     ["media", "models", modelId, "parameters"] as const,
+  generationCredits: (projectId: string, payload: requests.AssetRequest) =>
+    ["media", projectId, "estimate", payload] as const,
 }
 
 export const listGoogleVoicesQueryOptions = queryOptions({
@@ -59,6 +61,19 @@ export const listCatalogModelParametersQueryOptions = (
     queryKey: mediaGeneratorKeys.modelParameters(modelId ?? ""),
     queryFn: () => requests.listCatalogModelParameters(modelId!),
     enabled: Boolean(modelId),
+  })
+
+export const estimateGenerationCreditsQueryOptions = (
+  projectId: string,
+  payload: requests.AssetRequest,
+  enabled: boolean,
+) =>
+  queryOptions({
+    queryKey: mediaGeneratorKeys.generationCredits(projectId, payload),
+    queryFn: () => requests.estimateGenerationCredits(projectId, payload),
+    enabled,
+    retry: false,
+    placeholderData: keepPreviousData,
   })
 
 export const listAiGeneratedAssetsQueryOptions = (

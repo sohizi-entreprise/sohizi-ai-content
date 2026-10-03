@@ -1,4 +1,4 @@
-import { Download, Folder, ImagePlus, Sparkles, Trash2, X } from "lucide-react"
+import { Download, Folder, ImagePlus, Trash2, X } from "lucide-react"
 import { useParams } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query"
@@ -50,10 +50,6 @@ const mediaFilterOptions = [
     label: "Audio",
     value: "audio",
   },
-  {
-    label: "HTML",
-    value: "html",
-  },
 ]
 
 export function MediaGenerator() {
@@ -91,7 +87,7 @@ export function MediaGenerator() {
             order={2}
             defaultSize={35}
             minSize={30}
-            className="rounded-2xl mb-2 bg-card"
+            className="rounded-2xl mb-2"
           >
             <MediaComposer projectId={projectId} />
           </ResizablePanel>
@@ -176,12 +172,8 @@ function RenderHeader(props: {
     <header className="px-4 pt-4 pb-2 flex items-center justify-between relative z-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-sm text-primary">
-            <Sparkles className="size-4" />
-            AI media
-          </div>
           <h1 className="mt-1 text-2xl font-semibold text-white">
-            Media generator history
+            Media generator
           </h1>
         </div>
       </div>

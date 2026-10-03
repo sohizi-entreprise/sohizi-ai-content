@@ -14,8 +14,8 @@ import { fileSyntaxTool } from "./file-syntax"
 import {
   listModelsTool,
   getModelSchemaTool,
-  cancelRequestTool,
   submitRequestTool,
+  cancelRequestTool,
 } from "./submit-media-jobs"
 import { submitHtmlCompositionTool } from "./submit-html-composition"
 import { loadSkillTool } from "./load-skill"
@@ -26,6 +26,7 @@ import {
   youtubeAnalyzerTool,
 } from "./media-analyzer"
 import { getJobStatus, submitAssetGenerationJob, waitForJob } from "./wait-job"
+import { tavilyExtractTool, tavilySearchTool } from "./tavily-tools"
 
 const toolRegistry = new Map<string, BaseTool<z.ZodType>>()
 
@@ -63,6 +64,8 @@ export const allTools = {
   waitForJob,
   getJobStatus,
   fileSyntaxTool,
+  tavilySearchTool,
+  tavilyExtractTool,
 } as const
 
 for (const tool of Object.values(allTools)) {

@@ -2,6 +2,7 @@ import { useShallow } from "zustand/shallow"
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { useChatStore } from "../store/chat-store"
+import { resolveReasoningEffort } from "../lib/reasoning-effort"
 import {
   cancelChatRunMutationOptions,
   submitChatCompletionMutationOptions,
@@ -16,7 +17,11 @@ import { getErrorMessage } from "@/lib/errors"
 
 export const useSendMessage = (projectId: string) => {
   const clearInput = useChatStore((state) => state.clearInput)
-  const modelId = useChatStore((state) => state.model?.id)
+  const model = useChatStore((state) => state.model)
+  const modelId = model?.id
+  const reasoningEffortByModelId = useChatStore(
+    (state) => state.reasoningEffortByModelId,
+  )
   const conversation = useChatStore(
     useShallow((state) => state.activeConversation),
   )
@@ -47,10 +52,11 @@ export const useSendMessage = (projectId: string) => {
       : undefined
 
   const sendMessage = () => {
-    if (disableSendButton) return
+    if (disableSendButton || !modelId) return
 
     const payload: ChatCompletionRequest = {
       modelId,
+      reasoningEffort: resolveReasoningEffort(model, reasoningEffortByModelId),
       userPrompt: {
         role: "user",
         content: [

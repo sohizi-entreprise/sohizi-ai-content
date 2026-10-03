@@ -1,7 +1,7 @@
 import { BadRequest, Conflict, NotFound } from "@/features/error"
 import {
-  isRegisteredMediaVendor,
-  listRegisteredMediaVendors,
+  isRegisteredMediaAdapter,
+  listRegisteredMediaAdapters,
 } from "@/features/media-engine/providers/factory"
 import * as modelsRepo from "../models/repo"
 import * as commandRepo from "../command/repo"
@@ -428,19 +428,18 @@ export const deleteVendorParameterMapping = async (
 export const listVendors = async () => modelsRepo.listVendors()
 
 export const listMediaVendorSlugs = async () => ({
-  slugs: listRegisteredMediaVendors(),
+  slugs: listRegisteredMediaAdapters(),
 })
 
 export const createVendor = async (input: CreateVendorInput) => {
-  if (
-    (input.kind ?? "llm") === "media" &&
-    !isRegisteredMediaVendor(input.name)
-  ) {
-    throw new BadRequest(`Unknown media vendor slug: ${input.name}`)
+  const adapter = input.adapter ?? input.name
+  if ((input.kind ?? "llm") === "media" && !isRegisteredMediaAdapter(adapter)) {
+    throw new BadRequest(`Unknown media adapter: ${adapter}`)
   }
   try {
     return await modelsRepo.createVendor({
       name: input.name,
+      adapter,
       kind: input.kind,
       enabled: input.enabled,
       rateLimit: input.rateLimit,
@@ -458,14 +457,14 @@ export const updateVendor = async (id: string, input: UpdateVendorInput) => {
   if (Object.keys(input).length === 0) {
     throw new BadRequest("No fields to update")
   }
-  if (input.kind === "media" || input.name) {
+  if (input.kind === "media" || input.adapter) {
     const existing = await modelsRepo
       .listVendors()
       .then((rows) => rows.find((row) => row.id === id))
-    const name = input.name ?? existing?.name
+    const adapter = input.adapter ?? existing?.adapter
     const kind = input.kind ?? existing?.kind
-    if (kind === "media" && name && !isRegisteredMediaVendor(name)) {
-      throw new BadRequest(`Unknown media vendor slug: ${name}`)
+    if (kind === "media" && adapter && !isRegisteredMediaAdapter(adapter)) {
+      throw new BadRequest(`Unknown media adapter: ${adapter}`)
     }
   }
   try {

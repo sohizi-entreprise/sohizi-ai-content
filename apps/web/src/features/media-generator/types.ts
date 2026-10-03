@@ -2,8 +2,6 @@ import type { ReactNode } from "react"
 
 export type MediaType = "image" | "video" | "audio" | "html"
 
-export type MediaRunMode = "agent" | "direct"
-
 export type MediaAssetGenerationRequest = {
   id: string
   status: "pending" | "processing" | "completed" | "failed" | "aborted"
@@ -50,14 +48,19 @@ export type GenerationType =
   | "image"
   | "video"
   | "audio"
-  | "motion-graphic"
   | "motion-transfer"
-  | "clone-voice"
+  | "lip-sync"
+  | "upscaler"
 
 export type ImageSubtype = "from-text" | "from-image"
-export type VideoSubtype = "create" | "edit" | "extend"
-export type AudioSubtype = "tts" | "music" | "dialogue"
-export type GenerationSubtype = ImageSubtype | VideoSubtype | AudioSubtype
+export type VideoSubtype = "create" | "edit"
+export type AudioSubtype = "tts" | "music"
+export type UpscalerSubtype = "image" | "video"
+export type GenerationSubtype =
+  | ImageSubtype
+  | VideoSubtype
+  | AudioSubtype
+  | UpscalerSubtype
 
 /** @deprecated Use GenerationType */
 export type ComposerMediaType = GenerationType

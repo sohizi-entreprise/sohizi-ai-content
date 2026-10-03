@@ -24,6 +24,7 @@ import { getErrorMessage } from "@/utils/get-error-message"
 import { ZipArchive } from "archiver"
 import { PassThrough, Readable } from "node:stream"
 import { inngest } from "@/lib/inngest/client"
+import { estimateCatalogMediaCredits } from "./catalog-cost"
 
 export async function getUploadUrl(projectId: string, data: GetUploadUrlInput) {
   const project = await getProjectById(projectId)
@@ -135,10 +136,8 @@ export async function uploadSuccess(
 
 export const assetRequestSchema = z.object({
   model: z.string(),
-  prompt: z.string().default(""),
   settings: z.record(z.string(), z.any()),
   context: z.record(z.string(), z.any()),
-  runMode: z.enum(["agent", "direct"]).default("direct"),
 })
 
 export type RunAgentPayload = {
@@ -147,13 +146,31 @@ export type RunAgentPayload = {
   organizationId: string
 } & z.infer<typeof assetRequestSchema>
 
+export const estimateGenerationCredits = async (
+  payload: z.infer<typeof assetRequestSchema>,
+) => {
+  if (!payload.model) {
+    return { credits: null }
+  }
+
+  try {
+    const credits = await estimateCatalogMediaCredits(
+      payload.model,
+      payload.settings,
+      toProviderMediaType(payload.context),
+    )
+    return { credits }
+  } catch (error) {
+    console.error(error)
+    return { credits: null }
+  }
+}
+
 export const generateAsset = async (payload: RunAgentPayload) => {
   const requestPayload = {
     model: payload.model,
-    prompt: payload.prompt,
     settings: payload.settings,
     context: payload.context,
-    runMode: payload.runMode,
   }
   const run = await repo.createAssetRequest(
     payload.projectId,
@@ -190,18 +207,13 @@ async function runAiGeneration(payload: RunAgentPayload & { runId: string }) {
   const { runId, organizationId, projectId, userId } = payload
   const request = {
     model: payload.model,
-    prompt: payload.prompt,
     settings: payload.settings,
     context: payload.context,
-    runMode: payload.runMode,
   }
   try {
     await repo.updateAssetRequest(runId, { status: "processing", request })
 
-    const jobPayload = {
-      ...request.settings,
-      ...(request.prompt ? { prompt: request.prompt } : {}),
-    }
+    const jobPayload = request.settings
 
     await inngest.send({
       name: "media/generate",
@@ -214,7 +226,6 @@ async function runAiGeneration(payload: RunAgentPayload & { runId: string }) {
         payload: jobPayload,
         referenceFiles: payload.context.referenceFiles || [],
         mediaType: toProviderMediaType(payload.context),
-        runMode: payload.runMode,
         _reservationId: uuidv4(),
       },
     })

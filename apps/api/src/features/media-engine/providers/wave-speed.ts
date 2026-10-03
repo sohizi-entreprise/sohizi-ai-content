@@ -8,6 +8,8 @@ import {
 } from "./type"
 import { waveSpeedFuncs } from "@/lib/wave-speed"
 
+const TERMINAL_JOB_STATUSES = new Set(["failed", "cancelled", "timeout"])
+
 function toRequestData(
   outputs: unknown,
 ): Array<string | Record<string, string>> {
@@ -22,6 +24,18 @@ function toRequestData(
   if (outputs && typeof outputs === "object")
     return [outputs as Record<string, string>]
   return []
+}
+
+function terminalErrorMessage(outputs: unknown, status: string): string {
+  if (typeof outputs === "string" && outputs.trim() !== "") return outputs
+  if (outputs != null) {
+    try {
+      return JSON.stringify(outputs)
+    } catch {
+      return status
+    }
+  }
+  return status
 }
 
 export class WaveSpeedProvider implements MediaEngineProvider {
@@ -43,24 +57,20 @@ export class WaveSpeedProvider implements MediaEngineProvider {
   }
 
   async getRequestData(requestId: string): Promise<GetRequestDataResponse> {
-    try {
-      const response = await waveSpeedFuncs.getJobResult(this.apiKey, requestId)
-      if (response.status === "completed") {
-        return {
-          status: "completed",
-          data: toRequestData(response.outputs),
-        }
+    const response = await waveSpeedFuncs.getJobResult(this.apiKey, requestId)
+    if (response.status === "completed") {
+      return {
+        status: "completed",
+        data: toRequestData(response.outputs),
       }
-      return { status: response.status }
-    } catch (error) {
-      if (
-        error instanceof waveSpeedFuncs.WaveSpeedError &&
-        error.errorCode === "GENERATION_FAILED"
-      ) {
-        return { status: "error", error: error.message }
-      }
-      throw error
     }
+    if (TERMINAL_JOB_STATUSES.has(response.status)) {
+      return {
+        status: "error",
+        error: terminalErrorMessage(response.outputs, response.status),
+      }
+    }
+    return { status: response.status }
   }
 
   async cancelRequest(requestId: string): Promise<CancelResponse> {

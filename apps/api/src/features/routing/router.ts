@@ -1,4 +1,5 @@
 import {
+  MediaAccountError,
   MediaRateLimitError,
   MediaServiceUnavailableError,
   MediaValidationError,
@@ -44,7 +45,8 @@ function retryAfterMsFrom(error: unknown): number {
 function isFailoverError(error: unknown): boolean {
   return (
     error instanceof MediaRateLimitError ||
-    error instanceof MediaServiceUnavailableError
+    error instanceof MediaServiceUnavailableError ||
+    error instanceof MediaAccountError
   )
 }
 
@@ -86,6 +88,7 @@ export async function resolveAndAcquire(
       requestId: options.requestId,
       modelId: options.modelId,
       vendorName: route.vendorName,
+      adapter: route.adapter,
       apiName: route.apiName,
       mappedPayload,
       cooldownMs: route.cooldownMs,
@@ -112,7 +115,7 @@ export async function submitWithFailover(
     tried.push(decision.vendorName)
 
     try {
-      const provider = makeProvider(decision.vendorName)
+      const provider = makeProvider(decision.adapter, decision.vendorName)
       const submitted = await provider.submitRequest(
         decision.apiName,
         decision.mappedPayload,
@@ -161,6 +164,6 @@ export async function pollWithSticky(
   decision: StickyDecision,
   createProviderFn: MediaProviderFactory = createProvider,
 ): Promise<GetRequestDataResponse> {
-  const provider = createProviderFn(decision.vendorName)
+  const provider = createProviderFn(decision.adapter, decision.vendorName)
   return provider.getRequestData(decision.providerRequestId)
 }

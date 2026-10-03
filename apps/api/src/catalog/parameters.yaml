@@ -1,0 +1,372 @@
+# App-defined parameter vocabulary. Models pick a subset via allowedValues / constraints.
+# Vendor files map these ids onto provider field names.
+types:
+  - string
+  - number
+  - boolean
+  - array<string>
+  - array<number>
+uiComponents:
+  - select
+  - slider
+  - uploader
+  - textarea
+  - checkbox
+parameters:
+  - id: parameter_prompt
+    key: prompt
+    label: Prompt
+    type: string
+    description: Text instruction for generation or editing.
+    xUiComponent: textarea
+
+  - id: parameter_negative_prompt
+    key: negative_prompt
+    label: Negative prompt
+    type: string
+    description: Things the model should avoid in the output.
+    xUiComponent: textarea
+
+  - id: parameter_aspect_ratio
+    key: aspect_ratio
+    label: Aspect ratio
+    type: string
+    description: Output frame shape.
+    xUiComponent: select
+    options:
+      - { id: option_aspect_ratio_auto, value: auto, label: Auto }
+      - { id: option_aspect_ratio_1_1, value: "1:1", label: "1:1" }
+      - { id: option_aspect_ratio_16_9, value: "16:9", label: "16:9" }
+      - { id: option_aspect_ratio_9_16, value: "9:16", label: "9:16" }
+      - { id: option_aspect_ratio_4_3, value: "4:3", label: "4:3" }
+      - { id: option_aspect_ratio_3_4, value: "3:4", label: "3:4" }
+      - { id: option_aspect_ratio_3_2, value: "3:2", label: "3:2" }
+      - { id: option_aspect_ratio_2_3, value: "2:3", label: "2:3" }
+      - { id: option_aspect_ratio_4_5, value: "4:5", label: "4:5" }
+      - { id: option_aspect_ratio_5_4, value: "5:4", label: "5:4" }
+      - { id: option_aspect_ratio_21_9, value: "21:9", label: "21:9" }
+      - { id: option_aspect_ratio_9_21, value: "9:21", label: "9:21" }
+      - { id: option_aspect_ratio_2_1, value: "2:1", label: "2:1" }
+      - { id: option_aspect_ratio_1_2, value: "1:2", label: "1:2" }
+      - { id: option_aspect_ratio_3_1, value: "3:1", label: "3:1" }
+      - { id: option_aspect_ratio_1_3, value: "1:3", label: "1:3" }
+      - { id: option_aspect_ratio_4_1, value: "4:1", label: "4:1" }
+      - { id: option_aspect_ratio_1_4, value: "1:4", label: "1:4" }
+      - { id: option_aspect_ratio_8_1, value: "8:1", label: "8:1" }
+      - { id: option_aspect_ratio_1_8, value: "1:8", label: "1:8" }
+
+  - id: parameter_resolution
+    key: resolution
+    label: Resolution
+    type: string
+    description: Output pixel density. Image models use k labels; video models use p labels.
+    xUiComponent: select
+    options:
+      - { id: option_resolution_360p, value: 360p, label: 360p }
+      - { id: option_resolution_480p, value: 480p, label: 480p }
+      - { id: option_resolution_720p, value: 720p, label: 720p }
+      - { id: option_resolution_1080p, value: 1080p, label: 1080p }
+      - { id: option_resolution_0_5k, value: 0.5k, label: 0.5K }
+      - { id: option_resolution_1k, value: 1k, label: 1K }
+      - { id: option_resolution_2k, value: 2k, label: 2K }
+      - { id: option_resolution_4k, value: 4k, label: 4K }
+
+  - id: parameter_quality
+    key: quality
+    label: Quality
+    type: string
+    description: Rendering quality tier. Higher tiers add detail and cost more.
+    xUiComponent: select
+    options:
+      - { id: option_quality_low, value: low, label: Low }
+      - { id: option_quality_medium, value: medium, label: Medium }
+      - { id: option_quality_high, value: high, label: High }
+      - { id: option_quality_xhigh, value: xhigh, label: Extra high }
+      - { id: option_quality_max, value: max, label: Max }
+
+  - id: parameter_duration
+    key: duration
+    label: Duration
+    type: number
+    description: Output length in seconds.
+    xUiComponent: slider
+
+  - id: parameter_output_format
+    key: output_format
+    label: Output format
+    type: string
+    description: File format of the generated still image.
+    xUiComponent: select
+    options:
+      - { id: option_output_format_png, value: png, label: PNG }
+      - { id: option_output_format_jpeg, value: jpeg, label: JPEG }
+      - { id: option_output_format_webp, value: webp, label: WebP }
+
+  - id: parameter_generate_audio
+    key: generate_audio
+    label: Generate audio
+    type: boolean
+    description: Whether the video should include a generated soundtrack.
+    xUiComponent: checkbox
+
+  - id: parameter_background
+    key: background
+    label: Background
+    type: string
+    description: Background treatment for the generated image.
+    xUiComponent: select
+    options:
+      - { id: option_background_auto, value: auto, label: Auto }
+      - { id: option_background_opaque, value: opaque, label: Opaque }
+      - { id: option_background_transparent, value: transparent, label: Transparent }
+
+  - id: parameter_image
+    key: image
+    label: Image
+    type: string
+    description: Single source or start-frame image URL.
+    xUiComponent: uploader
+    fileType: image
+
+  - id: parameter_images
+    key: images
+    label: Images
+    type: array<string>
+    description: One or more reference or source image URLs.
+    xUiComponent: uploader
+    fileType: image
+
+  - id: parameter_last_image
+    key: last_image
+    label: Last frame
+    type: string
+    description: Optional end-frame image. The model interpolates from the start image to this frame.
+    xUiComponent: uploader
+    fileType: image
+
+  - id: parameter_video
+    key: video
+    label: Video
+    type: string
+    description: Source video URL to edit or restyle.
+    xUiComponent: uploader
+    fileType: video
+
+  - id: parameter_reference_images
+    key: reference_images
+    label: Reference images
+    type: array<string>
+    description: Optional images that lock style, characters, or scene composition.
+    xUiComponent: uploader
+    fileType: image
+
+  - id: parameter_reference_videos
+    key: reference_videos
+    label: Reference videos
+    type: array<string>
+    description: Optional video clips that guide motion or identity.
+    xUiComponent: uploader
+    fileType: video
+
+  - id: parameter_reference_audios
+    key: reference_audios
+    label: Reference audio
+    type: array<string>
+    description: Optional audio clips that guide voice, music, or sound design.
+    xUiComponent: uploader
+    fileType: audio
+
+  - id: parameter_audio
+    key: audio
+    label: Audio
+    type: string
+    description: Source audio URL for speech, voice restyle, lip sync, or a cover reference.
+    xUiComponent: uploader
+    fileType: audio
+
+  - id: parameter_voice
+    key: voice
+    label: Voice
+    type: string
+    description: Preset voice name or provider voice id.
+    xUiComponent: select
+    options:
+      - { id: option_voice_achernar, value: Achernar, label: Achernar, description: "Soft, Higher pitch" }
+      - { id: option_voice_achird, value: Achird, label: Achird, description: "Friendly, Lower middle pitch" }
+      - { id: option_voice_algenib, value: Algenib, label: Algenib, description: "Gravelly, Lower pitch" }
+      - { id: option_voice_algieba, value: Algieba, label: Algieba, description: "Smooth, Lower pitch" }
+      - { id: option_voice_alnilam, value: Alnilam, label: Alnilam, description: "Firm, Lower middle pitch" }
+      - { id: option_voice_aoede, value: Aoede, label: Aoede, description: "Breezy, Middle pitch" }
+      - { id: option_voice_autonoe, value: Autonoe, label: Autonoe, description: "Bright, Middle pitch" }
+      - { id: option_voice_callirrhoe, value: Callirrhoe, label: Callirrhoe, description: "Easy-going, Middle pitch" }
+      - { id: option_voice_charon, value: Charon, label: Charon, description: "Informative, Lower pitch" }
+      - { id: option_voice_despina, value: Despina, label: Despina, description: "Smooth, Middle pitch" }
+      - { id: option_voice_enceladus, value: Enceladus, label: Enceladus, description: "Breathy, Lower pitch" }
+      - { id: option_voice_erinome, value: Erinome, label: Erinome, description: "Clear, Middle pitch" }
+      - { id: option_voice_fenrir, value: Fenrir, label: Fenrir, description: "Excitable, Lower middle pitch" }
+      - { id: option_voice_gacrux, value: Gacrux, label: Gacrux, description: "Mature, Middle pitch" }
+      - { id: option_voice_iapetus, value: Iapetus, label: Iapetus, description: "Clear, Lower middle pitch" }
+      - { id: option_voice_kore, value: Kore, label: Kore, description: "Firm, Middle pitch" }
+      - { id: option_voice_laomedeia, value: Laomedeia, label: Laomedeia, description: "Upbeat, Higher pitch" }
+      - { id: option_voice_leda, value: Leda, label: Leda, description: "Youthful, Higher pitch" }
+      - { id: option_voice_orus, value: Orus, label: Orus, description: "Firm, Lower middle pitch" }
+      - { id: option_voice_puck, value: Puck, label: Puck, description: "Upbeat, Middle pitch" }
+      - { id: option_voice_pulcherrima, value: Pulcherrima, label: Pulcherrima, description: "Forward, Middle pitch" }
+      - { id: option_voice_rasalgethi, value: Rasalgethi, label: Rasalgethi, description: "Informative, Middle pitch" }
+      - { id: option_voice_sadachbia, value: Sadachbia, label: Sadachbia, description: "Lively, Lower pitch" }
+      - { id: option_voice_sadaltager, value: Sadaltager, label: Sadaltager, description: "Knowledgeable, Middle pitch" }
+      - { id: option_voice_schedar, value: Schedar, label: Schedar, description: "Even, Lower middle pitch" }
+      - { id: option_voice_sulafat, value: Sulafat, label: Sulafat, description: "Warm, Middle pitch" }
+      - { id: option_voice_umbriel, value: Umbriel, label: Umbriel, description: "Easy-going, Lower middle pitch" }
+      - { id: option_voice_vindemiatrix, value: Vindemiatrix, label: Vindemiatrix, description: "Gentle, Middle pitch" }
+      - { id: option_voice_zephyr, value: Zephyr, label: Zephyr, description: "Bright, Higher pitch" }
+      - { id: option_voice_zubenelgenubi, value: Zubenelgenubi, label: Zubenelgenubi, description: "Casual, Lower middle pitch" }
+      - { id: option_voice_alicia, value: Alicia, label: Alicia, description: Polished Global Anchor }
+      - { id: option_voice_alice, value: Alice, label: Alice, description: "Clear British woman, e-learning" }
+      - { id: option_voice_sarah, value: Sarah, label: Sarah, description: "Confident, warm, professional" }
+      - { id: option_voice_jessica, value: Jessica, label: Jessica, description: "Playful American, trendy content" }
+      - { id: option_voice_lily, value: Lily, label: Lily, description: "Velvety British, news and narration" }
+      - { id: option_voice_matilda, value: Matilda, label: Matilda, description: "Professional alto, many use cases" }
+      - { id: option_voice_bella, value: Bella, label: Bella, description: "Warm, bright, professional American" }
+      - { id: option_voice_adam, value: Adam, label: Adam, description: "Bright tenor, brash and confident" }
+      - { id: option_voice_brian, value: Brian, label: Brian, description: "Resonant, comforting, narrations" }
+      - { id: option_voice_daniel, value: Daniel, label: Daniel, description: Strong broadcast and news }
+      - { id: option_voice_chris, value: Chris, label: Chris, description: "Natural, down-to-earth" }
+      - { id: option_voice_charlie, value: Charlie, label: Charlie, description: "Young Australian, confident" }
+      - { id: option_voice_george, value: George, label: George, description: Warm resonance }
+      - { id: option_voice_liam, value: Liam, label: Liam, description: "Energy and warmth, reels and shorts" }
+      - { id: option_voice_river, value: River, label: River, description: "Relaxed, neutral narration" }
+
+  - id: parameter_stability
+    key: stability
+    label: Stability
+    type: number
+    description: How consistent speech delivery stays. Lower allows more variation.
+    xUiComponent: slider
+
+  - id: parameter_similarity
+    key: similarity
+    label: Similarity
+    type: number
+    description: How closely generated speech follows the selected voice.
+    xUiComponent: slider
+
+  - id: parameter_style_instructions
+    key: style_instructions
+    label: Style instructions
+    type: string
+    description: Delivery style, tone, pacing, or accent for speech.
+    xUiComponent: textarea
+
+  - id: parameter_character_orientation
+    key: character_orientation
+    label: Character orientation
+    type: string
+    description: Whether the output character matches the image or the driving video.
+    xUiComponent: select
+    options:
+      - { id: option_character_orientation_image, value: image, label: Image }
+      - { id: option_character_orientation_video, value: video, label: Video }
+
+  - id: parameter_keep_original_sound
+    key: keep_original_sound
+    label: Keep original sound
+    type: boolean
+    description: Whether the output keeps the driving video soundtrack.
+    xUiComponent: checkbox
+
+  - id: parameter_sync_mode
+    key: sync_mode
+    label: Sync mode
+    type: string
+    description: How to handle a duration mismatch between video and audio.
+    xUiComponent: select
+    options:
+      - { id: option_sync_mode_bounce, value: bounce, label: Bounce }
+      - { id: option_sync_mode_loop, value: loop, label: Loop }
+      - { id: option_sync_mode_cut_off, value: cut_off, label: Cut off }
+      - { id: option_sync_mode_silence, value: silence, label: Silence }
+      - { id: option_sync_mode_remap, value: remap, label: Remap }
+
+  - id: parameter_creativity
+    key: creativity
+    label: Creativity
+    type: number
+    description: How freely the upscaler invents detail. Negative stays closer to the source.
+    xUiComponent: slider
+
+  - id: parameter_target_megapixels
+    key: target_megapixels
+    label: Target megapixels
+    type: number
+    description: Requested output size in megapixels.
+    xUiComponent: slider
+
+  - id: parameter_lyrics
+    key: lyrics
+    label: Lyrics
+    type: string
+    description: Sung lyrics for a generated song.
+    xUiComponent: textarea
+
+  - id: parameter_is_instrumental
+    key: is_instrumental
+    label: Instrumental
+    type: boolean
+    description: Generate music without vocals.
+    xUiComponent: checkbox
+
+  - id: parameter_lyrics_optimizer
+    key: lyrics_optimizer
+    label: Lyrics optimizer
+    type: boolean
+    description: Auto-generate lyrics from the prompt when lyrics are empty.
+    xUiComponent: checkbox
+
+  - id: parameter_number_of_songs
+    key: number_of_songs
+    label: Number of songs
+    type: number
+    description: How many tracks to generate in one request.
+    xUiComponent: slider
+
+  - id: parameter_audio_format
+    key: audio_format
+    label: Audio format
+    type: string
+    description: File format of the generated audio.
+    xUiComponent: select
+    options:
+      - { id: option_audio_format_mp3, value: mp3, label: MP3 }
+      - { id: option_audio_format_wav, value: wav, label: WAV }
+      - { id: option_audio_format_flac, value: flac, label: FLAC }
+      - { id: option_audio_format_aac, value: aac, label: AAC }
+
+  - id: parameter_temperature
+    key: temperature
+    label: Temperature
+    type: number
+    description: Sampling randomness for text generation. Lower is more deterministic.
+    xUiComponent: slider
+
+  - id: parameter_max_output_tokens
+    key: max_output_tokens
+    label: Max output tokens
+    type: number
+    description: Upper bound on generated text tokens.
+    xUiComponent: slider
+
+  - id: parameter_reasoning_effort
+    key: reasoning_effort
+    label: Reasoning effort
+    type: string
+    description: How much internal reasoning the model should spend before answering.
+    xUiComponent: select
+    options:
+      - { id: option_reasoning_effort_none, value: none, label: None }
+      - { id: option_reasoning_effort_minimal, value: minimal, label: Minimal }
+      - { id: option_reasoning_effort_low, value: low, label: Low }
+      - { id: option_reasoning_effort_medium, value: medium, label: Medium }
+      - { id: option_reasoning_effort_high, value: high, label: High }
+      - { id: option_reasoning_effort_xhigh, value: xhigh, label: Extra high }
+      - { id: option_reasoning_effort_max, value: max, label: Max }

@@ -20,13 +20,26 @@ import type {
   VendorRateLimit,
 } from "@/type"
 import { DEFAULT_VENDOR_RATE_LIMIT } from "@/type"
+import {
+  categoryIdFromName,
+  optionIdFromKeyValue,
+  parameterIdFromKey,
+  vendorIdFromName,
+} from "@/catalog/ids"
 
 const isCompleteListing = (pricing: ModelBasePricing | null | undefined) => {
   if (!pricing) return false
   if (pricing.unit === "per_1m_tokens") {
     return Number.isFinite(pricing.input) && Number.isFinite(pricing.output)
   }
-  return pricing.unit === "per_inference" && Number.isFinite(pricing.rate)
+  if (pricing.unit === "per_inference") {
+    return Number.isFinite(pricing.rate)
+  }
+  return (
+    pricing.unit === "parameter_table" &&
+    pricing.rate.length > 0 &&
+    pricing.rate.every((row) => Number.isFinite(row.usd))
+  )
 }
 
 type ParameterOptionRow = {
@@ -56,12 +69,112 @@ type ParameterOptionDetailRow = ParameterOptionRow & {
   vendorMappings: OptionVendorMappingRow[]
 }
 
+export type ModelReasoningEffortOption = {
+  value: string
+  label: string
+}
+
+export type ModelReasoningEffort = {
+  defaultValue: string | null
+  options: Array<ModelReasoningEffortOption>
+}
+
+const REASONING_EFFORT_KEY = "reasoning_effort"
+
+const REASONING_EFFORT_ORDER = [
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const
+
+const reasoningEffortRank = (value: string) => {
+  const index = REASONING_EFFORT_ORDER.indexOf(
+    value as (typeof REASONING_EFFORT_ORDER)[number],
+  )
+  return index === -1 ? REASONING_EFFORT_ORDER.length : index
+}
+
+export const listReasoningEffortByModelIds = async (modelIds: string[]) => {
+  const byModel = new Map<string, ModelReasoningEffort>()
+  if (modelIds.length === 0) {
+    return byModel
+  }
+
+  const rows = await db
+    .select({
+      modelId: modelsAndParameters.modelId,
+      defaultValue: modelsAndParameters.defaultValue,
+      optionValue: parameterOptions.value,
+      optionLabel: parameterOptions.label,
+    })
+    .from(modelsAndParameters)
+    .innerJoin(
+      modelParameters,
+      eq(modelsAndParameters.parameterId, modelParameters.id),
+    )
+    .leftJoin(
+      modelsAndParameterOptions,
+      and(
+        eq(modelsAndParameterOptions.modelId, modelsAndParameters.modelId),
+        eq(
+          modelsAndParameterOptions.parameterId,
+          modelsAndParameters.parameterId,
+        ),
+      ),
+    )
+    .leftJoin(
+      parameterOptions,
+      and(
+        eq(parameterOptions.id, modelsAndParameterOptions.optionId),
+        eq(parameterOptions.parameterId, modelsAndParameterOptions.parameterId),
+      ),
+    )
+    .where(
+      and(
+        inArray(modelsAndParameters.modelId, modelIds),
+        eq(modelParameters.key, REASONING_EFFORT_KEY),
+      ),
+    )
+
+  for (const row of rows) {
+    let binding = byModel.get(row.modelId)
+    if (!binding) {
+      binding = { defaultValue: row.defaultValue, options: [] }
+      byModel.set(row.modelId, binding)
+    }
+    if (row.optionValue && row.optionLabel) {
+      binding.options.push({
+        value: row.optionValue,
+        label: row.optionLabel,
+      })
+    }
+  }
+
+  for (const binding of byModel.values()) {
+    binding.options.sort(
+      (left, right) =>
+        reasoningEffortRank(left.value) - reasoningEffortRank(right.value),
+    )
+  }
+
+  return byModel
+}
+
+export const getModelReasoningEffort = async (modelId: string) => {
+  const byModel = await listReasoningEffortByModelIds([modelId])
+  return byModel.get(modelId) ?? null
+}
+
 export const listEnabledModelsByCategories = async (categories: string[]) => {
   if (categories.length === 0) {
     return []
   }
 
-  return db
+  const models = await db
     .select({
       id: llmModels.id,
       name: llmModels.name,
@@ -90,6 +203,15 @@ export const listEnabledModelsByCategories = async (categories: string[]) => {
       llmModels.contextWindow,
     )
     .limit(50)
+
+  const reasoningByModel = await listReasoningEffortByModelIds(
+    models.map((model) => model.id),
+  )
+
+  return models.map((model) => ({
+    ...model,
+    reasoningEffort: reasoningByModel.get(model.id) ?? null,
+  }))
 }
 
 export const getModelById = async (id: string) => {
@@ -490,6 +612,7 @@ export const createCategory = async (data: {
   const [created] = await db
     .insert(modelCategories)
     .values({
+      id: categoryIdFromName(data.name),
       name: data.name,
       description: data.description,
     })
@@ -658,7 +781,7 @@ export const getParameterDetail = async (id: string) => {
             ORDER BY o.label
           )
           FROM parameter_options o
-          WHERE o.parameter_id = ${id}::uuid
+          WHERE o.parameter_id = ${id}
         ), '[]'::jsonb)
       `,
       vendorMappings: sql<ParameterVendorMappingRow[]>`
@@ -674,7 +797,7 @@ export const getParameterDetail = async (id: string) => {
           )
           FROM llm_vendors_and_parameters m
           INNER JOIN llm_vendors v ON v.id = m.vendor_id
-          WHERE m.parameter_id = ${id}::uuid
+          WHERE m.parameter_id = ${id}
         ), '[]'::jsonb)
       `,
     })
@@ -704,6 +827,7 @@ export const createParameter = async (data: {
     const [created] = await tx
       .insert(modelParameters)
       .values({
+        id: parameterIdFromKey(data.key),
         key: data.key,
         label: data.label,
         type: data.type,
@@ -715,6 +839,7 @@ export const createParameter = async (data: {
     if (data.options && data.options.length > 0) {
       await tx.insert(parameterOptions).values(
         data.options.map((option) => ({
+          id: optionIdFromKeyValue(data.key, option.value),
           parameterId: created.id,
           label: option.label,
           value: option.value,
@@ -759,9 +884,12 @@ export const createParameterOption = async (data: {
   value: string
   description?: string | null
 }) => {
+  const parameter = await getParameterById(data.parameterId)
+  const key = parameter?.key ?? data.parameterId.replace(/^parameter_/, "")
   const [created] = await db
     .insert(parameterOptions)
     .values({
+      id: optionIdFromKeyValue(key, data.value),
       parameterId: data.parameterId,
       label: data.label,
       value: data.value,
@@ -817,10 +945,10 @@ export const upsertVendorOptionMapping = async (data: {
 }) => {
   const result = await db.execute(sql`
     INSERT INTO llm_vendors_and_parameter_options (vendor_id, parameter_option_id, vendor_option_value)
-    SELECT ${data.vendorId}::uuid, o.id, ${data.vendorOptionValue}
+    SELECT ${data.vendorId}, o.id, ${data.vendorOptionValue}
     FROM parameter_options o
-    WHERE o.id = ${data.optionId}::uuid
-      AND o.parameter_id = ${data.parameterId}::uuid
+    WHERE o.id = ${data.optionId}
+      AND o.parameter_id = ${data.parameterId}
     ON CONFLICT (vendor_id, parameter_option_id)
     DO UPDATE SET
       vendor_option_value = excluded.vendor_option_value,
@@ -850,8 +978,8 @@ export const deleteVendorOptionMapping = async (
         eq(llmVendorsAndParameterOptions.parameterOptionId, optionId),
         sql`exists (
           select 1 from ${parameterOptions}
-          where ${parameterOptions.id} = ${optionId}::uuid
-            and ${parameterOptions.parameterId} = ${parameterId}::uuid
+          where ${parameterOptions.id} = ${optionId}
+            and ${parameterOptions.parameterId} = ${parameterId}
         )`,
       ),
     )
@@ -1011,6 +1139,7 @@ export const listVendors = async () => {
     .select({
       id: llmVendors.id,
       name: llmVendors.name,
+      adapter: llmVendors.adapter,
       kind: llmVendors.kind,
       enabled: llmVendors.enabled,
       rateLimit: llmVendors.rateLimit,
@@ -1035,6 +1164,7 @@ export const listVendors = async () => {
 
 export const createVendor = async (data: {
   name: string
+  adapter?: string
   kind?: "media" | "llm"
   enabled?: boolean
   rateLimit?: VendorRateLimit
@@ -1043,7 +1173,9 @@ export const createVendor = async (data: {
   const [created] = await db
     .insert(llmVendors)
     .values({
+      id: vendorIdFromName(data.name),
       name: data.name,
+      adapter: data.adapter ?? data.name,
       kind: data.kind ?? "llm",
       enabled: data.enabled ?? true,
       rateLimit: data.rateLimit ?? DEFAULT_VENDOR_RATE_LIMIT,
@@ -1057,6 +1189,7 @@ export const updateVendor = async (
   id: string,
   data: Partial<{
     name: string
+    adapter: string
     kind: "media" | "llm"
     enabled: boolean
     rateLimit: VendorRateLimit

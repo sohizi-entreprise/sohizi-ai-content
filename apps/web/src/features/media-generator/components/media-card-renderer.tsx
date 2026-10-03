@@ -2,10 +2,9 @@ import { useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { IconAlertTriangle } from "@tabler/icons-react"
 import { Eye, RotateCcw, Trash2 } from "lucide-react"
-import { DotsLoader, SphereLoader } from "@sohizi/ui/loaders"
+import { DotsLoader } from "@sohizi/ui/loaders"
 import { GENERATION_TYPES } from "../constants"
 import { useRequestActions } from "../hooks/use-request-actions"
-import { extractLastMessageContent } from "../lib/agent-progress"
 import {
   usePatchAiGeneratedRequest,
   useUpdateAssetsList,
@@ -63,11 +62,10 @@ function PendingMediaCard({ item }: { item: AiGeneratedMediaRequest }) {
   const updateAssetsList = useUpdateAssetsList(item.projectId)
   const patchRequest = usePatchAiGeneratedRequest(item.projectId)
 
-  const runMode = item.request?.runMode === "agent" ? "agent" : "direct"
   const generationType = getRequestGenerationType(item.request)
 
   const url = `/api/media/${item.projectId}/requests/${item.id}`
-  const { messages } = useBufferChunks({
+  useBufferChunks({
     url,
     initialMessages: [],
     onAsset: (asset) => {
@@ -87,27 +85,13 @@ function PendingMediaCard({ item }: { item: AiGeneratedMediaRequest }) {
       })
     },
   })
-  if (runMode === "direct") {
-    const GenerationIcon = GENERATION_TYPE_ICONS[generationType]
-    return (
-      <StreamingContainer>
-        <div className="flex flex-col min-w-0 items-center gap-2">
-          <GenerationIcon className="size-4 shrink-0 text-foreground" />
-          <DotsLoader bgColor="text-foreground" />
-        </div>
-      </StreamingContainer>
-    )
-  }
 
-  const progressText = extractLastMessageContent(messages, true)
-
+  const GenerationIcon = GENERATION_TYPE_ICONS[generationType]
   return (
     <StreamingContainer>
-      <div className="flex shrink-0 items-center gap-2 px-2 py-1.5">
-        <SphereLoader isLoading size={18} showRings={false} />
-        <p className="min-w-0 truncate text-xs tracking-wide text-muted-foreground">
-          {progressText}
-        </p>
+      <div className="flex flex-col min-w-0 items-center gap-2">
+        <GenerationIcon className="size-4 shrink-0 text-foreground" />
+        <DotsLoader bgColor="text-foreground" />
       </div>
     </StreamingContainer>
   )

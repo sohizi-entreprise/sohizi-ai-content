@@ -11,6 +11,15 @@ export const modelBasePricingSchema = z.discriminatedUnion("unit", [
     unit: z.literal("per_inference"),
     rate: z.number().min(0),
   }),
+  z.object({
+    unit: z.literal("parameter_table"),
+    rate: z.array(
+      z.object({
+        when: z.record(z.string(), z.union([z.string(), z.number()])),
+        usd: z.number().min(0),
+      }),
+    ),
+  }),
 ])
 
 export const modelParameterTypeSchema = z.enum([
@@ -25,6 +34,8 @@ export const modelParameterUiComponentSchema = z.enum([
   "select",
   "slider",
   "uploader",
+  "textarea",
+  "checkbox",
 ])
 
 export const modelParameterConstraintSchema = z.object({
@@ -134,6 +145,7 @@ export const vendorCircuitConfigSchema = z.object({
 
 export const createVendorSchema = z.object({
   name: vendorNameSlugSchema,
+  adapter: vendorNameSlugSchema.optional(),
   kind: vendorKindSchema.optional(),
   enabled: z.boolean().optional(),
   rateLimit: vendorRateLimitSchema.optional(),
@@ -142,14 +154,17 @@ export const createVendorSchema = z.object({
 
 export const updateVendorSchema = z.object({
   name: vendorNameSlugSchema.optional(),
+  adapter: vendorNameSlugSchema.optional(),
   kind: vendorKindSchema.optional(),
   enabled: z.boolean().optional(),
   rateLimit: vendorRateLimitSchema.optional(),
   circuitConfig: vendorCircuitConfigSchema.nullable().optional(),
 })
 
+export const catalogIdSchema = z.string().trim().min(1).max(100)
+
 export const createModelVendorBindingSchema = z.object({
-  vendorId: z.uuid(),
+  vendorId: catalogIdSchema,
   apiName: z.string().min(1).max(50),
   enabled: z.boolean().optional(),
   priority: z.number().int().optional(),
@@ -162,14 +177,14 @@ export const updateModelVendorBindingSchema = z.object({
 })
 
 export const modelParameterBindingSchema = z.object({
-  parameterId: z.uuid(),
+  parameterId: catalogIdSchema,
   required: z.boolean().optional(),
   defaultValue: z.string().nullable().optional(),
   constraints: modelParameterConstraintSchema.nullable().optional(),
   options: z
     .array(
       z.object({
-        optionId: z.uuid(),
+        optionId: catalogIdSchema,
         priceMultiplier: z.number().min(0).nullable().optional(),
       }),
     )

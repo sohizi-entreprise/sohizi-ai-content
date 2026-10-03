@@ -1,0 +1,19 @@
+# Shared capability groups. Model files reference these ids; do not copy this list into each file.
+categories:
+  - { id: text-to-text, name: text-to-text, description: Chat, summarization, extraction, and other language-only tasks. }
+  - { id: text-to-image, name: text-to-image, description: Generate a still image from a text prompt. }
+  - { id: image-to-image, name: image-to-image, description: Edit or restyle an existing image from a prompt and references. }
+  - { id: text-to-video, name: text-to-video, description: Generate a video from a text prompt. }
+  - { id: image-to-video, name: image-to-video, description: Animate a still image into a video. }
+  - { id: video-to-video, name: video-to-video, description: Edit or restyle an existing video. }
+  - { id: text-to-speech, name: text-to-speech, description: Synthesize speech from text. }
+  - { id: music-generation, name: music-generation, description: Generate a song or instrumental from a prompt. }
+  - { id: voice-control, name: voice-control, description: Restyle existing speech into a different voice while keeping timing. }
+  - { id: motion-transfer, name: motion-transfer, description: Transfer movement from a driving video onto a character image. }
+  - { id: lip-sync, name: lip-sync, description: Align a video subject's mouth to a new audio track. }
+  - { id: image-upscaler, name: image-upscaler, description: Increase resolution and recover detail in a still image. }
+  - { id: video-upscaler, name: video-upscaler, description: Increase resolution and recover detail in an existing video. }
+  - { id: speech-to-text, name: speech-to-text, description: Transcribe speech into text. }
+  - { id: image-to-text, name: image-to-text, description: Describe or extract information from images. }
+  - { id: video-to-text, name: video-to-text, description: Describe or extract information from video. }
+  - { id: leading-agent, name: leading-agent, description: Frontier models used as the primary conversational agent. }

@@ -13,10 +13,24 @@ export function isPickerAssetType(value: unknown): value is PickerAssetType {
   return value === "image" || value === "video" || value === "audio"
 }
 
+const FILE_TYPE_BY_KEY: Record<string, PickerAssetType> = {
+  image: "image",
+  images: "image",
+  last_image: "image",
+  reference_images: "image",
+  video: "video",
+  reference_videos: "video",
+  audio: "audio",
+  reference_audios: "audio",
+}
+
 export function getUploaderFileType(
   parameter: ModelParameterBinding,
 ): PickerAssetType {
-  return parameter.constraints?.fileType ?? "image"
+  if (parameter.constraints?.fileType) {
+    return parameter.constraints.fileType
+  }
+  return FILE_TYPE_BY_KEY[parameter.key] ?? "image"
 }
 
 export function getUploaderFileTypes(
@@ -44,6 +58,16 @@ export function describeFileTypes(fileTypes: Array<PickerAssetType>): string {
   if (fileTypes.length === 1) return fileTypes[0]
   if (fileTypes.length === 2) return `${fileTypes[0]} or ${fileTypes[1]}`
   return `${fileTypes.slice(0, -1).join(", ")}, or ${fileTypes[fileTypes.length - 1]}`
+}
+
+export function chooseLabelForFileTypes(
+  fileTypes: Array<PickerAssetType>,
+  allowMultiple: boolean,
+): string {
+  if (fileTypes.length !== 1) return "files"
+  const type = fileTypes[0]
+  if (!allowMultiple || type === "audio") return type
+  return `${type}s`
 }
 
 export function isArrayParameter(parameter: ModelParameterBinding) {
@@ -85,6 +109,14 @@ export function serializeParameterAssetUrls(
   return JSON.stringify(next)
 }
 
+export function isStoredBoolean(
+  value: unknown,
+): value is boolean | "true" | "false" {
+  return (
+    value === true || value === false || value === "true" || value === "false"
+  )
+}
+
 export function coerceParameterSettings(
   values: Record<string, string>,
   parameters: Array<ModelParameterBinding>,
@@ -92,8 +124,22 @@ export function coerceParameterSettings(
   const next: Record<string, unknown> = { ...values }
 
   for (const parameter of parameters) {
-    if (parameter.xUiComponent !== "uploader") continue
     const raw = values[parameter.key]
+    if (parameter.type === "boolean") {
+      if (raw === "true" || raw === "false") {
+        next[parameter.key] = raw === "true"
+      }
+      continue
+    }
+    if (parameter.type === "number") {
+      if (raw == null || raw === "") continue
+      const numeric = Number(raw)
+      if (Number.isFinite(numeric)) {
+        next[parameter.key] = numeric
+      }
+      continue
+    }
+    if (parameter.xUiComponent !== "uploader") continue
     next[parameter.key] = isArrayParameter(parameter)
       ? parseParameterAssetUrls(raw)
       : (parseParameterAssetUrls(raw)[0] ?? "")

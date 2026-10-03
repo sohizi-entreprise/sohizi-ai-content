@@ -1,0 +1,105 @@
+# Songs, covers, BGM, and text-to-SFX. per_inference holds a flat or unit rate; the description says what it multiplies.
+models:
+  - id: google/lyria-3.5/music
+    name: Lyria 3.5
+    provider: google
+    description: >
+      Flagship Google music. Prefer for full songs with vocals, timed lyrics, and arrangement. Optional image sets mood. Flat WaveSpeed rate.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.10
+    categories: [music-generation]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_image, required: false }
+
+  - id: minimax/music-3.0
+    name: MiniMax Music 3.0
+    provider: minimax
+    description: >
+      Newest MiniMax full-song model. Prefer when you have a style prompt and optional lyrics; is_instrumental true drops vocals. lyrics_optimizer can invent lyrics when lyrics is empty. Flat WaveSpeed rate.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.15
+    categories: [music-generation]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_lyrics, required: false }
+      - { id: parameter_is_instrumental, required: false, defaultValue: false }
+      - { id: parameter_lyrics_optimizer, required: false, defaultValue: false }
+
+  - id: mureka-ai/mureka-o2/generate-song
+    name: Mureka O2 Song
+    provider: mureka-ai
+    description: >
+      Mureka O2 song. Prefer when lyrics are the source of truth; prompt is optional style. Lyrics cap 3000 characters, prompt cap 1024. number_of_songs 1-3. Listed rate is USD per generated song.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.07
+    categories: [music-generation]
+    parameters:
+      - { id: parameter_lyrics, required: true }
+      - { id: parameter_prompt, required: false }
+      - { id: parameter_number_of_songs, required: false, defaultValue: 1, constraints: { min: 1, max: 3, step: 1 } }
+      - { id: parameter_audio_format, required: false, defaultValue: mp3, allowedValues: [mp3, wav, flac] }
+
+  - id: mureka-ai/mureka-v8/generate-bgm
+    name: Mureka V8 BGM
+    provider: mureka-ai
+    description: >
+      Mureka V8 background music. Prefer instrumental beds and underscore from a style prompt. Prompt cap 1024 characters. number_of_songs 1-3. Listed rate is USD per generated track.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.07
+    categories: [music-generation]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_number_of_songs, required: false, defaultValue: 1, constraints: { min: 1, max: 3, step: 1 } }
+      - { id: parameter_audio_format, required: false, defaultValue: mp3, allowedValues: [mp3, wav, flac] }
+
+  - id: kwaivgi/kling-text-to-audio
+    name: Kling Text to Audio
+    provider: kwaivgi
+    description: >
+      Kling short sound design. Prefer foley and SFX, not songs. Prompt cap 200 characters. Duration 3-10s. Flat WaveSpeed rate.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.035
+    categories: [music-generation]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_duration, required: true, defaultValue: 10, constraints: { min: 3, max: 10, step: 0.1 } }
+
+  - id: minimax/music-cover
+    name: MiniMax Music Cover
+    provider: minimax
+    description: >
+      MiniMax style cover. Prefer to restyle an existing vocal track; audio must include vocals, 6s-6min. Prompt 10-300 characters describing the new style. Flat WaveSpeed rate.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.15
+    categories: [music-generation]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_audio, required: true }
+
+  - id: sonilo/v1/text-to-sfx
+    name: Sonilo Text to SFX
+    provider: sonilo
+    description: >
+      Sonilo sound effects. Prefer longer or format-controlled SFX (1-180s). Listed rate is USD per second with a $0.006 minimum.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.002
+    categories: [music-generation]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_duration, required: true, constraints: { min: 1, max: 180, step: 1 } }
+      - { id: parameter_audio_format, required: false, defaultValue: aac, allowedValues: [wav, mp3, aac, flac] }

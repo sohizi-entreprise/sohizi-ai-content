@@ -1,0 +1,16 @@
+# Photoreal still-image upscale. per_inference holds USD per target megapixel.
+models:
+  - id: clarity-ai/pro-upscaler
+    name: Clarity Pro Upscaler
+    provider: clarity-ai
+    description: >
+      Photoreal image upscaler with identity preservation. creativity below 0 stays closer to the source; above 0 invents more detail. target_megapixels 1-64. Listed rate is USD per target megapixel.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.03
+    categories: [image-upscaler]
+    parameters:
+      - { id: parameter_image, required: true }
+      - { id: parameter_creativity, required: false, defaultValue: 0, constraints: { min: -10, max: 10, step: 1 } }
+      - { id: parameter_target_megapixels, required: false, defaultValue: 4, constraints: { min: 1, max: 64, step: 1 } }

@@ -3,12 +3,7 @@ import type {
   CursorPaginationResult,
 } from "@/lib/pagination"
 import type { ModelParameterBinding } from "@/features/admin/types"
-import type {
-  AiGeneratedMediaRequest,
-  MediaAsset,
-  MediaRunMode,
-  MediaType,
-} from "./types"
+import type { AiGeneratedMediaRequest, MediaAsset, MediaType } from "./types"
 import api from "@/lib/axios"
 
 export type {
@@ -21,10 +16,8 @@ export type { CursorPaginationOptions, CursorPaginationResult }
 
 export type AssetRequest = {
   model: string
-  prompt: string
   settings: Record<string, unknown>
   context: Record<string, unknown>
-  runMode: MediaRunMode
 }
 
 export type GenerationRequestAsset = {
@@ -109,11 +102,23 @@ export const listUploadedAssets = async (
   return response.data
 }
 
+export type GenerationCreditEstimate = {
+  credits: number | null
+}
+
 export const startGeneration = async (
   projectId: string,
   data: AssetRequest,
 ): Promise<MediaGenerationRun> => {
   const response = await api.post(`/media/${projectId}/assets`, data)
+  return response.data
+}
+
+export const estimateGenerationCredits = async (
+  projectId: string,
+  data: AssetRequest,
+): Promise<GenerationCreditEstimate> => {
+  const response = await api.post(`/media/${projectId}/estimate`, data)
   return response.data
 }
 

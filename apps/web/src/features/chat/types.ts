@@ -330,6 +330,7 @@ export type EditorContext = {
 
 export type ChatCompletionRequest = {
   modelId: string
+  reasoningEffort?: string
   userPrompt: {
     role: "user"
     content: Array<ImagePart | FilePart | MsgTextPart>
@@ -411,11 +412,22 @@ export type ChatStreamChunk = {
   | { type: "operation"; operation: FilePendingOperation }
 )
 
+export type ModelReasoningEffortOption = {
+  value: string
+  label: string
+}
+
+export type ModelReasoningEffort = {
+  defaultValue: string | null
+  options: Array<ModelReasoningEffortOption>
+}
+
 export type LlmModel = {
   id: string
   provider: string
   name: string
   contextWindow?: number | null
+  reasoningEffort?: ModelReasoningEffort | null
 }
 
 export const DEFAULT_CONTEXT_WINDOW = 250_000

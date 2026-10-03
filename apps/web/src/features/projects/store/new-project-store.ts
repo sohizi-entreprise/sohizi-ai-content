@@ -38,6 +38,7 @@ export type NewProjectState = {
   storyIdea: string
   additionalSettings: AdditionalSettings
   modelId: string | null
+  reasoningEffortByModelId: Record<string, string>
   mode: ProjectMode
   attachments: Array<ProjectAttachment>
 }
@@ -53,6 +54,7 @@ type NewProjectActions = {
   ) => void
   clearAdditionalSetting: (key: AdditionalSettingKey) => void
   setModelId: (modelId: string) => void
+  setReasoningEffort: (modelId: string, reasoningEffort: string) => void
   setMode: (mode: ProjectMode) => void
   addAttachments: (attachments: Array<ProjectAttachment>) => void
   removeAttachment: (id: string) => void
@@ -77,6 +79,7 @@ const initialState: NewProjectState = {
   storyIdea: "",
   additionalSettings: initialAdditionalSettings,
   modelId: null,
+  reasoningEffortByModelId: {},
   mode: PROJECT_MODES[0].value,
   attachments: [],
 }
@@ -139,5 +142,13 @@ export const useNewProjectStore = create<NewProjectState & NewProjectActions>(
     },
 
     setModelId: (modelId) => set({ modelId }),
+
+    setReasoningEffort: (modelId, reasoningEffort) =>
+      set((state) => ({
+        reasoningEffortByModelId: {
+          ...state.reasoningEffortByModelId,
+          [modelId]: reasoningEffort,
+        },
+      })),
   }),
 )

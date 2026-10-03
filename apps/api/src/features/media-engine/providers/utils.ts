@@ -30,73 +30,81 @@ export function extractOutputUrls(data: unknown): string[] {
   return [...new Set(urlsFromValue(data))]
 }
 
-export const mapVendorPayload = async (
-  vendor: string,
-  modelId: string,
-  payload: SubmitPayload,
-) => {
-  const parameters: string[] = []
-  const values: string[] = []
+type VendorParameterMapping = {
+  parameter: string
+  type?: string | null
+  vendorParameter: string | null
+  optionValue: string | null
+  vendorOption: string | null
+}
 
+export function applyVendorParameterMapping(
+  payload: SubmitPayload,
+  mappings: Array<VendorParameterMapping>,
+): SubmitPayload {
   const parameterMap: Record<string, string> = {}
   const optionMap: Record<string, string> = {}
+  const numberParameters = new Set<string>()
 
-  for (const [key, value] of Object.entries(payload)) {
-    if (key === "prompt") {
-      continue
-    }
-    parameters.push(key)
-    if (typeof value === "string") {
-      values.push(value)
-      continue
-    }
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        if (typeof item === "string") {
-          values.push(item)
-        }
-      }
-      continue
-    }
-  }
-
-  const parametersMapping = await getVendorParamsMapping(
-    vendor,
-    modelId,
-    parameters,
-  )
-
-  for (const parameter of parametersMapping) {
+  for (const parameter of mappings) {
     if (parameter.vendorParameter) {
       parameterMap[parameter.parameter] = parameter.vendorParameter
     }
     if (parameter.optionValue && parameter.vendorOption) {
       optionMap[parameter.optionValue] = parameter.vendorOption
     }
+    if (parameter.type === "number") {
+      numberParameters.add(parameter.parameter)
+    }
   }
 
   const mappedPayload: SubmitPayload = {}
 
-  for (const value of values) {
-    if (optionMap[value]) {
-      mappedPayload[optionMap[value]] = value
-    }
-  }
-
   for (const [key, value] of Object.entries(payload)) {
     const mappedKey = parameterMap[key] || key
-    let optionMapped = value
-
-    if (Array.isArray(value)) {
-      optionMapped = value.map((item) =>
-        typeof item === "string" ? optionMap[item] || item : item,
-      )
-    } else if (typeof value === "string") {
-      optionMapped = optionMap[value] || value
-    }
-
-    mappedPayload[mappedKey] = optionMapped
+    mappedPayload[mappedKey] = mapParameterValue(
+      key,
+      value,
+      optionMap,
+      numberParameters,
+    )
   }
 
   return mappedPayload
+}
+
+function mapParameterValue(
+  key: string,
+  value: SubmitPayload[string],
+  optionMap: Record<string, string>,
+  numberParameters: Set<string>,
+): SubmitPayload[string] {
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      typeof item === "string" ? optionMap[item] || item : item,
+    )
+  }
+
+  if (typeof value !== "string") return value
+
+  const mapped = optionMap[value] || value
+  if (!numberParameters.has(key)) return mapped
+
+  const numeric = Number(mapped)
+  return Number.isFinite(numeric) && mapped.trim() !== "" ? numeric : mapped
+}
+
+export const mapVendorPayload = async (
+  vendor: string,
+  modelId: string,
+  payload: SubmitPayload,
+) => {
+  const parameters = Object.keys(payload)
+  const parametersMapping = await getVendorParamsMapping(
+    vendor,
+    modelId,
+    parameters,
+  )
+
+  return applyVendorParameterMapping(payload, parametersMapping)
 }

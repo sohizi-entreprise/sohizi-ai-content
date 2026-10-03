@@ -2,7 +2,6 @@ import { Checkpoint } from "@/db/schema"
 import { AgentState } from "@/type"
 import * as repo from "@/features/chat/repo"
 import { ModelMessage } from "ai"
-import { appendRequestHistory } from "@/features/generation-request/repo"
 import { v4 as uuidv4 } from "uuid"
 
 export abstract class Persistence {
@@ -82,29 +81,5 @@ export class CheckpointPersistence extends Persistence {
     await repo.updateConversation(this.checkpoint.conversationId, {
       metadata: { usage: state.usage },
     })
-  }
-}
-
-export class MediaGenerationPersistence extends Persistence {
-  private readonly requestId: string
-
-  constructor(requestId: string) {
-    super()
-    this.requestId = requestId
-  }
-
-  async persist(_runtimeState: AgentState) {
-    const allMsgs = this.messages.filter((message) => message.role !== "system")
-    const messages = allMsgs.map((message) => ({ ...message, id: uuidv4() }))
-    if (messages.length === 0) return
-    try {
-      await appendRequestHistory(this.requestId, messages)
-    } catch (error) {
-      console.error("Failed to persist session state", error)
-    }
-  }
-
-  getInitialState() {
-    return null
   }
 }

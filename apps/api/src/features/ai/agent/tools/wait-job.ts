@@ -93,7 +93,6 @@ export const submitAssetGenerationJob = buildBaseTool({
         "A short label that identifies the asset, like 'hero portrait', 'scene 3 vo'",
       ),
     modelId: z.string().describe("The model ID to use for the generation"),
-    prompt: z.string().min(1).describe("The prompt to generate the media"),
     parameters: z
       .record(z.string(), z.unknown())
       .describe(
@@ -122,13 +121,11 @@ export const submitAssetGenerationJob = buildBaseTool({
         projectId: session.projectId,
         organizationId: session.organizationId,
         model: input.modelId,
-        prompt: input.prompt,
         settings: input.parameters,
         context: {
           mediaType,
           referenceFiles: extractReferenceFiles(input.parameters, mediaType),
         },
-        runMode: "direct",
       })
 
       state.addJob({

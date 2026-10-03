@@ -12,25 +12,15 @@ import {
 } from "../generation-request/stream-handler"
 import { appendRequestAssets } from "../generation-request/repo"
 import type { GenerationRequestAsset } from "@/type"
+import { estimateCatalogMediaCostUsd, mediaOverheadRate } from "./catalog-cost"
 import { createProvider } from "./providers/factory"
 import { extractOutputUrls } from "./providers/utils"
 import type { SubmitPayload } from "./providers/type"
 import {
-  AUDIO_OVERHEAD_RATE,
-  IMAGE_OVERHEAD_RATE,
-  VIDEO_OVERHEAD_RATE,
-} from "@/features/billing/constants"
-import {
   providerCostToActualCredits,
   providerCostToCredits,
 } from "./generators/cost-utils"
-import { createCancellableController } from "../generation-request/abort-manager"
-import { Session } from "../ai/agent/core/session"
-import { MediaGenerationPersistence } from "../ai/agent/core/persistence"
-import { createAgentFromDefinition } from "../ai/agent/core/agent-factory"
-import { UserModelMessage } from "ai"
 import { getErrorMessage } from "@/utils/get-error-message"
-import { textFromAgentChunk, withAgentTrace } from "../ai/agent/utils/tracing"
 import {
   limiter,
   pollWithSticky,
@@ -38,8 +28,11 @@ import {
   submitWithFailover,
   type StickyDecision,
 } from "@/features/routing"
-import { MediaRateLimitError, MediaServiceUnavailableError } from "./errors"
-import { SubmitRequestInput } from "../ai/agent/tools/submit-media-jobs"
+import {
+  MediaAccountError,
+  MediaRateLimitError,
+  MediaServiceUnavailableError,
+} from "./errors"
 import { MAX_MEDIA_POLL_ATTEMPTS, VIDEO_POLL_INTERVAL } from "./constants"
 
 const MEDIA_POLL_INTERVAL = "5s"
@@ -59,14 +52,7 @@ type ProviderMediaEventData = {
   payload: SubmitPayload
   referenceFiles: ReferenceFile[]
   mediaType: ProviderMediaType
-  runMode: "agent" | "direct"
   _reservationId: string
-}
-
-function mediaOverheadRate(mediaType: ProviderMediaType): number {
-  if (mediaType === "video") return VIDEO_OVERHEAD_RATE
-  if (mediaType === "audio") return AUDIO_OVERHEAD_RATE
-  return IMAGE_OVERHEAD_RATE
 }
 
 function mediaReservationTtlMs(mediaType: ProviderMediaType): number {
@@ -128,7 +114,7 @@ function toRequestAsset(asset: Asset): GenerationRequestAsset | null {
 export const handleMediaGeneration = inngest.createFunction(
   {
     id: "media-generate",
-    retries: 0,
+    retries: 1,
     triggers: [{ event: "media/generate" }],
     onFailure: async ({ event }) => {
       const data = event.data.event.data as ProviderMediaEventData
@@ -158,27 +144,7 @@ export const handleMediaGeneration = inngest.createFunction(
     const reservationTtlMs = mediaReservationTtlMs(mediaType)
     const pollInterval = mediaPollInterval(mediaType)
 
-    const requestPayload = await step.run("run-agent", async () => {
-      if (data.runMode === "agent") {
-        const output = await runAgent({
-          userId,
-          projectId,
-          requestId,
-          organizationId,
-          requestPayload: payload,
-          requestModelId: model,
-          referenceFiles: data.referenceFiles,
-        })
-        if (output.ok) {
-          return output.request as SubmitPayload
-        } else {
-          console.error(output.error)
-          throw new Error(output.error)
-        }
-      } else {
-        return payload
-      }
-    })
+    const requestPayload = payload
 
     const decision = await step.run("resolve-route", async () => {
       try {
@@ -198,15 +164,11 @@ export const handleMediaGeneration = inngest.createFunction(
     try {
       const reservation = await step.run("reserve-credits", async () => {
         try {
-          const provider = createProvider(decision.vendorName)
-          const estimate = await provider.estimateRequestPrice(
-            decision.apiName,
-            decision.mappedPayload,
+          const priceUSD = await estimateCatalogMediaCostUsd(
+            decision.modelId,
+            requestPayload,
           )
-          if (!estimate.ok) {
-            throw new Error(estimate.error)
-          }
-          const estimatedCredits = providerCostToCredits(estimate.priceUSD, {
+          const estimatedCredits = providerCostToCredits(priceUSD, {
             overheadRate,
           })
           const res = await billingService.reserve({
@@ -228,7 +190,7 @@ export const handleMediaGeneration = inngest.createFunction(
           return {
             id: res.id,
             estimatedCredits: estimatedCredits.toString(),
-            priceUSD: estimate.priceUSD,
+            priceUSD,
           }
         } catch (error) {
           wrapNonRetryable(error)
@@ -238,7 +200,10 @@ export const handleMediaGeneration = inngest.createFunction(
       try {
         sticky = await step.run("submit-job", async () => {
           try {
-            const provider = createProvider(decision.vendorName)
+            const provider = createProvider(
+              decision.adapter,
+              decision.vendorName,
+            )
             const submitted = await provider.submitRequest(
               decision.apiName,
               decision.mappedPayload,
@@ -260,7 +225,8 @@ export const handleMediaGeneration = inngest.createFunction(
           } catch (error) {
             if (
               error instanceof MediaRateLimitError ||
-              error instanceof MediaServiceUnavailableError
+              error instanceof MediaServiceUnavailableError ||
+              error instanceof MediaAccountError
             ) {
               await limiter.release(decision.vendorName, requestId, {
                 outcome: "failure",
@@ -292,10 +258,7 @@ export const handleMediaGeneration = inngest.createFunction(
           }
         })
       } catch (error) {
-        await step.run("refund-on-submit-error", () =>
-          safeRefund(billingService, reservation.id, "media-submit-error"),
-        )
-        throw error
+        wrapNonRetryable(error)
       }
 
       let resultData: unknown = null
@@ -421,154 +384,3 @@ export const handleMediaGeneration = inngest.createFunction(
     }
   },
 )
-
-// This function is used when we are in agent mode
-type AgentPayload = {
-  userId: string
-  projectId: string
-  organizationId: string
-  requestId: string
-  requestPayload: SubmitPayload
-  requestModelId: string
-  referenceFiles: ReferenceFile[]
-}
-
-type AgentResponse =
-  | {
-      ok: true
-      request: Record<string, unknown>
-    }
-  | {
-      ok: false
-      error: string
-    }
-
-async function runAgent(payload: AgentPayload) {
-  const {
-    userId,
-    projectId,
-    requestId,
-    organizationId,
-    requestPayload,
-    referenceFiles,
-  } = payload
-  const { controller, cleanup } = await createCancellableController(requestId)
-
-  let response: AgentResponse = {
-    ok: false,
-    error: "Unknown error occurred",
-  }
-
-  try {
-    const session = new Session({
-      sessionId: uuidv4(),
-      userId,
-      organizationId,
-      projectId,
-      runId: requestId,
-    })
-    const persistence = new MediaGenerationPersistence(requestId)
-    const agent = await createAgentFromDefinition({
-      agentName: "media-generator",
-      session,
-      persistence,
-      buildSystemPrompt: (baseSystemPrompt) =>
-        fullPrompt(baseSystemPrompt, referenceFiles),
-    })
-
-    await withAgentTrace(
-      session,
-      {
-        agentName: "media-generator",
-        entrypoint: "media-generation",
-        input: String(requestPayload.prompt ?? ""),
-      },
-      async (updateOutput) => {
-        const chunks = agent.runLoop(
-          buildUserPrompt(requestPayload.prompt as string, referenceFiles),
-          controller.signal,
-          250,
-        )
-        let outputText = ""
-
-        for await (const chunk of chunks) {
-          const text = textFromAgentChunk(chunk)
-          if (text !== undefined) {
-            outputText = text
-          }
-          await writeStreamData(requestId, {
-            runId: requestId,
-            event: "chunk",
-            chunk,
-          })
-        }
-
-        updateOutput(outputText)
-      },
-    )
-
-    const submitRequest = agent.artifacts.get("submitRequest") as
-      { status: "ready" | "cancelled"; input: SubmitRequestInput } | undefined
-    if (submitRequest?.status === "ready") {
-      response = {
-        ok: true,
-        request: {
-          ...submitRequest.input.parameters,
-          prompt: submitRequest.input.prompt,
-          modelId: submitRequest.input.modelId,
-        },
-      }
-    } else {
-      response = {
-        ok: false,
-        error: "Request cancelled",
-      }
-    }
-  } catch (error) {
-    const errorMessage = getErrorMessage(error, "Completion failed")
-    console.error(error)
-    response = {
-      ok: false,
-      error: errorMessage,
-    }
-  } finally {
-    await cleanup()
-  }
-
-  return response
-}
-
-function buildUserPrompt(
-  prompt: string,
-  referenceFiles: ReferenceFile[] = [],
-): UserModelMessage {
-  const userMsg: UserModelMessage = {
-    role: "user",
-    content: [
-      { type: "text", text: prompt },
-      ...referenceFiles.map((file) => ({
-        type: "image" as const,
-        image: file.url,
-      })),
-    ],
-  }
-
-  return userMsg
-}
-
-function fullPrompt(basePrompt: string, referenceFiles: ReferenceFile[]) {
-  return `
-${basePrompt}
-
-${
-  referenceFiles.length > 0
-    ? `
-<reference_files>
-Here are the files referenced by the user:
-${JSON.stringify(referenceFiles)}
-</reference_files>
-`
-    : ""
-}
-`.trim()
-}

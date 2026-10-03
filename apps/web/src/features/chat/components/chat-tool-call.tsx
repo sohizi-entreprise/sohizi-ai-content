@@ -86,10 +86,12 @@ function ChatToolCallComponent({ toolCall }: ChatToolCallProps) {
       return ExploreFileToolCall({ toolCall })
     case "editFile":
       return EditFileToolCall({ toolCall })
+    case "tavily-search":
     case "web_search":
     case "openrouter.web_search":
     case "openrouter:web_search":
       return WebSearchToolCall({ toolCall })
+    case "tavily-extract":
     case "web_fetch":
     case "openrouter.web_fetch":
     case "openrouter:web_fetch":
@@ -252,12 +254,14 @@ function WebSearchToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
 
 function WebFetchToolCall({ toolCall }: { toolCall: MsgToolCallPart }) {
   const isStreaming = toolCall.isStreaming ?? false
-  const input = toolCall.input as { url?: string }
-  const url = input.url
+  const input = toolCall.input as { url?: string; urls?: string[] }
+  const url = input.url ?? input.urls?.[0]
+  const extra =
+    input.urls && input.urls.length > 1 ? ` (+${input.urls.length - 1})` : ""
   const text = url
     ? isStreaming
-      ? `Reading ${url}`
-      : `Read ${url}`
+      ? `Reading ${url}${extra}`
+      : `Read ${url}${extra}`
     : isStreaming
       ? "Reading web page"
       : "Read web page"

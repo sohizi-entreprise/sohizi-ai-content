@@ -4,6 +4,7 @@ import {
   fileNodes,
   generationRequests,
   llmVendorsAndParameters,
+  llmVendorModelParameterOverrides,
   modelParameters,
   llmVendors,
   parameterOptions,
@@ -741,7 +742,10 @@ export const getVendorParamsMapping = async (
   return db
     .select({
       parameter: modelParameters.key,
-      vendorParameter: llmVendorsAndParameters.vendorParamName,
+      type: modelParameters.type,
+      vendorParameter: sql<
+        string | null
+      >`coalesce(${llmVendorModelParameterOverrides.vendorParamName}, ${llmVendorsAndParameters.vendorParamName})`,
       optionValue: parameterOptions.value,
       vendorOption: llmVendorsAndParameterOptions.vendorOptionValue,
     })
@@ -786,6 +790,17 @@ export const getVendorParamsMapping = async (
           parameterOptions.id,
         ),
         eq(llmVendorsAndParameterOptions.vendorId, llmVendors.id),
+      ),
+    )
+    .leftJoin(
+      llmVendorModelParameterOverrides,
+      and(
+        eq(llmVendorModelParameterOverrides.vendorId, llmVendors.id),
+        eq(llmVendorModelParameterOverrides.modelId, modelsAndParameters.modelId),
+        eq(
+          llmVendorModelParameterOverrides.parameterId,
+          modelsAndParameters.parameterId,
+        ),
       ),
     )
     .where(

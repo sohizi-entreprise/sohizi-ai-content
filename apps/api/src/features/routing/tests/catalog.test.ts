@@ -12,8 +12,8 @@ import { llmModels, llmVendors, llmVendorsAndModels } from "@/db/schema"
 import { eq, like } from "drizzle-orm"
 import { DEFAULT_VENDOR_RATE_LIMIT } from "@/type"
 import {
-  registerMediaProvider,
-  unregisterMediaProvider,
+  registerMediaAdapter,
+  unregisterMediaAdapter,
 } from "@/features/media-engine/providers/factory"
 import { listMediaRoutes } from "../catalog"
 import { createFakeProviderClass } from "./fake-provider"
@@ -36,8 +36,8 @@ beforeAll(async () => {
   process.env[`${FAKE_A.toUpperCase().replace(/-/g, "_")}_API_KEY`] = "test"
   process.env[`${FAKE_B.toUpperCase().replace(/-/g, "_")}_API_KEY`] = "test"
 
-  registerMediaProvider(FAKE_A, createFakeProviderClass(FAKE_A))
-  registerMediaProvider(FAKE_B, createFakeProviderClass(FAKE_B))
+  registerMediaAdapter(FAKE_A, createFakeProviderClass(FAKE_A))
+  registerMediaAdapter(FAKE_B, createFakeProviderClass(FAKE_B))
 
   await db.insert(llmModels).values({
     id: MODEL,
@@ -49,7 +49,9 @@ beforeAll(async () => {
   const [fakeA] = await db
     .insert(llmVendors)
     .values({
+      id: `vendor_${FAKE_A}`,
       name: FAKE_A,
+      adapter: FAKE_A,
       kind: "media",
       enabled: true,
       rateLimit: DEFAULT_VENDOR_RATE_LIMIT,
@@ -58,7 +60,9 @@ beforeAll(async () => {
   const [fakeB] = await db
     .insert(llmVendors)
     .values({
+      id: `vendor_${FAKE_B}`,
       name: FAKE_B,
+      adapter: FAKE_B,
       kind: "media",
       enabled: true,
       rateLimit: DEFAULT_VENDOR_RATE_LIMIT,
@@ -67,7 +71,9 @@ beforeAll(async () => {
   const [unknown] = await db
     .insert(llmVendors)
     .values({
+      id: `vendor_${UNREGISTERED}`,
       name: UNREGISTERED,
+      adapter: UNREGISTERED,
       kind: "media",
       enabled: true,
       rateLimit: DEFAULT_VENDOR_RATE_LIMIT,
@@ -76,7 +82,9 @@ beforeAll(async () => {
   const [llm] = await db
     .insert(llmVendors)
     .values({
+      id: `vendor_${LLM_VENDOR}`,
       name: LLM_VENDOR,
+      adapter: LLM_VENDOR,
       kind: "llm",
       enabled: true,
       rateLimit: DEFAULT_VENDOR_RATE_LIMIT,
@@ -126,8 +134,8 @@ afterAll(async () => {
     .where(eq(llmVendorsAndModels.modelId, MODEL))
   await db.delete(llmVendors).where(like(llmVendors.name, `${PREFIX}%`))
   await db.delete(llmModels).where(eq(llmModels.id, MODEL))
-  unregisterMediaProvider(FAKE_A)
-  unregisterMediaProvider(FAKE_B)
+  unregisterMediaAdapter(FAKE_A)
+  unregisterMediaAdapter(FAKE_B)
 })
 
 describe("listMediaRoutes", () => {
@@ -149,6 +157,7 @@ describe("listMediaRoutes", () => {
   test("returns enabled media bindings with apiName and priority", async () => {
     const routes = await listMediaRoutes(MODEL)
     expect(routes.map((r) => r.vendorName)).toEqual([FAKE_B, FAKE_A])
+    expect(routes[0]?.adapter).toBe(FAKE_B)
     expect(routes[0]?.apiName).toBe("api-b")
     expect(routes[0]?.priority).toBe(10)
     expect(routes[1]?.apiName).toBe("api-a")

@@ -8,6 +8,7 @@ import {
   createModelVendorBindingSchema,
   createParameterOptionSchema,
   createParameterSchema,
+  catalogIdSchema,
   createVendorSchema,
   replaceCategoriesSchema,
   replaceModelParametersSchema,
@@ -40,7 +41,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     "/categories/:id",
     ({ params }) => adminService.deleteCategory(params.id),
     {
-      params: z.object({ id: z.uuid() }),
+      params: z.object({ id: catalogIdSchema }),
     },
   )
   .get("/models", () => adminService.listModels())
@@ -98,7 +99,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     ({ params, body }) =>
       adminService.updateModelVendorBinding(params.id, params.vendorId, body),
     {
-      params: z.object({ id: z.string().min(1), vendorId: z.uuid() }),
+      params: z.object({ id: z.string().min(1), vendorId: catalogIdSchema }),
       body: updateModelVendorBindingSchema,
     },
   )
@@ -107,7 +108,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     ({ params }) =>
       adminService.deleteModelVendorBinding(params.id, params.vendorId),
     {
-      params: z.object({ id: z.string().min(1), vendorId: z.uuid() }),
+      params: z.object({ id: z.string().min(1), vendorId: catalogIdSchema }),
     },
   )
   .get("/vendors", () => adminService.listVendors())
@@ -119,7 +120,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     "/vendors/:id",
     ({ params, body }) => adminService.updateVendor(params.id, body),
     {
-      params: z.object({ id: z.uuid() }),
+      params: z.object({ id: catalogIdSchema }),
       body: updateVendorSchema,
     },
   )
@@ -127,7 +128,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     "/vendors/:id",
     ({ params }) => adminService.deleteVendor(params.id),
     {
-      params: z.object({ id: z.uuid() }),
+      params: z.object({ id: catalogIdSchema }),
     },
   )
   .get("/parameters", () => adminService.listParameters())
@@ -138,14 +139,14 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     "/parameters/:id",
     ({ params }) => adminService.getParameter(params.id),
     {
-      params: z.object({ id: z.uuid() }),
+      params: z.object({ id: catalogIdSchema }),
     },
   )
   .patch(
     "/parameters/:id",
     ({ params, body }) => adminService.updateParameter(params.id, body),
     {
-      params: z.object({ id: z.uuid() }),
+      params: z.object({ id: catalogIdSchema }),
       body: updateParameterSchema,
     },
   )
@@ -153,14 +154,14 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     "/parameters/:id",
     ({ params }) => adminService.deleteParameter(params.id),
     {
-      params: z.object({ id: z.uuid() }),
+      params: z.object({ id: catalogIdSchema }),
     },
   )
   .post(
     "/parameters/:id/options",
     ({ params, body }) => adminService.createParameterOption(params.id, body),
     {
-      params: z.object({ id: z.uuid() }),
+      params: z.object({ id: catalogIdSchema }),
       body: createParameterOptionSchema,
     },
   )
@@ -169,7 +170,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     ({ params, body }) =>
       adminService.updateParameterOption(params.id, params.optionId, body),
     {
-      params: z.object({ id: z.uuid(), optionId: z.uuid() }),
+      params: z.object({ id: catalogIdSchema, optionId: catalogIdSchema }),
       body: updateParameterOptionSchema,
     },
   )
@@ -178,7 +179,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     ({ params }) =>
       adminService.deleteParameterOption(params.id, params.optionId),
     {
-      params: z.object({ id: z.uuid(), optionId: z.uuid() }),
+      params: z.object({ id: catalogIdSchema, optionId: catalogIdSchema }),
     },
   )
   .put(
@@ -192,9 +193,9 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       ),
     {
       params: z.object({
-        id: z.uuid(),
-        optionId: z.uuid(),
-        vendorId: z.uuid(),
+        id: catalogIdSchema,
+        optionId: catalogIdSchema,
+        vendorId: catalogIdSchema,
       }),
       body: upsertVendorOptionMapSchema,
     },
@@ -209,9 +210,9 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       ),
     {
       params: z.object({
-        id: z.uuid(),
-        optionId: z.uuid(),
-        vendorId: z.uuid(),
+        id: catalogIdSchema,
+        optionId: catalogIdSchema,
+        vendorId: catalogIdSchema,
       }),
     },
   )
@@ -224,7 +225,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
         body,
       ),
     {
-      params: z.object({ id: z.uuid(), vendorId: z.uuid() }),
+      params: z.object({ id: catalogIdSchema, vendorId: catalogIdSchema }),
       body: upsertVendorParameterMapSchema,
     },
   )
@@ -233,7 +234,7 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     ({ params }) =>
       adminService.deleteVendorParameterMapping(params.id, params.vendorId),
     {
-      params: z.object({ id: z.uuid(), vendorId: z.uuid() }),
+      params: z.object({ id: catalogIdSchema, vendorId: catalogIdSchema }),
     },
   )
   .get("/commands", () => adminService.listCommands())

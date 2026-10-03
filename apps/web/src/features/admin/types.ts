@@ -60,7 +60,8 @@ export type CreateCategoryInput = {
 export type ModelParameterDataType =
   "string" | "number" | "boolean" | "array<string>" | "array<number>"
 
-export type ModelParameterUIComponent = "select" | "slider" | "uploader"
+export type ModelParameterUIComponent =
+  "select" | "slider" | "uploader" | "textarea" | "checkbox"
 
 export type ModelParameterConstraint = {
   min?: number
@@ -177,6 +178,7 @@ export type VendorCircuitConfig = {
 export type AdminVendor = {
   id: string
   name: string
+  adapter: string
   kind: VendorKind
   enabled: boolean
   rateLimit: VendorRateLimit
@@ -188,6 +190,7 @@ export type AdminVendor = {
 
 export type CreateVendorInput = {
   name: string
+  adapter?: string
   kind?: VendorKind
   enabled?: boolean
   rateLimit?: VendorRateLimit

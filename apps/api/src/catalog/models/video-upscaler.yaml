@@ -1,0 +1,29 @@
+# Increase resolution of an existing clip. per_inference uses WaveSpeed base_price because the price API needs a real video.
+models:
+  - id: wavespeed-ai/video-upscaler-pro
+    name: Video Upscaler Pro
+    provider: wavespeed-ai
+    description: >
+      Higher-quality WaveSpeed video upscaler. Prefer for 4K recovery with smoother motion. target_resolution 720p, 1080p, 2k, or 4k. Listed rate is WaveSpeed base; duration can raise the charge.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.20
+    categories: [video-upscaler]
+    parameters:
+      - { id: parameter_video, required: true }
+      - { id: parameter_resolution, required: false, defaultValue: 1080p, allowedValues: [720p, 1080p, 2k, 4k] }
+
+  - id: bytedance/video-upscaler
+    name: ByteDance Video Upscaler
+    provider: bytedance
+    description: >
+      Cheaper ByteDance video upscaler. Prefer for fast 1080p-4K super-resolution when cost matters more than the Pro path. target_resolution 1080p, 2k, or 4k. Listed rate is WaveSpeed base; duration can raise the charge.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.0072
+    categories: [video-upscaler]
+    parameters:
+      - { id: parameter_video, required: true }
+      - { id: parameter_resolution, required: false, defaultValue: 1080p, allowedValues: [1080p, 2k, 4k] }

@@ -51,6 +51,8 @@ const UI_COMPONENTS: Array<ModelParameterUIComponent> = [
   "select",
   "slider",
   "uploader",
+  "textarea",
+  "checkbox",
 ]
 const NONE_VALUE = "__none__"
 

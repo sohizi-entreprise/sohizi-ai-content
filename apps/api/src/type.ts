@@ -30,6 +30,12 @@ export type ModelCategory =
   | "image-to-video"
   | "text-to-video"
   | "text-to-speech"
+  | "music-generation"
+  | "voice-control"
+  | "motion-transfer"
+  | "lip-sync"
+  | "image-upscaler"
+  | "video-upscaler"
   | "video-to-text"
   | "image-to-text"
   | "speech-to-text"
@@ -41,6 +47,11 @@ export type ModelRecommendedUsage = "lead-agent" | "summary-agent"
 
 export type MsgContent = UserContent | AssistantContent | ToolContent
 
+export type ModelParameterTableRate = {
+  when: Record<string, string | number>
+  usd: number
+}
+
 export type ModelBasePricing =
   | {
       unit: "per_1m_tokens"
@@ -51,6 +62,10 @@ export type ModelBasePricing =
   | {
       unit: "per_inference"
       rate: number
+    }
+  | {
+      unit: "parameter_table"
+      rate: ModelParameterTableRate[]
     }
 
 export type VendorKind = "media" | "llm"

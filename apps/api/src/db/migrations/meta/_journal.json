@@ -281,6 +281,20 @@
       "when": 1790802991697,
       "tag": "0039_damp_korg",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1790890218226,
+      "tag": "0040_open_morg",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1790973443045,
+      "tag": "0041_vendor_adapter",
+      "breakpoints": true
     }
   ]
 }

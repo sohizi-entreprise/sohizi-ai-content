@@ -1,12 +1,10 @@
-type ErrorCode =
-  | "BAD_REQUEST"
-  | "UNAUTHORIZED"
-  | "TOO_MANY_REQUESTS"
-  | "INTERNAL_SERVER_ERROR"
-  | "ACCOUNT_ISSUE"
-  | "GENERATION_FAILED"
-  | "REQUEST_TIMEOUT"
-  | "UNKNOWN"
+import {
+  MediaAccountError,
+  MediaProviderError,
+  MediaRateLimitError,
+  MediaServiceUnavailableError,
+  MediaValidationError,
+} from "@/features/media-engine/providers/type"
 
 type SubmitJobResponse = {
   code: number
@@ -26,6 +24,15 @@ type GetJobResultResponse = {
   outputs: unknown
 }
 
+const KNOWN_JOB_STATUSES = new Set([
+  "created",
+  "processing",
+  "completed",
+  "failed",
+  "cancelled",
+  "timeout",
+])
+
 const buildHeader = (
   apiKey: string,
   authOnly: boolean = false,
@@ -41,18 +48,6 @@ const buildHeader = (
   }
 }
 
-export class WaveSpeedError extends Error {
-  code: number
-  errorCode: ErrorCode
-  constructor(code: number, message: string, errorCode: ErrorCode) {
-    super(message)
-    this.name = "WaveSpeedError"
-    this.code = code
-    this.errorCode = errorCode
-  }
-}
-
-// Submit a job to the WaveSpeed API for media generation
 export const submitJob = async (
   apiKey: string,
   modelId: string,
@@ -83,14 +78,9 @@ export const getJobResult = async (apiKey: string, jobId: string) => {
   }
   const status = result.data.status
 
-  if (["failed", "cancelled", "timeout"].includes(status))
-    throw new WaveSpeedError(
-      500,
-      JSON.stringify(result.data),
-      "GENERATION_FAILED",
-    )
-  if (!["created", "processing", "completed"].includes(status))
-    throw new WaveSpeedError(500, "Unexpected status: " + status, "UNKNOWN")
+  if (!KNOWN_JOB_STATUSES.has(status)) {
+    throw new MediaProviderError(`Unexpected status: ${status}`, 500)
+  }
 
   return {
     status,
@@ -131,29 +121,54 @@ export const getInferencePrice = async (
   }
 }
 
+function retryAfterMsFrom(response: Response): number | undefined {
+  const header = response.headers.get("retry-after")
+  if (!header) return undefined
+  const seconds = Number(header)
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * 1000
+  }
+  const dateMs = Date.parse(header)
+  if (Number.isNaN(dateMs)) return undefined
+  return Math.max(dateMs - Date.now(), 0)
+}
+
 async function requestJson(url: string, options: RequestInit = {}) {
-  const response = await fetch(url, options)
+  let response: Response
+  try {
+    response = await fetch(url, options)
+  } catch (error) {
+    throw new MediaServiceUnavailableError(
+      error instanceof Error ? error.message : "Request timed out",
+      error instanceof Error ? error : undefined,
+    )
+  }
+
   if (!response.ok) {
     const status = response.status
     const error = await response.text()
     if (status === 401) {
-      throw new WaveSpeedError(401, "Invalid API Key", "UNAUTHORIZED")
+      throw MediaAccountError.fromResponse(status, "Invalid API Key")
     }
     if (status === 400) {
-      throw new WaveSpeedError(400, "Invalid Parameters", "BAD_REQUEST")
+      throw new MediaValidationError("Invalid Parameters")
     }
     if (status === 429) {
-      throw new WaveSpeedError(429, "Too Many Requests", "TOO_MANY_REQUESTS")
+      throw MediaRateLimitError.fromResponse(
+        status,
+        "Too Many Requests",
+        undefined,
+        retryAfterMsFrom(response),
+      )
     }
     if (status === 500) {
       console.error("WaveSpeed API Error:", error)
-      throw new WaveSpeedError(
-        500,
+      throw MediaServiceUnavailableError.fromResponse(
+        status,
         "Internal Server Error",
-        "INTERNAL_SERVER_ERROR",
       )
     }
-    throw new WaveSpeedError(status, error, "UNKNOWN")
+    throw MediaProviderError.fromResponse(status, error)
   }
   return response.json()
 }

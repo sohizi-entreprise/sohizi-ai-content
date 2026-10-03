@@ -13,10 +13,11 @@ import { eq, like } from "drizzle-orm"
 import { redis } from "@/lib/redis"
 import {
   createProvider,
-  registerMediaProvider,
-  unregisterMediaProvider,
+  registerMediaAdapter,
+  unregisterMediaAdapter,
 } from "@/features/media-engine/providers/factory"
 import {
+  MediaAccountError,
   MediaRateLimitError,
   MediaValidationError,
 } from "@/features/media-engine/errors"
@@ -53,8 +54,8 @@ const identityMap = async (
 beforeAll(async () => {
   process.env[`${FAKE_A.toUpperCase().replace(/-/g, "_")}_API_KEY`] = "test"
   process.env[`${FAKE_B.toUpperCase().replace(/-/g, "_")}_API_KEY`] = "test"
-  registerMediaProvider(FAKE_A, createFakeProviderClass(FAKE_A))
-  registerMediaProvider(FAKE_B, createFakeProviderClass(FAKE_B))
+  registerMediaAdapter(FAKE_A, createFakeProviderClass(FAKE_A))
+  registerMediaAdapter(FAKE_B, createFakeProviderClass(FAKE_B))
 
   await db.insert(llmModels).values({
     id: MODEL,
@@ -65,7 +66,9 @@ beforeAll(async () => {
   const [a] = await db
     .insert(llmVendors)
     .values({
+      id: `vendor_${FAKE_A}`,
       name: FAKE_A,
+      adapter: FAKE_A,
       kind: "media",
       enabled: true,
       rateLimit: { rpm: 60, burst: 60, maxConcurrency: 2 },
@@ -74,7 +77,9 @@ beforeAll(async () => {
   const [b] = await db
     .insert(llmVendors)
     .values({
+      id: `vendor_${FAKE_B}`,
       name: FAKE_B,
+      adapter: FAKE_B,
       kind: "media",
       enabled: true,
       rateLimit: { rpm: 60, burst: 60, maxConcurrency: 2 },
@@ -106,8 +111,8 @@ afterAll(async () => {
     .where(eq(llmVendorsAndModels.modelId, MODEL))
   await db.delete(llmVendors).where(like(llmVendors.name, `${PREFIX}%`))
   await db.delete(llmModels).where(eq(llmModels.id, MODEL))
-  unregisterMediaProvider(FAKE_A)
-  unregisterMediaProvider(FAKE_B)
+  unregisterMediaAdapter(FAKE_A)
+  unregisterMediaAdapter(FAKE_B)
 })
 
 beforeEach(async () => {
@@ -138,6 +143,7 @@ describe("resolveAndAcquire", () => {
   test("acquires the highest-priority vendor", async () => {
     const decision = await resolveAndAcquire(resolveOpts("r1"))
     expect(decision.vendorName).toBe(FAKE_A)
+    expect(decision.adapter).toBe(FAKE_A)
     expect(decision.apiName).toBe("api-a")
     expect(decision.mappedPayload).toEqual({ prompt: "hi" })
     await limiter.release(FAKE_A, "r1", { outcome: "none" })
@@ -275,6 +281,19 @@ describe("submitWithFailover", () => {
     expect(await limiter.inflightCount(FAKE_A)).toBe(0)
     expect(await limiter.inflightCount(FAKE_B)).toBe(1)
     await limiter.release(FAKE_B, "r-fo", { outcome: "none" })
+  })
+
+  test("fails over on account error to the next vendor", async () => {
+    setFakeScript(FAKE_A, {
+      submitError: new MediaAccountError("Invalid API Key"),
+    })
+    setFakeScript(FAKE_B, {
+      submit: async () => ({ requestId: "job-b", status: "created" }),
+    })
+    const sticky = await submitWithFailover(resolveOpts("r-acct"))
+    expect(sticky.vendorName).toBe(FAKE_B)
+    expect(sticky.providerRequestId).toBe("job-b")
+    await limiter.release(FAKE_B, "r-acct", { outcome: "none" })
   })
 
   test("does not fail over on validation errors and releases the slot", async () => {

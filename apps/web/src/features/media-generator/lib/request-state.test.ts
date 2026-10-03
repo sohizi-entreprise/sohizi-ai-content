@@ -22,7 +22,6 @@ describe("getGenerationDetails", () => {
     const details = getGenerationDetails({
       model: "flux-pro",
       prompt: "cinematic aerial of a forest",
-      runMode: "direct",
       settings: {
         aspectRatio: "16:9",
         resolution: "1080p",
@@ -43,7 +42,6 @@ describe("getGenerationDetails", () => {
       { label: "Model", value: "flux-pro" },
       { label: "Type", value: "Image" },
       { label: "Mode", value: "From text" },
-      { label: "Run mode", value: "Direct" },
     ])
     expect(details?.parameters).toEqual([
       { label: "Aspect Ratio", value: "16:9" },
@@ -58,11 +56,45 @@ describe("getGenerationDetails", () => {
     ])
   })
 
+  it("reads prompt from settings when the top-level field is empty", () => {
+    const details = getGenerationDetails({
+      model: "flux-pro",
+      settings: {
+        prompt: "a quiet harbor at dusk",
+        aspectRatio: "16:9",
+      },
+      context: {
+        generationType: "image",
+        subtype: "from-text",
+      },
+    })
+
+    expect(details?.prompt).toBe("a quiet harbor at dusk")
+    expect(details?.parameters).toEqual([
+      { label: "Aspect Ratio", value: "16:9" },
+    ])
+  })
+
+  it("prefers settings.prompt over a historical top-level prompt", () => {
+    const details = getGenerationDetails({
+      model: "flux-pro",
+      prompt: "old top-level prompt",
+      settings: {
+        prompt: "settings prompt",
+      },
+      context: {
+        generationType: "image",
+        subtype: "from-text",
+      },
+    })
+
+    expect(details?.prompt).toBe("settings prompt")
+  })
+
   it("moves image and video fields out of settings into references", () => {
     const details = getGenerationDetails({
       model: "kling",
       prompt: "extend the shot",
-      runMode: "direct",
       settings: {
         aspectRatio: "16:9",
         startImage: "https://cdn.example.com/start.webp",
@@ -73,7 +105,7 @@ describe("getGenerationDetails", () => {
       },
       context: {
         generationType: "video",
-        subtype: "extend",
+        subtype: "edit",
       },
     })
 
@@ -99,10 +131,9 @@ describe("getGenerationDetails", () => {
     ])
   })
 
-  it("labels agent run mode and voice", () => {
+  it("labels voice without a run mode tile", () => {
     const details = getGenerationDetails({
       prompt: "say hello",
-      runMode: "agent",
       context: {
         generationType: "audio",
         subtype: "tts",
@@ -114,9 +145,9 @@ describe("getGenerationDetails", () => {
       expect.arrayContaining([
         { label: "Type", value: "Audio" },
         { label: "Mode", value: "Text to speech" },
-        { label: "Run mode", value: "Agent" },
         { label: "Voice", value: "Aoede" },
       ]),
     )
+    expect(details?.meta.some((tile) => tile.label === "Run mode")).toBe(false)
   })
 })

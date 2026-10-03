@@ -404,7 +404,7 @@ export const llmModels = pgTable("llm_models", {
 export const modelCategories = pgTable(
   "model_categories",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: varchar("id", { length: 100 }).primaryKey(),
     name: varchar("name", { length: 100 }).notNull(),
     description: text("description").notNull(),
     ...timestamps,
@@ -418,7 +418,7 @@ export const modelsAndCategories = pgTable(
     modelId: varchar("model_id", { length: 50 })
       .references(() => llmModels.id, { onDelete: "cascade" })
       .notNull(),
-    categoryId: uuid("category_id")
+    categoryId: varchar("category_id", { length: 100 })
       .references(() => modelCategories.id, { onDelete: "cascade" })
       .notNull(),
     ...timestamps,
@@ -430,7 +430,7 @@ export const modelsAndCategories = pgTable(
 export const modelParameters = pgTable(
   "model_parameters",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: varchar("id", { length: 100 }).primaryKey(),
     key: varchar("key", { length: 100 }).notNull(),
     label: varchar("label", { length: 100 }).notNull(),
     type: varchar("type", { length: 50 })
@@ -448,8 +448,8 @@ export const modelParameters = pgTable(
 export const parameterOptions = pgTable(
   "parameter_options",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    parameterId: uuid("parameter_id")
+    id: varchar("id", { length: 100 }).primaryKey(),
+    parameterId: varchar("parameter_id", { length: 100 })
       .references(() => modelParameters.id, { onDelete: "cascade" })
       .notNull(),
     label: varchar("label", { length: 100 }).notNull(),
@@ -477,7 +477,7 @@ export const modelsAndParameters = pgTable(
     modelId: varchar("model_id", { length: 50 })
       .references(() => llmModels.id, { onDelete: "cascade" })
       .notNull(),
-    parameterId: uuid("parameter_id")
+    parameterId: varchar("parameter_id", { length: 100 })
       .references(() => modelParameters.id, { onDelete: "cascade" })
       .notNull(),
     required: boolean("required").default(false).notNull(),
@@ -494,8 +494,8 @@ export const modelsAndParameterOptions = pgTable(
   "models_and_parameter_options",
   {
     modelId: varchar("model_id", { length: 50 }).notNull(),
-    parameterId: uuid("parameter_id").notNull(),
-    optionId: uuid("option_id").notNull(),
+    parameterId: varchar("parameter_id", { length: 100 }).notNull(),
+    optionId: varchar("option_id", { length: 100 }).notNull(),
     priceMultiplier: numeric("price_multiplier", {
       precision: 10,
       scale: 4,
@@ -522,8 +522,10 @@ export const modelsAndParameterOptions = pgTable(
 export const llmVendors = pgTable(
   "llm_vendors",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: varchar("id", { length: 100 }).primaryKey(),
     name: varchar("name", { length: 100 }).notNull(),
+    adapter: varchar("adapter", { length: 100 }).notNull(),
+    url: text("url"),
     kind: varchar("kind", { length: 20 })
       .$type<VendorKind>()
       .default("llm")
@@ -539,7 +541,7 @@ export const llmVendors = pgTable(
 export const llmVendorsAndModels = pgTable(
   "llm_vendors_and_models",
   {
-    vendorId: uuid("vendor_id")
+    vendorId: varchar("vendor_id", { length: 100 })
       .references(() => llmVendors.id, { onDelete: "cascade" })
       .notNull(),
     modelId: varchar("model_id", { length: 50 })
@@ -556,10 +558,10 @@ export const llmVendorsAndModels = pgTable(
 export const llmVendorsAndParameters = pgTable(
   "llm_vendors_and_parameters",
   {
-    vendorId: uuid("vendor_id")
+    vendorId: varchar("vendor_id", { length: 100 })
       .references(() => llmVendors.id, { onDelete: "cascade" })
       .notNull(),
-    parameterId: uuid("parameter_id")
+    parameterId: varchar("parameter_id", { length: 100 })
       .references(() => modelParameters.id, { onDelete: "cascade" })
       .notNull(),
     vendorParamName: varchar("vendor_param_name", { length: 100 }),
@@ -572,10 +574,10 @@ export const llmVendorsAndParameters = pgTable(
 export const llmVendorsAndParameterOptions = pgTable(
   "llm_vendors_and_parameter_options",
   {
-    vendorId: uuid("vendor_id")
+    vendorId: varchar("vendor_id", { length: 100 })
       .references(() => llmVendors.id, { onDelete: "cascade" })
       .notNull(),
-    parameterOptionId: uuid("parameter_option_id")
+    parameterOptionId: varchar("parameter_option_id", { length: 100 })
       .references(() => parameterOptions.id, { onDelete: "cascade" })
       .notNull(),
     vendorOptionValue: text("vendor_option_value").notNull(),
@@ -583,6 +585,28 @@ export const llmVendorsAndParameterOptions = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.vendorId, table.parameterOptionId] }),
+  ],
+)
+
+export const llmVendorModelParameterOverrides = pgTable(
+  "llm_vendor_model_parameter_overrides",
+  {
+    vendorId: varchar("vendor_id", { length: 100 })
+      .references(() => llmVendors.id, { onDelete: "cascade" })
+      .notNull(),
+    modelId: varchar("model_id", { length: 50 })
+      .references(() => llmModels.id, { onDelete: "cascade" })
+      .notNull(),
+    parameterId: varchar("parameter_id", { length: 100 })
+      .references(() => modelParameters.id, { onDelete: "cascade" })
+      .notNull(),
+    vendorParamName: varchar("vendor_param_name", { length: 100 }).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.vendorId, table.modelId, table.parameterId],
+    }),
   ],
 )
 
@@ -1106,6 +1130,8 @@ export type ModelAndParameterOption =
   typeof modelsAndParameterOptions.$inferSelect
 export type LlmVendor = typeof llmVendors.$inferSelect
 export type LlmVendorAndModel = typeof llmVendorsAndModels.$inferSelect
+export type LlmVendorModelParameterOverride =
+  typeof llmVendorModelParameterOverrides.$inferSelect
 export type Checkpoint = typeof checkpoints.$inferSelect
 export type Asset = typeof assets.$inferSelect
 export type AssetVariant = typeof assetVariants.$inferSelect

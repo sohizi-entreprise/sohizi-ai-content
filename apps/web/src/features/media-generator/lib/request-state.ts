@@ -2,18 +2,13 @@ import {
   AUDIO_SUBTYPES,
   GENERATION_TYPES,
   IMAGE_SUBTYPES,
+  UPSCALER_SUBTYPES,
   VIDEO_SUBTYPES,
   getDefaultSubtype,
-  showsAgentMode,
 } from "../constants"
-import {
-  defaultAgentParameterValues,
-  parseAgentReferences,
-  serializeAgentReferences,
-} from "./agent-settings"
 import { isPickerAssetType, parseParameterAssetUrls } from "./parameter-assets"
 import type { AttachedFile } from "@/components/widgets/file-attachments"
-import type { GenerationSubtype, GenerationType, MediaRunMode } from "../types"
+import type { GenerationSubtype, GenerationType } from "../types"
 
 export type ParsedRequestState = {
   generationType: GenerationType
@@ -22,7 +17,6 @@ export type ParsedRequestState = {
   parameterValues: Record<string, string>
   prompt: string
   attachments: Array<AttachedFile>
-  runMode: MediaRunMode
   voice?: string
 }
 
@@ -49,7 +43,12 @@ export type GenerationDetails = {
   references: Array<GenerationDetailReference>
 }
 
-const SUBTYPE_LABELS = [...IMAGE_SUBTYPES, ...VIDEO_SUBTYPES, ...AUDIO_SUBTYPES]
+const SUBTYPE_LABELS = [
+  ...IMAGE_SUBTYPES,
+  ...VIDEO_SUBTYPES,
+  ...AUDIO_SUBTYPES,
+  ...UPSCALER_SUBTYPES,
+]
 const MEDIA_FIELD_PATTERN =
   /(image|video|thumbnail|poster|frame|mask|reference)/i
 const IMAGE_URL_PATTERN = /\.(png|jpe?g|webp|gif|avif|bmp|svg)(\?|#|$)/i
@@ -62,6 +61,7 @@ const SUBTYPE_SET = new Set<string>([
   ...IMAGE_SUBTYPES.map((subtype) => subtype.value),
   ...VIDEO_SUBTYPES.map((subtype) => subtype.value),
   ...AUDIO_SUBTYPES.map((subtype) => subtype.value),
+  ...UPSCALER_SUBTYPES.map((subtype) => subtype.value),
 ])
 
 function isGenerationType(value: unknown): value is GenerationType {
@@ -133,30 +133,18 @@ export function parseStoredRequest(
         : null
 
   const attachments = parseAttachments(context.referencedFiles)
-  const runMode: MediaRunMode = request.runMode === "agent" ? "agent" : "direct"
-  let parameterValues = parseSettings(request.settings)
-
-  if (runMode === "agent" && showsAgentMode(generationType)) {
-    parameterValues = defaultAgentParameterValues({
-      ...parameterValues,
-      references: serializeAgentReferences(
-        attachments.flatMap((attachment) =>
-          attachment.status === "uploaded" && isPickerAssetType(attachment.type)
-            ? [{ url: attachment.url, type: attachment.type }]
-            : [],
-        ),
-      ),
-    })
-  }
+  const parameterValues = parseSettings(request.settings)
+  const topLevelPrompt =
+    typeof request.prompt === "string" ? request.prompt : ""
+  const prompt = parameterValues.prompt || topLevelPrompt
 
   return {
     generationType,
     generationSubtype,
     selectedModelId: model,
-    parameterValues,
-    prompt: typeof request.prompt === "string" ? request.prompt : "",
+    parameterValues: prompt ? { ...parameterValues, prompt } : parameterValues,
+    prompt,
     attachments,
-    runMode,
     voice: typeof context.voice === "string" ? context.voice : undefined,
   }
 }
@@ -178,11 +166,11 @@ export function flattenRequestSettings(
 
   add("model", parsed.selectedModelId)
   add("prompt", parsed.prompt)
-  add("runMode", parsed.runMode)
   add("generationType", parsed.generationType)
   add("subtype", parsed.generationSubtype)
   add("voice", parsed.voice)
   for (const [key, value] of Object.entries(parsed.parameterValues)) {
+    if (key === "prompt") continue
     add(key, value)
   }
   parsed.attachments.forEach((attachment, index) => {
@@ -230,10 +218,6 @@ export function getGenerationDetails(
   if (subtypeLabel) {
     meta.push({ label: "Mode", value: subtypeLabel })
   }
-  meta.push({
-    label: "Run mode",
-    value: parsed.runMode === "agent" ? "Agent" : "Direct",
-  })
   if (parsed.voice) {
     meta.push({ label: "Voice", value: parsed.voice })
   }
@@ -242,6 +226,7 @@ export function getGenerationDetails(
   const references: Array<GenerationDetailReference> = []
 
   for (const [key, value] of Object.entries(parsed.parameterValues)) {
+    if (key === "prompt") continue
     if (!isPresentSettingValue(value)) continue
 
     const mediaReferences = extractMediaReferences(key, value)
@@ -293,6 +278,37 @@ function inferMediaType(url: string, hint: string): "image" | "video" | null {
   return null
 }
 
+function parseStoredReferences(
+  value: string,
+): Array<{ url: string; type: string }> {
+  try {
+    const parsed = JSON.parse(value)
+    if (!Array.isArray(parsed)) return []
+
+    return parsed.flatMap((item) => {
+      if (typeof item === "string" && item.length > 0) {
+        return [{ url: item, type: "image" }]
+      }
+      if (
+        item &&
+        typeof item === "object" &&
+        typeof item.url === "string" &&
+        item.url.length > 0
+      ) {
+        return [
+          {
+            url: item.url,
+            type: isPickerAssetType(item.type) ? item.type : "image",
+          },
+        ]
+      }
+      return []
+    })
+  } catch {
+    return []
+  }
+}
+
 function extractMediaReferences(
   key: string,
   value: string,
@@ -300,7 +316,7 @@ function extractMediaReferences(
   const label = humanizeSettingKey(key)
 
   if (key === "references") {
-    return parseAgentReferences(value).flatMap((reference) => {
+    return parseStoredReferences(value).flatMap((reference) => {
       const type = inferMediaType(reference.url, reference.type)
       if (!type) return []
       return [{ label, url: reference.url, type }]

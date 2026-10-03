@@ -5,9 +5,12 @@ import { UserModelMessage, userModelMessageSchema } from "ai"
 import { assertConversationOwner } from "@/lib/authorize"
 import { Conversation, ConversationAgentRun } from "@/db/schema"
 import {
+  getModelReasoningEffort,
   getModelWithVendorBinding,
+  type ModelReasoningEffort,
   type ResolvedVendorModel,
 } from "@/features/models/repo"
+import type { ReasoningEffort } from "../ai/agent/utils/llm-client"
 import { BadRequest } from "../error"
 import { Session } from "../ai/agent/core/session"
 import { v4 as uuidv4 } from "uuid"
@@ -85,6 +88,7 @@ export const listConversationAgentRuns = async (
 export const completionSchema = z.object({
   conversationId: z.uuid("Invalid conversation id").nullable(),
   modelId: z.string("Invalid model id"),
+  reasoningEffort: z.string().optional(),
   userPrompt: userModelMessageSchema,
   editorContext: editorContextSchema.optional(),
 })
@@ -112,7 +116,13 @@ export const chatCompletion = async (
   projectId: string,
   payload: CompletionPayload,
 ) => {
-  const { conversationId, modelId, userPrompt, editorContext } = payload
+  const {
+    conversationId,
+    modelId,
+    userPrompt,
+    editorContext,
+    reasoningEffort,
+  } = payload
 
   const shouldGenerateTitle = conversationId === null
 
@@ -124,6 +134,12 @@ export const chatCompletion = async (
   if (!model) {
     throw new BadRequest("Model not found")
   }
+
+  const resolvedReasoningEffort = resolveChatReasoningEffort(
+    await getModelReasoningEffort(modelId),
+    reasoningEffort,
+    agentDefinition.modelConfig.reasoningEffort,
+  )
 
   let result: { conversation: Conversation; run: ConversationAgentRun } | null =
     null
@@ -161,6 +177,7 @@ export const chatCompletion = async (
     userPrompt,
     editorContext,
     shouldGenerateTitle,
+    reasoningEffort: resolvedReasoningEffort,
   })
 
   return result
@@ -175,6 +192,7 @@ type RunAgentPayload = {
   userPrompt: UserModelMessage
   editorContext?: EditorContext
   shouldGenerateTitle: boolean
+  reasoningEffort?: ReasoningEffort
 }
 
 async function runAgent(payload: RunAgentPayload) {
@@ -187,6 +205,7 @@ async function runAgent(payload: RunAgentPayload) {
     userPrompt,
     editorContext,
     shouldGenerateTitle,
+    reasoningEffort,
   } = payload
   const { controller, cleanup } = await createCancellableController(runId)
 
@@ -224,6 +243,7 @@ async function runAgent(payload: RunAgentPayload) {
       session,
       model,
       persistence: checkpointPersistence,
+      modelConfig: reasoningEffort ? { reasoningEffort } : undefined,
       buildSystemPrompt: (baseSystemPrompt, definition) =>
         enrichSystemPrompt(
           baseSystemPrompt,
@@ -293,7 +313,7 @@ async function handleTitleGeneration(
 ) {
   const { title } = await generateTitle({
     message: extractTextFromUserMessage(userPrompt),
-    modelId: "openai/gpt-5-nano",
+    modelId: "openai/gpt-5-mini",
     organizationId,
     abortSignal: new AbortController().signal, // This won't be aborted since the request will be done at this stage
   })
@@ -360,4 +380,23 @@ ${subAgentPrompts}
   }
 
   return finalPrompt.trim()
+}
+
+function resolveChatReasoningEffort(
+  binding: ModelReasoningEffort | null,
+  requested: string | undefined,
+  fallback: ReasoningEffort | undefined,
+): ReasoningEffort | undefined {
+  if (requested) {
+    if (!binding?.options.some((option) => option.value === requested)) {
+      throw new BadRequest("Invalid reasoning effort for this model")
+    }
+    return requested as ReasoningEffort
+  }
+
+  if (binding?.defaultValue) {
+    return binding.defaultValue as ReasoningEffort
+  }
+
+  return fallback
 }

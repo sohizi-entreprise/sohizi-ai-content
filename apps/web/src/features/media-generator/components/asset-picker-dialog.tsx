@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ImagePlus, Music, X } from "lucide-react"
+import { ImagePlus, Music, Video, X } from "lucide-react"
 import { Button } from "@sohizi/ui/button"
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
 } from "@sohizi/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sohizi/ui/tabs"
 import {
+  chooseLabelForFileTypes,
   describeFileTypes,
   getMaxAssetItems,
   getUploaderFileTypes,
@@ -18,23 +19,21 @@ import {
   parseParameterAssetUrls,
   serializeParameterAssetUrls,
 } from "../lib/parameter-assets"
-import {
-  parseAgentReferences,
-  serializeAgentReferences,
-} from "../lib/agent-settings"
 import { AssetPickerFolderTab } from "./asset-picker-folder-tab"
 import { AssetPickerGeneratedTab } from "./asset-picker-generated-tab"
 import { AssetPickerUploadTab } from "./asset-picker-upload-tab"
 import type { PickerAsset, PickerAssetType } from "../lib/parameter-assets"
 import type { ModelParameterBinding } from "@/features/admin/types"
-import type { AgentReference } from "../lib/agent-settings"
 import { cn } from "@/lib/utils"
 import {
   buildOptimizeddImageUrl,
   imageUrlTransforms,
 } from "@/utils/transform-url"
 
-type AssetPickerValueFormat = "urls" | "references"
+type SelectedAsset = {
+  url: string
+  type: PickerAssetType
+}
 
 type SharedAssetPickerProps = {
   projectId: string
@@ -44,7 +43,6 @@ type SharedAssetPickerProps = {
   allowMultiple: boolean
   value: string
   onChange: (value: string) => void
-  valueFormat: AssetPickerValueFormat
 }
 
 type AssetPickerFieldProps = {
@@ -69,36 +67,6 @@ export function AssetPickerField({
       allowMultiple={isArrayParameter(parameter)}
       value={value}
       onChange={onChange}
-      valueFormat="urls"
-    />
-  )
-}
-
-export function ReferenceAssetPickerField({
-  projectId,
-  label,
-  fileTypes,
-  maxItems,
-  value,
-  onChange,
-}: {
-  projectId: string
-  label: string
-  fileTypes: Array<PickerAssetType>
-  maxItems: number
-  value: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <SharedAssetPicker
-      projectId={projectId}
-      label={label}
-      fileTypes={fileTypes}
-      maxItems={maxItems}
-      allowMultiple
-      value={value}
-      onChange={onChange}
-      valueFormat="references"
     />
   )
 }
@@ -111,14 +79,11 @@ function SharedAssetPicker({
   allowMultiple,
   value,
   onChange,
-  valueFormat,
 }: SharedAssetPickerProps) {
   const [open, setOpen] = useState(false)
-  const selected = parsePickerValue(value, fileTypes, valueFormat)
-  const chooseLabel =
-    fileTypes.length === 1
-      ? `${fileTypes[0]}${allowMultiple ? "s" : ""}`
-      : "files"
+  const selected = parsePickerValue(value, fileTypes)
+  const chooseLabel = chooseLabelForFileTypes(fileTypes, allowMultiple)
+  const EmptyIcon = emptyIconForFileTypes(fileTypes)
 
   return (
     <>
@@ -133,7 +98,7 @@ function SharedAssetPicker({
           ) : (
             <>
               <span className="flex size-12 items-center justify-center rounded-lg border border-dashed">
-                <ImagePlus className="size-4 text-muted-foreground" />
+                <EmptyIcon className="size-4 text-muted-foreground" />
               </span>
               <span className="text-xs text-muted-foreground">
                 Choose {chooseLabel}
@@ -146,9 +111,7 @@ function SharedAssetPicker({
             type="button"
             variant="ghost"
             size="icon-sm"
-            onClick={() =>
-              onChange(serializePickerValue([], allowMultiple, valueFormat))
-            }
+            onClick={() => onChange(serializePickerValue([], allowMultiple))}
             aria-label="Clear selected assets"
           >
             <X className="size-3.5" />
@@ -166,13 +129,12 @@ function SharedAssetPicker({
         allowMultiple={allowMultiple}
         value={value}
         onChange={onChange}
-        valueFormat={valueFormat}
       />
     </>
   )
 }
 
-function SelectedThumbnails({ items }: { items: Array<AgentReference> }) {
+function SelectedThumbnails({ items }: { items: Array<SelectedAsset> }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
       <div className="flex">
@@ -196,7 +158,7 @@ function SelectedThumbnails({ items }: { items: Array<AgentReference> }) {
   )
 }
 
-function ReferenceThumbnail({ item }: { item: AgentReference }) {
+function ReferenceThumbnail({ item }: { item: SelectedAsset }) {
   if (item.type === "image") {
     return (
       <img
@@ -239,24 +201,23 @@ function AssetPickerDialog({
   allowMultiple,
   value,
   onChange,
-  valueFormat,
 }: SharedAssetPickerProps & {
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const [draftItems, setDraftItems] = useState<Array<AgentReference>>([])
+  const [draftItems, setDraftItems] = useState<Array<SelectedAsset>>([])
   const selectedUrls = draftItems.map((item) => item.url)
   const fileTypeLabel = describeFileTypes(fileTypes)
   const fileTypesKey = fileTypes.join(",")
 
   useEffect(() => {
     if (open) {
-      setDraftItems(parsePickerValue(value, fileTypes, valueFormat))
+      setDraftItems(parsePickerValue(value, fileTypes))
     }
-  }, [fileTypesKey, open, value, valueFormat])
+  }, [fileTypesKey, open, value])
 
-  const applySelection = (items: Array<AgentReference>) => {
-    onChange(serializePickerValue(items, allowMultiple, valueFormat))
+  const applySelection = (items: Array<SelectedAsset>) => {
+    onChange(serializePickerValue(items, allowMultiple))
     onOpenChange(false)
   }
 
@@ -355,13 +316,7 @@ function AssetPickerDialog({
 function parsePickerValue(
   value: string,
   fileTypes: Array<PickerAssetType>,
-  valueFormat: AssetPickerValueFormat,
-): Array<AgentReference> {
-  if (valueFormat === "references") {
-    const allowed = new Set(fileTypes)
-    return parseAgentReferences(value).filter((item) => allowed.has(item.type))
-  }
-
+): Array<SelectedAsset> {
   const fallbackType = fileTypes[0] ?? "image"
   return parseParameterAssetUrls(value).map((url) => ({
     url,
@@ -370,16 +325,17 @@ function parsePickerValue(
 }
 
 function serializePickerValue(
-  items: Array<AgentReference>,
+  items: Array<SelectedAsset>,
   allowMultiple: boolean,
-  valueFormat: AssetPickerValueFormat,
 ): string {
-  if (valueFormat === "references") {
-    return serializeAgentReferences(allowMultiple ? items : items.slice(0, 1))
-  }
-
   return serializeParameterAssetUrls(
     items.map((item) => item.url),
     allowMultiple,
   )
+}
+
+function emptyIconForFileTypes(fileTypes: Array<PickerAssetType>) {
+  if (fileTypes.length === 1 && fileTypes[0] === "video") return Video
+  if (fileTypes.length === 1 && fileTypes[0] === "audio") return Music
+  return ImagePlus
 }

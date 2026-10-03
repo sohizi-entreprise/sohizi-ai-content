@@ -12,7 +12,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "catalog:validate": "bun run src/catalog/validate.ts",
+    "catalog:populate": "bun run src/catalog/populate.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4",

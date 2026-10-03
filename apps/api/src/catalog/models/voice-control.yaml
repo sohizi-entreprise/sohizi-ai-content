@@ -1,0 +1,15 @@
+# Restyle existing speech into a different voice. per_inference uses WaveSpeed base_price when the price API needs a real file.
+models:
+  - id: elevenlabs/voice-changer
+    name: ElevenLabs Voice Changer
+    provider: elevenlabs
+    description: >
+      ElevenLabs voice restyle. Prefer when existing speech should keep timing and become a different preset voice. Does not mint a reusable voice id. Listed rate is WaveSpeed base; duration can raise the charge.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.004
+    categories: [voice-control]
+    parameters:
+      - { id: parameter_audio, required: true }
+      - { id: parameter_voice, required: false, defaultValue: Alicia, allowedValues: [Alicia, Alice, Sarah, Jessica, Lily, Matilda, Bella, Adam, Brian, Daniel, Chris, Charlie, George, Liam, River] }

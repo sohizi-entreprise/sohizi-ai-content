@@ -1,7 +1,7 @@
 import { useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
 import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
+import { Textarea } from "@sohizi/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -12,11 +12,8 @@ import {
 import { Slider } from "@sohizi/ui/slider"
 import { Switch } from "@sohizi/ui/switch"
 import { Skeleton } from "@sohizi/ui/skeleton"
-import { listGoogleVoicesQueryOptions } from "../query-mutations"
 import { useMediaCatalog } from "../hooks/use-media-catalog"
-import { showsVoiceSelector } from "../constants"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
-import { MediaVoiceSelector } from "./media-voice-selector"
 import { AssetPickerField } from "./asset-picker-dialog"
 import { MediaModelSelector } from "./media-model-selector"
 import type { ReactNode } from "react"
@@ -35,10 +32,6 @@ export function MediaModelSettings(props: MediaModelSettingsProps) {
   const { projectId, errors, isLoadingParameters, parameters, resetErrors } =
     props
 
-  const generationType = useMediaGeneratorStore((state) => state.generationType)
-  const generationSubtype = useMediaGeneratorStore(
-    (state) => state.generationSubtype,
-  )
   const parameterValues = useMediaGeneratorStore(
     (state) => state.parameterValues,
   )
@@ -52,10 +45,6 @@ export function MediaModelSettings(props: MediaModelSettingsProps) {
     isLoadingModels,
     hasCatalog,
   } = useMediaCatalog()
-  const { data: voices = [], isLoading: isLoadingVoices } = useQuery(
-    listGoogleVoicesQueryOptions,
-  )
-  const showVoice = showsVoiceSelector(generationType, generationSubtype)
 
   const handleParameterChange = (key: string, value: string) => {
     updateParameterValue(key, value)
@@ -85,16 +74,9 @@ export function MediaModelSettings(props: MediaModelSettingsProps) {
         </SettingsField>
       ) : (
         <p className="text-sm text-muted-foreground">
-          This mode uses the project agent. Describe what you want in the prompt
-          below.
+          No models are configured for this mode yet.
         </p>
       )}
-
-      {showVoice ? (
-        <SettingsField label="Voice">
-          <MediaVoiceSelector voices={voices} isLoading={isLoadingVoices} />
-        </SettingsField>
-      ) : null}
 
       {hasCatalog && selectedModelId ? (
         isLoadingParameters ? (
@@ -158,10 +140,7 @@ function ParameterLabel({
 }) {
   return (
     <Label
-      className={cn(
-        "text-xs text-muted-foreground",
-        error && "text-destructive",
-      )}
+      className={cn("text-xs text-foreground", error && "text-destructive")}
     >
       {parameter.label}
       {parameter.required ? (
@@ -173,7 +152,7 @@ function ParameterLabel({
   )
 }
 
-function ParameterField({
+export function ParameterField({
   projectId,
   parameter,
   value,
@@ -187,6 +166,21 @@ function ParameterField({
   error: string | undefined
 }) {
   const component = parameter.xUiComponent
+
+  if (component === "textarea") {
+    return (
+      <div className="space-y-2">
+        <ParameterLabel parameter={parameter} error={error} />
+        <Textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={parameter.description ?? undefined}
+          className="min-h-20 rounded-xl resize-none bg-background! max-h-40"
+          aria-invalid={Boolean(error)}
+        />
+      </div>
+    )
+  }
 
   if (component === "select" && parameter.options.length > 0) {
     return (
@@ -230,6 +224,7 @@ function ParameterField({
             step={step}
             value={[safeValue]}
             onValueChange={([next]) => onChange(String(next))}
+            className="**:data-[slot=slider-track]:bg-background"
           />
         </div>
       )
@@ -270,7 +265,7 @@ function ParameterField({
     )
   }
 
-  if (parameter.type === "boolean") {
+  if (component === "checkbox" || parameter.type === "boolean") {
     return (
       <div className="flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5">
         <ParameterLabel parameter={parameter} error={error} />

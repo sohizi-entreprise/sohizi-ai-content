@@ -3,7 +3,6 @@ import {
   getJobResult,
   deleteJob,
   getInferencePrice,
-  WaveSpeedError,
 } from "./utils"
 
 export const waveSpeedFuncs = {
@@ -11,5 +10,4 @@ export const waveSpeedFuncs = {
   getJobResult,
   deleteJob,
   getInferencePrice,
-  WaveSpeedError,
 }

@@ -4,6 +4,7 @@ import type { VendorCircuitConfig, VendorRateLimit } from "@/type"
 export type MediaRoute = {
   modelId: string
   vendorName: string
+  adapter: string
   apiName: string
   priority: number
   rpm: number
@@ -17,6 +18,7 @@ export type RouteDecision = {
   requestId: string
   modelId: string
   vendorName: string
+  adapter: string
   apiName: string
   mappedPayload: SubmitPayload
   cooldownMs: number

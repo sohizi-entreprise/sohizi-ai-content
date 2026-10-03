@@ -9,7 +9,7 @@ export function MediaTypeRail() {
   )
 
   return (
-    <nav className="flex w-[76px] shrink-0 flex-col items-center gap-1 border-l py-3">
+    <nav className="flex w-19 shrink-0 flex-col items-center gap-1 py-3">
       {GENERATION_TYPES.map((item) => {
         const Icon = item.icon
         const isActive = generationType === item.value
@@ -20,17 +20,23 @@ export function MediaTypeRail() {
             type="button"
             onClick={() => setGenerationType(item.value)}
             className={cn(
-              "relative flex w-[68px] flex-col items-center gap-1 rounded-xl px-1.5 py-2 text-center transition-colors",
-              isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+              "relative flex flex-col w-16 items-center gap-1 rounded-xl px-1.5 py-2 text-center transition-colors text-muted-foreground hover:bg-white/5 hover:text-foreground",
             )}
           >
-            {isActive ? (
-              <span className="absolute top-1/2 left-0 h-6 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
-            ) : null}
-            <Icon className="size-4" />
-            <span className="text-[10px] leading-tight font-medium">
+            <div
+              className={cn(
+                "flex items-center justify-center p-4 rounded-full",
+                isActive && "bg-primary/10 text-primary",
+              )}
+            >
+              <Icon className="size-4" />
+            </div>
+            <span
+              className={cn(
+                "text-[10px] leading-tight font-medium",
+                isActive && "text-primary",
+              )}
+            >
               {item.label}
             </span>
           </button>

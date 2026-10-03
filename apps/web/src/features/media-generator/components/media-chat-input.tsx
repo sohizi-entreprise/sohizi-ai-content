@@ -1,77 +1,56 @@
-import { useEffect, useRef } from "react"
-import { Sparkles } from "lucide-react"
 import { Button } from "@sohizi/ui/button"
-import { Label } from "@sohizi/ui/label"
-import { Switch } from "@sohizi/ui/switch"
+import { IconSparklesFilled } from "@tabler/icons-react"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
-import { getPromptPlaceholder, showsAgentMode } from "../constants"
-import type { Editor } from "@tiptap/core"
+import { ParameterField } from "./media-model-settings"
+import type { ModelParameterBinding } from "@/features/admin/types"
 import { cn } from "@/lib/utils"
-import ChatTextarea from "@/features/chat/components/chat-textarea"
 
 export type MediaChatInputProps = {
   projectId: string
+  promptParameter?: ModelParameterBinding
+  error?: string
+  resetErrors: () => void
   className?: string
   handleSendRequest: () => void
   isPending: boolean
   disableButton: boolean
+  credits?: number | null
 }
 
 export function MediaChatInput({
   projectId,
+  promptParameter,
+  error,
+  resetErrors,
   className,
   handleSendRequest,
   isPending,
   disableButton,
+  credits,
 }: MediaChatInputProps) {
-  const generationType = useMediaGeneratorStore((state) => state.generationType)
-  const generationSubtype = useMediaGeneratorStore(
-    (state) => state.generationSubtype,
+  const parameterValues = useMediaGeneratorStore(
+    (state) => state.parameterValues,
   )
-  const setChatInput = useMediaGeneratorStore((state) => state.setChatInput)
-  const setPrompt = useMediaGeneratorStore((state) => state.setPrompt)
-  const runMode = useMediaGeneratorStore((state) => state.runMode)
-  const setRunMode = useMediaGeneratorStore((state) => state.setRunMode)
-  const editorRef = useRef<Editor | null>(null)
-
-  useEffect(() => {
-    if (editorRef.current) {
-      setChatInput(editorRef.current)
-    }
-    return () => {
-      setChatInput(null)
-    }
-  }, [editorRef.current, setChatInput])
+  const updateParameterValue = useMediaGeneratorStore(
+    (state) => state.updateParameterValue,
+  )
 
   return (
     <section className={cn("relative", className)}>
       <div className="relative z-1">
-        <div className="max-h-28 min-h-20 min-w-0 overflow-y-auto rounded-xl p-3 border bg-background focus-within:border-white/20 text-foreground">
-          <ChatTextarea
-            projectId={projectId}
-            onChange={setPrompt}
-            placeholder={getPromptPlaceholder(
-              generationType,
-              generationSubtype,
-            )}
-            editorRef={editorRef}
-          />
-        </div>
-
-        {showsAgentMode(generationType) ? (
-          <div className="flex items-center justify-between gap-3 px-1 py-2">
-            <Label
-              htmlFor="media-run-mode"
-              className="text-xs text-muted-foreground"
-            >
-              Agent mode
-            </Label>
-            <Switch
-              id="media-run-mode"
-              checked={runMode === "agent"}
-              onCheckedChange={(checked) =>
-                setRunMode(checked ? "agent" : "direct")
+        {promptParameter ? (
+          <div className="py-2">
+            <ParameterField
+              projectId={projectId}
+              parameter={promptParameter}
+              value={
+                parameterValues.prompt || promptParameter.defaultValue || ""
               }
+              onChange={(value) => {
+                updateParameterValue("prompt", value)
+                resetErrors()
+              }}
+              error={error}
             />
           </div>
         ) : null}
@@ -81,12 +60,17 @@ export function MediaChatInput({
             disabled={disableButton}
             onClick={handleSendRequest}
             className={cn(
-              "h-11 w-full rounded-xl text-black disabled:opacity-50",
+              "h-11 w-full rounded-xl text-black font-semibold disabled:opacity-50",
               isPending && "animate-pulse",
             )}
           >
-            <Sparkles className="size-4" />
+            <IconSparklesFilled className="size-6" />
             {isPending ? "Pending…" : "Generate"}
+            {credits != null ? (
+              <span className="tabular-nums opacity-80">
+                &bull; {credits} {credits === 1 ? "credit" : "credits"}
+              </span>
+            ) : null}
           </Button>
         </div>
       </div>

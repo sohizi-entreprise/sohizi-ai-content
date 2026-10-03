@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { listCatalogModelParametersQueryOptions } from "../query-mutations"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
-import { parseParameterAssetUrls } from "../lib/parameter-assets"
+import {
+  isStoredBoolean,
+  parseParameterAssetUrls,
+} from "../lib/parameter-assets"
 import type { ModelParameterBinding } from "@/features/admin/types"
 
 export function useModelParameters() {
@@ -84,7 +87,9 @@ export function useValidateParameterValues() {
             parameter.xUiComponent === "uploader"
               ? parseParameterAssetUrls(typeof value === "string" ? value : "")
                   .length === 0
-              : !value
+              : parameterType === "boolean"
+                ? !isStoredBoolean(value)
+                : value == null || value === ""
           if (missing) {
             errorMsg = "This field is required"
             assignError(parameter.key, errorMsg)
@@ -108,7 +113,7 @@ export function useValidateParameterValues() {
         }
 
         if (parameterType === "boolean") {
-          if (typeof value !== "boolean") {
+          if (value != null && value !== "" && !isStoredBoolean(value)) {
             errorMsg = "This field must be a boolean"
             assignError(parameter.key, errorMsg)
           }

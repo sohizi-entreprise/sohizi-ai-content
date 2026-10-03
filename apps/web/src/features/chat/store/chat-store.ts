@@ -29,6 +29,7 @@ type ChatState = {
   userPrompt: string
   activeConversation: StoreConversation | null
   model: LlmModel | null
+  reasoningEffortByModelId: Record<string, string>
   attachedFiles: Array<AttachedFile>
 }
 
@@ -36,6 +37,7 @@ type ChatActions = {
   setUserPrompt: (content: string) => void
   appendUserPrompt: (content: string) => void
   setModel: (model: LlmModel) => void
+  setReasoningEffort: (modelId: string, reasoningEffort: string) => void
   setActiveConversation: (conversation: StoreConversation) => void
   patchActiveConversation: (conversation: Partial<StoreConversation>) => void
   clearInput: () => void
@@ -50,12 +52,21 @@ const initialState: ChatState = {
   userPrompt: "",
   activeConversation: null,
   model: null,
+  reasoningEffortByModelId: {},
   attachedFiles: [],
 }
 
 // ============================================================================
 // STORE
 // ============================================================================
+
+function applyChatState(state: ChatState, next: ChatState) {
+  state.userPrompt = next.userPrompt
+  state.activeConversation = next.activeConversation
+  state.model = next.model
+  state.reasoningEffortByModelId = { ...next.reasoningEffortByModelId }
+  state.attachedFiles = next.attachedFiles
+}
 
 export const useChatStore = create<ChatState & ChatActions>()(
   immer((set) => ({
@@ -64,6 +75,13 @@ export const useChatStore = create<ChatState & ChatActions>()(
     appendUserPrompt: (content) =>
       set((state) => ({ userPrompt: state.userPrompt + content })),
     setModel: (model) => set({ model }),
+    setReasoningEffort: (modelId, reasoningEffort) =>
+      set((state) => {
+        state.reasoningEffortByModelId = {
+          ...state.reasoningEffortByModelId,
+          [modelId]: reasoningEffort,
+        }
+      }),
     setActiveConversation: (conversation) =>
       set({ activeConversation: conversation }),
     patchActiveConversation: (conversation) =>
@@ -76,8 +94,14 @@ export const useChatStore = create<ChatState & ChatActions>()(
         }
       }),
     clearInput: () => set({ userPrompt: "", attachedFiles: [] }),
-    init: (projectId) => set(createInitialState(projectId)),
-    reset: () => set(initialState),
+    init: (projectId) =>
+      set((state) => {
+        applyChatState(state, createInitialState(projectId))
+      }),
+    reset: () =>
+      set((state) => {
+        applyChatState(state, initialState)
+      }),
 
     addAttachedFile: (file) =>
       set((state) => {
@@ -119,4 +143,16 @@ function createInitialState(projectId: string): ChatState {
       isStreaming: false,
     },
   }
+}
+
+export function setChatReasoningEffort(
+  modelId: string,
+  reasoningEffort: string,
+) {
+  useChatStore.setState((state) => {
+    state.reasoningEffortByModelId = {
+      ...state.reasoningEffortByModelId,
+      [modelId]: reasoningEffort,
+    }
+  })
 }

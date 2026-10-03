@@ -1,5 +1,10 @@
 import { Tabs, TabsList, TabsTrigger } from "@sohizi/ui/tabs"
-import { AUDIO_SUBTYPES, IMAGE_SUBTYPES, VIDEO_SUBTYPES } from "../constants"
+import {
+  AUDIO_SUBTYPES,
+  IMAGE_SUBTYPES,
+  UPSCALER_SUBTYPES,
+  VIDEO_SUBTYPES,
+} from "../constants"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
 import type { GenerationSubtype } from "../types"
 
@@ -7,6 +12,7 @@ const SUBTYPE_OPTIONS = {
   image: IMAGE_SUBTYPES,
   video: VIDEO_SUBTYPES,
   audio: AUDIO_SUBTYPES,
+  upscaler: UPSCALER_SUBTYPES,
 } as const
 
 export function MediaSubtypeTabs() {
@@ -21,7 +27,8 @@ export function MediaSubtypeTabs() {
   if (
     generationType !== "image" &&
     generationType !== "video" &&
-    generationType !== "audio"
+    generationType !== "audio" &&
+    generationType !== "upscaler"
   ) {
     return null
   }

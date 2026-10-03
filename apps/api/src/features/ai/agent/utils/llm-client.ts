@@ -1,16 +1,9 @@
-import {
-  Output,
-  streamText,
-  generateText,
-  ModelMessage,
-  ToolSet,
-  LanguageModelUsage,
-  createDownload,
-  type Experimental_DownloadFunction,
-} from "ai"
-import { openai } from "@/lib/llm-providers"
-import { getOpenRouterProvider } from "./openrouter-provider"
+import { ModelMessage, ToolSet, LanguageModelUsage } from "ai"
 import { z } from "zod"
+import {
+  generateTextWithFailover,
+  streamTextWithFailover,
+} from "@/features/ai/llm/router"
 import { LlmChunk, LlmCompleteChunk, streamEvents } from "./llm-response"
 import { TokenUsage, CompleteReason } from "@/type"
 import type {
@@ -37,44 +30,17 @@ import {
 import { getErrorMessage } from "@/utils/get-error-message"
 import { simpleHash } from "@/utils/simple-hash"
 
+export type ReasoningEffort =
+  "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
+
 export type ModelConfig = {
   tools?: ToolSet
   temperature?: number
-  reasoningEffort?: "minimal" | "low" | "medium" | "high"
+  reasoningEffort?: ReasoningEffort
   reasoningSummary?: "auto" | "none"
   maxRetries?: number
   maxOutputTokens?: number
   timeout?: number
-}
-
-const fetchUnsupportedUrl = createDownload()
-
-/** True for public YouTube hosts Gemini/OpenRouter accept as video_url. */
-function isYoutubeUrl(url: URL): boolean {
-  const host = url.hostname.replace(/^www\./, "").toLowerCase()
-  return (
-    host === "youtu.be" ||
-    host === "youtube.com" ||
-    host === "m.youtube.com" ||
-    host === "music.youtube.com"
-  )
-}
-
-/**
- * Never download YouTube (or model-supported) URLs — return null so the AI SDK
- * forwards the original URL to OpenRouter as `video_url` unchanged.
- */
-const passthroughOpenRouterMedia: Experimental_DownloadFunction = async (
-  downloads,
-) => {
-  return Promise.all(
-    downloads.map(async ({ url, isUrlSupportedByModel }) => {
-      if (isUrlSupportedByModel || isYoutubeUrl(url)) {
-        return null
-      }
-      return fetchUnsupportedUrl({ url })
-    }),
-  )
 }
 
 export type InvokeRequest = {
@@ -111,53 +77,28 @@ export class LlmClient {
     outputSchema,
     telemetryFunctionId,
   }: Omit<InvokeRequest, "stream">): AsyncGenerator<LlmChunk, void, unknown> {
-    const output =
-      outputSchema instanceof z.ZodArray
-        ? Output.array({ element: outputSchema.element })
-        : outputSchema
-          ? Output.object({ schema: outputSchema })
-          : undefined
-
     const modelConfig = this.modelConfig
-    let openRouterCost = 0
+    let cost = 0
 
     try {
-      const response = await generateText({
-        model: this.getProvider(true),
-        allowSystemInMessages: true,
+      const response = await generateTextWithFailover({
+        modelId: this.model,
         messages,
         abortSignal,
         tools: this.tools,
-        maxRetries: modelConfig?.maxRetries,
+        outputSchema,
         maxOutputTokens: modelConfig?.maxOutputTokens,
-        output,
-        experimental_download: passthroughOpenRouterMedia,
-        telemetry: {
-          isEnabled: true,
-          functionId: telemetryFunctionId ?? "generate-response",
-        },
-        providerOptions: {
-          openai: {
-            reasoningEffort: modelConfig?.reasoningEffort,
-            reasoningSummary: modelConfig?.reasoningSummary,
-          },
-          openrouter: {
-            reasoning: {
-              effort: modelConfig?.reasoningEffort,
-              exclude: false,
-            },
-          },
-        },
+        reasoningEffort: modelConfig?.reasoningEffort,
+        reasoningSummary: modelConfig?.reasoningSummary,
+        telemetryFunctionId,
       })
-      const openRouterUsage = response.finalStep.providerMetadata?.openrouter
-        ?.usage as { cost: number } | undefined
-      openRouterCost = openRouterUsage?.cost ?? 0
+      cost = response.costUsd
 
       yield {
         type: streamEvents.complete,
         text: response.text,
         finishReason: response.finishReason,
-        usage: this.getTokenUsage(response.usage, openRouterCost),
+        usage: this.getTokenUsage(response.usage, cost),
       }
     } catch (error) {
       yield {
@@ -172,7 +113,7 @@ export class LlmClient {
           cached: 0,
           total: 0,
           modelId: this.model,
-          cost: openRouterCost,
+          cost,
         },
       }
     }
@@ -184,13 +125,6 @@ export class LlmClient {
     outputSchema,
     telemetryFunctionId,
   }: Omit<InvokeRequest, "stream">): AsyncGenerator<LlmChunk, void, unknown> {
-    const output =
-      outputSchema instanceof z.ZodArray
-        ? Output.array({ element: outputSchema.element })
-        : outputSchema
-          ? Output.object({ schema: outputSchema })
-          : undefined
-
     const modelConfig = this.modelConfig
     let finishReason: CompleteReason = "other"
     let error: string | undefined
@@ -208,32 +142,16 @@ export class LlmClient {
     }
 
     try {
-      const response = streamText({
-        model: this.getProvider(true),
+      const response = await streamTextWithFailover({
+        modelId: this.model,
         messages,
-        allowSystemInMessages: true,
         abortSignal,
         tools: this.tools,
-        maxRetries: modelConfig?.maxRetries,
+        outputSchema,
         maxOutputTokens: modelConfig?.maxOutputTokens,
-        output,
-        experimental_download: passthroughOpenRouterMedia,
-        telemetry: {
-          isEnabled: true,
-          functionId: telemetryFunctionId ?? "generate-response",
-        },
-        providerOptions: {
-          openai: {
-            reasoningEffort: modelConfig?.reasoningEffort,
-            reasoningSummary: modelConfig?.reasoningSummary,
-          },
-          openrouter: {
-            reasoning: {
-              effort: modelConfig?.reasoningEffort,
-              exclude: false,
-            },
-          },
-        },
+        reasoningEffort: modelConfig?.reasoningEffort,
+        reasoningSummary: modelConfig?.reasoningSummary,
+        telemetryFunctionId,
       })
       for await (const chunk of response.stream) {
         switch (chunk.type) {
@@ -310,19 +228,13 @@ export class LlmClient {
             break
         }
       }
-      usage = this.getTokenUsage(await response.usage)
-      const [finish, finalStep] = await Promise.all([
+      const [tokenUsage, finish, cost] = await Promise.all([
+        response.usage,
         response.finishReason,
-        response.finalStep,
+        response.costUsd,
       ])
+      usage = this.getTokenUsage(tokenUsage, cost)
       finishReason = finish
-      const openRouterUsage = finalStep.providerMetadata?.openrouter?.usage as
-        { cost: number } | undefined
-      const openRouterCost = openRouterUsage?.cost ?? 0
-      usage = {
-        ...usage,
-        cost: openRouterCost,
-      }
     } catch (e) {
       error = getErrorMessage(e)
       finishReason = "error"
@@ -355,32 +267,6 @@ export class LlmClient {
       cost,
     }
   }
-
-  private getProvider(useOpenRouter?: boolean) {
-    if (useOpenRouter) {
-      const apiKey = process.env.OPENROUTER_API_KEY
-      if (!apiKey) {
-        throw new Error("OPENROUTER_API_KEY is not set")
-      }
-      const openrouter = getOpenRouterProvider()
-      // OpenRouter converts video/* file parts → video_url, but its AI SDK
-      // provider never declares video/* in supportedUrls. Without this patch,
-      // streamText downloads YouTube pages as bytes and Google 400s.
-      return withVideoUrlSupport(openrouter(this.model))
-    }
-    return openai(this.model)
-  }
-}
-
-/** Keep video HTTP(S)/data URLs as URLs so OpenRouter can emit `video_url`. */
-function withVideoUrlSupport<
-  T extends { supportedUrls?: Record<string, RegExp[]> },
->(model: T): T {
-  const urls = model.supportedUrls ?? (model.supportedUrls = {})
-  if (!urls["video/*"]?.length) {
-    urls["video/*"] = [/^https?:\/\/.+/i, /^data:video\//i]
-  }
-  return model
 }
 
 export type BillableLlmInput = {
@@ -425,7 +311,7 @@ export function createBillableLlmClient(
   config: BillableLlmConfig,
 ): BillableLlmClient {
   const { model, modelConfig, timeoutMs = DEFAULT_TIMEOUT_MS, ttlMs } = config
-  const client = new LlmClient(model.apiName, modelConfig)
+  const client = new LlmClient(model.id, modelConfig)
 
   const creditsFromUsage = (usage: TokenUsage): Credits => {
     if (usage.cost > 0) {

@@ -2,62 +2,61 @@ import { MediaConfigurationError } from "../errors"
 import type { MediaEngineProvider } from "./type"
 import { WaveSpeedProvider } from "./wave-speed"
 
-export const WAVESPEED_VENDOR = "wavespeed"
+export const WAVESPEED_ADAPTER = "wavespeed"
 
 type MediaProviderConstructor = new (apiKey: string) => MediaEngineProvider
 
 const PROVIDER_CLASSES: Record<string, MediaProviderConstructor> = {
-  [WAVESPEED_VENDOR]: WaveSpeedProvider,
-}
-
-const API_KEY_ENV: Record<string, string> = {
-  [WAVESPEED_VENDOR]: "WAVESPEED_API_KEY",
+  [WAVESPEED_ADAPTER]: WaveSpeedProvider,
 }
 
 function apiKeyEnvName(vendorName: string): string {
-  return (
-    API_KEY_ENV[vendorName] ??
-    `${vendorName.toUpperCase().replace(/-/g, "_")}_API_KEY`
-  )
+  return `${vendorName.toUpperCase().replace(/-/g, "_")}_API_KEY`
 }
 
-export function listRegisteredMediaVendors(): string[] {
+export function listRegisteredMediaAdapters(): string[] {
   return Object.keys(PROVIDER_CLASSES)
 }
 
-export function isRegisteredMediaVendor(name: string): boolean {
+export function isRegisteredMediaAdapter(name: string): boolean {
   return name in PROVIDER_CLASSES
 }
 
-export function hasProviderApiKey(name: string): boolean {
-  return Boolean(process.env[apiKeyEnvName(name)])
+export function hasProviderApiKey(vendorName: string): boolean {
+  return Boolean(process.env[apiKeyEnvName(vendorName)])
 }
 
-export function registerMediaProvider(
+export function registerMediaAdapter(
   name: string,
   ProviderClass: MediaProviderConstructor,
 ): void {
   PROVIDER_CLASSES[name] = ProviderClass
 }
 
-export function unregisterMediaProvider(name: string): void {
+export function unregisterMediaAdapter(name: string): void {
   delete PROVIDER_CLASSES[name]
 }
 
-function getProviderApiKey(name: string): string {
-  const apiKey = process.env[apiKeyEnvName(name)]
+function getProviderApiKey(vendorName: string): string {
+  const apiKey = process.env[apiKeyEnvName(vendorName)]
   if (!apiKey) {
-    throw new MediaConfigurationError(`${apiKeyEnvName(name)} is not set`)
+    throw new MediaConfigurationError(`${apiKeyEnvName(vendorName)} is not set`)
   }
   return apiKey
 }
 
-export type MediaProviderFactory = (name: string) => MediaEngineProvider
+export type MediaProviderFactory = (
+  adapter: string,
+  vendorName: string,
+) => MediaEngineProvider
 
-export function createProvider(name: string): MediaEngineProvider {
-  const ProviderClass = PROVIDER_CLASSES[name]
+export function createProvider(
+  adapter: string,
+  vendorName: string,
+): MediaEngineProvider {
+  const ProviderClass = PROVIDER_CLASSES[adapter]
   if (!ProviderClass) {
-    throw new MediaConfigurationError(`Unknown media provider: ${name}`)
+    throw new MediaConfigurationError(`Unknown media adapter: ${adapter}`)
   }
-  return new ProviderClass(getProviderApiKey(name))
+  return new ProviderClass(getProviderApiKey(vendorName))
 }

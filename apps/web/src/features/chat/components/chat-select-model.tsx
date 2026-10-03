@@ -2,8 +2,13 @@ import { useQuery } from "@tanstack/react-query"
 import { Check, ChevronDown } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Spinner } from "@sohizi/ui/spinner"
-import { useChatStore } from "../store/chat-store"
+import { setChatReasoningEffort, useChatStore } from "../store/chat-store"
 import { listModelsQueryOptions } from "../query-mutation"
+import {
+  reasoningEffortLabel,
+  resolveReasoningEffort,
+} from "../lib/reasoning-effort"
+import { ReasoningEffortSelect } from "./reasoning-effort-select"
 import type { LlmModel } from "../types"
 import {
   ModelSelector,
@@ -21,20 +26,26 @@ import {
 export default function ChatSelectModel({ projectId }: { projectId: string }) {
   const model = useChatStore((state) => state.model)
   const setModel = useChatStore((state) => state.setModel)
+  const reasoningEffortByModelId = useChatStore(
+    (state) => state.reasoningEffortByModelId,
+  )
   const { data: models = [], isLoading } = useQuery(
     listModelsQueryOptions(projectId, ["leading-agent"]),
   )
 
   const [open, setOpen] = useState(false)
 
-  const isNotSet = model === null
-  const isEmpty = models.length === 0
-
   useEffect(() => {
-    if (isNotSet && !isEmpty) {
+    if (models.length === 0) return
+    if (!model) {
       setModel(models[0])
+      return
     }
-  }, [isNotSet, isEmpty, setModel])
+    const next = models.find((item) => item.id === model.id)
+    if (next && next !== model) {
+      setModel(next)
+    }
+  }, [model, models, setModel])
 
   const grouped = useMemo(() => {
     const map = new Map<string, Array<LlmModel>>()
@@ -45,6 +56,15 @@ export default function ChatSelectModel({ projectId }: { projectId: string }) {
     }
     return map
   }, [models])
+
+  const selectedReasoning = resolveReasoningEffort(
+    model,
+    reasoningEffortByModelId,
+  )
+  const selectedReasoningLabel = reasoningEffortLabel(
+    model?.reasoningEffort,
+    selectedReasoning,
+  )
 
   const onSelect = (mod: LlmModel) => {
     setModel(mod)
@@ -66,7 +86,12 @@ export default function ChatSelectModel({ projectId }: { projectId: string }) {
           {model ? (
             <>
               <ModelSelectorLogo provider={model.provider} className="size-3" />
-              <span className="max-w-[120px] truncate">{model.name}</span>
+              <span className="max-w-30 truncate">{model.name}</span>
+              {selectedReasoningLabel ? (
+                <span className="text-muted-foreground/80">
+                  {selectedReasoningLabel}
+                </span>
+              ) : null}
             </>
           ) : (
             "Select Model"
@@ -81,23 +106,40 @@ export default function ChatSelectModel({ projectId }: { projectId: string }) {
           <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
           {[...grouped.entries()].map(([provider, providerModels]) => (
             <ModelSelectorGroup key={provider} heading={provider}>
-              {providerModels.map((mod) => (
-                <ModelSelectorItem
-                  key={mod.id}
-                  value={mod.name}
-                  onSelect={() => onSelect(mod)}
-                  className="flex items-center gap-2"
-                >
-                  <ModelSelectorLogo
-                    provider={mod.provider}
-                    className="size-4"
-                  />
-                  <ModelSelectorName>{mod.name}</ModelSelectorName>
-                  {mod.id === model?.id && (
-                    <Check className="ml-auto size-4 shrink-0 text-primary" />
-                  )}
-                </ModelSelectorItem>
-              ))}
+              {providerModels.map((mod) => {
+                const effort = resolveReasoningEffort(
+                  mod,
+                  reasoningEffortByModelId,
+                )
+                return (
+                  <ModelSelectorItem
+                    key={mod.id}
+                    value={mod.name}
+                    onSelect={() => onSelect(mod)}
+                    className="flex items-center gap-2"
+                  >
+                    <ModelSelectorLogo
+                      provider={mod.provider}
+                      className="size-4"
+                    />
+                    <ModelSelectorName>{mod.name}</ModelSelectorName>
+                    <div className="ml-auto flex items-center gap-1">
+                      {mod.reasoningEffort ? (
+                        <ReasoningEffortSelect
+                          reasoningEffort={mod.reasoningEffort}
+                          value={effort}
+                          onChange={(value) =>
+                            setChatReasoningEffort(mod.id, value)
+                          }
+                        />
+                      ) : null}
+                      {mod.id === model?.id ? (
+                        <Check className="size-4 shrink-0 text-primary" />
+                      ) : null}
+                    </div>
+                  </ModelSelectorItem>
+                )
+              })}
             </ModelSelectorGroup>
           ))}
         </ModelSelectorList>

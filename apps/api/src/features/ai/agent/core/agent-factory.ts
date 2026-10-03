@@ -1,5 +1,6 @@
 import type { ResolvedVendorModel } from "@/features/models/repo"
 import { getModelWithVendorBinding } from "@/features/models/repo"
+import type { ModelConfig } from "../utils/llm-client"
 import { Agent } from "./agent"
 import {
   getAgentDefinition,
@@ -21,6 +22,7 @@ export type CreateAgentFromDefinitionOptions = {
     definition: AgentDefinition,
   ) => string
   persistence?: Persistence
+  modelConfig?: Partial<ModelConfig>
 }
 
 export async function createAgentFromDefinition(
@@ -52,7 +54,10 @@ export async function createAgentFromDefinition(
     session,
     model,
     vendor: definition.vendor,
-    modelConfig: definition.modelConfig,
+    modelConfig: {
+      ...definition.modelConfig,
+      ...options.modelConfig,
+    },
     persistence,
     maxContextTokens: model.contextWindow ?? DEFAULT_CONTEXT_WINDOW,
     contextThreshold: definition.contextThreshold,

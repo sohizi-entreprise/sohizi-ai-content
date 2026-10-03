@@ -1,0 +1,178 @@
+# GPT Image 2 family, Nano Banana, and MAI generate endpoints.
+models:
+  - id: openai/gpt-image-2/text-to-image
+    name: GPT Image 2
+    provider: openai
+    description: >
+      Default GPT Image 2 generate. Prefer for photoreal scenes, product shots, and readable in-image text when 2.5 quality tiers are unnecessary. Quality and resolution drive price; start at medium / 1k.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { quality: low, resolution: 1k }, usd: 0.01 }
+        - { when: { quality: low, resolution: 2k }, usd: 0.02 }
+        - { when: { quality: low, resolution: 4k }, usd: 0.03 }
+        - { when: { quality: medium, resolution: 1k }, usd: 0.06 }
+        - { when: { quality: medium, resolution: 2k }, usd: 0.1 }
+        - { when: { quality: medium, resolution: 4k }, usd: 0.18 }
+        - { when: { quality: high, resolution: 1k }, usd: 0.22 }
+        - { when: { quality: high, resolution: 2k }, usd: 0.4 }
+        - { when: { quality: high, resolution: 4k }, usd: 0.72 }
+    categories: [text-to-image]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_aspect_ratio, required: false, defaultValue: 1:1, allowedValues: [1:1, 1:2, 2:1, 1:3, 3:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 9:21, 21:9] }
+      - { id: parameter_resolution, required: true, defaultValue: 1k, allowedValues: [1k, 2k, 4k] }
+      - { id: parameter_quality, required: true, defaultValue: medium, allowedValues: [low, medium, high] }
+      - { id: parameter_output_format, required: false, defaultValue: png, allowedValues: [png, jpeg, webp] }
+
+  - id: openai/gpt-image-2.5-flare/text-to-image
+    name: GPT Image 2.5 Flare
+    provider: openai
+    description: >
+      Faster GPT Image 2.5 generate. Prefer for drafts and iteration; use xhigh or max only when extra fidelity is worth the jump. Same quality/resolution grid as Sunburst at a lower default cost than GPT Image 2 high.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { quality: low, resolution: 1k }, usd: 0.01 }
+        - { when: { quality: low, resolution: 2k }, usd: 0.02 }
+        - { when: { quality: low, resolution: 4k }, usd: 0.03 }
+        - { when: { quality: medium, resolution: 1k }, usd: 0.024 }
+        - { when: { quality: medium, resolution: 2k }, usd: 0.04 }
+        - { when: { quality: medium, resolution: 4k }, usd: 0.07 }
+        - { when: { quality: high, resolution: 1k }, usd: 0.09 }
+        - { when: { quality: high, resolution: 2k }, usd: 0.15 }
+        - { when: { quality: high, resolution: 4k }, usd: 0.27 }
+        - { when: { quality: xhigh, resolution: 1k }, usd: 0.16 }
+        - { when: { quality: xhigh, resolution: 2k }, usd: 0.27 }
+        - { when: { quality: xhigh, resolution: 4k }, usd: 0.48 }
+        - { when: { quality: max, resolution: 1k }, usd: 0.36 }
+        - { when: { quality: max, resolution: 2k }, usd: 0.6 }
+        - { when: { quality: max, resolution: 4k }, usd: 1.0 }
+    categories: [text-to-image]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_aspect_ratio, required: false, defaultValue: 1:1, allowedValues: [1:1, 1:2, 2:1, 1:3, 3:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 9:21, 21:9] }
+      - { id: parameter_resolution, required: true, defaultValue: 1k, allowedValues: [1k, 2k, 4k] }
+      - { id: parameter_quality, required: true, defaultValue: medium, allowedValues: [low, medium, high, xhigh, max] }
+      - { id: parameter_output_format, required: false, defaultValue: png, allowedValues: [png, jpeg, webp] }
+
+  - id: openai/gpt-image-2.5-sunburst/text-to-image
+    name: GPT Image 2.5 Sunburst
+    provider: openai
+    description: >
+      Highest GPT Image 2.5 generate. Prefer for hero frames, brand layouts, and dense typography. Same price grid as Flare; pick Sunburst when composition accuracy matters more than turnaround.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { quality: low, resolution: 1k }, usd: 0.01 }
+        - { when: { quality: low, resolution: 2k }, usd: 0.02 }
+        - { when: { quality: low, resolution: 4k }, usd: 0.03 }
+        - { when: { quality: medium, resolution: 1k }, usd: 0.024 }
+        - { when: { quality: medium, resolution: 2k }, usd: 0.04 }
+        - { when: { quality: medium, resolution: 4k }, usd: 0.07 }
+        - { when: { quality: high, resolution: 1k }, usd: 0.09 }
+        - { when: { quality: high, resolution: 2k }, usd: 0.15 }
+        - { when: { quality: high, resolution: 4k }, usd: 0.27 }
+        - { when: { quality: xhigh, resolution: 1k }, usd: 0.16 }
+        - { when: { quality: xhigh, resolution: 2k }, usd: 0.27 }
+        - { when: { quality: xhigh, resolution: 4k }, usd: 0.48 }
+        - { when: { quality: max, resolution: 1k }, usd: 0.36 }
+        - { when: { quality: max, resolution: 2k }, usd: 0.6 }
+        - { when: { quality: max, resolution: 4k }, usd: 1.0 }
+    categories: [text-to-image]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_aspect_ratio, required: false, defaultValue: 1:1, allowedValues: [1:1, 1:2, 2:1, 1:3, 3:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 9:21, 21:9] }
+      - { id: parameter_resolution, required: true, defaultValue: 1k, allowedValues: [1k, 2k, 4k] }
+      - { id: parameter_quality, required: true, defaultValue: medium, allowedValues: [low, medium, high, xhigh, max] }
+      - { id: parameter_output_format, required: false, defaultValue: png, allowedValues: [png, jpeg, webp] }
+
+  - id: google/nano-banana-pro/text-to-image
+    name: Nano Banana Pro
+    provider: google
+    description: >
+      Top Nano Banana generate. Prefer for stylized stills and fast concept frames when GPT Image text rendering is not required. 1k and 2k cost the same; 4k is the premium step.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { resolution: 1k }, usd: 0.14 }
+        - { when: { resolution: 2k }, usd: 0.14 }
+        - { when: { resolution: 4k }, usd: 0.24 }
+    categories: [text-to-image]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_aspect_ratio, required: false, defaultValue: 1:1, allowedValues: [1:1, 3:2, 2:3, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9] }
+      - { id: parameter_resolution, required: true, defaultValue: 1k, allowedValues: [1k, 2k, 4k] }
+      - { id: parameter_output_format, required: false, defaultValue: png, allowedValues: [png, jpeg] }
+
+  - id: google/nano-banana-2/text-to-image
+    name: Nano Banana 2
+    provider: google
+    description: >
+      Cheaper Nano Banana generate with ultra-wide ratios (1:8 / 8:1) and a 0.5k draft tier. Prefer for banners, storyboards, and volume stills. Use the fast endpoint when only 2k/4k is needed.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { resolution: 0.5k }, usd: 0.045 }
+        - { when: { resolution: 1k }, usd: 0.07 }
+        - { when: { resolution: 2k }, usd: 0.105 }
+        - { when: { resolution: 4k }, usd: 0.14 }
+    categories: [text-to-image]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_aspect_ratio, required: false, defaultValue: 1:1, allowedValues: [1:1, 3:2, 2:3, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9, 1:4, 4:1, 1:8, 8:1] }
+      - { id: parameter_resolution, required: true, defaultValue: 1k, allowedValues: [0.5k, 1k, 2k, 4k] }
+      - { id: parameter_output_format, required: false, defaultValue: png, allowedValues: [png, jpeg] }
+
+  - id: google/nano-banana-2/text-to-image-fast
+    name: Nano Banana 2 Fast
+    provider: google
+    description: >
+      Speed-tier Nano Banana 2. Only 2k and 4k. Prefer for rapid iteration at about half the 2k cost of the standard endpoint.
+    contextWindow: ~
+    pricing:
+      unit: parameter_table
+      rate:
+        - { when: { resolution: 2k }, usd: 0.045 }
+        - { when: { resolution: 4k }, usd: 0.05 }
+    categories: [text-to-image]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_aspect_ratio, required: false, defaultValue: 1:1, allowedValues: [1:1, 3:2, 2:3, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9, 1:4, 4:1, 1:8, 8:1] }
+      - { id: parameter_resolution, required: true, defaultValue: 2k, allowedValues: [2k, 4k] }
+      - { id: parameter_output_format, required: false, defaultValue: png, allowedValues: [png, jpeg] }
+
+  - id: microsoft/mai-image-2.5-pro/text-to-image
+    name: MAI Image 2.5 Pro
+    provider: microsoft
+    description: >
+      Highest MAI still generate. Prefer for cinematic lighting and illustration when GPT Image / Nano Banana are a poor stylistic match. Flat per-image price; aspect ratio does not change cost.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.18
+    categories: [text-to-image]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_aspect_ratio, required: false, defaultValue: 1:1, allowedValues: [1:1, 4:3, 3:4, 16:9, 9:16, 3:2, 2:3] }
+      - { id: parameter_output_format, required: false, defaultValue: png, allowedValues: [jpeg, png, webp] }
+
+  - id: microsoft/mai-image-2.5/text-to-image
+    name: MAI Image 2.5
+    provider: microsoft
+    description: >
+      Cheaper MAI generate. Prefer for volume stills and style exploration. Uses size for aspect ratio. Flat per-image price.
+    contextWindow: ~
+    pricing:
+      unit: per_inference
+      rate: 0.05
+    categories: [text-to-image]
+    parameters:
+      - { id: parameter_prompt, required: true }
+      - { id: parameter_aspect_ratio, required: false, defaultValue: 1:1, allowedValues: [21:9, 16:9, 3:2, 4:3, 5:4, 1:1, 4:5, 3:4, 2:3, 9:16] }
+      - { id: parameter_output_format, required: false, defaultValue: png, allowedValues: [jpeg, png, webp] }

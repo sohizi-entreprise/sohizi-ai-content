@@ -6,12 +6,13 @@ import { authMiddleware } from "@/lib/auth-middleware"
 import z from "zod"
 
 export {
+  MediaAccountError,
+  MediaConfigurationError,
   MediaError,
+  MediaProviderError,
   MediaRateLimitError,
   MediaServiceUnavailableError,
-  MediaProviderError,
   MediaValidationError,
-  MediaConfigurationError,
   isMediaError,
 } from "./errors"
 
@@ -106,6 +107,16 @@ export const mediaEngineRoutes = new Elysia({ prefix: "/media/:projectId" })
         organizationId,
         ...body,
       })
+    },
+    {
+      body: mediaService.assetRequestSchema,
+    },
+  )
+  .post(
+    "/estimate",
+    async ({ params, user, body }) => {
+      await assertProjectAccess(user.id, params.projectId)
+      return mediaService.estimateGenerationCredits(body)
     },
     {
       body: mediaService.assetRequestSchema,
