@@ -38,10 +38,7 @@ export const assignTaskTool = buildBaseTool({
         )
       }
 
-      const model = await session.resolveModel(
-        agentDefinition.modelId,
-        agentDefinition.vendor,
-      )
+      const model = await session.resolveModel(agentDefinition.modelId)
       if (!model) {
         return failure(
           `Model not found. The sub-agent ${subAgent} is unvailable right now. Either assign a different sub-agent if possible or return to the user if this is a blocker.`,

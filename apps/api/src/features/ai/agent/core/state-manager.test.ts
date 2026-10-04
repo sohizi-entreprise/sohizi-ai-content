@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { AgentStateManager } from "./state-manager"
-import type { AgentJob } from "@/type"
+import type { AgentJob, TokenUsage } from "@/type"
 
 function job(overrides: Partial<AgentJob> & Pick<AgentJob, "jobId">): AgentJob {
   return {
@@ -89,5 +89,86 @@ describe("AgentStateManager job helpers", () => {
       "running",
       "done-unnotified",
     ])
+  })
+})
+
+function usage(overrides: Partial<TokenUsage> = {}): TokenUsage {
+  return {
+    input: 10,
+    output: 4,
+    reasoning: 1,
+    cached: 2,
+    total: 14,
+    modelId: "openai/gpt-5.1",
+    cost: 1,
+    ...overrides,
+  }
+}
+
+describe("AgentStateManager usage", () => {
+  it("keeps conversation usage cumulative and run usage limited to this run", () => {
+    const state = new AgentStateManager()
+    state.setState({
+      ...state.getState(),
+      usage: usage({
+        input: 100,
+        output: 20,
+        reasoning: 5,
+        cached: 40,
+        total: 120,
+        cost: 4,
+        modelId: "openai/gpt-5",
+      }),
+    })
+
+    state.incrementUsage(usage())
+    state.incrementUsage(
+      usage({
+        input: 3,
+        output: 1,
+        reasoning: 0,
+        cached: 0,
+        total: 4,
+        cost: 2,
+        modelId: "openai/gpt-5.1",
+      }),
+    )
+
+    expect(state.getState().usage).toEqual(
+      usage({
+        input: 113,
+        output: 25,
+        reasoning: 6,
+        cached: 42,
+        total: 138,
+        cost: 7,
+        modelId: "openai/gpt-5",
+      }),
+    )
+    expect(state.usageThisRun).toEqual(
+      usage({
+        input: 13,
+        output: 5,
+        reasoning: 1,
+        cached: 2,
+        total: 18,
+        cost: 3,
+        modelId: "openai/gpt-5.1",
+      }),
+    )
+  })
+})
+
+describe("AgentStateManager fulfilled vendor", () => {
+  it("keeps each vendor that served a model call, in order", () => {
+    const state = new AgentStateManager()
+    expect(state.fulfilledVendor).toBeNull()
+
+    state.recordVendor("vercel-gateway")
+    state.recordVendor("vercel-gateway")
+    expect(state.fulfilledVendor).toBe("vercel-gateway")
+
+    state.recordVendor("openrouter")
+    expect(state.fulfilledVendor).toBe("vercel-gateway, openrouter")
   })
 })

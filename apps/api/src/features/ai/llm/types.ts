@@ -31,9 +31,17 @@ export type LlmTextResult = {
 
 export type LlmStream = {
   stream: AsyncIterable<TextStreamPart<ToolSet>>
-  usage: Promise<LanguageModelUsage>
-  finishReason: Promise<FinishReason>
-  costUsd: Promise<number>
+  usage: PromiseLike<LanguageModelUsage>
+  finishReason: PromiseLike<FinishReason>
+  costUsd: PromiseLike<number>
+}
+
+export type FulfilledLlmText = LlmTextResult & {
+  vendorName: string
+}
+
+export type FulfilledLlmStream = LlmStream & {
+  vendorName: string
 }
 
 export interface LlmAdapter {

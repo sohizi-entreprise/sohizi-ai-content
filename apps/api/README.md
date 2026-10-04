@@ -119,6 +119,8 @@ bun run catalog:validate
 bun run catalog:populate
 ```
 
+`catalog:populate` inserts missing rows and leaves existing ones unchanged (parameters are the exception and are updated). `catalog:overwrite` updates every catalog-owned column when the id already exists, and deletes catalog rows the files no longer contain, so the database matches the YAML. It does not change `enabled` on models, vendors, or vendor bindings.
+
 Set `{NAME}_API_KEY`. A media vendor created in admin must pick a registered adapter; the name stays the account slug.
 
 ## Add an LLM vendor
@@ -130,7 +132,7 @@ LLM vendors do not use `MediaEngineProvider`. Text calls go through `LlmAdapter`
 3. Routes for one catalog model are tried in ascending `priority` (lower number first). A 429, 408, 502, 503, 504, or network failure before any output cools that vendor+model in Redis and tries the next route. A 400 does not fail over. A stream that has already emitted text stays on the vendor that produced it.
 4. Run `bun run catalog:validate` then `bun run catalog:populate`.
 
-The gateway catalog currently binds GPT models only, at priority 200, so OpenRouter (priorities 65–100) stays primary and the gateway is the fallback. Claude, Gemini, and Grok stay on OpenRouter.
+The gateway catalog binds the same text models as OpenRouter, at priority 200, so OpenRouter (priorities 65–100) stays primary and the gateway is the fallback.
 
 ## Check after any vendor change
 

@@ -1,4 +1,5 @@
 import { loadCatalog, type Catalog } from "./load"
+import modelsTracker from "./models-tracker"
 
 const MODEL_ID_MAX = 50
 const NAME_MAX = 50
@@ -182,9 +183,35 @@ export const validateCatalog = (catalog: Catalog): string[] => {
   return errors
 }
 
+export const validateTrackedModels = (
+  catalog: Catalog,
+  tracked: Readonly<Record<string, string>> = modelsTracker,
+): string[] => {
+  const modelIds = new Set(catalog.models.map((model) => model.id))
+  const errors: string[] = []
+
+  for (const [role, modelId] of Object.entries(tracked)) {
+    if (!modelId) {
+      errors.push(`modelsTracker.${role} is missing a model id`)
+      continue
+    }
+    if (!modelIds.has(modelId)) {
+      errors.push(
+        `modelsTracker.${role} references unregistered model "${modelId}"`,
+      )
+    }
+  }
+
+  return errors
+}
+
 export const collectCatalogErrors = async () => {
   const { catalog, errors } = await loadCatalog()
-  return [...errors, ...validateCatalog(catalog)]
+  return [
+    ...errors,
+    ...validateCatalog(catalog),
+    ...validateTrackedModels(catalog),
+  ]
 }
 
 if (import.meta.main) {

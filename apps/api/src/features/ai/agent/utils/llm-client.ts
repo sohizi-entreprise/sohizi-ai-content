@@ -13,7 +13,7 @@ import type {
   BillableStream,
   Credits,
 } from "@/features/billing/types"
-import type { ResolvedVendorModel } from "@/features/models/repo"
+import type { ResolvedTextModel } from "@/features/models/repo"
 import {
   calculateTextCredits,
   loaded_cost_usd,
@@ -99,6 +99,7 @@ export class LlmClient {
         text: response.text,
         finishReason: response.finishReason,
         usage: this.getTokenUsage(response.usage, cost),
+        vendor: response.vendorName,
       }
     } catch (error) {
       yield {
@@ -141,6 +142,7 @@ export class LlmClient {
       cost: 0,
     }
 
+    let vendor: string | undefined
     try {
       const response = await streamTextWithFailover({
         modelId: this.model,
@@ -153,6 +155,7 @@ export class LlmClient {
         reasoningSummary: modelConfig?.reasoningSummary,
         telemetryFunctionId,
       })
+      vendor = response.vendorName
       for await (const chunk of response.stream) {
         switch (chunk.type) {
           case "text-delta":
@@ -250,6 +253,7 @@ export class LlmClient {
         error,
         usage,
         reasoningText,
+        vendor,
       }
     }
   }
@@ -287,7 +291,7 @@ export type BillableLlmOutput = {
 }
 
 export type BillableLlmConfig = {
-  model: ResolvedVendorModel
+  model: ResolvedTextModel
   modelConfig: ModelConfig
   timeoutMs?: number
   ttlMs?: number
@@ -419,7 +423,7 @@ export function createBillableLlmClient(
     ): string {
       const runId = ctx.metadata?.runId ?? crypto.randomUUID()
       const messageHash = simpleHash(JSON.stringify(input.messages))
-      return `llm:${ctx.organizationId}:${model.apiName}:${messageHash}:${runId}`
+      return `llm:${ctx.organizationId}:${model.id}:${messageHash}:${runId}`
     },
   }
 }

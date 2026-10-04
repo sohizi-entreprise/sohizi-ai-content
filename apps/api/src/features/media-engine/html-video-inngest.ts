@@ -3,7 +3,7 @@ import { inngest } from "@/lib/inngest/client"
 import { createAgentFromDefinition } from "@/features/ai/agent/core/agent-factory"
 import { Session } from "@/features/ai/agent/core/session"
 import { getAgentDefinition } from "@/features/ai/agent/core/agent-registry"
-import { getModelWithVendorBinding } from "@/features/models/repo"
+import { getResolvedTextModel } from "@/features/models/repo"
 import type { UserModelMessage } from "ai"
 import { v4 as uuidv4 } from "uuid"
 import * as repo from "./repo"
@@ -63,10 +63,7 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
       if (!agentDefinition) {
         throw new NonRetriableError("motion-graphic agent definition not found")
       }
-      const model = await getModelWithVendorBinding(
-        agentDefinition.modelId,
-        agentDefinition.vendor,
-      )
+      const model = await getResolvedTextModel(agentDefinition.modelId)
       if (!model) {
         throw new NonRetriableError(
           `Model not found: ${agentDefinition.modelId}`,
@@ -85,10 +82,7 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
             "motion-graphic agent definition not found",
           )
         }
-        const model = await getModelWithVendorBinding(
-          resolvedModel.modelId,
-          agentDefinition.vendor,
-        )
+        const model = await getResolvedTextModel(resolvedModel.modelId)
         if (!model) {
           throw new NonRetriableError(
             `Model not found: ${resolvedModel.modelId}`,

@@ -108,6 +108,7 @@ export type LlmCompleteChunk = {
   usage: TokenUsage
   error?: string
   reasoningText?: string
+  vendor?: string
 }
 
 export type LlmChunk =

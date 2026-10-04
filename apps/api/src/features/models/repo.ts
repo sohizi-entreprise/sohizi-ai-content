@@ -219,54 +219,26 @@ export const getModelById = async (id: string) => {
   return result[0]
 }
 
-export type ResolvedVendorModel = {
+export type ResolvedTextModel = {
   id: string
   provider: string
   name: string
   enabled: boolean
-  vendorName: string
-  apiName: string
   pricing: ModelBasePricing | null
   contextWindow: number | null
 }
 
-export const getModelWithVendorBinding = async (
+export const getResolvedTextModel = async (
   modelId: string,
-  vendorName: string,
-): Promise<ResolvedVendorModel | null> => {
+): Promise<ResolvedTextModel | null> => {
   const model = await getModelById(modelId)
-  if (!model) {
-    return null
-  }
-
-  const [row] = await db
-    .select({
-      vendorName: llmVendors.name,
-      vendorEnabled: llmVendors.enabled,
-      apiName: llmVendorsAndModels.apiName,
-      bindingEnabled: llmVendorsAndModels.enabled,
-    })
-    .from(llmVendorsAndModels)
-    .innerJoin(llmVendors, eq(llmVendors.id, llmVendorsAndModels.vendorId))
-    .where(
-      and(
-        eq(llmVendorsAndModels.modelId, modelId),
-        eq(llmVendors.name, vendorName),
-      ),
-    )
-    .limit(1)
-
-  if (!row || !row.vendorEnabled || !row.bindingEnabled) {
-    throw new Error(`No enabled ${vendorName} binding for model ${modelId}`)
-  }
+  if (!model) return null
 
   return {
     id: model.id,
     provider: model.provider,
     name: model.name,
     enabled: model.enabled,
-    vendorName: row.vendorName,
-    apiName: row.apiName,
     pricing: model.pricing,
     contextWindow: model.contextWindow,
   }

@@ -24,3 +24,11 @@
 [ ] Create a pool of lambda function in different regions, so we can have more concurrency quotas
 [ ] Add a cache on the video export in such way that if the composition doesn't change we resolve directly to an existing video if present
 [ ] when we click the export let's open up a dialog where user chooses the setting (fps, where to save the output and how to name the file)
+
+<!-- Design & improvement-->
+[ ] improve how some of the tools and sub-agent are rendered
+[ ] rename tavily tools to generic web tools
+[ ] collapse some tools so we can avoid having too much tools (ex: loading skill, etc.)
+[ ] improve the system prompt make it concise and add some policies for consistency and context grounding
+[ ] improve command, when we just type / we should directly render all the available commands. And they should be appended as additional system prompt which inject behaviour that doesn't contradict the main system prompt.
+[ ] maybe let's have a generate title as a tool instead of doing a parallel call

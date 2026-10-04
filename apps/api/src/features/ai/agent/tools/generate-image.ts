@@ -73,6 +73,7 @@ export const generateImageTool = buildBaseTool({
         referenceImages,
         numVariations,
         runId: uuidv4(),
+        conversationRunId: session.runId,
         signal: abortSignal,
       })
 
@@ -110,6 +111,7 @@ type GenerateAndStoreImageInput = {
   numVariations?: number
   /** Used for billing idempotency; defaults to a random UUID. */
   runId?: string
+  conversationRunId?: string
   signal?: AbortSignal
 }
 
@@ -152,6 +154,7 @@ async function generateAndStoreImage(
     referenceImages,
     numVariations = 1,
     runId = uuidv4(),
+    conversationRunId,
     signal,
   } = input
 
@@ -168,7 +171,11 @@ async function generateAndStoreImage(
       organizationId,
       userId,
       signal,
-      metadata: { runId, kind: "image" },
+      metadata: {
+        runId,
+        kind: "image",
+        ...(conversationRunId ? { conversationRunId } : {}),
+      },
     },
   )
 

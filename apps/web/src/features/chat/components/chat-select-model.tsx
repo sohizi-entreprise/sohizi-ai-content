@@ -1,13 +1,22 @@
-import { useQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { Check, ChevronDown } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Spinner } from "@sohizi/ui/spinner"
 import { setChatReasoningEffort, useChatStore } from "../store/chat-store"
-import { listModelsQueryOptions } from "../query-mutation"
+import {
+  listAgentRunsInfiniteQueryOptions,
+  listModelsQueryOptions,
+} from "../query-mutation"
 import {
   reasoningEffortLabel,
   resolveReasoningEffort,
 } from "../lib/reasoning-effort"
+import {
+  latestRunModelId,
+  readSelectedModelId,
+  resolveChatModel,
+  writeSelectedModelId,
+} from "../lib/selected-model"
 import { ReasoningEffortSelect } from "./reasoning-effort-select"
 import type { LlmModel } from "../types"
 import {
@@ -26,26 +35,53 @@ import {
 export default function ChatSelectModel({ projectId }: { projectId: string }) {
   const model = useChatStore((state) => state.model)
   const setModel = useChatStore((state) => state.setModel)
+  const conversationId = useChatStore((state) => state.activeConversation?.id)
+  const isNew = useChatStore((state) => state.activeConversation?.isNew ?? true)
   const reasoningEffortByModelId = useChatStore(
     (state) => state.reasoningEffortByModelId,
   )
   const { data: models = [], isLoading } = useQuery(
     listModelsQueryOptions(projectId, ["leading-agent"]),
   )
+  const { select: _flattenRuns, ...runQueryOptions } =
+    listAgentRunsInfiniteQueryOptions(projectId, conversationId ?? "", isNew)
+  const {
+    data: firstPageRuns = [],
+    isSuccess: runsLoaded,
+    isPlaceholderData: runsArePlaceholder,
+  } = useInfiniteQuery({
+    ...runQueryOptions,
+    enabled: Boolean(conversationId) && !isNew,
+    select: (data) => data.pages[0]?.data ?? [],
+  })
 
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (models.length === 0) return
-    if (!model) {
-      setModel(models[0])
+    if (model) {
+      const refreshed = models.find((item) => item.id === model.id)
+      if (refreshed && refreshed !== model) setModel(refreshed)
       return
     }
-    const next = models.find((item) => item.id === model.id)
-    if (next && next !== model) {
-      setModel(next)
-    }
-  }, [model, models, setModel])
+    if (!conversationId) return
+    if (!isNew && (!runsLoaded || runsArePlaceholder)) return
+
+    const next = resolveChatModel(models, {
+      runModelId: isNew ? null : latestRunModelId(firstPageRuns),
+      storedModelId: readSelectedModelId(),
+    })
+    if (next) setModel(next)
+  }, [
+    conversationId,
+    firstPageRuns,
+    isNew,
+    model,
+    models,
+    runsArePlaceholder,
+    runsLoaded,
+    setModel,
+  ])
 
   const grouped = useMemo(() => {
     const map = new Map<string, Array<LlmModel>>()
@@ -67,6 +103,7 @@ export default function ChatSelectModel({ projectId }: { projectId: string }) {
   )
 
   const onSelect = (mod: LlmModel) => {
+    writeSelectedModelId(mod.id)
     setModel(mod)
     setOpen(false)
   }

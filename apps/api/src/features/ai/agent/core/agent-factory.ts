@@ -1,5 +1,7 @@
-import type { ResolvedVendorModel } from "@/features/models/repo"
-import { getModelWithVendorBinding } from "@/features/models/repo"
+import {
+  getResolvedTextModel,
+  type ResolvedTextModel,
+} from "@/features/models/repo"
 import type { ModelConfig } from "../utils/llm-client"
 import { Agent } from "./agent"
 import {
@@ -15,7 +17,7 @@ const DEFAULT_CONTEXT_WINDOW = 300_000
 export type CreateAgentFromDefinitionOptions = {
   agentName: AgentName
   session: Session
-  model?: ResolvedVendorModel
+  model?: ResolvedTextModel
   systemPrompt?: string
   buildSystemPrompt?: (
     baseSystemPrompt: string,
@@ -36,8 +38,7 @@ export async function createAgentFromDefinition(
   }
 
   const model =
-    options.model ??
-    (await getModelWithVendorBinding(definition.modelId, definition.vendor))
+    options.model ?? (await getResolvedTextModel(definition.modelId))
   if (!model) {
     throw new Error(
       `Model not found for agent ${agentName}: ${definition.modelId}`,
@@ -53,7 +54,6 @@ export async function createAgentFromDefinition(
     systemPrompt,
     session,
     model,
-    vendor: definition.vendor,
     modelConfig: {
       ...definition.modelConfig,
       ...options.modelConfig,

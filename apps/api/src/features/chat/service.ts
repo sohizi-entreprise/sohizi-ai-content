@@ -6,9 +6,9 @@ import { assertConversationOwner } from "@/lib/authorize"
 import { Conversation, ConversationAgentRun } from "@/db/schema"
 import {
   getModelReasoningEffort,
-  getModelWithVendorBinding,
+  getResolvedTextModel,
   type ModelReasoningEffort,
-  type ResolvedVendorModel,
+  type ResolvedTextModel,
 } from "@/features/models/repo"
 import type { ReasoningEffort } from "../ai/agent/utils/llm-client"
 import { BadRequest } from "../error"
@@ -130,7 +130,7 @@ export const chatCompletion = async (
   if (!agentDefinition) {
     throw new Error("Agent definition not found")
   }
-  const model = await getModelWithVendorBinding(modelId, agentDefinition.vendor)
+  const model = await getResolvedTextModel(modelId)
   if (!model) {
     throw new BadRequest("Model not found")
   }
@@ -187,7 +187,7 @@ type RunAgentPayload = {
   userId: string
   conversationId: string
   projectId: string
-  model: ResolvedVendorModel
+  model: ResolvedTextModel
   runId: string
   userPrompt: UserModelMessage
   editorContext?: EditorContext
@@ -262,11 +262,13 @@ async function runAgent(payload: RunAgentPayload) {
         input: userPromptText,
       },
       async (updateOutput) => {
-        const editorContextState = {
-          role: "system" as const,
-          content: buildEditorContextPrompt(editorContext),
-        }
-        const messages = [editorContextState, userPrompt]
+        const editorContextPrompt = buildEditorContextPrompt(editorContext)
+        const messages = editorContextPrompt
+          ? [
+              { role: "system" as const, content: editorContextPrompt },
+              userPrompt,
+            ]
+          : [userPrompt]
         const chunks = agent.runLoop(messages, controller.signal, 250)
         let outputText = ""
 
@@ -282,6 +284,7 @@ async function runAgent(payload: RunAgentPayload) {
           const conversationTitle = await handleTitleGeneration(
             userPrompt,
             project.organizationId,
+            runId,
           )
           await repo.updateConversation(conversationId, {
             title: conversationTitle,
@@ -310,11 +313,13 @@ async function runAgent(payload: RunAgentPayload) {
 async function handleTitleGeneration(
   userPrompt: UserModelMessage,
   organizationId: string,
+  conversationRunId: string,
 ) {
   const { title } = await generateTitle({
     message: extractTextFromUserMessage(userPrompt),
     modelId: "openai/gpt-5-mini",
     organizationId,
+    conversationRunId,
     abortSignal: new AbortController().signal, // This won't be aborted since the request will be done at this stage
   })
   return title

@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "catalog:validate": "bun run src/catalog/validate.ts",
-    "catalog:populate": "bun run src/catalog/populate.ts"
+    "catalog:populate": "bun run src/catalog/populate.ts",
+    "catalog:overwrite": "bun run src/catalog/overwrite.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4",

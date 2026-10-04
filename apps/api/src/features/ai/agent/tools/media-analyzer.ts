@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { buildLlmTool } from "./tool-definition"
+import modelsTracker from "@/catalog/models-tracker"
 
 const MAX_DURATION = 20 * 60 // 20 minutes
 
@@ -15,7 +16,7 @@ export const imageAnalyzerTool = buildLlmTool({
   }),
 
   config: {
-    modelId: "google/gemini-3.1-flash-lite-preview",
+    modelId: modelsTracker.imageAnalyzer,
     modelConfig: {
       maxOutputTokens: 2000,
       reasoningEffort: "low",
@@ -67,7 +68,7 @@ export const videoAnalyzerTool = buildLlmTool({
   }),
 
   config: {
-    modelId: "google/gemini-3.1-flash-lite-preview",
+    modelId: modelsTracker.videoAnalyzer,
     modelConfig: {
       maxOutputTokens: 2000,
       reasoningEffort: "low",
@@ -132,7 +133,7 @@ export const youtubeAnalyzerTool = buildLlmTool({
   }),
 
   config: {
-    modelId: "google/gemini-3.1-flash-lite-preview",
+    modelId: modelsTracker.youtubeAnalyzer,
     modelConfig: {
       maxOutputTokens: 2000,
       reasoningEffort: "low",

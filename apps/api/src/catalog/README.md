@@ -219,14 +219,14 @@ modelParameterOverrides:
 - `name` is the account. Two WaveSpeed keys are two vendor files with different names and the same `adapter`.
 - `adapter` is the implementation (`wavespeed`, `openrouter`, `vercel-gateway`). Media adapters are registered in the media factory. LLM adapters are registered in `src/features/ai/llm/adapters/factory.ts`.
 - `apiName` for WaveSpeed is the full WaveSpeed model id.
-- `apiName` for OpenRouter is the OpenRouter model id (`x-ai/grok-4.6`, `anthropic/claude-opus-5.5`). For Vercel AI Gateway it is the gateway model id (`openai/gpt-5.4`).
-- Routing tries the lowest `priority` number first. Gateway GPT bindings use 200 so OpenRouter (65–100) is tried first.
+- `apiName` for OpenRouter is the OpenRouter model id (`x-ai/grok-4.6`, `anthropic/claude-opus-5.5`). For Vercel AI Gateway it is the gateway model id (`openai/gpt-5.4`, `spacexai/grok-4.6`, `anthropic/claude-opus-5.5`).
+- Routing tries the lowest `priority` number first. Gateway bindings use 200 so OpenRouter (65–100) is tried first.
 - `parametersMapping` is vendor-wide. Use `modelParameterOverrides` only when one endpoint uses a different field.
 
 Current vendors:
 
 - `vendors/openrouter.yaml` — all `leading-agent` and `text-to-text` models
-- `vendors/vercel-gateway.yaml` — GPT text models only, fallback after OpenRouter
+- `vendors/vercel-gateway.yaml` — the same text models as OpenRouter, fallback after OpenRouter
 - `vendors/wavespeed.yaml` — all image, video, and audio media models
 
 ## Common update recipes
@@ -244,7 +244,7 @@ Current vendors:
 1. Confirm official price and context window from the provider site
 2. Confirm the OpenRouter id before setting `apiName`
 3. Add to `models/leading-agent.yaml` or `models/text-to-text.yaml`
-4. Bind it in `vendors/openrouter.yaml`
+4. Bind it in `vendors/openrouter.yaml` and `vendors/vercel-gateway.yaml`
 
 **New parameter used by several models**
 
@@ -274,6 +274,6 @@ After any edit, all of these must hold:
 5. Every `allowedValues` entry exists on that parameter.
 6. Every model is listed in at least one vendor file.
 7. Every vendor binding points at an existing model.
-8. Media `apiName` values exist on WaveSpeed; text `apiName` values exist on OpenRouter.
+8. Media `apiName` values exist on WaveSpeed. OpenRouter `apiName` values exist on OpenRouter. Vercel `apiName` values exist on the AI Gateway.
    )
    <|eos|>

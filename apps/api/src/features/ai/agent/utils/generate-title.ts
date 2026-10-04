@@ -1,7 +1,6 @@
 import { ModelMessage } from "ai"
 import { createBillableLlmClient } from "./llm-client"
-import { getModelWithVendorBinding } from "@/features/models/repo"
-import { DEFAULT_AGENT_VENDOR } from "../core/vendor"
+import { getResolvedTextModel } from "@/features/models/repo"
 import { billingService, withBilling } from "@/features/billing"
 import { estimateInputTokens } from "./estimate-token"
 import { v4 as uuidv4 } from "uuid"
@@ -15,15 +14,17 @@ type GenerateTitleRequest = {
   modelId: string
   organizationId: string
   abortSignal: AbortSignal
+  conversationRunId?: string
 }
 
 export async function generateTitle(
   request: GenerateTitleRequest,
 ): Promise<GenerateTitleResult> {
-  const { message, modelId, organizationId, abortSignal } = request
+  const { message, modelId, organizationId, abortSignal, conversationRunId } =
+    request
   let title = derivedTitle(message)
   try {
-    const model = await getModelWithVendorBinding(modelId, DEFAULT_AGENT_VENDOR)
+    const model = await getResolvedTextModel(modelId)
     if (!model) {
       throw new Error("Model not found")
     }
@@ -60,6 +61,7 @@ export async function generateTitle(
         signal: abortSignal,
         metadata: {
           runId: uuidv4(),
+          ...(conversationRunId ? { conversationRunId } : {}),
         },
       },
     )

@@ -11,7 +11,7 @@ import {
   type BillableLlmInput,
   type ModelConfig,
 } from "../utils/llm-client"
-import type { ResolvedVendorModel } from "@/features/models/repo"
+import type { ResolvedTextModel } from "@/features/models/repo"
 import {
   LlmChunk,
   OperationChunk,
@@ -49,8 +49,7 @@ export type AgentChunk = {
 } & (LlmChunk | ToolResultComplete | OperationChunk)
 
 type AgentConfig = {
-  model: ResolvedVendorModel
-  vendor: string
+  model: ResolvedTextModel
   modelConfig: ModelConfig
   session: Session
   name: string
@@ -73,7 +72,7 @@ export class Agent {
   private readonly persistence: Persistence | undefined
   private readonly agentParams: Pick<AgentConfig, "name" | "systemPrompt">
   private readonly modelConfig: ModelConfig
-  private readonly model: ResolvedVendorModel
+  private readonly model: ResolvedTextModel
   private readonly contextManager: ContextManager
   private lastInputTokens: number
   public artifacts: Map<string, unknown>
@@ -96,7 +95,6 @@ export class Agent {
       threshold: config.contextThreshold,
       session: config.session,
       summaryModelId: config.summaryModelId,
-      vendor: config.vendor,
     })
     this.artifacts = new Map()
   }
@@ -157,7 +155,11 @@ export class Agent {
     } finally {
       this.stateManager.dropNotifiedTerminalJobs()
       // Persist optionally based on the agent config
-      await this.persistence?.persist(this.stateManager.getState())
+      await this.persistence?.persist(
+        this.stateManager.getState(),
+        this.stateManager.fulfilledVendor,
+        this.stateManager.usageThisRun,
+      )
       yield this.buildUsageEvent()
     }
   }
@@ -196,6 +198,7 @@ export class Agent {
       metadata: {
         sessionId: this.session.id,
         conversationId: this.session.conversationId,
+        conversationRunId: this.session.runId,
         runId: this.runId,
       },
     })
@@ -234,6 +237,7 @@ export class Agent {
             break
           case streamEvents.complete:
             this.stateManager.incrementUsage(chunk.usage)
+            if (chunk.vendor) this.stateManager.recordVendor(chunk.vendor)
             this.lastInputTokens = chunk.usage.input || this.lastInputTokens
             this.updateStatus(chunk.finishReason, chunk.error)
             text = chunk.text || text

@@ -1,7 +1,7 @@
 import { createGateway } from "ai"
 import {
+  gatewayCallExtras,
   gatewayCost,
-  gatewayProviderOptions,
   generateWithModel,
   streamWithModel,
 } from "../call"
@@ -33,14 +33,14 @@ export class VercelGatewayAdapter implements LlmAdapter {
 
   generateText(input: LlmCallInput): Promise<LlmTextResult> {
     return generateWithModel(this.model(input.apiName), input, {
-      providerOptions: gatewayProviderOptions(input),
+      ...gatewayCallExtras(input),
       costFrom: gatewayCost,
     })
   }
 
   streamText(input: LlmCallInput): LlmStream {
     return streamWithModel(this.model(input.apiName), input, {
-      providerOptions: gatewayProviderOptions(input),
+      ...gatewayCallExtras(input),
       costFrom: gatewayCost,
     })
   }

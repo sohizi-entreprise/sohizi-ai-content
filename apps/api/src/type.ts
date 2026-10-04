@@ -495,8 +495,8 @@ export type FilePendingOperation =
 
 export type AgentRunStatus = "pending" | "running" | "finished" | "error"
 export type AgentRunMetadata = {
-  modelId: string
-  cost: number
+  usage: TokenUsage
+  vendor?: string
 }
 
 export type AgentRunMessage = ModelMessage & { id: string }

@@ -14,11 +14,18 @@ import type {
   LlmCallInput,
   LlmFailoverRequest,
   LlmRoute,
+  FulfilledLlmStream,
+  FulfilledLlmText,
   LlmStream,
-  LlmTextResult,
 } from "./types"
 
 const ROUTE_CACHE_TTL_SEC = 30
+
+/** Silence before the first streamed content part, then the next vendor is tried. */
+export const LLM_STREAM_ATTEMPT_TIMEOUT_MS = 120_000
+
+/** Whole non-streaming attempt. Stays under the 10 minute billing abort. */
+export const LLM_GENERATE_ATTEMPT_TIMEOUT_MS = 240_000
 
 const CONTENT_PARTS = new Set([
   "text-delta",
@@ -35,6 +42,8 @@ export type LlmRouterOptions = {
   resolveAdapter?: (adapter: string, vendorName: string) => LlmAdapter
   keyPrefix?: string
   random?: () => number
+  streamAttemptTimeoutMs?: number
+  generateAttemptTimeoutMs?: number
 }
 
 function cooldownKey(prefix: string, vendorName: string, modelId: string) {
@@ -161,11 +170,15 @@ async function selectCandidates(
   }
 }
 
-function callInput(request: LlmFailoverRequest, route: LlmRoute): LlmCallInput {
+function callInput(
+  request: LlmFailoverRequest,
+  route: LlmRoute,
+  abortSignal: AbortSignal,
+): LlmCallInput {
   return {
     apiName: route.apiName,
     messages: request.messages,
-    abortSignal: request.abortSignal,
+    abortSignal,
     tools: request.tools,
     outputSchema: request.outputSchema,
     maxOutputTokens: request.maxOutputTokens,
@@ -202,7 +215,7 @@ async function openStream(
       if (next.done) break
       const part = next.value
       if (part.type === "error" && isFailoverError(part.error)) {
-        await iterator.return?.()
+        await iterator.return?.().catch(() => undefined)
         return { ok: false, error: part.error }
       }
       buffered.push(part)
@@ -232,6 +245,45 @@ function resolveOptions(options: LlmRouterOptions = {}) {
     resolveAdapter: options.resolveAdapter ?? createLlmAdapter,
     keyPrefix: options.keyPrefix ?? "",
     random: options.random ?? Math.random,
+    streamAttemptTimeoutMs:
+      options.streamAttemptTimeoutMs ?? LLM_STREAM_ATTEMPT_TIMEOUT_MS,
+    generateAttemptTimeoutMs:
+      options.generateAttemptTimeoutMs ?? LLM_GENERATE_ATTEMPT_TIMEOUT_MS,
+  }
+}
+
+async function withAttemptDeadline<T>(
+  parent: AbortSignal,
+  timeoutMs: number,
+  run: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  if (parent.aborted) {
+    throw parent.reason instanceof Error
+      ? parent.reason
+      : new DOMException("The operation was aborted.", "AbortError")
+  }
+
+  const controller = new AbortController()
+  const onParentAbort = () => controller.abort(parent.reason)
+  parent.addEventListener("abort", onParentAbort, { once: true })
+
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await new Promise<T>((resolve, reject) => {
+      timer = setTimeout(() => {
+        const error = new DOMException(
+          `LLM vendor attempt timed out after ${timeoutMs}ms`,
+          "TimeoutError",
+        )
+        controller.abort(error)
+        reject(error)
+      }, timeoutMs)
+
+      run(controller.signal).then(resolve, reject)
+    })
+  } finally {
+    clearTimeout(timer)
+    parent.removeEventListener("abort", onParentAbort)
   }
 }
 
@@ -259,7 +311,7 @@ async function failover<T>(
       if (!isFailoverError(error)) throw error
       const base = Math.max(
         retryAfterMsFrom(error),
-        route.cooldownMs || DEFAULT_VENDOR_CIRCUIT_CONFIG.cooldownMs,
+        route.cooldownMs ?? DEFAULT_VENDOR_CIRCUIT_CONFIG.cooldownMs,
       )
       const ttl = jitteredTtl(base, resolved.random)
       soonest = Math.min(soonest, ttl)
@@ -288,16 +340,23 @@ async function failover<T>(
 export function generateTextWithFailover(
   request: LlmFailoverRequest,
   options?: LlmRouterOptions,
-): Promise<LlmTextResult> {
-  return failover(request, options ?? {}, async (adapter, route) =>
-    adapter.generateText(callInput(request, route)),
-  )
+): Promise<FulfilledLlmText> {
+  const timeoutMs =
+    options?.generateAttemptTimeoutMs ?? LLM_GENERATE_ATTEMPT_TIMEOUT_MS
+  return failover(request, options ?? {}, async (adapter, route) => {
+    const result = await withAttemptDeadline(
+      request.abortSignal,
+      timeoutMs,
+      (signal) => adapter.generateText(callInput(request, route, signal)),
+    )
+    return { ...result, vendorName: route.vendorName }
+  })
 }
 
 export async function streamTextWithFailover(
   request: LlmFailoverRequest,
   options?: LlmRouterOptions,
-): Promise<LlmStream> {
+): Promise<FulfilledLlmStream> {
   const resolved = resolveOptions(options)
   const selected = await selectCandidates(request.modelId, resolved)
   if (selected.routes.length === 0) {
@@ -310,27 +369,35 @@ export async function streamTextWithFailover(
   let lastError: unknown
   let soonest = Number.POSITIVE_INFINITY
   for (const route of selected.routes) {
-    let handle: LlmStream
     try {
-      const adapter = resolved.resolveAdapter(route.adapter, route.vendorName)
-      handle = adapter.streamText(callInput(request, route))
+      const opened = await withAttemptDeadline(
+        request.abortSignal,
+        resolved.streamAttemptTimeoutMs,
+        async (signal) => {
+          const adapter = resolved.resolveAdapter(
+            route.adapter,
+            route.vendorName,
+          )
+          const handle = adapter.streamText(callInput(request, route, signal))
+          return openStream(handle)
+        },
+      )
+      if (opened.ok) {
+        return { ...opened.stream, vendorName: route.vendorName }
+      }
+      lastError = opened.error
+      soonest = await cool(
+        resolved,
+        request.modelId,
+        route,
+        opened.error,
+        soonest,
+      )
     } catch (error) {
       if (!isFailoverError(error)) throw error
       lastError = error
       soonest = await cool(resolved, request.modelId, route, error, soonest)
-      continue
     }
-
-    const opened = await openStream(handle)
-    if (opened.ok) return opened.stream
-    lastError = opened.error
-    soonest = await cool(
-      resolved,
-      request.modelId,
-      route,
-      opened.error,
-      soonest,
-    )
   }
 
   throw new AllLlmVendorsUnavailableError(
@@ -349,7 +416,7 @@ async function cool(
 ): Promise<number> {
   const base = Math.max(
     retryAfterMsFrom(error),
-    route.cooldownMs || DEFAULT_VENDOR_CIRCUIT_CONFIG.cooldownMs,
+    route.cooldownMs ?? DEFAULT_VENDOR_CIRCUIT_CONFIG.cooldownMs,
   )
   const ttl = jitteredTtl(base, resolved.random)
   console.warn("[llm] failover", {

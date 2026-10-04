@@ -14,7 +14,13 @@ import {
   streamTextWithFailover,
   type LlmRouterOptions,
 } from "./router"
-import type { LlmAdapter, LlmRoute, LlmStream, LlmTextResult } from "./types"
+import type {
+  LlmAdapter,
+  LlmCallInput,
+  LlmRoute,
+  LlmStream,
+  LlmTextResult,
+} from "./types"
 
 const usage: LanguageModelUsage = {
   inputTokens: 1,
@@ -73,6 +79,41 @@ function badRequestError() {
     statusCode: 400,
     isRetryable: false,
   })
+}
+
+function serverError() {
+  return new APICallError({
+    message: "internal error",
+    url: "https://example.com",
+    requestBodyValues: {},
+    statusCode: 500,
+    isRetryable: true,
+  })
+}
+
+function hangUntilAbort(input: LlmCallInput): Promise<LlmTextResult> {
+  return new Promise((_, reject) => {
+    const fail = () => {
+      reject(
+        input.abortSignal.reason instanceof Error
+          ? input.abortSignal.reason
+          : new DOMException("The operation was aborted.", "AbortError"),
+      )
+    }
+    if (input.abortSignal.aborted) fail()
+    else input.abortSignal.addEventListener("abort", fail, { once: true })
+  })
+}
+
+function hungStream(): LlmStream {
+  return {
+    stream: (async function* () {
+      await new Promise(() => {})
+    })(),
+    usage: Promise.resolve(usage),
+    finishReason: Promise.resolve("stop" as FinishReason),
+    costUsd: Promise.resolve(0),
+  }
 }
 
 function routes(): LlmRoute[] {
@@ -154,6 +195,7 @@ describe("llm failover", () => {
       }),
     )
     expect(result.text).toBe("primary")
+    expect(result.vendorName).toBe("primary")
     expect(calls).toEqual(["primary"])
   })
 
@@ -174,6 +216,7 @@ describe("llm failover", () => {
       }),
     )
     expect(result.text).toBe("secondary")
+    expect(result.vendorName).toBe("secondary")
     expect(calls).toEqual(["primary", "secondary"])
     const cooled = await redis.get(`${prefix}llm:cd:primary:model`)
     expect(cooled).toBe("1")
@@ -248,6 +291,7 @@ describe("llm failover", () => {
       }
     }).toThrow("rate limit")
     expect(parts).toEqual(["hello"])
+    expect(handle.vendorName).toBe("primary")
     expect(calls).toEqual(["primary"])
   })
 
@@ -284,6 +328,156 @@ describe("llm failover", () => {
       ),
     )
     expect(result.text).toBe("primary")
+    expect(result.vendorName).toBe("primary")
+    expect(calls).toEqual(["primary"])
+  })
+
+  test("a 500 cools the vendor and the next vendor serves the call", async () => {
+    const result = await generateTextWithFailover(
+      request,
+      options({
+        primary: {
+          generateText: async () => {
+            throw serverError()
+          },
+          streamText: () => streamOf([]),
+        },
+        secondary: {
+          generateText: async () => textResult("secondary"),
+          streamText: () => streamOf([]),
+        },
+      }),
+    )
+    expect(result.text).toBe("secondary")
+    expect(result.vendorName).toBe("secondary")
+    expect(calls).toEqual(["primary", "secondary"])
+    expect(await redis.get(`${prefix}llm:cd:primary:model`)).toBe("1")
+  })
+
+  test("a stream error before the first text delta fails over", async () => {
+    const handle = await streamTextWithFailover(
+      request,
+      options({
+        primary: {
+          generateText: async () => textResult("primary"),
+          streamText: () =>
+            streamOf([
+              { type: "start" },
+              { type: "error", error: serverError() },
+            ]),
+        },
+        secondary: {
+          generateText: async () => textResult("secondary"),
+          streamText: () =>
+            streamOf([{ type: "text-delta", id: "2", text: "other" }]),
+        },
+      }),
+    )
+
+    const parts: string[] = []
+    for await (const part of handle.stream) {
+      if (part.type === "text-delta") parts.push(part.text)
+    }
+    expect(parts).toEqual(["other"])
+    expect(handle.vendorName).toBe("secondary")
+    expect(calls).toEqual(["primary", "secondary"])
+  })
+
+  test("a silent generate attempt times out and the next vendor serves the call", async () => {
+    const result = await generateTextWithFailover(request, {
+      ...options({
+        primary: {
+          generateText: () => new Promise(() => {}),
+          streamText: () => streamOf([]),
+        },
+        secondary: {
+          generateText: async () => textResult("secondary"),
+          streamText: () => streamOf([]),
+        },
+      }),
+      generateAttemptTimeoutMs: 50,
+    })
+    expect(result.text).toBe("secondary")
+    expect(result.vendorName).toBe("secondary")
+    expect(calls).toEqual(["primary", "secondary"])
+    expect(await redis.get(`${prefix}llm:cd:primary:model`)).toBe("1")
+  })
+
+  test("a silent stream times out before the first content part", async () => {
+    const handle = await streamTextWithFailover(request, {
+      ...options({
+        primary: {
+          generateText: async () => textResult("primary"),
+          streamText: () => hungStream(),
+        },
+        secondary: {
+          generateText: async () => textResult("secondary"),
+          streamText: () =>
+            streamOf([{ type: "text-delta", id: "2", text: "other" }]),
+        },
+      }),
+      streamAttemptTimeoutMs: 50,
+    })
+
+    const parts: string[] = []
+    for await (const part of handle.stream) {
+      if (part.type === "text-delta") parts.push(part.text)
+    }
+    expect(parts).toEqual(["other"])
+    expect(handle.vendorName).toBe("secondary")
+    expect(calls).toEqual(["primary", "secondary"])
+  })
+
+  test("the attempt deadline stops once the stream produces content", async () => {
+    const handle = await streamTextWithFailover(request, {
+      ...options({
+        primary: {
+          generateText: async () => textResult("primary"),
+          streamText: () =>
+            streamOf([{ type: "text-delta", id: "1", text: "hello" }]),
+        },
+        secondary: {
+          generateText: async () => textResult("secondary"),
+          streamText: () =>
+            streamOf([{ type: "text-delta", id: "2", text: "other" }]),
+        },
+      }),
+      streamAttemptTimeoutMs: 50,
+    })
+
+    const parts: string[] = []
+    for await (const part of handle.stream) {
+      if (part.type === "text-delta") parts.push(part.text)
+    }
+    expect(parts).toEqual(["hello"])
+    expect(calls).toEqual(["primary"])
+  })
+
+  test("an aborted call is not failed over", async () => {
+    const controller = new AbortController()
+    let started!: () => void
+    const entered = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const pending = generateTextWithFailover(
+      { ...request, abortSignal: controller.signal },
+      options({
+        primary: {
+          generateText: (input) => {
+            started()
+            return hangUntilAbort(input)
+          },
+          streamText: () => streamOf([]),
+        },
+        secondary: {
+          generateText: async () => textResult("secondary"),
+          streamText: () => streamOf([]),
+        },
+      }),
+    )
+    await entered
+    controller.abort()
+    await expect(pending).rejects.toThrow(/abort/i)
     expect(calls).toEqual(["primary"])
   })
 })

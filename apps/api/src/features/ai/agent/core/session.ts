@@ -1,8 +1,8 @@
 import { resolveFileByPathOrId } from "../tools/utils"
 import { FileObject } from "@/features/file-system/objects/file"
 import {
-  getModelWithVendorBinding,
-  type ResolvedVendorModel,
+  getResolvedTextModel,
+  type ResolvedTextModel,
 } from "@/features/models/repo"
 import { getSkillByName } from "@/features/file-system/repo"
 
@@ -24,7 +24,7 @@ export class Session {
   public readonly runId: string
   // We need a cache to make sure that the read and write applies to the correct file content.
   private fileCache: Map<string, FileObject>
-  private modelsCache: Map<string, ResolvedVendorModel | null>
+  private modelsCache: Map<string, ResolvedTextModel | null>
   private skillsCache: Map<string, string>
 
   constructor(data: SessionInitData) {
@@ -54,17 +54,13 @@ export class Session {
     return result.file
   }
 
-  async resolveModel(
-    modelId: string,
-    vendor: string,
-  ): Promise<ResolvedVendorModel | null> {
-    const cacheKey = `${vendor}:${modelId}`
-    const cachedModel = this.modelsCache.get(cacheKey)
+  async resolveModel(modelId: string): Promise<ResolvedTextModel | null> {
+    const cachedModel = this.modelsCache.get(modelId)
     if (cachedModel !== undefined) {
       return cachedModel
     }
-    const model = await getModelWithVendorBinding(modelId, vendor)
-    this.modelsCache.set(cacheKey, model)
+    const model = await getResolvedTextModel(modelId)
+    this.modelsCache.set(modelId, model)
     return model
   }
 

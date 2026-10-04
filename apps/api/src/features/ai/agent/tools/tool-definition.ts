@@ -13,7 +13,6 @@ import { Tool, ModelMessage } from "ai"
 import { AgentStateManager } from "../core/state-manager"
 import { withBillingStream } from "@/features/billing/wrapper"
 import { createBillableLlmClient, ModelConfig } from "../utils/llm-client"
-import { DEFAULT_AGENT_VENDOR } from "../core/vendor"
 import { billingService } from "@/features/billing"
 import { estimateInputTokens } from "../utils/estimate-token"
 import { getErrorMessage } from "@/utils/get-error-message"
@@ -192,10 +191,7 @@ export class LlmTool<T extends z.ZodType> extends BaseTool<T> {
       },
       metadata: {},
     }
-    const model = await session.resolveModel(
-      this.config.modelId,
-      DEFAULT_AGENT_VENDOR,
-    )
+    const model = await session.resolveModel(this.config.modelId)
     if (!model) {
       throw new Error(
         `Model ${this.config.modelId} not found in the current session`,
@@ -221,6 +217,7 @@ export class LlmTool<T extends z.ZodType> extends BaseTool<T> {
       metadata: {
         sessionId: session.id,
         conversationId: session.conversationId,
+        conversationRunId: session.runId,
         runId: session.runId,
       },
     })

@@ -3,14 +3,29 @@ import {
   generateText,
   streamText,
   type LanguageModel,
+  type ModelMessage,
   type ProviderMetadata,
-  type ProviderOptions,
 } from "ai"
 import { z } from "zod"
-import type { LlmCallInput, LlmStream, LlmTextResult } from "./types"
+import type {
+  LlmCallInput,
+  LlmReasoningEffort,
+  LlmStream,
+  LlmTextResult,
+} from "./types"
+
+type ProviderOptions = NonNullable<
+  Parameters<typeof generateText>[0]["providerOptions"]
+>
+
+type GatewayReasoning = Exclude<
+  NonNullable<Parameters<typeof generateText>[0]["reasoning"]>,
+  "provider-default"
+>
 
 type ModelCallExtras = {
   providerOptions?: ProviderOptions
+  reasoning?: GatewayReasoning
   download?: Parameters<typeof generateText>[0]["experimental_download"]
   costFrom: (metadata: ProviderMetadata | undefined) => number
 }
@@ -23,9 +38,17 @@ function buildOutput(outputSchema?: z.ZodType) {
   return Output.object({ schema: outputSchema })
 }
 
+export function omitEmptySystemMessages(
+  messages: ModelMessage[],
+): ModelMessage[] {
+  return messages.filter(
+    (message) => message.role !== "system" || message.content.trim().length > 0,
+  )
+}
+
 function callSettings(input: LlmCallInput, extras: ModelCallExtras) {
   return {
-    messages: input.messages,
+    messages: omitEmptySystemMessages(input.messages),
     allowSystemInMessages: true as const,
     abortSignal: input.abortSignal,
     tools: input.tools,
@@ -37,6 +60,7 @@ function callSettings(input: LlmCallInput, extras: ModelCallExtras) {
       isEnabled: true,
       functionId: input.telemetryFunctionId ?? "generate-response",
     },
+    reasoning: extras.reasoning,
     providerOptions: extras.providerOptions,
   }
 }
@@ -105,10 +129,6 @@ export function openRouterProviderOptions(
   input: LlmCallInput,
 ): ProviderOptions {
   return {
-    openai: {
-      reasoningEffort: input.reasoningEffort,
-      reasoningSummary: input.reasoningSummary,
-    },
     openrouter: {
       reasoning: {
         effort: input.reasoningEffort,
@@ -118,11 +138,29 @@ export function openRouterProviderOptions(
   }
 }
 
-export function gatewayProviderOptions(input: LlmCallInput): ProviderOptions {
+const gatewayReasoningByEffort: Record<LlmReasoningEffort, GatewayReasoning> = {
+  none: "none",
+  minimal: "minimal",
+  low: "low",
+  medium: "medium",
+  high: "high",
+  xhigh: "xhigh",
+  // OpenAI's "max" is outside the portable reasoning union.
+  max: "xhigh",
+}
+
+export function gatewayCallExtras(input: LlmCallInput): {
+  reasoning?: GatewayReasoning
+  providerOptions?: ProviderOptions
+} {
+  const openai: Record<string, string> = {}
+  if (input.reasoningEffort === "max") openai.reasoningEffort = "max"
+  if (input.reasoningSummary) openai.reasoningSummary = input.reasoningSummary
+
   return {
-    openai: {
-      reasoningEffort: input.reasoningEffort,
-      reasoningSummary: input.reasoningSummary,
-    },
+    reasoning: input.reasoningEffort
+      ? gatewayReasoningByEffort[input.reasoningEffort]
+      : undefined,
+    providerOptions: Object.keys(openai).length > 0 ? { openai } : undefined,
   }
 }

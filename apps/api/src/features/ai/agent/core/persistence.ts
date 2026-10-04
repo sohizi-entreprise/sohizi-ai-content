@@ -1,8 +1,19 @@
 import { Checkpoint } from "@/db/schema"
-import { AgentState } from "@/type"
+import { AgentRunMetadata, AgentState, TokenUsage } from "@/type"
 import * as repo from "@/features/chat/repo"
 import { ModelMessage } from "ai"
 import { v4 as uuidv4 } from "uuid"
+
+export function agentRunMetadata(
+  usage: TokenUsage | null,
+  vendor: string | null,
+): AgentRunMetadata | undefined {
+  if (!usage) return undefined
+  return {
+    usage,
+    ...(vendor ? { vendor } : {}),
+  }
+}
 
 export abstract class Persistence {
   protected messages: ModelMessage[]
@@ -19,7 +30,11 @@ export abstract class Persistence {
     }
   }
 
-  abstract persist(runtimeState: AgentState): Promise<void>
+  abstract persist(
+    runtimeState: AgentState,
+    vendor: string | null,
+    runUsage: TokenUsage | null,
+  ): Promise<void>
 
   abstract getInitialState(): AgentState | null
 }
@@ -34,11 +49,15 @@ export class CheckpointPersistence extends Persistence {
     this.runId = runId
   }
 
-  async persist(runtimeState: AgentState) {
+  async persist(
+    runtimeState: AgentState,
+    vendor: string | null,
+    runUsage: TokenUsage | null,
+  ) {
     try {
       await Promise.all([
         this.persistCheckpoint(runtimeState),
-        this.persistConversationAgentRun(),
+        this.persistConversationAgentRun(agentRunMetadata(runUsage, vendor)),
         this.persistConversationUsage(runtimeState),
       ])
     } catch (error) {
@@ -63,7 +82,7 @@ export class CheckpointPersistence extends Persistence {
     return await repo.insertCheckpoint(projectId, conversationId, payload)
   }
 
-  async persistConversationAgentRun() {
+  async persistConversationAgentRun(metadata: AgentRunMetadata | undefined) {
     const filteredMessages = this.messages.filter(
       (message) => message.role !== "system",
     )
@@ -71,9 +90,12 @@ export class CheckpointPersistence extends Persistence {
       ...message,
       id: uuidv4(),
     }))
-    if (filteredMessages.length === 0) return
+    if (filteredMessages.length === 0 && !metadata) return
 
-    await repo.updateConversationAgentRun(this.runId, { messages })
+    await repo.updateConversationAgentRun(this.runId, {
+      ...(filteredMessages.length > 0 ? { messages } : {}),
+      ...(metadata ? { metadata } : {}),
+    })
   }
 
   async persistConversationUsage(state: AgentState) {

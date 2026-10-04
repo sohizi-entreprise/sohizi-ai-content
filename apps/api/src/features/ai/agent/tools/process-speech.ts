@@ -104,7 +104,7 @@ async function textToSpeech(
       {
         organizationId: session.organizationId,
         userId: session.userId,
-        metadata: { runId: uuid4() },
+        metadata: { runId: uuid4(), conversationRunId: session.runId },
       },
     )
 
@@ -192,7 +192,7 @@ async function speechToText(
       {
         organizationId: session.organizationId,
         userId: session.userId,
-        metadata: { runId: uuid4() },
+        metadata: { runId: uuid4(), conversationRunId: session.runId },
       },
     )
 

@@ -7,8 +7,23 @@ import {
   AgentJob,
 } from "@/type"
 
+function addUsage(current: TokenUsage | null, usage: TokenUsage): TokenUsage {
+  if (!current) return usage
+  return {
+    ...current,
+    input: current.input + usage.input || 0,
+    output: current.output + usage.output || 0,
+    reasoning: current.reasoning + usage.reasoning || 0,
+    cached: current.cached + usage.cached || 0,
+    total: current.total + usage.total || 0,
+    cost: current.cost + usage.cost || 0,
+  }
+}
+
 export class AgentStateManager {
   private state: AgentState
+  private vendors: string[] = []
+  private runUsage: TokenUsage | null = null
 
   constructor(initialState?: AgentState) {
     this.state = initialState ?? {
@@ -80,20 +95,22 @@ export class AgentStateManager {
     this.state.messages = messages
   }
 
+  recordVendor(vendor: string) {
+    if (!this.vendors.includes(vendor)) this.vendors.push(vendor)
+  }
+
+  get fulfilledVendor(): string | null {
+    if (this.vendors.length === 0) return null
+    return this.vendors.join(", ")
+  }
+
+  get usageThisRun(): TokenUsage | null {
+    return this.runUsage
+  }
+
   incrementUsage(usage: TokenUsage) {
-    if (!this.state.usage) {
-      this.state.usage = usage
-      return
-    }
-    this.state.usage = {
-      ...this.state.usage,
-      input: this.state.usage.input + usage.input || 0,
-      output: this.state.usage.output + usage.output || 0,
-      reasoning: this.state.usage.reasoning + usage.reasoning || 0,
-      cached: this.state.usage.cached + usage.cached || 0,
-      total: this.state.usage.total + usage.total || 0,
-      cost: this.state.usage.cost + usage.cost || 0,
-    }
+    this.state.usage = addUsage(this.state.usage, usage)
+    this.runUsage = addUsage(this.runUsage, usage)
   }
 
   getPendingJobs() {

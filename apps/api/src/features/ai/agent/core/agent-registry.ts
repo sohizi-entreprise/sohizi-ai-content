@@ -2,9 +2,7 @@ import { ToolSet } from "ai"
 import { ModelConfig } from "../utils/llm-client"
 import { BaseTool } from "../tools/tool-definition"
 import { z } from "zod"
-import { htmlVideoGeneratorPrompt } from "../prompts/html-video-generator"
 import { allTools } from "../tools/tool-registry"
-import { DEFAULT_AGENT_VENDOR } from "./vendor"
 import { supportedAgents } from "../constants"
 import {
   explorerPrompt,
@@ -14,6 +12,7 @@ import {
   navigateContextPrompt,
   progressUpdatePrompt,
 } from "../prompts"
+import modelsTracker from "@/catalog/models-tracker"
 
 export type AgentName = (typeof supportedAgents)[number]
 
@@ -23,7 +22,6 @@ export type AgentDefinition = {
   baseSystemPrompt: string
   modelConfig: ModelConfig
   modelId: string
-  vendor: string
   contextThreshold?: number // 0-1, defaults to 0.8 in the ContextManager
   summaryModelId: string // dedicated summarizer model
   subAgents: AgentName[]
@@ -85,32 +83,10 @@ registerAgent({
     reasoningSummary: "auto",
     maxOutputTokens: 3000,
   },
-  modelId: "openai/gpt-5.1", // This will be overridden by the model passed to the agent
-  vendor: DEFAULT_AGENT_VENDOR,
+  modelId: "", // This will be overridden by the model passed to the agent
   contextThreshold: 0.8,
-  summaryModelId: "openai/gpt-5-nano",
+  summaryModelId: "google/gemini-2.5-flash-lite",
   subAgents: ["explorer", "web-searcher"],
-})
-
-registerAgent({
-  name: "motion-graphic",
-  description: "Generate standalone HyperFrames HTML video compositions.",
-  baseSystemPrompt: htmlVideoGeneratorPrompt,
-  modelConfig: {
-    tools: getSchemas([
-      allTools.submitHtmlCompositionTool,
-      allTools.exploreFileTool,
-      allTools.searchFileTool,
-    ]),
-    reasoningEffort: "medium",
-    reasoningSummary: "auto",
-    maxOutputTokens: 100_000,
-  },
-  modelId: "openai/gpt-5.2",
-  vendor: DEFAULT_AGENT_VENDOR,
-  contextThreshold: 0.8,
-  summaryModelId: "openai/gpt-5-nano",
-  subAgents: [],
 })
 
 registerAgent({
@@ -127,10 +103,9 @@ registerAgent({
     reasoningSummary: "auto",
     maxOutputTokens: 3000,
   },
-  modelId: "openai/gpt-5.2",
-  vendor: DEFAULT_AGENT_VENDOR,
+  modelId: modelsTracker.explorer,
   contextThreshold: 0.8,
-  summaryModelId: "openai/gpt-5-nano",
+  summaryModelId: modelsTracker.summarizer,
   subAgents: [],
 })
 
@@ -145,9 +120,8 @@ registerAgent({
     reasoningSummary: "auto",
     maxOutputTokens: 4000,
   },
-  modelId: "openai/gpt-5.2",
-  vendor: DEFAULT_AGENT_VENDOR,
+  modelId: modelsTracker.webSearcher,
   contextThreshold: 0.8,
-  summaryModelId: "openai/gpt-5-nano",
+  summaryModelId: modelsTracker.summarizer,
   subAgents: [],
 })

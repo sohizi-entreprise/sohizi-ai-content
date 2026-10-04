@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { validateCatalog } from "./validate"
+import { validateCatalog, validateTrackedModels } from "./validate"
 import { withInheritedFileType } from "./load"
 import type {
   Catalog,
@@ -147,6 +147,41 @@ describe("validateCatalog", () => {
         error.includes('references unknown parameter "parameter_missing"'),
       ),
     ).toBe(true)
+  })
+})
+
+describe("validateTrackedModels", () => {
+  it("rejects a tracked model that is not in the catalog", () => {
+    const errors = validateTrackedModels(
+      catalog({
+        models: [model({ id: "openai/gpt-6-luna" })],
+      }),
+      {
+        explorer: "openai/gpt-6-luna",
+        summarizer: "google/gemini-2.5-flash-lite",
+      },
+    )
+
+    expect(errors).toEqual([
+      'modelsTracker.summarizer references unregistered model "google/gemini-2.5-flash-lite"',
+    ])
+  })
+
+  it("accepts tracked models that are registered", () => {
+    const errors = validateTrackedModels(
+      catalog({
+        models: [
+          model({ id: "openai/gpt-6-luna" }),
+          model({ id: "google/gemini-2.5-flash-lite" }),
+        ],
+      }),
+      {
+        explorer: "openai/gpt-6-luna",
+        summarizer: "google/gemini-2.5-flash-lite",
+      },
+    )
+
+    expect(errors).toEqual([])
   })
 })
 

@@ -12,7 +12,6 @@ export type ContextManagerConfig = {
   maxContextTokens: number
   session: Session
   summaryModelId: string
-  vendor: string
   threshold?: number
   pruneMaxLength?: number
   keepFirst?: number
@@ -65,14 +64,12 @@ export class ContextManager {
   private readonly keepLast: number
   private readonly session: Session
   private readonly summaryModelId: string
-  private readonly vendor: string
   private summaryStream: BilledLlmStream | null | undefined
 
   constructor(config: ContextManagerConfig) {
     this.maxContextTokens = config.maxContextTokens
     this.session = config.session
     this.summaryModelId = config.summaryModelId
-    this.vendor = config.vendor
     this.threshold = config.threshold ?? DEFAULT_THRESHOLD
     this.pruneMaxLength = config.pruneMaxLength ?? DEFAULT_PRUNE_MAX_LENGTH
     this.keepFirst = config.keepFirst ?? DEFAULT_KEEP_FIRST
@@ -385,6 +382,7 @@ export class ContextManager {
         metadata: {
           sessionId: this.session.id,
           conversationId: this.session.conversationId,
+          conversationRunId: this.session.runId,
           runId,
         },
       })
@@ -394,6 +392,7 @@ export class ContextManager {
         return ""
       }
       stateManager.incrementUsage(result.usage)
+      if (result.vendor) stateManager.recordVendor(result.vendor)
       return result.text
     }
   }
@@ -403,10 +402,7 @@ export class ContextManager {
       return this.summaryStream
     }
 
-    const model = await this.session.resolveModel(
-      this.summaryModelId,
-      this.vendor,
-    )
+    const model = await this.session.resolveModel(this.summaryModelId)
     if (!model) {
       this.summaryStream = null
       return null
@@ -426,11 +422,11 @@ export class ContextManager {
 
 async function drainStreamForComplete(
   stream: AsyncGenerator<LlmChunk, void, unknown>,
-): Promise<{ text: string; usage: TokenUsage } | null> {
-  let result: { text: string; usage: TokenUsage } | null = null
+): Promise<{ text: string; usage: TokenUsage; vendor?: string } | null> {
+  let result: { text: string; usage: TokenUsage; vendor?: string } | null = null
   for await (const chunk of stream) {
     if (chunk.type === streamEvents.complete) {
-      result = { text: chunk.text, usage: chunk.usage }
+      result = { text: chunk.text, usage: chunk.usage, vendor: chunk.vendor }
     }
   }
   return result

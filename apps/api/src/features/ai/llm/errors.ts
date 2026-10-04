@@ -1,6 +1,6 @@
 import { APICallError } from "ai"
 
-const FAILOVER_STATUS = new Set([408, 429, 502, 503, 504])
+const FAILOVER_STATUS = new Set([408, 409, 429])
 
 export class LlmConfigurationError extends Error {
   constructor(message: string) {
@@ -23,11 +23,34 @@ export class AllLlmVendorsUnavailableError extends Error {
   }
 }
 
+function errorName(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") return undefined
+  const name = (error as { name?: unknown }).name
+  return typeof name === "string" ? name : undefined
+}
+
 function isGatewayRateLimit(error: unknown): boolean {
+  return errorName(error) === "GatewayRateLimitError"
+}
+
+function isUserAbort(error: unknown): boolean {
+  const name = errorName(error)
+  return name === "AbortError" || name === "ResponseAborted"
+}
+
+function isTimeoutError(error: unknown): boolean {
+  return errorName(error) === "TimeoutError"
+}
+
+function isFailoverStatus(status: number): boolean {
+  return FAILOVER_STATUS.has(status) || status >= 500
+}
+
+function isRetryableFlag(error: unknown): boolean {
   return (
     typeof error === "object" &&
     error !== null &&
-    (error as { name?: string }).name === "GatewayRateLimitError"
+    (error as { isRetryable?: unknown }).isRetryable === true
   )
 }
 
@@ -66,12 +89,15 @@ function responseHeadersOf(
 export function isFailoverError(error: unknown, depth = 0): boolean {
   if (depth > 5 || !error || typeof error !== "object") return false
   if (error instanceof LlmConfigurationError) return false
+  if (isUserAbort(error)) return false
   if (isGatewayRateLimit(error)) return true
+  if (isTimeoutError(error)) return true
 
   const status = statusCodeOf(error)
-  if (status != null) return FAILOVER_STATUS.has(status)
+  if (status != null) return isFailoverStatus(status)
 
   if (error instanceof APICallError && error.isRetryable) return true
+  if (isRetryableFlag(error)) return true
   if (error instanceof TypeError) return true
 
   const message = error instanceof Error ? error.message : ""
