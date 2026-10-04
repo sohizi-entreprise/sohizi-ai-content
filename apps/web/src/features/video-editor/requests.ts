@@ -145,9 +145,11 @@ export async function batchEdit(
 export async function generateCaption(
   projectId: string,
   trackId: string,
+  clipId?: string,
 ): Promise<{ ok: boolean }> {
   const res = await api.post(
     `/video-editor/${projectId}/tracks/${trackId}/captions`,
+    clipId ? { clipId } : {},
   )
   return res.data
 }

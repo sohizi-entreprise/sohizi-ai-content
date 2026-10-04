@@ -32,3 +32,7 @@
 [ ] improve the system prompt make it concise and add some policies for consistency and context grounding
 [ ] improve command, when we just type / we should directly render all the available commands. And they should be appended as additional system prompt which inject behaviour that doesn't contradict the main system prompt.
 [ ] maybe let's have a generate title as a tool instead of doing a parallel call
+[ ] let's create a grid view for the file system that can help us preview the assets and add them easily to the video timeline
+[ ] let's have a starting template when the chat is empty and an explainer when there is not tab open, let's open an home page with updates???
+[ ] create 3 variations of captions style
+[ ] improve the logos of the file so they look minimalistic and modern

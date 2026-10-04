@@ -1,5 +1,8 @@
 export { ChatPanel } from "./chat-panel"
+export { ClipSettingsDrawer } from "./clip-settings-drawer"
 export { EditorTopBar } from "./editor-top-bar"
+export { ExportButton } from "./export-button"
+export { FileSystemVideoEditorHeader } from "./file-system-video-editor-header"
 export { LeftPanel } from "./left-panel"
 export { PanelHandle } from "./panel-handle"
 export { TimelineToolbar } from "./timeline-toolbar"

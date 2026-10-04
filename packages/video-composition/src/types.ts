@@ -100,6 +100,7 @@ export interface CaptionClip extends BaseClip {
     heightRatio: number
     hightlightColor?: string
     backgroundColor?: string
+    backgroundEnabled?: boolean
   }
 }
 

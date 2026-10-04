@@ -2,6 +2,14 @@ import { create, useStore } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import { temporal } from "zundo"
 import { v4 as uuidv4 } from "uuid"
+import { toast } from "sonner"
+import {
+  TIMELINE_CAP_MESSAGE,
+  clampClipEnd,
+  clampClipMove,
+  clampTimelineDuration,
+  maxTimelineFrames,
+} from "../utils/timeline-limit"
 import { ASPECT_RATIO_DIMENSIONS } from "./types"
 import type { HydrationData } from "../transforms"
 import type { StateCreator } from "zustand"
@@ -49,14 +57,14 @@ interface EditorActions {
     width?: number
     height?: number
     startFrame?: number
-  }) => string
+  }) => string | null
   addAudioClip: (params: {
     trackId?: string
     url: string
     fileName: string
     durationInFrames: number
     startFrame?: number
-  }) => string
+  }) => string | null
   addTextClip: (params: {
     trackId?: string
     text: string
@@ -72,7 +80,7 @@ interface EditorActions {
     yRatio?: number
     widthRatio?: number
     heightRatio?: number
-  }) => string
+  }) => string | null
   addImageClip: (params: {
     trackId?: string
     url: string
@@ -81,7 +89,7 @@ interface EditorActions {
     width?: number
     height?: number
     startFrame?: number
-  }) => string
+  }) => string | null
 
   updateClip: (clipId: string, patch: Partial<Clip>) => void
 
@@ -107,6 +115,7 @@ interface EditorActions {
   setIsPlaying: (isPlaying: boolean) => void
 
   setAspectRatio: (ratio: AspectRatio) => void
+  setFps: (fps: number) => void
   setZoomScale: (zoomScale: number) => void
   setViewport: (startSec: number, endSec: number) => void
   setDurationInFrames: (frames: number) => void
@@ -169,6 +178,29 @@ function nextFreeStart(track: Track): number {
   return Math.max(...track.clips.map((c) => c.endFrame))
 }
 
+function scaleFrame(frame: number, scale: number): number {
+  return Math.max(0, Math.round(frame * scale))
+}
+
+function notifyTimelineCap(): void {
+  toast.error(TIMELINE_CAP_MESSAGE, { id: "timeline-cap" })
+}
+
+function finishAddedClip(
+  tracks: Array<Track>,
+  id: string,
+  requestedLength: number,
+): string | null {
+  const found = findClip(tracks, id)
+  if (!found) {
+    notifyTimelineCap()
+    return null
+  }
+  const placedLength = found.clip.endFrame - found.clip.startFrame
+  if (placedLength < requestedLength) notifyTimelineCap()
+  return id
+}
+
 function recomputeDuration(state: EditorState): void {
   const minDuration = Math.max(state.fps * 10, 1)
   let maxEnd = 0
@@ -177,7 +209,55 @@ function recomputeDuration(state: EditorState): void {
       if (clip.endFrame > maxEnd) maxEnd = clip.endFrame
     }
   }
-  state.durationInFrames = Math.max(minDuration, maxEnd + state.fps * 2)
+  state.durationInFrames = clampTimelineDuration(
+    Math.max(minDuration, maxEnd + state.fps * 2),
+    state.fps,
+  )
+}
+
+/** Drop clips that start past the cap and trim any that hang over it. */
+function trimClipsToTimeline(state: EditorState): boolean {
+  const maxFrame = maxTimelineFrames(state.fps)
+  let trimmed = false
+  for (const track of state.tracks) {
+    const kept: Array<Clip> = []
+    for (const clip of track.clips) {
+      if (clip.startFrame >= maxFrame) {
+        trimmed = true
+        continue
+      }
+      if (clip.endFrame > maxFrame) {
+        clip.endFrame = maxFrame
+        trimmed = true
+      }
+      if (clip.endFrame <= clip.startFrame) {
+        trimmed = true
+        continue
+      }
+      kept.push(clip)
+    }
+    track.clips = kept
+  }
+  if (trimmed) pruneEmpty(state)
+  return trimmed
+}
+
+function takeClipPlacement(
+  state: EditorState,
+  startFrame: number | undefined,
+  durationInFrames: number,
+  trackForStart: Track | undefined,
+): { startFrame: number; endFrame: number; trimmed: boolean } | null {
+  const length = Math.max(1, Math.floor(durationInFrames))
+  const fallbackStart = trackForStart ? nextFreeStart(trackForStart) : 0
+  const start = Math.max(0, Math.floor(startFrame ?? fallbackStart))
+  const placed = clampClipEnd(start, start + length, state.fps)
+  if (!placed) return null
+  return {
+    startFrame: placed.startFrame,
+    endFrame: placed.endFrame,
+    trimmed: placed.endFrame < start + length,
+  }
 }
 
 function pruneEmpty(state: EditorState): void {
@@ -197,7 +277,7 @@ const creator: StateCreator<
   [["zustand/immer", never]],
   [],
   EditorState & EditorActions
-> = (set) => ({
+> = (set, get) => ({
   ...initialState,
 
   hydrate: (data) => {
@@ -206,11 +286,15 @@ const creator: StateCreator<
       state.fileNodeId = data.fileNodeId
       state.projectId = data.projectId
       state.fps = data.fps
-      state.durationInFrames = data.durationInFrames
+      state.durationInFrames = clampTimelineDuration(
+        data.durationInFrames,
+        data.fps,
+      )
       state.aspectRatio = data.aspectRatio
       state.width = data.width
       state.height = data.height
       state.tracks = data.tracks
+      trimClipsToTimeline(state)
       state.currentFrame = 0
       state.selection = { clipIds: [] }
       state.isPlaying = false
@@ -322,19 +406,25 @@ const creator: StateCreator<
     startFrame,
   }) => {
     const id = uuidv4()
+    const requestedLength = Math.max(1, Math.floor(durationInFrames))
     set((state) => {
-      const track = trackId
-        ? (state.tracks.find((t) => t.id === trackId && t.type === "video") ??
-          findOrCreateTrack(state, "video"))
-        : findOrCreateTrack(state, "video")
-
-      const start = startFrame ?? nextFreeStart(track)
+      const existing = trackId
+        ? state.tracks.find((t) => t.id === trackId && t.type === "video")
+        : state.tracks.find((t) => t.type === "video")
+      const placement = takeClipPlacement(
+        state,
+        startFrame,
+        durationInFrames,
+        existing,
+      )
+      if (!placement) return
+      const track = existing ?? findOrCreateTrack(state, "video")
       const clip: VideoClip = {
         id,
         trackId: track.id,
         type: "video",
-        startFrame: start,
-        endFrame: start + Math.max(1, durationInFrames),
+        startFrame: placement.startFrame,
+        endFrame: placement.endFrame,
         sourceStartFrame: 0,
         sourceDurationInFrames: Math.max(1, durationInFrames),
         url,
@@ -353,24 +443,30 @@ const creator: StateCreator<
       track.clips.push(clip)
       recomputeDuration(state)
     })
-    return id
+    return finishAddedClip(get().tracks, id, requestedLength)
   },
 
   addAudioClip: ({ trackId, url, fileName, durationInFrames, startFrame }) => {
     const id = uuidv4()
+    const requestedLength = Math.max(1, Math.floor(durationInFrames))
     set((state) => {
-      const track = trackId
-        ? (state.tracks.find((t) => t.id === trackId && t.type === "audio") ??
-          findOrCreateTrack(state, "audio"))
-        : findOrCreateTrack(state, "audio")
-
-      const start = startFrame ?? nextFreeStart(track)
+      const existing = trackId
+        ? state.tracks.find((t) => t.id === trackId && t.type === "audio")
+        : state.tracks.find((t) => t.type === "audio")
+      const placement = takeClipPlacement(
+        state,
+        startFrame,
+        durationInFrames,
+        existing,
+      )
+      if (!placement) return
+      const track = existing ?? findOrCreateTrack(state, "audio")
       const clip: AudioClip = {
         id,
         trackId: track.id,
         type: "audio",
-        startFrame: start,
-        endFrame: start + Math.max(1, durationInFrames),
+        startFrame: placement.startFrame,
+        endFrame: placement.endFrame,
         sourceStartFrame: 0,
         sourceDurationInFrames: Math.max(1, durationInFrames),
         url,
@@ -381,7 +477,7 @@ const creator: StateCreator<
       track.clips.push(clip)
       recomputeDuration(state)
     })
-    return id
+    return finishAddedClip(get().tracks, id, requestedLength)
   },
 
   addTextClip: ({
@@ -401,19 +497,25 @@ const creator: StateCreator<
     heightRatio,
   }) => {
     const id = uuidv4()
+    const requestedLength = Math.max(1, Math.floor(durationInFrames))
     set((state) => {
-      const track = trackId
-        ? (state.tracks.find((t) => t.id === trackId && t.type === "text") ??
-          findOrCreateTrack(state, "text"))
-        : findOrCreateTrack(state, "text")
-
-      const start = startFrame ?? state.currentFrame
+      const existing = trackId
+        ? state.tracks.find((t) => t.id === trackId && t.type === "text")
+        : state.tracks.find((t) => t.type === "text")
+      const placement = takeClipPlacement(
+        state,
+        startFrame ?? state.currentFrame,
+        durationInFrames,
+        existing,
+      )
+      if (!placement) return
+      const track = existing ?? findOrCreateTrack(state, "text")
       const clip: TextClip = {
         id,
         trackId: track.id,
         type: "text",
-        startFrame: start,
-        endFrame: start + Math.max(1, durationInFrames),
+        startFrame: placement.startFrame,
+        endFrame: placement.endFrame,
         sourceStartFrame: 0,
         sourceDurationInFrames: Math.max(1, durationInFrames),
         text,
@@ -431,7 +533,7 @@ const creator: StateCreator<
       track.clips.push(clip)
       recomputeDuration(state)
     })
-    return id
+    return finishAddedClip(get().tracks, id, requestedLength)
   },
 
   addImageClip: ({
@@ -444,19 +546,25 @@ const creator: StateCreator<
     startFrame,
   }) => {
     const id = uuidv4()
+    const requestedLength = Math.max(1, Math.floor(durationInFrames))
     set((state) => {
-      const track = trackId
-        ? (state.tracks.find((t) => t.id === trackId && t.type === "image") ??
-          findOrCreateTrack(state, "image"))
-        : findOrCreateTrack(state, "image")
-
-      const start = startFrame ?? nextFreeStart(track)
+      const existing = trackId
+        ? state.tracks.find((t) => t.id === trackId && t.type === "image")
+        : state.tracks.find((t) => t.type === "image")
+      const placement = takeClipPlacement(
+        state,
+        startFrame,
+        durationInFrames,
+        existing,
+      )
+      if (!placement) return
+      const track = existing ?? findOrCreateTrack(state, "image")
       const clip: ImageClip = {
         id,
         trackId: track.id,
         type: "image",
-        startFrame: start,
-        endFrame: start + Math.max(1, durationInFrames),
+        startFrame: placement.startFrame,
+        endFrame: placement.endFrame,
         sourceStartFrame: 0,
         sourceDurationInFrames: Math.max(1, durationInFrames),
         url,
@@ -475,7 +583,7 @@ const creator: StateCreator<
       track.clips.push(clip)
       recomputeDuration(state)
     })
-    return id
+    return finishAddedClip(get().tracks, id, requestedLength)
   },
 
   updateClip: (clipId, patch) => {
@@ -498,20 +606,39 @@ const creator: StateCreator<
       void _type
       void _trackId
       Object.assign(clip, safe)
+      if ("startFrame" in safe || "endFrame" in safe) {
+        const placed = clampClipEnd(clip.startFrame, clip.endFrame, state.fps)
+        if (placed) {
+          clip.startFrame = placed.startFrame
+          clip.endFrame = placed.endFrame
+        }
+        recomputeDuration(state)
+      }
     })
   },
 
   moveClip: (clipId, deltaFrames) => {
+    const before = findClip(get().tracks, clipId)
     set((state) => {
       const found = findClip(state.tracks, clipId)
       if (!found) return
       const { clip } = found
       const length = clip.endFrame - clip.startFrame
-      const newStart = Math.max(0, clip.startFrame + deltaFrames)
-      clip.startFrame = newStart
-      clip.endFrame = newStart + length
+      const requested = Math.max(0, clip.startFrame + deltaFrames)
+      const placed = clampClipMove(requested, length, state.fps)
+      clip.startFrame = placed.startFrame
+      clip.endFrame = placed.endFrame
       recomputeDuration(state)
     })
+    if (!before) return
+    const after = findClip(get().tracks, clipId)
+    if (!after) return
+    const length = before.clip.endFrame - before.clip.startFrame
+    const requested = Math.max(0, before.clip.startFrame + deltaFrames)
+    const hitCap =
+      after.clip.startFrame !== requested ||
+      after.clip.endFrame - after.clip.startFrame !== length
+    if (hitCap) notifyTimelineCap()
   },
 
   moveClipToTrack: (clipId, targetTrackId, newStartFrame) => {
@@ -526,14 +653,19 @@ const creator: StateCreator<
 
       sourceTrack.clips.splice(clipIndex, 1)
       const length = clip.endFrame - clip.startFrame
-      const newStart = Math.max(0, Math.floor(newStartFrame))
-      clip.startFrame = newStart
-      clip.endFrame = newStart + length
+      const requested = Math.max(0, Math.floor(newStartFrame))
+      const placed = clampClipMove(requested, length, state.fps)
+      const capped =
+        placed.startFrame !== requested ||
+        placed.endFrame - placed.startFrame !== length
+      clip.startFrame = placed.startFrame
+      clip.endFrame = placed.endFrame
       clip.trackId = target.id
       target.clips.push(clip)
       pruneEmpty(state)
       recomputeDuration(state)
       ok = true
+      if (capped) notifyTimelineCap()
     })
     return ok
   },
@@ -547,9 +679,14 @@ const creator: StateCreator<
 
       sourceTrack.clips.splice(clipIndex, 1)
       const length = clip.endFrame - clip.startFrame
-      const newStart = Math.max(0, Math.floor(newStartFrame))
-      clip.startFrame = newStart
-      clip.endFrame = newStart + length
+      const requested = Math.max(0, Math.floor(newStartFrame))
+      const placed = clampClipMove(requested, length, state.fps)
+      const capped =
+        placed.startFrame !== requested ||
+        placed.endFrame - placed.startFrame !== length
+      clip.startFrame = placed.startFrame
+      clip.endFrame = placed.endFrame
+      if (capped) notifyTimelineCap()
 
       const newTrack: Track = {
         id: uuidv4(),
@@ -585,8 +722,12 @@ const creator: StateCreator<
           clip.sourceStartFrame = Math.max(0, clip.sourceStartFrame + delta)
         }
       } else {
-        const clamped = Math.max(clip.startFrame + 1, newFrame)
-        clip.endFrame = clamped
+        const requested = Math.max(clip.startFrame + 1, newFrame)
+        const placed = clampClipEnd(clip.startFrame, requested, state.fps)
+        if (placed) {
+          if (placed.endFrame !== requested) notifyTimelineCap()
+          clip.endFrame = placed.endFrame
+        }
       }
       recomputeDuration(state)
     })
@@ -713,6 +854,49 @@ const creator: StateCreator<
     })
   },
 
+  setFps: (fps) => {
+    const next = Math.round(fps)
+    if (!Number.isFinite(next) || next < 1 || next > 120) return
+    set((state) => {
+      if (state.fps === next || state.fps <= 0) return
+      const scale = next / state.fps
+      state.fps = next
+
+      for (const track of state.tracks) {
+        for (const clip of track.clips) {
+          const startFrame = scaleFrame(clip.startFrame, scale)
+          let endFrame = scaleFrame(clip.endFrame, scale)
+          if (endFrame <= startFrame) endFrame = startFrame + 1
+          clip.startFrame = startFrame
+          clip.endFrame = endFrame
+          clip.sourceStartFrame = scaleFrame(clip.sourceStartFrame, scale)
+          clip.sourceDurationInFrames = Math.max(
+            1,
+            scaleFrame(clip.sourceDurationInFrames, scale),
+          )
+        }
+      }
+
+      trimClipsToTimeline(state)
+
+      let maxEnd = 0
+      for (const track of state.tracks) {
+        for (const clip of track.clips) {
+          if (clip.endFrame > maxEnd) maxEnd = clip.endFrame
+        }
+      }
+
+      state.durationInFrames = clampTimelineDuration(
+        Math.max(1, scaleFrame(state.durationInFrames, scale), maxEnd),
+        state.fps,
+      )
+      state.currentFrame = Math.min(
+        scaleFrame(state.currentFrame, scale),
+        Math.max(0, state.durationInFrames - 1),
+      )
+    })
+  },
+
   setZoomScale: (zoomScale) => {
     set((state) => {
       state.zoomScale = Math.max(0.25, Math.min(8, zoomScale))
@@ -736,7 +920,7 @@ const creator: StateCreator<
 
   setDurationInFrames: (frames) => {
     set((state) => {
-      state.durationInFrames = Math.max(1, Math.floor(frames))
+      state.durationInFrames = clampTimelineDuration(frames, state.fps)
     })
   },
 })

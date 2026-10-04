@@ -9,7 +9,7 @@ import { Button } from "@sohizi/ui/button"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { usePlayerRef } from "../../engine/player-ref"
 import { formatPlayerTimecode } from "../../utils/time"
-import { AspectRatioPicker } from "./aspect-ratio-picker"
+import { PlaybackSpeedPicker } from "./playback-speed-picker"
 
 export function TransportBar() {
   const playerRef = usePlayerRef()
@@ -36,9 +36,9 @@ export function TransportBar() {
   }
 
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-t border-border/60 px-3 bg-surface">
+    <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-t border-border/60 px-3 bg-card">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <AspectRatioPicker />
+        <PlaybackSpeedPicker />
       </div>
 
       <div className="flex items-center gap-2">

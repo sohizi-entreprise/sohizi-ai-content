@@ -6,7 +6,6 @@ import {
   EyeOff,
   Film,
   ImageIcon,
-  MoreHorizontal,
   Subtitles,
   Trash2,
   Type,
@@ -14,12 +13,6 @@ import {
   VolumeX,
 } from "lucide-react"
 import { Button } from "@sohizi/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@sohizi/ui/dropdown-menu"
 import { useVideoEditorStore } from "../store/editor-store"
 import type { LucideIcon } from "lucide-react"
 import type { Track, TrackType } from "../store/types"
@@ -31,6 +24,7 @@ interface TrackHeadersProps {
   width: number
   /** Aligns the first row with the timeline's ruler + edit-area offset. */
   topOffset: number
+  onWheelScroll: (event: WheelEvent) => void
 }
 
 const TRACK_ICON: Record<TrackType, LucideIcon> = {
@@ -50,6 +44,7 @@ export function TrackHeaders({
   scrollTop,
   width,
   topOffset,
+  onWheelScroll,
 }: TrackHeadersProps) {
   const tracks = useVideoEditorStore((s) => s.tracks)
   const toggleTrackHidden = useVideoEditorStore((s) => s.toggleTrackHidden)
@@ -66,6 +61,16 @@ export function TrackHeaders({
     if (!node) return
     node.scrollTop = scrollTop
   }, [scrollTop])
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node) return
+    const handleWheel = (event: WheelEvent) => {
+      onWheelScroll(event)
+    }
+    node.addEventListener("wheel", handleWheel, { passive: false })
+    return () => node.removeEventListener("wheel", handleWheel)
+  }, [onWheelScroll])
 
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     setDraggingIndex(index)
@@ -155,6 +160,11 @@ function TrackHeaderRow({
   const Icon = TRACK_ICON[track.type]
   const hasAudio = track.type === "audio" || track.type === "video"
 
+  const handleDelete = () => {
+    const confirmed = window.confirm(`Delete track "${track.name}"?`)
+    if (confirmed) onDelete()
+  }
+
   return (
     <div
       onDragOver={onDragOver}
@@ -219,24 +229,19 @@ function TrackHeaderRow({
         <span className="size-7 shrink-0" aria-hidden />
       )}
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className={iconBtn}
-            title="Track options"
-          >
-            <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="right" className="min-w-36">
-          <DropdownMenuItem variant="destructive" onClick={onDelete}>
-            <Trash2 className="size-3.5" />
-            Delete track
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className={cn(
+          iconBtn,
+          "text-muted-foreground/55 opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover/track:opacity-100",
+        )}
+        onClick={handleDelete}
+        title="Delete track"
+        aria-label={`Delete track ${track.name}`}
+      >
+        <Trash2 className="size-3.5" strokeWidth={1.75} />
+      </Button>
     </div>
   )
 }

@@ -299,6 +299,7 @@ export const addCaption = async (
   trackId: string,
   projectId: string,
   userId: string,
+  clipId?: string,
 ) => {
   const track = await repo.getTrackById(trackId)
   if (!track) {
@@ -320,8 +321,15 @@ export const addCaption = async (
   > & { url: string })[] = []
 
   const clips = await repo.getClipsByTrackId(trackId)
+  const sourceClips = clipId
+    ? clips.filter((clip) => clip.id === clipId)
+    : clips
 
-  for (const clip of clips) {
+  if (clipId && sourceClips.length === 0) {
+    throw new BadRequest("Clip not found on this track")
+  }
+
+  for (const clip of sourceClips) {
     if (clip.type === "audio" || clip.type === "video") {
       let url = (
         clip.properties as AudioMediaClipProperties | VideoMediaClipProperties
@@ -341,7 +349,11 @@ export const addCaption = async (
   }
 
   if (payload.length === 0) {
-    throw new BadRequest("No clips found to generate caption for")
+    throw new BadRequest(
+      clipId
+        ? "Caption can only be generated for a video or audio clip"
+        : "No clips found to generate caption for",
+    )
   }
 
   const audioClient = withBilling(

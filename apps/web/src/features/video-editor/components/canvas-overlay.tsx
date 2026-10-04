@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useVideoEditorStore } from "../store/editor-store"
-import { getClipLayout, isCanvasEditableClip } from "../store/types"
+import { getClipLayout } from "../store/types"
+import { listCanvasHitTargets } from "./canvas-hit-order"
 import type { CanvasEditableClip, SpatialLayout } from "../store/types"
 
 type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw"
@@ -37,27 +38,18 @@ export function CanvasOverlay() {
   const dragRef = useRef<DragState | null>(null)
   const [, forceRender] = useState(0)
 
-  const activeClips = useMemo<Array<CanvasEditableClip>>(() => {
-    const result: Array<CanvasEditableClip> = []
-    for (const track of tracks) {
-      if (track.hidden) continue
-      for (const clip of track.clips) {
-        if (!isCanvasEditableClip(clip)) continue
-        if (currentFrame < clip.startFrame || currentFrame >= clip.endFrame) {
-          continue
-        }
-        result.push(clip)
-      }
-    }
-    return result
-  }, [tracks, currentFrame])
+  const activeClips = useMemo(
+    () => listCanvasHitTargets(tracks, currentFrame),
+    [tracks, currentFrame],
+  )
 
   const selectedId =
     selection.clipIds.length === 1 ? selection.clipIds[0] : null
-  const selectedClip = useMemo<CanvasEditableClip | null>(
-    () => activeClips.find((c) => c.id === selectedId) ?? null,
+  const selectedEntry = useMemo(
+    () => activeClips.find((entry) => entry.clip.id === selectedId) ?? null,
     [activeClips, selectedId],
   )
+  const selectedClip = selectedEntry?.clip ?? null
 
   const applyLayoutPatch = useCallback(
     (clip: CanvasEditableClip, patch: Partial<SpatialLayout>) => {
@@ -246,7 +238,7 @@ export function CanvasOverlay() {
       className="pointer-events-none absolute inset-0"
       data-slot="canvas-overlay"
     >
-      {activeClips.map((clip) => {
+      {activeClips.map(({ clip, zIndex }) => {
         if (selectedClip && clip.id === selectedClip.id) return null
         const layout = getClipLayout(clip)
         return (
@@ -265,12 +257,13 @@ export function CanvasOverlay() {
               width: `${layout.widthRatio * 100}%`,
               height: `${layout.heightRatio * 100}%`,
               transform: "translate(-50%, -50%)",
+              zIndex,
             }}
           />
         )
       })}
 
-      {selectedClip && selectedLayout ? (
+      {selectedClip && selectedLayout && selectedEntry ? (
         <div
           className="pointer-events-none absolute"
           style={{
@@ -279,6 +272,7 @@ export function CanvasOverlay() {
             width: `${selectedLayout.widthRatio * 100}%`,
             height: `${selectedLayout.heightRatio * 100}%`,
             transform: "translate(-50%, -50%)",
+            zIndex: selectedEntry.zIndex,
           }}
         >
           <div className="pointer-events-none absolute inset-0 rounded-[2px] border-2 border-primary shadow-[0_0_0_1px_rgba(0,0,0,0.55)]" />

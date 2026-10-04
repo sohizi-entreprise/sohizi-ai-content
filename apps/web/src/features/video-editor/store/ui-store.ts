@@ -13,9 +13,12 @@ interface VideoEditorUiState {
   lastLibraryTab: LibraryTab
   saveStatus: SaveStatus
   activeRender: ActiveRender | null
+  /** Preview playback rate. Does not change the exported video. */
+  playbackRate: number
   setLeftTab: (tab: LeftPanelTab) => void
   setSaveStatus: (status: SaveStatus) => void
   setActiveRender: (render: ActiveRender | null) => void
+  setPlaybackRate: (rate: number) => void
 }
 
 /**
@@ -27,6 +30,7 @@ export const useVideoEditorUiStore = create<VideoEditorUiState>()((set) => ({
   lastLibraryTab: "assets",
   saveStatus: "idle",
   activeRender: null,
+  playbackRate: 1,
 
   setLeftTab: (tab) =>
     set((s) => ({
@@ -37,4 +41,6 @@ export const useVideoEditorUiStore = create<VideoEditorUiState>()((set) => ({
   setSaveStatus: (saveStatus) => set({ saveStatus }),
 
   setActiveRender: (activeRender) => set({ activeRender }),
+
+  setPlaybackRate: (playbackRate) => set({ playbackRate }),
 }))

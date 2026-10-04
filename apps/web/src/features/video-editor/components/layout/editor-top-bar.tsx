@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Check, Cloud, Download, Loader2, X } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
-import { Button } from "@sohizi/ui/button"
 import { Input } from "@sohizi/ui/input"
-import { useVideoEditorUiStore } from "../../store/ui-store"
-import { useVideoExport } from "../../hooks/use-video-export"
+import { OutputControls } from "./output-controls"
+import { SaveIndicator } from "./save-indicator"
 import {
   listFilesByTypeQueryOptions,
   renameFileNodeMutationOptions,
@@ -37,8 +36,8 @@ export function EditorTopBar({ projectId, fileNodeId }: EditorTopBarProps) {
 
       <SaveIndicator />
 
-      <div className="ml-auto flex items-center gap-1">
-        <ExportButton fileName={fileName} />
+      <div className="ml-auto">
+        <OutputControls fileName={fileName} />
       </div>
     </header>
   )
@@ -49,74 +48,6 @@ function useCompositionName(projectId: string, fileNodeId: string): string {
     listFilesByTypeQueryOptions(projectId, "video-editor"),
   )
   return files?.find((file) => file.id === fileNodeId)?.name ?? ""
-}
-
-function ExportButton({ fileName }: { fileName: string }) {
-  const {
-    job,
-    isSubmitting,
-    isCancelling,
-    isDownloading,
-    isBusy,
-    canExport,
-    start,
-    cancel,
-    download,
-  } = useVideoExport()
-
-  if (job?.status === "completed") {
-    return (
-      <Button
-        size="sm"
-        variant="secondary"
-        disabled={isDownloading}
-        className="h-8 gap-1.5 rounded-lg px-3 text-xs font-semibold"
-        onClick={() => void download()}
-      >
-        {isDownloading ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : (
-          <Download className="size-3.5" />
-        )}
-        Download
-      </Button>
-    )
-  }
-
-  if (isBusy) {
-    return (
-      <div className="flex items-center gap-1">
-        <span className="flex h-8 items-center gap-1.5 rounded-lg bg-muted/60 px-3 text-xs font-medium text-muted-foreground">
-          <Loader2 className="size-3.5 animate-spin" />
-          {job?.status === "rendering"
-            ? `Rendering ${job.progress}%`
-            : "Queued"}
-        </span>
-        <Button
-          size="icon"
-          variant="ghost"
-          disabled={isCancelling || isSubmitting}
-          className="size-8 rounded-lg text-muted-foreground"
-          title="Cancel export"
-          onClick={() => void cancel()}
-        >
-          <X className="size-3.5" />
-        </Button>
-      </div>
-    )
-  }
-
-  return (
-    <Button
-      size="sm"
-      disabled={!canExport}
-      className="h-8 gap-1.5 rounded-lg px-3 text-xs font-semibold"
-      onClick={() => void start(fileName)}
-    >
-      <Download className="size-3.5" />
-      {job?.status === "failed" ? "Retry export" : "Export"}
-    </Button>
-  )
 }
 
 function CompositionTitle({ projectId, fileNodeId }: EditorTopBarProps) {
@@ -186,34 +117,5 @@ function CompositionTitle({ projectId, fileNodeId }: EditorTopBarProps) {
     >
       {name || "Untitled video"}
     </button>
-  )
-}
-
-function SaveIndicator() {
-  const saveStatus = useVideoEditorUiStore((s) => s.saveStatus)
-
-  if (saveStatus === "idle") {
-    return (
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Cloud className="size-3.5" />
-        Autosave on
-      </span>
-    )
-  }
-
-  if (saveStatus === "saving") {
-    return (
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Loader2 className="size-3.5 animate-spin" />
-        Saving
-      </span>
-    )
-  }
-
-  return (
-    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-      <Check className="size-3.5 text-primary" />
-      Saved
-    </span>
   )
 }

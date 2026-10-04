@@ -77,27 +77,29 @@ export async function ingestFileNodeClip({
     fileName: media.name,
   }
 
+  let clipId: string | null = null
   if (node.format === "video") {
     const seconds = await probeMediaDuration(media.url, "video")
-    return addVideoClip({
+    clipId = addVideoClip({
       ...base,
       durationInFrames: secondsToFrames(seconds, fps),
     })
-  }
-
-  if (node.format === "audio") {
+  } else if (node.format === "audio") {
     const seconds = await probeMediaDuration(media.url, "audio")
-    return addAudioClip({
+    clipId = addAudioClip({
       ...base,
       durationInFrames: secondsToFrames(seconds, fps),
     })
+  } else {
+    const dims = await probeImageDimensions(media.url)
+    clipId = addImageClip({
+      ...base,
+      width: dims.width,
+      height: dims.height,
+      durationInFrames: fps * 5,
+    })
   }
 
-  const dims = await probeImageDimensions(media.url)
-  return addImageClip({
-    ...base,
-    width: dims.width,
-    height: dims.height,
-    durationInFrames: fps * 5,
-  })
+  if (!clipId) useVideoEditorStore.getState().pruneEmptyTracks()
+  return clipId
 }

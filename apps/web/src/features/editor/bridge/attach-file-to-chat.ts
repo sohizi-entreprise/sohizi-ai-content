@@ -1,18 +1,18 @@
 import { useEditorStore } from "../stores/editor-store"
 import { useEditorInputBridge } from "./use-editor-input-bridge"
 
-export function attachStoryboardToChat(params: {
+export function attachFileToChat(params: {
   file: { name: string; path: string }
   extraText?: string
 }): void {
   ensureChatPanelOpen()
   if (useEditorInputBridge.getState().chatEditor) {
-    insertStoryboardMention(params)
+    insertFileMention(params)
     return
   }
 
   // Chat textarea mounts after the panel opens; retry once it is ready.
-  window.setTimeout(() => insertStoryboardMention(params), 80)
+  window.setTimeout(() => insertFileMention(params), 80)
 }
 
 function ensureChatPanelOpen() {
@@ -22,7 +22,7 @@ function ensureChatPanelOpen() {
   }
 }
 
-function insertStoryboardMention(params: {
+function insertFileMention(params: {
   file: { name: string; path: string }
   extraText?: string
 }) {

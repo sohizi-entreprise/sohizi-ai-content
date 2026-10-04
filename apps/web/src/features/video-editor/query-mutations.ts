@@ -47,7 +47,8 @@ export const batchEditMutationOptions = (
 
 export const generateCaptionMutationOptions = (projectId: string) =>
   mutationOptions({
-    mutationFn: (trackId: string) => generateCaption(projectId, trackId),
+    mutationFn: (input: { trackId: string; clipId?: string }) =>
+      generateCaption(projectId, input.trackId, input.clipId),
     meta: {
       // invalidateQueries: [keysFactory.composition(projectId, fileNodeId)],
     },

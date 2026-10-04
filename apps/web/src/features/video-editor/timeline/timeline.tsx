@@ -6,6 +6,7 @@ import { Timeline } from "@xzdarcy/react-timeline-editor"
 import { useVideoEditorStore } from "../store/editor-store"
 import { CLIP_EFFECT_IDS, selectVisibleClips } from "../store/selectors"
 import { framesToSeconds, secondsToFrames } from "../utils/time"
+import { MAX_TIMELINE_SECONDS } from "../utils/timeline-limit"
 import { usePlayerRef } from "../engine/player-ref"
 import {
   VIDEO_EDITOR_TEXT_PRESET_DRAG_TYPE,
@@ -42,6 +43,7 @@ const ROW_HEIGHT = 44
 const HEADERS_WIDTH = 140
 const SCALE_WIDTH_BASE = 80
 const SCALE_SECONDS = 5
+const MAX_SCALE_COUNT = MAX_TIMELINE_SECONDS / SCALE_SECONDS
 const START_LEFT = 20
 // The library stacks a 32px ruler above the edit area, which our stylesheet
 // offsets by a further 6px. Track headers need the same offset to line up.
@@ -113,9 +115,6 @@ export function VideoTimeline() {
 
   const [scrollTop, setScrollTop] = useState(0)
   const scrollTopRef = useRef(0)
-  useEffect(() => {
-    scrollTopRef.current = scrollTop
-  }, [scrollTop])
 
   const scrollLeftRef = useRef(0)
 
@@ -192,8 +191,11 @@ export function VideoTimeline() {
 
   const scaleWidth = Math.max(20, SCALE_WIDTH_BASE * zoomScale)
   scaleWidthRef.current = scaleWidth
-  const minScaleCount = Math.ceil(
-    Math.max(20, framesToSeconds(durationInFrames, fps) / SCALE_SECONDS) + 4,
+  const minScaleCount = Math.min(
+    MAX_SCALE_COUNT,
+    Math.ceil(
+      Math.max(20, framesToSeconds(durationInFrames, fps) / SCALE_SECONDS) + 4,
+    ),
   )
 
   const handleSeek = useCallback(
@@ -388,11 +390,31 @@ export function VideoTimeline() {
     [getEditAreaEl, handleWindowMouseMove, handleWindowMouseUp],
   )
 
+  // The timeline library rejects ruler clicks once scrollLeft is subtracted
+  // from a finite maxScaleCount. Leave that prop unset so clicks past the
+  // halfway point still move the playhead, and stop drags here instead.
+  const withinTimeline = useCallback((end: number) => {
+    return end <= MAX_TIMELINE_SECONDS + 0.001
+  }, [])
+
   const handleActionMoving = useCallback<
     NonNullable<TimelineEditor["onActionMoving"]>
-  >(({ start, end }) => {
-    dragLiveSecRef.current = { start, end }
-  }, [])
+  >(
+    ({ start, end }) => {
+      if (!withinTimeline(end)) return false
+      dragLiveSecRef.current = { start, end }
+    },
+    [withinTimeline],
+  )
+
+  const handleActionResizing = useCallback<
+    NonNullable<TimelineEditor["onActionResizing"]>
+  >(
+    ({ end }) => {
+      if (!withinTimeline(end)) return false
+    },
+    [withinTimeline],
+  )
 
   const handleActionMoveEnd = useCallback<
     NonNullable<TimelineEditor["onActionMoveEnd"]>
@@ -522,9 +544,32 @@ export function VideoTimeline() {
   const handleScroll = useCallback<NonNullable<TimelineEditor["onScroll"]>>(
     (p) => {
       scrollLeftRef.current = p.scrollLeft
+      scrollTopRef.current = p.scrollTop
       setScrollTop(p.scrollTop)
     },
     [],
+  )
+
+  const scrollFromTrackHeaders = useCallback(
+    (event: WheelEvent) => {
+      const timeline = timelineStateRef.current
+      const editArea = getEditAreaEl()
+      const scroller = editArea?.querySelector<HTMLElement>(
+        ".ReactVirtualized__Grid",
+      )
+      if (!timeline || !scroller) return
+
+      const deltaY = wheelDeltaPixels(event, event.deltaY)
+      if (deltaY === 0) return
+
+      event.preventDefault()
+
+      const maxTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight)
+      const nextTop = clamp(scrollTopRef.current + deltaY, 0, maxTop)
+      scrollTopRef.current = nextTop
+      timeline.setScrollTop(nextTop)
+    },
+    [getEditAreaEl],
   )
 
   const onChange = useCallback<NonNullable<TimelineEditor["onChange"]>>(
@@ -752,6 +797,7 @@ export function VideoTimeline() {
           scrollTop={scrollTop}
           width={HEADERS_WIDTH}
           topOffset={HEADERS_TOP_OFFSET}
+          onWheelScroll={scrollFromTrackHeaders}
         />
         <div
           ref={(node) => {
@@ -783,6 +829,7 @@ export function VideoTimeline() {
             onActionMoveStart={handleActionMoveStart}
             onActionMoving={handleActionMoving}
             onActionMoveEnd={handleActionMoveEnd}
+            onActionResizing={handleActionResizing}
             onActionResizeEnd={handleActionResizeEnd}
             getActionRender={getActionRender}
             onChange={onChange}
@@ -948,6 +995,16 @@ function sameDragGuide(a: DragGuide, b: DragGuide): boolean {
     return a.insertIndex === b.insertIndex
   }
   return false
+}
+
+function wheelDeltaPixels(event: WheelEvent, delta: number): number {
+  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) return delta * 16
+  if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) return delta * ROW_HEIGHT
+  return delta
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
 }
 
 function clipDisplayLabel(clip: {

@@ -9,7 +9,7 @@ import AssetViewer from "../content/asset-viewer"
 import { SkillEditorView } from "../content/skill-editor-view"
 import { StoryboardEditorView } from "../content/storyboard-editor-view"
 import type { EditorTab } from "../../types"
-import { VideoEditor } from "@/features/video-editor"
+import { FileSystemVideoEditor } from "@/features/video-editor"
 import { MediaGenerator } from "@/features/media-generator"
 
 interface ContentRouterProps {
@@ -25,7 +25,13 @@ export function ContentRouter({ tab }: ContentRouterProps) {
 
   if (tab.name === "video-editor" || tab.type === "video-editor") {
     return (
-      <VideoEditor projectId={projectId} fileNodeId={tab.id} key={tab.id} />
+      <FileSystemVideoEditor
+        projectId={projectId}
+        fileNodeId={tab.id}
+        fileName={tab.name}
+        filePath={tab.path}
+        key={tab.id}
+      />
     )
   }
 

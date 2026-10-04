@@ -24,7 +24,7 @@ export function SliderWithValue({
       <div
         className={cn(
           "min-w-0 flex-1",
-          "**:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:rounded-full **:data-[slot=slider-track]:bg-muted",
+          "**:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:rounded-full **:data-[slot=slider-track]:bg-background",
           "**:data-[slot=slider-range]:bg-foreground",
           "**:data-[slot=slider-thumb]:size-3.5 **:data-[slot=slider-thumb]:border-0! **:data-[slot=slider-thumb]:bg-foreground! **:data-[slot=slider-thumb]:shadow-sm!",
           "**:data-[slot=slider-thumb]:ring-1 **:data-[slot=slider-thumb]:ring-black/5",
@@ -51,7 +51,7 @@ export function SliderWithValue({
             if (!Number.isFinite(v)) return
             onChange(Math.max(min, Math.min(max, v)))
           }}
-          className="h-7 w-14 rounded-lg border-0 bg-muted px-1.5 text-center text-sm tabular-nums shadow-none focus-visible:ring-1"
+          className="h-7 w-14 rounded-lg border border-transparent bg-muted px-1.5 text-center text-sm tabular-nums shadow-none focus-visible:border-foreground focus-visible:ring-0"
         />
         {suffix ? (
           <span className="text-xs text-muted-foreground">{suffix}</span>

@@ -44,6 +44,10 @@ export const addTrackSchema = z.object({
   hidden: z.boolean().default(false),
 })
 
+export const generateCaptionSchema = z.object({
+  clipId: z.uuid().optional(),
+})
+
 export const updateTrackSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   position: z.number().int().min(0).optional(),

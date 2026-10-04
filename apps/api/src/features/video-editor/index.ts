@@ -6,6 +6,7 @@ import {
   createCompositionSchema,
   updateCompositionSchema,
   addTrackSchema,
+  generateCaptionSchema,
   updateTrackSchema,
   addClipSchema,
   updateClipSchema,
@@ -144,16 +145,18 @@ export const videoEditorRoutes = new Elysia({
 
   .post(
     "/tracks/:trackId/captions",
-    async ({ params, user }) => {
+    async ({ params, body, user }) => {
       await assertProjectAccess(user.id, params.projectId)
       return videoEditorService.addCaption(
         params.trackId,
         params.projectId,
         user.id,
+        body.clipId,
       )
     },
     {
       params: trackParams,
+      body: generateCaptionSchema,
     },
   )
 

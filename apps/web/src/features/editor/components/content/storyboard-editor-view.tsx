@@ -23,7 +23,7 @@ import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable"
 import { MAX_CHARACTER_COUNT } from "../../constants"
 import { useAutoSave } from "../../hooks/use-autosave"
 import { usePendingMarkdownChanges } from "../../hooks/use-pending-markdown-changes"
-import { attachStoryboardToChat } from "../../bridge/attach-storyboard-to-chat"
+import { attachFileToChat } from "../../bridge/attach-file-to-chat"
 import { useEditorInputBridge } from "../../bridge/use-editor-input-bridge"
 import {
   StoryboardProvider,
@@ -196,12 +196,12 @@ export function StoryboardEditorView({
   }, [])
 
   const attachFile = useCallback(() => {
-    attachStoryboardToChat({ file: { name: tab.name, path: tab.path } })
+    attachFileToChat({ file: { name: tab.name, path: tab.path } })
   }, [tab.name, tab.path])
 
   const attachScene = useCallback(
     (sceneNumber: number) => {
-      attachStoryboardToChat({
+      attachFileToChat({
         file: { name: tab.name, path: tab.path },
         extraText: sceneAttachLabel(sceneNumber),
       })
@@ -211,7 +211,7 @@ export function StoryboardEditorView({
 
   const attachShot = useCallback(
     (sceneNumber: number, shotNumber: number) => {
-      attachStoryboardToChat({
+      attachFileToChat({
         file: { name: tab.name, path: tab.path },
         extraText: shotAttachLabel(sceneNumber, shotNumber),
       })

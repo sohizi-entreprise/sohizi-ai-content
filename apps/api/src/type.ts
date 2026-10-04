@@ -336,6 +336,7 @@ export type CaptionClipProperties = {
   align?: TextAlign
   hightlightColor?: string
   backgroundColor?: string
+  backgroundEnabled?: boolean
   opacity?: number
   xRatio?: number
   yRatio?: number

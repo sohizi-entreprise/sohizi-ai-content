@@ -1,9 +1,22 @@
-import { Redo2, Scissors, Trash2, Undo2 } from "lucide-react"
+import { useState } from "react"
+import { Redo2, Scissors, Subtitles, Trash2, Type, Undo2 } from "lucide-react"
 import { Button } from "@sohizi/ui/button"
 import { useTemporalStore, useVideoEditorStore } from "../../store/editor-store"
+import { useSelectedClip } from "../../hooks/use-selected-clip"
 import { ZoomSlider } from "../zoom-slider"
+import { CaptionScopeDialog } from "./caption-scope-dialog"
 
-export function TimelineToolbar() {
+interface TimelineToolbarProps {
+  iconOnly?: boolean
+  showInsertTools?: boolean
+  projectId?: string
+}
+
+export function TimelineToolbar({
+  iconOnly = false,
+  showInsertTools = false,
+  projectId,
+}: TimelineToolbarProps) {
   const splitClipAtPlayhead = useVideoEditorStore((s) => s.splitClipAtPlayhead)
   const deleteClip = useVideoEditorStore((s) => s.deleteClip)
   const selectedClipIds = useVideoEditorStore((s) => s.selection.clipIds)
@@ -50,30 +63,103 @@ export function TimelineToolbar() {
 
         <Button
           variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 rounded-lg px-2 text-xs font-medium text-foreground"
+          size={iconOnly ? "icon-sm" : "sm"}
+          className={
+            iconOnly
+              ? "size-8"
+              : "h-8 gap-1.5 rounded-lg px-2 text-xs font-medium text-foreground"
+          }
           onClick={handleSplit}
           title="Split at playhead"
+          aria-label="Split at playhead"
           disabled={selectedClipIds.length === 0}
         >
           <Scissors className="size-3.5" />
-          Split
+          {iconOnly ? null : "Split"}
         </Button>
         <Button
           variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 rounded-lg px-2 text-xs font-medium text-foreground hover:text-destructive"
+          size={iconOnly ? "icon-sm" : "sm"}
+          className={
+            iconOnly
+              ? "size-8 hover:text-destructive"
+              : "h-8 gap-1.5 rounded-lg px-2 text-xs font-medium text-foreground hover:text-destructive"
+          }
           onClick={handleDeleteSelected}
           disabled={selectedClipIds.length === 0}
           title="Delete selected clip"
+          aria-label="Delete selected clip"
         >
           <Trash2 className="size-3.5" />
-          Delete
+          {iconOnly ? null : "Delete"}
         </Button>
+
+        {showInsertTools && projectId ? (
+          <InsertTools projectId={projectId} />
+        ) : null}
       </div>
 
       <ZoomSlider />
     </div>
+  )
+}
+
+function InsertTools({ projectId }: { projectId: string }) {
+  const [captionOpen, setCaptionOpen] = useState(false)
+  const selectedClip = useSelectedClip()
+  const canCaption =
+    selectedClip?.type === "video" || selectedClip?.type === "audio"
+
+  const handleAddText = () => {
+    const state = useVideoEditorStore.getState()
+    const trackId = state.insertTrackAt("text", 0)
+    const clipId = state.addTextClip({
+      trackId,
+      text: "Text",
+      startFrame: state.currentFrame,
+      durationInFrames: state.fps * 5,
+    })
+    if (!clipId) {
+      state.pruneEmptyTracks()
+      return
+    }
+    state.selectClip(clipId)
+  }
+
+  return (
+    <>
+      <div className="mx-1 h-5 w-px bg-border" />
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="size-8"
+        onClick={handleAddText}
+        title="Add text at playhead"
+        aria-label="Add text at playhead"
+      >
+        <Type className="size-3.5" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="size-8"
+        onClick={() => setCaptionOpen(true)}
+        disabled={!canCaption}
+        title={
+          canCaption
+            ? "Generate captions"
+            : "Select a video or audio clip to generate captions"
+        }
+        aria-label="Generate captions"
+      >
+        <Subtitles className="size-3.5" />
+      </Button>
+      <CaptionScopeDialog
+        projectId={projectId}
+        open={captionOpen}
+        onOpenChange={setCaptionOpen}
+      />
+    </>
   )
 }
 

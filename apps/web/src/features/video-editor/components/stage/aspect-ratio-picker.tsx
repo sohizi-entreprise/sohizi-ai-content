@@ -80,7 +80,13 @@ const ASPECT_PRESETS: Array<AspectPreset> = [
   },
 ]
 
-export function AspectRatioPicker() {
+export function AspectRatioPicker({
+  align = "end",
+  side = "bottom",
+}: {
+  align?: "start" | "center" | "end"
+  side?: "top" | "bottom"
+}) {
   const [open, setOpen] = useState(false)
   const [presetId, setPresetId] = useState<string | null>(null)
   const aspectRatio = useVideoEditorStore((s) => s.aspectRatio)
@@ -108,16 +114,16 @@ export function AspectRatioPicker() {
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+          className="h-8 gap-1.5 rounded-lg px-2 text-xs font-medium text-foreground hover:text-foreground"
         >
           {activePreset?.icon ?? <RectangleHorizontal className="size-4" />}
           {aspectRatio}
-          <ChevronDown className="size-3" />
+          <ChevronDown className="size-3 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        align="start"
-        side="top"
+        align={align}
+        side={side}
         sideOffset={8}
         className="w-64 p-0"
       >

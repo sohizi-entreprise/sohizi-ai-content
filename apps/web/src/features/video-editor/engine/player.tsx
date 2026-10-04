@@ -1,7 +1,8 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react"
 import { Player } from "@remotion/player"
 import { MainComposition } from "@sohizi/video-composition"
 import { useVideoEditorStore } from "../store/editor-store"
+import { useVideoEditorUiStore } from "../store/ui-store"
 import { usePlayerRef } from "./player-ref"
 import type { CallbackListener } from "@remotion/player"
 import type { MainCompositionProps } from "@sohizi/video-composition"
@@ -18,6 +19,8 @@ export function VideoEditorPlayer({ className }: VideoEditorPlayerProps) {
   const width = useVideoEditorStore((s) => s.width)
   const height = useVideoEditorStore((s) => s.height)
   const tracks = useVideoEditorStore((s) => s.tracks)
+  const playbackRate = useVideoEditorUiStore((s) => s.playbackRate)
+  const fpsRef = useRef(fps)
 
   const setCurrentFrame = useVideoEditorStore((s) => s.setCurrentFrame)
   const setIsPlaying = useVideoEditorStore((s) => s.setIsPlaying)
@@ -48,6 +51,12 @@ export function VideoEditorPlayer({ className }: VideoEditorPlayerProps) {
     }
   }, [playerRef, setCurrentFrame, setIsPlaying])
 
+  useLayoutEffect(() => {
+    if (fpsRef.current === fps) return
+    fpsRef.current = fps
+    playerRef.current?.seekTo(useVideoEditorStore.getState().currentFrame)
+  }, [fps, playerRef])
+
   return (
     <div className={className} style={{ width: "100%", height: "100%" }}>
       <Player
@@ -58,6 +67,7 @@ export function VideoEditorPlayer({ className }: VideoEditorPlayerProps) {
         compositionWidth={width}
         compositionHeight={height}
         fps={fps}
+        playbackRate={playbackRate}
         controls={false}
         clickToPlay={false}
         doubleClickToFullscreen={false}

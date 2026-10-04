@@ -178,6 +178,10 @@ function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
           heightRatio: numberProp(props, "heightRatio", 0.18),
           hightlightColor: props.hightlightColor as string | undefined,
           backgroundColor: props.backgroundColor as string | undefined,
+          backgroundEnabled:
+            typeof props.backgroundEnabled === "boolean"
+              ? props.backgroundEnabled
+              : undefined,
         },
       } satisfies CaptionClip
   }

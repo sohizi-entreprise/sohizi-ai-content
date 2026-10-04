@@ -34,14 +34,16 @@ export function ingestTextPresetClip({
   const trackId = resolveTextTrackId(guide)
   if (guide?.mode === "insert" && guide.valid && !trackId) return null
 
-  const { fps, addTextClip } = useVideoEditorStore.getState()
+  const { fps, addTextClip, pruneEmptyTracks } = useVideoEditorStore.getState()
   const { text, ...rest } = style
 
-  return addTextClip({
+  const clipId = addTextClip({
     trackId,
     text,
     startFrame,
     durationInFrames: fps * 5,
     ...rest,
   })
+  if (!clipId) pruneEmptyTracks()
+  return clipId
 }

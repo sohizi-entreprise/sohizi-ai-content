@@ -30,6 +30,8 @@ export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
     widthRatio = 0.7,
     heightRatio = 0.18,
     hightlightColor = "#FFD700",
+    backgroundColor = "rgba(0,0,0,0.8)",
+    backgroundEnabled = true,
   } = clip.properties
 
   const currentPage = pages.find(
@@ -63,6 +65,7 @@ export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
     >
       {currentPage?.tokens.map((token, i) => {
         const isActive = timeMs >= token.fromMs && timeMs < token.toMs
+        const showBackground = isActive && backgroundEnabled
         const wordStartFrame = (token.fromMs / 1000) * fps
         const bounce = spring({
           frame: frame - wordStartFrame,
@@ -77,9 +80,9 @@ export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
               display: "inline-block",
               transform: `scale(${isActive ? bounce : 1})`,
               color: isActive ? hightlightColor : color,
-              backgroundColor: isActive ? "rgba(0,0,0,0.8)" : "transparent",
-              padding: isActive ? "4px 8px" : "0",
-              borderRadius: isActive ? "4px" : "0",
+              backgroundColor: showBackground ? backgroundColor : "transparent",
+              padding: showBackground ? "4px 8px" : "0",
+              borderRadius: showBackground ? "4px" : "0",
               textShadow: isActive
                 ? "0 0 10px #FFD700, 2px 2px 4px rgba(0,0,0,0.8)"
                 : "2px 2px 4px rgba(0,0,0,0.8)",

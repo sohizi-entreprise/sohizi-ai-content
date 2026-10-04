@@ -11,8 +11,8 @@ export function Stage() {
   const aspectRatio = useMemo(() => width / height, [width, height])
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-border/60">
-      <div className="min-h-0 flex-1 p-3">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl bg-card">
+      <div className="min-h-0 flex-1">
         <CanvasWrapper aspectRatio={aspectRatio}>
           <VideoEditorPlayer />
           <CanvasOverlay />
