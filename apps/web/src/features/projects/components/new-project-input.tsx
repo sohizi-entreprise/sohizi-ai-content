@@ -1,3 +1,4 @@
+import { captureAnalyticsEvent } from "@sohizi/analytics/browser"
 import { ChevronDown } from "lucide-react"
 import {
   IconCircleChevronRightFilled,
@@ -89,6 +90,10 @@ export default function NewProjectInput() {
 
     createProject(output.data, {
       onSuccess: async (response) => {
+        captureAnalyticsEvent("project_created", {
+          project_id: response.id,
+          mode: "guided",
+        })
         await navigate({
           to: "/projects/$projectId/editor",
           params: {

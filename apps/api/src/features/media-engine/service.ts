@@ -1,3 +1,4 @@
+import { captureConsentedEvent } from "@/features/analytics-consent"
 import * as repo from "./repo"
 import * as storage from "./storage"
 import type { GetUploadUrlInput, uploadSuccessSchema } from "./schema"
@@ -144,6 +145,7 @@ export type RunAgentPayload = {
   userId: string
   projectId: string
   organizationId: string
+  analyticsConsentId?: string | null
 } & z.infer<typeof assetRequestSchema>
 
 export const estimateGenerationCredits = async (
@@ -176,6 +178,7 @@ export const generateAsset = async (payload: RunAgentPayload) => {
     payload.projectId,
     payload.userId,
     requestPayload,
+    payload.analyticsConsentId,
   )
   await markStreamActive(run.id)
   await incrementKey(run.id)
@@ -227,8 +230,19 @@ async function runAiGeneration(payload: RunAgentPayload & { runId: string }) {
         referenceFiles: payload.context.referenceFiles || [],
         mediaType: toProviderMediaType(payload.context),
         _reservationId: uuidv4(),
+        analyticsConsentId: payload.analyticsConsentId,
       },
     })
+    await captureConsentedEvent(
+      payload.analyticsConsentId,
+      userId,
+      "generation_started",
+      {
+        project_id: projectId,
+        request_id: runId,
+        media_type: toProviderMediaType(payload.context),
+      },
+    )
   } catch (error) {
     console.error(error)
     await repo.updateAssetRequest(runId, {

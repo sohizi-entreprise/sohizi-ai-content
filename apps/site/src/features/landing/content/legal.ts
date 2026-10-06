@@ -12,9 +12,9 @@ export type LegalDocument = {
 
 export const privacyPolicy: LegalDocument = {
   title: "Privacy Policy",
-  lastUpdated: "July 24, 2026",
+  lastUpdated: "October 6, 2026",
   intro:
-    "This Privacy Policy explains how Sohizi Lab (“Sohizi,” “we,” “us,” or “our”) collects, uses, and shares information when you use our website and AI video workspace. This is a starter policy for product clarity and is not a substitute for legal advice.",
+    "This Privacy Policy explains how Sohizi Lab (“Sohizi,” “we,” “us,” or “our”) collects, uses, and shares information when you use our website and AI video workspace. ",
   sections: [
     {
       heading: "Information we collect",
@@ -42,8 +42,10 @@ export const privacyPolicy: LegalDocument = {
     {
       heading: "Cookies and similar technologies",
       paragraphs: [
-        "We use necessary cookies and similar technologies for authentication, session security, and core product functionality. We may also use analytics tools to understand aggregate product usage and improve the experience.",
-        "You can control cookies through your browser settings, but disabling certain cookies may affect sign-in or product features.",
+        "We use necessary cookies for authentication, session security, and core product functionality. With your permission, we use PostHog analytics across www.sohizi.net and app.sohizi.net to understand page visits and selected product actions, such as sign-up, project creation, media generation, and video export. We use one PostHog project to understand the journey from the website to the app.",
+        "Analytics is off until you accept. We do not use analytics autocapture or session replay, and our curated analytics events exclude prompts, scripts, filenames, email addresses, and raw error messages. PostHog may process event metadata such as browser and device information, approximate location derived from IP, and an identifier linked to your account after sign-in.",
+        "Your analytics choice is shared between the website and app through a first-party cookie on sohizi.net. It expires after six months or when we change the policy version. You can reject analytics or withdraw consent at any time using Cookie settings in the site footer or app account area; this stops future analytics collection on this browser. A choice on one device does not automatically apply to other devices.",
+        "You can also control cookies in your browser settings. Disabling necessary cookies may affect sign-in or product features.",
       ],
     },
     {
@@ -57,7 +59,7 @@ export const privacyPolicy: LegalDocument = {
     {
       heading: "Retention",
       paragraphs: [
-        "We retain account, project, and billing records for as long as needed to provide the service and for legitimate business, legal, and security purposes. You may request deletion of your account; some records may be retained where we are legally required to keep them.",
+        "We retain account, project, and billing records for as long as needed to provide the service and for legitimate business, legal, and security purposes. Analytics consent records are valid for six months; analytics events are retained according to our PostHog project settings and are deleted when no longer needed for product analysis. You may request deletion of your account; some records may be retained where we are legally required to keep them.",
       ],
     },
     {

@@ -10,6 +10,7 @@ import { and, eq, inArray, desc, sql } from "drizzle-orm"
 type CreateGenerationRequestPayload = {
   projectId: string
   userId: string
+  analyticsConsentId?: string | null
   type: GenerationRequestType
   request: Record<string, unknown>
 }

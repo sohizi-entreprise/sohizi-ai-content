@@ -7,11 +7,17 @@ import { cors } from "@elysiajs/cors"
 import { inngest, functions } from "@/lib/inngest"
 import { serve } from "inngest/bun"
 import { auth } from "@/lib/auth"
+import { analyticsConsentRoutes } from "@/features/analytics-consent"
 import { billingService, InsufficientCreditsError } from "@/features/billing"
 import { NameConflictError } from "@/features/skill-market"
 
 const corsConfig = {
-  origin: ["http://localhost:3000"],
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL?.replace("//app.", "//www."),
+  ].filter((value): value is string => Boolean(value)),
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Content-Type",
@@ -99,6 +105,7 @@ const app = new Elysia()
   )
   .use(inngestHandler)
   .get("/", () => "Welcome to Sohizi Labs API")
+  .use(analyticsConsentRoutes)
   .use(routes.projectRoutes)
   .use(routes.fileSystemRoutes)
   .use(routes.chatRoutes)

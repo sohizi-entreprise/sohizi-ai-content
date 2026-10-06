@@ -33,7 +33,7 @@ export function AudienceSection() {
         </ul>
 
         <div className="mt-10">
-          <CtaButton />
+          <CtaButton location="audience" />
         </div>
       </div>
     </section>

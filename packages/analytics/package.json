@@ -1,0 +1,49 @@
+{
+  "name": "@sohizi/analytics",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./events": "./src/events.ts",
+    "./browser": "./src/browser.ts",
+    "./server": "./src/server.ts",
+    "./consent": "./src/consent.tsx",
+    "./policy": "./src/policy.ts"
+  },
+  "dependencies": {
+    "posthog-js": "^1.438.1",
+    "posthog-node": "^5.55.0"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@sohizi/eslint-config": "workspace:*",
+    "@types/node": "^22.0.0",
+    "bun-types": "latest"
+  },
+  "typesVersions": {
+    "*": {
+      "browser": [
+        "src/browser.ts"
+      ],
+      "server": [
+        "src/server.ts"
+      ],
+      "consent": [
+        "src/consent.tsx"
+      ],
+      "events": [
+        "src/events.ts"
+      ],
+      "policy": [
+        "src/policy.ts"
+      ]
+    }
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "test": "bun test src/policy.test.ts"
+  }
+}

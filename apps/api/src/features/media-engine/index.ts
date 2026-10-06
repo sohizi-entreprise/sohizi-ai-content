@@ -1,3 +1,4 @@
+import { acceptedConsentId } from "@/features/analytics-consent"
 import { Elysia } from "elysia"
 import * as mediaService from "./service"
 import { getUploadUrlSchema, uploadSuccessSchema } from "./schema"
@@ -96,7 +97,7 @@ export const mediaEngineRoutes = new Elysia({ prefix: "/media/:projectId" })
   )
   .post(
     "/assets",
-    async ({ params, user, body }) => {
+    async ({ params, user, body, request }) => {
       const { organizationId } = await assertProjectAccess(
         user.id,
         params.projectId,
@@ -105,6 +106,7 @@ export const mediaEngineRoutes = new Elysia({ prefix: "/media/:projectId" })
         projectId: params.projectId,
         userId: user.id,
         organizationId,
+        analyticsConsentId: await acceptedConsentId(request, user.id),
         ...body,
       })
     },

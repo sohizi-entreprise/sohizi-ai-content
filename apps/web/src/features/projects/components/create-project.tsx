@@ -1,3 +1,4 @@
+import { captureAnalyticsEvent } from "@sohizi/analytics/browser"
 import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
@@ -52,6 +53,10 @@ export default function CreateProject() {
 
     createProject(output.data, {
       onSuccess: async (response) => {
+        captureAnalyticsEvent("project_created", {
+          project_id: response.project.id,
+          mode: "blank",
+        })
         toast.success("Blank project created")
         setName("")
         setOpen(false)

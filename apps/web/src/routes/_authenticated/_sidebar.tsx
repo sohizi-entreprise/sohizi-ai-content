@@ -1,3 +1,4 @@
+import { resetAnalyticsUser } from "@sohizi/analytics/browser"
 import { useState } from "react"
 import {
   Link,
@@ -82,6 +83,7 @@ function AvatarDropdown() {
   const handleSignOut = async () => {
     setSigningOut(true)
     await authClient.signOut()
+    resetAnalyticsUser()
     navigate({ to: "/sign-in" })
   }
 

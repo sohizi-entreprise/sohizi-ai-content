@@ -48,7 +48,7 @@ export function HeroSection() {
             <p className="text-base leading-relaxed text-foreground/75 sm:text-lg">
               {hero.subheadline}
             </p>
-            <CtaButton />
+            <CtaButton location="hero" />
           </div>
         </motion.div>
 

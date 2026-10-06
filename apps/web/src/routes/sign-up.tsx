@@ -1,3 +1,4 @@
+import { captureAnalyticsEvent } from "@sohizi/analytics/browser"
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 import { Button } from "@sohizi/ui/button"
@@ -36,7 +37,13 @@ function SignUpPage() {
     setError("")
     setLoading(true)
 
-    const { error: signUpError } = await signUp.email({ name, email, password })
+    captureAnalyticsEvent("signup_started", { method: "email" })
+    const { error: signUpError } = await signUp.email({
+      name,
+      email,
+      password,
+      type: "user",
+    })
 
     if (signUpError) {
       setError(signUpError.message || "Failed to create account")
@@ -71,6 +78,7 @@ function SignUpPage() {
       return
     }
 
+    captureAnalyticsEvent("signup_completed", { method: "email" })
     navigate({ to: "/" })
   }
 
@@ -94,6 +102,8 @@ function SignUpPage() {
   }
 
   const handleGoogleSignUp = async () => {
+    captureAnalyticsEvent("signup_started", { method: "google" })
+    sessionStorage.setItem("sohizi_google_signup_pending", "1")
     await signIn.social({
       provider: "google",
       callbackURL: window.location.origin + "/",

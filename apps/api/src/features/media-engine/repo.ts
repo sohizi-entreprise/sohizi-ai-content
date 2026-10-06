@@ -368,10 +368,12 @@ export const createAssetRequest = async (
   projectId: string,
   userId: string,
   requestPayload: Record<string, unknown>,
+  analyticsConsentId?: string | null,
 ) => {
   const result = await createGenerationRequest({
     projectId,
     userId,
+    analyticsConsentId,
     type: "media-generation",
     request: requestPayload,
   })

@@ -282,6 +282,7 @@ type ListAssetsFolderOptions = {
 
 export type AssetFolderFileNode = FileNode & {
   url: string | null
+  source: string | null
 }
 
 /**
@@ -341,7 +342,8 @@ export const listFileNodesUnderFolder = async (
             fn.path,
             fn.created_at AS "createdAt",
             fn.updated_at AS "updatedAt",
-            a.url AS url
+            a.url AS url,
+            a.source AS source
         FROM file_nodes fn
         LEFT JOIN assets a
           ON a.file_node_id = fn.id

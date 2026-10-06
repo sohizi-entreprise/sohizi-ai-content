@@ -37,7 +37,11 @@ export function FaqSection() {
               {faq.ctaCard.body}
             </p>
             <div className="mt-5">
-              <CtaButton size="default" className="h-10 text-sm" />
+              <CtaButton
+                location="faq"
+                size="default"
+                className="h-10 text-sm"
+              />
             </div>
           </div>
         </div>

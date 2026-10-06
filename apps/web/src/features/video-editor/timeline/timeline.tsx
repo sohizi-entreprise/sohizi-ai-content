@@ -696,6 +696,7 @@ export function VideoTimeline() {
       name: string
       format: MediaClipKind
       url?: string | null
+      source?: string | null
     } | null => {
       if ("fromLibrary" in item) {
         if (!["video", "audio", "image"].includes(item.format)) return null
@@ -704,6 +705,7 @@ export function VideoTimeline() {
           name: item.label,
           format: item.format,
           url: item.url,
+          source: item.source,
         }
       }
 

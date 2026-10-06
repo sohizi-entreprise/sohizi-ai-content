@@ -51,7 +51,7 @@ export function SolutionBentoSection() {
         />
 
         <div className="mt-10">
-          <CtaButton />
+          <CtaButton location="solution_bento" />
         </div>
       </div>
     </section>

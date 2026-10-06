@@ -3,9 +3,16 @@ import {
   Outlet,
   Scripts,
   createRootRouteWithContext,
+  useRouterState,
 } from "@tanstack/react-router"
+import { useEffect } from "react"
+import {
+  AnalyticsProvider,
+  useAnalyticsConsent,
+} from "@sohizi/analytics/consent"
 import appCss from "../styles.css?url"
 import type { PublicEnv } from "@/lib/public-env"
+import { appUrl } from "@/lib/app-url"
 import { loadPublicEnv } from "@/lib/load-public-env"
 import { getPublicEnv, setPublicEnv } from "@/lib/public-env"
 
@@ -88,5 +95,29 @@ function RootComponent() {
   const { publicEnv } = Route.useRouteContext()
   setPublicEnv(publicEnv)
 
-  return <Outlet />
+  return (
+    <AnalyticsProvider
+      config={{
+        project: publicEnv.posthogProject,
+        apiHost: publicEnv.posthogApiHost,
+        apiVersion: publicEnv.posthogApiVersion,
+      }}
+      consentEndpoint={appUrl("/api/analytics/consent")}
+      privacyHref="/privacy"
+      app="site"
+    >
+      <AnalyticsRouteTracker />
+      <Outlet />
+    </AnalyticsProvider>
+  )
+}
+
+function AnalyticsRouteTracker() {
+  const href = useRouterState({ select: (state) => state.location.href })
+  const { choice, trackPageview } = useAnalyticsConsent()
+  useEffect(() => {
+    if (choice === "accepted")
+      trackPageview(new URL(href, window.location.origin).href)
+  }, [choice, href, trackPageview])
+  return null
 }

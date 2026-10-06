@@ -131,6 +131,7 @@ export function PricingPage() {
                 </p>
                 <div className="mt-8">
                   <CtaButton
+                    location="pricing"
                     className={cn("w-full", !plan.highlighted && "opacity-90")}
                     size="sm"
                     label={plan.ctaLabel}

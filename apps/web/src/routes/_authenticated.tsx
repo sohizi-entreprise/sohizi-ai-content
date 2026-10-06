@@ -1,3 +1,8 @@
+import {
+  captureAnalyticsEvent,
+  identifyAnalyticsUser,
+} from "@sohizi/analytics/browser"
+import { useAnalyticsConsent } from "@sohizi/analytics/consent"
 import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { OrgSetupModal } from "@/features/account/components/org-setup-modal"
@@ -16,10 +21,19 @@ function RouteComponent() {
   const [showOrgModal, setShowOrgModal] = useState(false)
   const navigate = useNavigate()
   const userId = session?.user.id
+  const { choice } = useAnalyticsConsent()
 
   useEffect(() => {
-    setOrgReady(false)
-  }, [userId])
+    if (!userId || choice !== "accepted") return
+    identifyAnalyticsUser(userId)
+    if (sessionStorage.getItem("sohizi_google_signup_pending") === "1") {
+      sessionStorage.removeItem("sohizi_google_signup_pending")
+      const createdAt = session.user.createdAt
+      if (Date.now() - new Date(createdAt).getTime() < 120_000) {
+        captureAnalyticsEvent("signup_completed", { method: "google" })
+      }
+    }
+  }, [userId, choice, session?.user.createdAt])
 
   useEffect(() => {
     if (isPending) return

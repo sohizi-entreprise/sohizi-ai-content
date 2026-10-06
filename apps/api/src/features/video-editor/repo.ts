@@ -321,6 +321,7 @@ export type CreateRenderJobData = {
   projectId: string
   compositionId: string
   userId: string
+  analyticsConsentId?: string | null
   compositionVersion: number
   fps: number
   width: number

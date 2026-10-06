@@ -1,3 +1,4 @@
+import { acceptedConsentId } from "@/features/analytics-consent"
 import { Elysia } from "elysia"
 import { z } from "zod"
 import * as videoEditorService from "./service"
@@ -236,7 +237,7 @@ export const videoEditorRoutes = new Elysia({
 
   .post(
     "/compositions/:compositionId/renders",
-    async ({ params, body, user }) => {
+    async ({ params, body, user, request }) => {
       const { organizationId } = await assertProjectAccess(
         user.id,
         params.projectId,
@@ -247,6 +248,7 @@ export const videoEditorRoutes = new Elysia({
         user.id,
         organizationId,
         body,
+        await acceptedConsentId(request, user.id),
       )
     },
     {

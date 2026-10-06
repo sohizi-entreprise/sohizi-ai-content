@@ -13,6 +13,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@sohizi/analytics": "workspace:*",
     "@sohizi/ui": "workspace:*",
     "@tabler/icons-react": "^3.44.0",
     "@tailwindcss/vite": "^4.0.6",

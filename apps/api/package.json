@@ -29,6 +29,7 @@
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/sdk-trace-node": "^2.11.0",
     "@remotion/lambda-client": "4.0.459",
+    "@sohizi/analytics": "workspace:*",
     "@toon-format/toon": "^2.1.0",
     "ai": "^7",
     "archiver": "^8.0.0",

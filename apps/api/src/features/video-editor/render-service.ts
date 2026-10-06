@@ -1,3 +1,4 @@
+import { captureConsentedEvent } from "@/features/analytics-consent"
 import { v4 as uuidv4 } from "uuid"
 import * as repo from "./repo"
 import {
@@ -53,6 +54,7 @@ export const createRender = async (
   userId: string,
   organizationId: string,
   input: CreateRenderInput,
+  analyticsConsentId?: string | null,
 ): Promise<RenderJobView> => {
   const composition = await assertCompositionAccess(compositionId, projectId)
   assertMediaHostsAllowed(input.composition)
@@ -101,6 +103,7 @@ export const createRender = async (
     projectId,
     compositionId,
     userId,
+    analyticsConsentId,
     compositionVersion: composition.version,
     fps: input.composition.fps,
     width: input.composition.width,
@@ -111,6 +114,13 @@ export const createRender = async (
     billingReservationId: reservationId,
     functionName: process.env.REMOTION_FUNCTION_NAME ?? null,
   })
+
+  await captureConsentedEvent(
+    analyticsConsentId,
+    userId,
+    "video_export_started",
+    { project_id: projectId, job_id: jobId },
+  )
 
   let remote: RemoteRenderJob
   try {
@@ -124,6 +134,16 @@ export const createRender = async (
     })
   } catch (error) {
     await safeRefund(billingService, reservationId, "render-submit-failed")
+    await captureConsentedEvent(
+      analyticsConsentId,
+      userId,
+      "video_export_failed",
+      {
+        project_id: projectId,
+        job_id: jobId,
+        failure_category: "submit_failed",
+      },
+    )
     await repo.updateRenderJob(jobId, {
       status: "failed",
       failureCode: "submit_failed",
@@ -199,6 +219,12 @@ export const getRenderDownload = async (
     objectKey: job.outputKey,
     fileName: job.fileName,
   })
+  await captureConsentedEvent(
+    job.analyticsConsentId,
+    job.userId,
+    "video_export_downloaded",
+    { project_id: job.projectId, job_id: job.id },
+  )
   return { url, fileName: job.fileName, sizeInBytes: job.outputSizeInBytes }
 }
 
@@ -316,6 +342,25 @@ async function update(
   if (!changed) return job
 
   const updated = await repo.updateRenderJob(job.id, patch)
+  if (updated?.status === "completed" && job.status !== "completed") {
+    await captureConsentedEvent(
+      job.analyticsConsentId,
+      job.userId,
+      "video_export_succeeded",
+      { project_id: job.projectId, job_id: job.id },
+    )
+  } else if (updated?.status === "failed" && job.status !== "failed") {
+    await captureConsentedEvent(
+      job.analyticsConsentId,
+      job.userId,
+      "video_export_failed",
+      {
+        project_id: job.projectId,
+        job_id: job.id,
+        failure_category: updated.failureCode ?? "render_failed",
+      },
+    )
+  }
   return updated ?? job
 }
 

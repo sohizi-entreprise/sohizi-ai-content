@@ -93,9 +93,24 @@ const timestamps = {
     .notNull(),
 }
 
+export const analyticsConsents = pgTable("analytics_consents", {
+  id: uuid("id").primaryKey(),
+  choice: varchar("choice", { length: 16 })
+    .notNull()
+    .$type<"accepted" | "rejected">(),
+  policyVersion: varchar("policy_version", { length: 32 }).notNull(),
+  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+  chosenAt: timestamp("chosen_at").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+})
+
 export const generationRequests = pgTable(
   "generation_requests",
   {
+    analyticsConsentId: uuid("analytics_consent_id").references(
+      () => analyticsConsents.id,
+      { onDelete: "set null" },
+    ),
     id: uuid("id").defaultRandom().primaryKey(),
     projectId: uuid("project_id")
       .references(() => projects.id, { onDelete: "cascade" })
@@ -800,6 +815,10 @@ export const videoRenderJobStatusEnum = pgEnum("video_render_job_status", [
 export const videoRenderJobs = pgTable(
   "video_render_jobs",
   {
+    analyticsConsentId: uuid("analytics_consent_id").references(
+      () => analyticsConsents.id,
+      { onDelete: "set null" },
+    ),
     id: uuid("id").defaultRandom().primaryKey(),
     projectId: uuid("project_id")
       .references(() => projects.id, { onDelete: "cascade" })

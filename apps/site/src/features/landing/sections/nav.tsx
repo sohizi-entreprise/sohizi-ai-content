@@ -149,7 +149,7 @@ export function LandingNav() {
           >
             <a href={appUrl("/sign-in")}>Sign in</a>
           </Button>
-          <CtaButton size="sm" className="h-9 px-4 text-sm" />
+          <CtaButton location="nav" size="sm" className="h-9 px-4 text-sm" />
         </div>
 
         <Sheet open={open} onOpenChange={setOpen}>
@@ -197,7 +197,7 @@ export function LandingNav() {
                   </a>
                 </Button>
                 <span onClick={() => setOpen(false)} className="block w-full">
-                  <CtaButton className="w-full" />
+                  <CtaButton location="mobile_nav" className="w-full" />
                 </span>
               </div>
             </div>

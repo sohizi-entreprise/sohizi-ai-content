@@ -34,6 +34,7 @@ export type LibraryAssetDragItem = {
   format: LibraryMediaFormat
   /** Joined media URL from the assets list — avoids a file-tree cache lookup. */
   url: string | null
+  source: string | null
 }
 
 export function isPointerOverTimelineDropArea(

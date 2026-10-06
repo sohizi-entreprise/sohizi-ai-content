@@ -34,6 +34,7 @@ export type DirectoryChildrenPage = {
 /** File node from the assets-folder listing, with media URL joined in. */
 export type ProjectAssetFile = FileNode & {
   url: string | null
+  source: string | null
 }
 
 export type FileNodeContent = {

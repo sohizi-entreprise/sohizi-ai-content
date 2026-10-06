@@ -1,3 +1,4 @@
+import { captureConsentedEvent } from "@/features/analytics-consent"
 import { NonRetriableError } from "inngest"
 import { inngest } from "@/lib/inngest/client"
 import * as repo from "./repo"
@@ -53,6 +54,7 @@ type ProviderMediaEventData = {
   referenceFiles: ReferenceFile[]
   mediaType: ProviderMediaType
   _reservationId: string
+  analyticsConsentId?: string | null
 }
 
 function mediaReservationTtlMs(mediaType: ProviderMediaType): number {
@@ -126,6 +128,17 @@ export const handleMediaGeneration = inngest.createFunction(
       if (data.requestId) {
         await limiter.releaseByRequestId(data.requestId, { outcome: "none" })
         await finalizeGenerationRequest(data.requestId, "failed")
+        await captureConsentedEvent(
+          data.analyticsConsentId,
+          data.userId,
+          "generation_failed",
+          {
+            project_id: data.projectId,
+            request_id: data.requestId,
+            media_type: data.mediaType,
+            failure_category: "job_failed",
+          },
+        )
       }
     },
   },
@@ -293,6 +306,17 @@ export const handleMediaGeneration = inngest.createFunction(
           await step.run("mark-error-on-provider-failure", () =>
             finalizeGenerationRequest(requestId, "failed"),
           )
+          await captureConsentedEvent(
+            data.analyticsConsentId,
+            userId,
+            "generation_failed",
+            {
+              project_id: projectId,
+              request_id: requestId,
+              media_type: mediaType,
+              failure_category: "provider_failed",
+            },
+          )
           return { requestId, status: "failed" as const }
         }
       }
@@ -308,6 +332,17 @@ export const handleMediaGeneration = inngest.createFunction(
         )
         await step.run("mark-error-on-timeout-or-empty", () =>
           finalizeGenerationRequest(requestId, "failed"),
+        )
+        await captureConsentedEvent(
+          data.analyticsConsentId,
+          userId,
+          "generation_failed",
+          {
+            project_id: projectId,
+            request_id: requestId,
+            media_type: mediaType,
+            failure_category: "timeout_or_empty",
+          },
         )
         return { requestId, status: "failed" as const }
       }
@@ -367,6 +402,16 @@ export const handleMediaGeneration = inngest.createFunction(
         }
 
         await finalizeGenerationRequest(requestId, "completed")
+        await captureConsentedEvent(
+          data.analyticsConsentId,
+          userId,
+          "generation_succeeded",
+          {
+            project_id: projectId,
+            request_id: requestId,
+            media_type: mediaType,
+          },
+        )
         return newAssets
       })
 

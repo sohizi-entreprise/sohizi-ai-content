@@ -11,5 +11,11 @@ export function readPublicEnvFromNitro(): PublicEnv {
     throw new Error("MEDIA_CDN_URL is not set")
   }
 
-  return { siteUrl, mediaCdnUrl }
+  return {
+    siteUrl,
+    mediaCdnUrl,
+    posthogProject: process.env.POSTHOG_PROJECT ?? "",
+    posthogApiHost: process.env.POSTHOG_API_HOST ?? "",
+    posthogApiVersion: process.env.POSTHOG_API_VERSION ?? "",
+  }
 }

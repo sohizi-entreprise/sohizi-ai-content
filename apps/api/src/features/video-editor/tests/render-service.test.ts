@@ -45,6 +45,7 @@ function buildJob(overrides: Partial<VideoRenderJob> = {}): VideoRenderJob {
     projectId: PROJECT_ID,
     compositionId: COMPOSITION_ID,
     userId: USER_ID,
+    analyticsConsentId: null,
     status: "queued",
     compositionVersion: 1,
     fps: 30,

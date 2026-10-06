@@ -137,6 +137,7 @@ function useAssetDrag(node: ProjectAssetFile, format: MediaFormat) {
         label: node.name,
         format,
         url: node.url,
+        source: node.source,
       },
       end: () => {
         flushTimelineDropPreview()
@@ -145,7 +146,7 @@ function useAssetDrag(node: ProjectAssetFile, format: MediaFormat) {
         isDragging: monitor.isDragging(),
       }),
     }),
-    [node.id, node.name, node.url, format],
+    [node.id, node.name, node.url, node.source, format],
   )
   // Native preview is suppressed; LibraryDragLayer follows the cursor until
   // the pointer enters the timeline, then the timeline ghost takes over.

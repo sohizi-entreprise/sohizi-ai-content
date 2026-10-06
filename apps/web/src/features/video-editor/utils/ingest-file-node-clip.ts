@@ -1,3 +1,4 @@
+import { captureAnalyticsEvent } from "@sohizi/analytics/browser"
 import { useVideoEditorStore } from "../store/editor-store"
 import { secondsToFrames } from "./time"
 import { probeImageDimensions, probeMediaDuration } from "./media-probe"
@@ -15,6 +16,7 @@ export type IngestMediaSource = {
   format: MediaFormat
   /** When present, skips a second content fetch (e.g. assets library drag). */
   url?: string | null
+  source?: string | null
 }
 
 export type IngestFileNodeClipParams = {
@@ -101,5 +103,12 @@ export async function ingestFileNodeClip({
   }
 
   if (!clipId) useVideoEditorStore.getState().pruneEmptyTracks()
+  else if (node.source === "ai-generated") {
+    captureAnalyticsEvent("generated_asset_used", {
+      project_id: projectId,
+      media_type: node.format,
+      destination: "timeline",
+    })
+  }
   return clipId
 }

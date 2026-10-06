@@ -1,3 +1,4 @@
+import { captureAnalyticsEvent } from "@sohizi/analytics/browser"
 import { useState } from "react"
 import { Button } from "@sohizi/ui/button"
 import { Input } from "@sohizi/ui/input"
@@ -34,6 +35,7 @@ export function CreateOrganizationForm({
       return
     }
 
+    captureAnalyticsEvent("organization_created", {})
     await organization.setActive({ organizationId: orgData.id })
     await onCreated()
     setName("")

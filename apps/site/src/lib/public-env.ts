@@ -1,4 +1,7 @@
 export type PublicEnv = {
+  posthogProject: string
+  posthogApiHost: string
+  posthogApiVersion: string
   appUrl: string
 }
 

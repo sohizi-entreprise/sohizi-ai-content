@@ -7,5 +7,10 @@ export function readPublicEnvFromNitro(): PublicEnv {
     throw new Error("APP_URL is not set")
   }
 
-  return { appUrl }
+  return {
+    appUrl,
+    posthogProject: process.env.POSTHOG_PROJECT ?? "",
+    posthogApiHost: process.env.POSTHOG_API_HOST ?? "",
+    posthogApiVersion: process.env.POSTHOG_API_VERSION ?? "",
+  }
 }

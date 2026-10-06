@@ -1,3 +1,4 @@
+import { CookieSettingsButton } from "@sohizi/analytics/consent"
 import { Link } from "@tanstack/react-router"
 import {
   IconBrandDiscord,
@@ -57,6 +58,7 @@ export function LandingFooter() {
           </p>
           <div className="mt-5">
             <CtaButton
+              location="footer"
               size="sm"
               className="h-9 px-4 text-sm"
               label="Get started"
@@ -96,7 +98,8 @@ export function LandingFooter() {
       </div>
 
       <div className="mx-auto mt-12 max-w-6xl pt-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Sohizi Lab. All rights reserved.
+        © {new Date().getFullYear()} Sohizi Lab. All rights reserved.{" "}
+        <CookieSettingsButton className="ml-3 underline underline-offset-2" />
       </div>
     </footer>
   )

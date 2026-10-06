@@ -1,3 +1,5 @@
+import { CookieSettingsButton } from "@sohizi/analytics/consent"
+import { resetAnalyticsUser } from "@sohizi/analytics/browser"
 import { useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { Button } from "@sohizi/ui/button"
@@ -21,6 +23,7 @@ export function AccountProfilePage() {
   const handleSignOut = async () => {
     setSigningOut(true)
     await authClient.signOut()
+    resetAnalyticsUser()
     navigate({ to: "/sign-in" })
   }
 
@@ -44,6 +47,8 @@ export function AccountProfilePage() {
             </p>
           </div>
         </div>
+
+        <CookieSettingsButton className="text-sm underline underline-offset-2" />
 
         <Button
           variant="outline"

@@ -39,7 +39,7 @@ export function FinalCtaSection() {
             {finalCta.body}
           </p>
           <div className="mt-8 flex flex-col items-center gap-3">
-            <CtaButton />
+            <CtaButton location="final_cta" />
           </div>
         </div>
       </motion.div>
