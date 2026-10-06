@@ -1,6 +1,4 @@
 import {
-  ChevronDown,
-  ChevronRight,
   FilePlus,
   FolderPlus,
   MoreHorizontal,
@@ -22,12 +20,17 @@ import {
   MenubarSubTrigger,
   MenubarTrigger,
 } from "@sohizi/ui/menubar"
+import { IconCaretDownFilled, IconCaretRightFilled } from "@tabler/icons-react"
 import { useEditorStore } from "../../stores/editor-store"
+import { appendDirectoryChild } from "../../stores/directory-children-cache"
 import { insertNodeAt as insertNodeInCache } from "../../stores/file-tree-cache"
 import { getDirectoryIcon } from "../../utils/get-file-icon"
 import { FILE_TYPE_OPTIONS } from "./node-menu"
 import type { FileNodeType, FileTreeNode, NodeProps } from "../../types"
-import { getlistFileTreePerDirectoryOptions } from "@/features/projects/query-mutation"
+import {
+  directoryChildrenKey,
+  getlistFileTreePerDirectoryOptions,
+} from "@/features/projects/query-mutation"
 import { cn } from "@/lib/utils"
 import { useFileUpload } from "@/hooks/use-file-upload"
 import { useSaveFileBucket } from "@/hooks/use-save-file-bucket"
@@ -81,9 +84,9 @@ export function DirectoryNode(props: NodeProps) {
     >
       <span className="flex size-4 shrink-0 items-center justify-center">
         {node.isOpen ? (
-          <ChevronDown className="size-3" />
+          <IconCaretDownFilled className="size-3" />
         ) : (
-          <ChevronRight className="size-3" />
+          <IconCaretRightFilled className="size-3" />
         )}
       </span>
 
@@ -182,7 +185,7 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
           <MenubarContent
             align="start"
             side="bottom"
-            className="min-w-[160px]"
+            className="min-w-40"
             onCloseAutoFocus={(e) => e.preventDefault()}
             onClick={(e) => e.stopPropagation()}
           >
@@ -323,6 +326,16 @@ function useHandleUploadFile(
                 fileNode,
                 totalChildren,
               )
+              appendDirectoryChild(queryClient, projectId, node.id, {
+                ...fileNode,
+                previewUrl:
+                  fileNode.type === "image" || fileNode.type === "video"
+                    ? result.asset.url
+                    : null,
+              })
+              void queryClient.invalidateQueries({
+                queryKey: directoryChildrenKey(projectId, node.id),
+              })
             },
             onError: (error) => {
               toast.error(error.message)

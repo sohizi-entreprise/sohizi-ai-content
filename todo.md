@@ -36,3 +36,24 @@
 [ ] let's have a starting template when the chat is empty and an explainer when there is not tab open, let's open an home page with updates???
 [ ] create 3 variations of captions style
 [ ] improve the logos of the file so they look minimalistic and modern
+[ ] handle the no internet state (maybe show a banner)
+[ ] handle the error state for chat and media generation
+
+<!-- Observability -->
+[ ] integrate sentry for logs
+[ ] add analytics for tracking
+
+<!-- Operations -->
+[ ] create professional email from google suite
+[ ] create 3 virtual bank accounts (infrastructure expenses, marketing expenses and revenue)
+
+<!-- Marketing -->
+[ ] improve copywriting
+[ ] create seo system
+[ ] create youtube channels
+
+<!-- Payment -->
+[ ] design final pricing and plan
+[ ] create product in polar.sh
+[ ] validate account with polar.sh
+[ ] connect payments

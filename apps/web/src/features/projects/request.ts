@@ -1,6 +1,7 @@
 import type {
   CreateTemplateInput,
   CreateTemplateResponse,
+  DirectoryChildrenPage,
   FileNode,
   PaginatedResponse,
   ProjectAssetFile,
@@ -61,6 +62,22 @@ export const listFileTreePerDirectory = async (
 ): Promise<Array<FileNode>> => {
   const response = await api.get(`/projects/${projectId}/files`, {
     params: { parentId },
+  })
+  return response.data
+}
+
+export const listDirectoryChildren = async (
+  projectId: string,
+  parentId: string,
+  options?: { cursor?: string; limit?: number; signal?: AbortSignal },
+): Promise<DirectoryChildrenPage> => {
+  const response = await api.get(`/projects/${projectId}/files/children`, {
+    params: {
+      parentId,
+      cursor: options?.cursor,
+      limit: options?.limit,
+    },
+    signal: options?.signal,
   })
   return response.data
 }

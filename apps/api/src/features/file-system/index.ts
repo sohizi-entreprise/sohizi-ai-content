@@ -53,6 +53,26 @@ export const fileSystemRoutes = new Elysia({
     },
   )
   .get(
+    "/children",
+    ({ params, query }) => {
+      return fileService.listDirectoryChildren(
+        params.projectId,
+        query.parentId,
+        {
+          cursor: query.cursor,
+          limit: query.limit,
+        },
+      )
+    },
+    {
+      query: z.object({
+        parentId: z.uuid("Invalid parent id"),
+        cursor: z.string().min(1).optional(),
+        limit: z.coerce.number().int().positive().max(100).optional(),
+      }),
+    },
+  )
+  .get(
     "/search",
     ({ params, query }) => {
       return fileService.searchFilesByName({

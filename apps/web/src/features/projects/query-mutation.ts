@@ -18,6 +18,12 @@ const keysFactory = {
     "file-tree",
     parentId,
   ],
+  fileTreeChildren: (projectId: string, parentId: string) => [
+    "project",
+    projectId,
+    "file-tree-children",
+    parentId,
+  ],
   filesByType: (projectId: string, type: string) => [
     "project",
     projectId,
@@ -58,6 +64,11 @@ export const getListProjectsQueryOptions = ({
 
 export const fileTreeKey = (projectId: string, parentId: string) =>
   keysFactory.fileTree(projectId, parentId)
+
+export const directoryChildrenKey = (projectId: string, parentId: string) =>
+  keysFactory.fileTreeChildren(projectId, parentId)
+
+export const DIRECTORY_CHILDREN_PAGE_SIZE = 48
 
 export const getProjectQueryOptions = (id: string) =>
   queryOptions({
@@ -101,6 +112,24 @@ export const getlistFileTreePerDirectoryOptions = (
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: true,
+  })
+
+export const listDirectoryChildrenQueryOptions = (
+  projectId: string,
+  parentId: string,
+) =>
+  infiniteQueryOptions({
+    queryKey: directoryChildrenKey(projectId, parentId),
+    queryFn: ({ pageParam, signal }) =>
+      requests.listDirectoryChildren(projectId, parentId, {
+        cursor: pageParam,
+        limit: DIRECTORY_CHILDREN_PAGE_SIZE,
+        signal,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    staleTime: 1000 * 60,
+    refetchOnWindowFocus: false,
   })
 
 export const filesByTypeKey = (projectId: string, type: string) =>
@@ -151,11 +180,7 @@ export const listFolderMediaQueryOptions = (
   options?: { type?: "image" | "video" | "audio"; limit?: number },
 ) =>
   queryOptions({
-    queryKey: keysFactory.folderMedia(
-      projectId,
-      folderId ?? "",
-      options?.type,
-    ),
+    queryKey: keysFactory.folderMedia(projectId, folderId ?? "", options?.type),
     queryFn: ({ signal }) =>
       requests.listFolderMedia(projectId, folderId!, {
         type: options?.type,

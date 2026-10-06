@@ -1,15 +1,20 @@
 import {
   IconCameraAi,
-  IconFileAi,
-  IconFileDescription,
   IconFileLambda,
   IconFolderFilled,
   IconFolderOpenFilled,
-  IconLayoutGrid,
-  IconMovie,
-  IconMusic,
 } from "@tabler/icons-react"
-import { Clapperboard, File, FileBadge, FileImage } from "lucide-react"
+import {
+  File,
+  FileBadge,
+  FileMinus,
+  FilePlay,
+  FileSearch,
+  FileSpreadsheet,
+  Image,
+  Music,
+  Video,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function getFileIcon(
@@ -20,7 +25,7 @@ export function getFileIcon(
   switch (type) {
     case "document":
       if (name === "context") {
-        return <IconFileAi className="size-4 shrink-0 text-yellow-300" />
+        return <FileSearch className="size-4 shrink-0 text-yellow-200" />
       }
       if (format === "json") {
         return <IconFileLambda className="size-4 shrink-0 text-green-400" />
@@ -28,19 +33,19 @@ export function getFileIcon(
       if (format === "pdf" || format === "html" || format === "file") {
         return <IconFileLambda className="size-4 shrink-0 text-green-400" />
       }
-      return <IconFileDescription className="size-4 shrink-0 text-blue-400" />
+      return <FileMinus className="size-4 shrink-0 text-blue-400" />
     case "audio":
-      return <IconMusic className="size-4 shrink-0 text-green-400" />
+      return <Music className="size-4 shrink-0 text-green-400" />
     case "video":
-      return <IconMovie className="size-4 shrink-0 text-green-400" />
+      return <Video className="size-4 shrink-0 text-green-400" />
     case "image":
-      return <FileImage className="size-4 shrink-0 text-green-400" />
+      return <Image className="size-4 shrink-0 text-green-400" />
     case "video-editor":
-      return <Clapperboard className="size-4 shrink-0 text-pink-300" />
+      return <FilePlay className="size-4 shrink-0 text-pink-300" />
     case "skill":
-      return <FileBadge className="size-4 shrink-0 text-yellow-300" />
+      return <FileBadge className="size-4 shrink-0 text-yellow-200" />
     case "storyboard":
-      return <IconLayoutGrid className="size-4 shrink-0 text-orange-300" />
+      return <FileSpreadsheet className="size-4 shrink-0 text-pink-300" />
     case "ai-generated":
       return <IconCameraAi className="size-4 shrink-0 text-yellow-300" />
     default:

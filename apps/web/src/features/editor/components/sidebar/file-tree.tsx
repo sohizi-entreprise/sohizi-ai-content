@@ -5,6 +5,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useFileTreeStore } from "../../stores/file-tree-store"
 import { useEditorStore } from "../../stores/editor-store"
 import {
+  appendDirectoryChild,
+  removeDirectoryChild,
+  updateDirectoryChild,
+} from "../../stores/directory-children-cache"
+import {
   insertNodeAt as insertNodeInCache,
   isDirLoaded,
   removeNode as removeNodeFromCache,
@@ -14,6 +19,7 @@ import {
 import { DirectoryNode } from "../file-node/node-directory"
 import { DocumentNode } from "../file-node/node-file"
 import useFileTreeBridge from "../../bridge/use-file-tree-bridge"
+import { defaultFormatForType } from "../../utils/file-kind"
 import type {
   DeleteHandler,
   MoveHandler,
@@ -22,11 +28,12 @@ import type {
   RowRendererProps,
 } from "react-arborist"
 import type { FileNodeType, FileTreeNode, NodeProps } from "../../types"
-import { defaultFormatForType } from "../../utils/file-kind"
 import { cn } from "@/lib/utils"
 import {
   createFileNodeMutationOptions,
   deleteFileNodeMutationOptions,
+  directoryChildrenKey,
+  fileTreeKey,
   getProjectQueryOptions,
   getlistFileTreePerDirectoryOptions,
   moveFileNodeMutationOptions,
@@ -157,6 +164,13 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
             parentId,
             node.directory ? { ...created, children: [] } : created,
           )
+          appendDirectoryChild(queryClient, projectId, parentId, {
+            ...created,
+            previewUrl: null,
+          })
+          void queryClient.invalidateQueries({
+            queryKey: directoryChildrenKey(projectId, parentId),
+          })
           if (!created.directory) {
             openFile(created)
           }
@@ -169,7 +183,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
     if (!node || node.name === name.trim()) return
 
     const parentId = node.parentId ?? rootFolderId
-    updateNodeInCache(queryClient, projectId, parentId, id, {
+    updateDirectoryChild(queryClient, projectId, parentId, id, {
       name: name.trim(),
     })
     try {
@@ -177,7 +191,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
         fileId: id,
         name: name.trim(),
       })
-      updateNodeInCache(queryClient, projectId, parentId, id, {
+      updateDirectoryChild(queryClient, projectId, parentId, id, {
         name: updated.name,
         path: updated.path,
       })
@@ -188,7 +202,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
       })
     } catch (err) {
       console.error("Failed to rename:", err)
-      updateNodeInCache(queryClient, projectId, parentId, id, {
+      updateDirectoryChild(queryClient, projectId, parentId, id, {
         name: node.name,
       })
     }
@@ -230,7 +244,7 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
       resolvedParentId,
     )
 
-    removeNodeFromCache(queryClient, projectId, oldParentId, fileId)
+    removeDirectoryChild(queryClient, projectId, oldParentId, fileId)
     const clampedIndex = Math.min(index, filteredSiblings.length)
 
     if (parentWasLoaded) {
@@ -266,8 +280,32 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
         path: updated.path,
         oldPath: node.path,
       })
+      void queryClient.invalidateQueries({
+        queryKey: directoryChildrenKey(projectId, oldParentId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: directoryChildrenKey(projectId, resolvedParentId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: fileTreeKey(projectId, oldParentId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: fileTreeKey(projectId, resolvedParentId),
+      })
     } catch (err) {
       console.error("Failed to move:", err)
+      void queryClient.invalidateQueries({
+        queryKey: directoryChildrenKey(projectId, oldParentId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: directoryChildrenKey(projectId, resolvedParentId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: fileTreeKey(projectId, oldParentId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: fileTreeKey(projectId, resolvedParentId),
+      })
     }
   }
 
@@ -285,15 +323,24 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
 
       const fileIdsToClose = collectDescendantFileIds(node)
       const parentId = node.parentId ?? rootFolderId
-      removeNodeFromCache(queryClient, projectId, parentId, id)
+      removeDirectoryChild(queryClient, projectId, parentId, id)
       if (!id.startsWith("temp-")) {
         try {
           await deleteMutation.mutateAsync(id)
           for (const fileId of fileIdsToClose) {
             closeTab(fileId)
           }
+          void queryClient.invalidateQueries({
+            queryKey: directoryChildrenKey(projectId, parentId),
+          })
         } catch (err) {
           console.error("Failed to delete:", err)
+          void queryClient.invalidateQueries({
+            queryKey: directoryChildrenKey(projectId, parentId),
+          })
+          void queryClient.invalidateQueries({
+            queryKey: fileTreeKey(projectId, parentId),
+          })
         }
       }
     }

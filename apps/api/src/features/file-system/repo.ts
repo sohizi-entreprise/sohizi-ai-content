@@ -9,7 +9,7 @@ import {
   videoCompositions,
   type FileNode,
 } from "@/db/schema"
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { and, asc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm"
 import { DatabaseError } from "pg"
 import {
   FileCreationRequest,
@@ -1165,6 +1165,48 @@ function resolveInsertionIndex(
       return position === "before" ? anchorIndex : anchorIndex + 1
     }
   }
+}
+
+export const listDirectoryChildrenPage = async (
+  projectId: string,
+  parentId: string,
+  options: {
+    limit: number
+    cursor?: { position: number; id: string } | null
+  },
+) => {
+  const cursor = options.cursor
+  const filters = [
+    eq(fileNodes.projectId, projectId),
+    eq(fileNodes.parentId, parentId),
+  ]
+  if (cursor) {
+    const cursorFilter = or(
+      gt(fileNodes.position, cursor.position),
+      and(eq(fileNodes.position, cursor.position), gt(fileNodes.id, cursor.id)),
+    )
+    if (cursorFilter) filters.push(cursorFilter)
+  }
+
+  return db
+    .select({
+      id: fileNodes.id,
+      name: fileNodes.name,
+      directory: fileNodes.directory,
+      projectId: fileNodes.projectId,
+      type: fileNodes.type,
+      format: fileNodes.format,
+      parentId: fileNodes.parentId,
+      position: fileNodes.position,
+      editable: fileNodes.editable,
+      contentEditable: fileNodes.contentEditable,
+      path: fileNodes.path,
+      previewUrl: sql<string | null>`${fileNodes.metadata} ->> 'url'`,
+    })
+    .from(fileNodes)
+    .where(and(...filters))
+    .orderBy(asc(fileNodes.position), asc(fileNodes.id))
+    .limit(options.limit + 1)
 }
 
 export const listDirectoryFiles = async (

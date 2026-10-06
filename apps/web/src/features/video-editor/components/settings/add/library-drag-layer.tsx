@@ -57,8 +57,9 @@ function getLibraryDragLabel(
     return (item as TextPresetDragItem).label
   }
   if (itemType === ARBORIST_NODE_DRAG_TYPE) {
-    const asset = item as LibraryAssetDragItem | undefined
-    if (asset?.fromLibrary) return asset.label
+    const asset = item as
+      (LibraryAssetDragItem & { fromGrid?: boolean }) | undefined
+    if (asset?.fromLibrary && !asset.fromGrid) return asset.label
   }
   return null
 }

@@ -295,6 +295,13 @@
       "when": 1790973443045,
       "tag": "0041_vendor_adapter",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791208257530,
+      "tag": "0042_backfill_asset_file_node_metadata",
+      "breakpoints": true
     }
   ]
 }

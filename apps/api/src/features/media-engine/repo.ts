@@ -27,6 +27,7 @@ import { and, eq, desc, lt, isNull, max, inArray, or, sql } from "drizzle-orm"
 import { ORDER_GAP } from "../file-system/repo"
 import { classifyFileKindFromAsset } from "../file-system/file-kind"
 import { joinLtree, normalizeFileName } from "../file-system/utils"
+import { mergeAssetFileNodeMetadata } from "./file-node-metadata"
 import {
   createGenerationRequest,
   deleteGenerationRequest,
@@ -128,12 +129,21 @@ export const createAssetWithFileNode = async (
       }
 
       const kind = classifyFileKindFromAsset(type, metadata.contentType)
+      const fileNodeMetadata = mergeAssetFileNodeMetadata(
+        existingFileNode.metadata,
+        {
+          metadata,
+          url,
+          storageKey,
+        },
+      )
       const updatedFileNodeResponse = await tx
         .update(fileNodes)
         .set({
           type: kind.type,
           format: kind.format,
           editable: true,
+          metadata: fileNodeMetadata,
         })
         .where(
           and(
@@ -196,6 +206,7 @@ export const createAssetWithFileNode = async (
       editable: true,
       position: filePosition,
       path: joinLtree(folder.path, normalizedName),
+      metadata: mergeAssetFileNodeMetadata(null, { metadata, url, storageKey }),
     }
     const fileNodeResponse = await tx
       .insert(fileNodes)
@@ -527,13 +538,32 @@ export const updateAssetMetadataValues = async (
     values,
   }
 
-  const result = await db
-    .update(assets)
-    .set({ metadata, updatedAt: new Date() })
-    .where(and(eq(assets.projectId, projectId), eq(assets.id, assetId)))
-    .returning()
+  return db.transaction(async (tx) => {
+    const result = await tx
+      .update(assets)
+      .set({ metadata, updatedAt: new Date() })
+      .where(and(eq(assets.projectId, projectId), eq(assets.id, assetId)))
+      .returning()
+    const updated = result[0]
+    if (!updated) return null
 
-  return result[0] ?? null
+    if (updated.fileNodeId) {
+      await tx
+        .update(fileNodes)
+        .set({
+          metadata: sql`coalesce(${fileNodes.metadata}, '{}'::jsonb) || ${JSON.stringify(
+            mergeAssetFileNodeMetadata(null, updated),
+          )}::jsonb`,
+        })
+        .where(
+          and(
+            eq(fileNodes.projectId, projectId),
+            eq(fileNodes.id, updated.fileNodeId),
+          ),
+        )
+    }
+    return updated
+  })
 }
 
 export const getAssetsByIds = async (projectId: string, assetIds: string[]) => {
@@ -628,6 +658,7 @@ export const attachAssetToFileNode = async ({
         editable: true,
         position: maxPosition + ORDER_GAP,
         path: joinLtree(folder.path, fileName),
+        metadata: mergeAssetFileNodeMetadata(null, asset),
       })
       .returning()
     const fileNode = res2[0]
@@ -703,6 +734,7 @@ export const attachAssetsToFileNodes = async ({
         editable: true,
         position: maxPosition + ORDER_GAP * (index + 1),
         path: joinLtree(folder.path, fileName),
+        metadata: mergeAssetFileNodeMetadata(null, asset),
       }
     })
 
@@ -796,7 +828,10 @@ export const getVendorParamsMapping = async (
       llmVendorModelParameterOverrides,
       and(
         eq(llmVendorModelParameterOverrides.vendorId, llmVendors.id),
-        eq(llmVendorModelParameterOverrides.modelId, modelsAndParameters.modelId),
+        eq(
+          llmVendorModelParameterOverrides.modelId,
+          modelsAndParameters.modelId,
+        ),
         eq(
           llmVendorModelParameterOverrides.parameterId,
           modelsAndParameters.parameterId,

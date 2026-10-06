@@ -2,6 +2,7 @@ import type { FileNode } from "@/db/schema"
 import { MAX_FILE_DEPTH } from "../constants"
 import * as fileSystemRepo from "../repo"
 import { FileSystemInputError } from "./base"
+import { requiresMoveTargetValidation } from "./move-target-validation"
 import { wouldCreateFileNodeCycle } from "./would-create-file-node-cycle"
 import { ltreeDepth } from "../utils"
 
@@ -10,6 +11,11 @@ export async function validateMoveTarget(
   fileNode: FileNode,
   parentId: string | null,
 ) {
+  // Reordering only changes the position among existing siblings. The current
+  // tree already contains this node, so rerunning depth/cycle validation can
+  // incorrectly reject valid legacy or maximum-depth subtrees.
+  if (!requiresMoveTargetValidation(fileNode.parentId, parentId)) return
+
   let destinationParent: FileNode | undefined
   if (parentId !== null) {
     destinationParent = await fileSystemRepo.getFileNodeById(

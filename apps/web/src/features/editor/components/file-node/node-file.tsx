@@ -134,7 +134,7 @@ function FileMenu({ node, tree, onCreateFile }: NodeProps) {
         <MenubarContent
           align="start"
           side="bottom"
-          className="min-w-[160px]"
+          className="min-w-40"
           onCloseAutoFocus={(e) => e.preventDefault()}
           onClick={(e) => e.stopPropagation()}
         >

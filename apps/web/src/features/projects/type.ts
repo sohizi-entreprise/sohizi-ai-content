@@ -21,6 +21,16 @@ export type FileNode = {
   path: string
 }
 
+export type DirectoryChild = FileNode & {
+  previewUrl: string | null
+}
+
+export type DirectoryChildrenPage = {
+  data: Array<DirectoryChild>
+  nextCursor: string | null
+  hasMore: boolean
+}
+
 /** File node from the assets-folder listing, with media URL joined in. */
 export type ProjectAssetFile = FileNode & {
   url: string | null

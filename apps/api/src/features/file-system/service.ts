@@ -28,6 +28,12 @@ import { CursorPaginationOptions } from "@/type"
 import * as videoEditorRepo from "../video-editor/repo"
 import { fromApiPath, serializeFileNode, toApiPath } from "./utils"
 import {
+  DIRECTORY_CHILDREN_PAGE_SIZE,
+  decodeDirectoryChildCursor,
+  previewUrlForChild,
+  sliceDirectoryChildrenPage,
+} from "./directory-children"
+import {
   parseSkillDocument,
   resolveSkillFileMetadata,
   serializeSkillDocument,
@@ -263,6 +269,44 @@ export const listFileTreePerLevel = async (
   return fileSystemRepo
     .listDirectoryFiles(projectId, parentId)
     .then((files) => files.map(serializeFileNode))
+}
+
+export const listDirectoryChildren = async (
+  projectId: string,
+  parentId: string,
+  options?: { limit?: number; cursor?: string },
+) => {
+  const parent = await fileSystemRepo.getFileNodeById(projectId, parentId)
+  if (!parent) {
+    throw new NotFound("File not found")
+  }
+  if (!parent.directory) {
+    throw new BadRequest("Parent is not a directory")
+  }
+
+  const limit = options?.limit ?? DIRECTORY_CHILDREN_PAGE_SIZE
+  const cursor = options?.cursor
+    ? decodeDirectoryChildCursor(options.cursor)
+    : null
+  if (options?.cursor && !cursor) {
+    throw new BadRequest("Invalid cursor")
+  }
+
+  const rows = await fileSystemRepo.listDirectoryChildrenPage(
+    projectId,
+    parentId,
+    { limit, cursor },
+  )
+  const page = sliceDirectoryChildrenPage(rows, limit)
+
+  return {
+    data: page.data.map((row) => ({
+      ...serializeFileNode(row),
+      previewUrl: previewUrlForChild(row.type, row.previewUrl),
+    })),
+    nextCursor: page.nextCursor,
+    hasMore: page.hasMore,
+  }
 }
 
 export const getFileContent = async (

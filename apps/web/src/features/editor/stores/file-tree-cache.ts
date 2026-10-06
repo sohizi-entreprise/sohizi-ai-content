@@ -94,6 +94,16 @@ export function removeNode(
   qc.removeQueries({ queryKey: fileTreeKey(projectId, id) })
 }
 
+export function reorderNodesInDirectory(
+  qc: QueryClient,
+  projectId: string,
+  parentId: string,
+  orderedNodes: Array<FileTreeNode>,
+): void {
+  if (!isDirLoaded(qc, projectId, parentId)) return
+  setEntry(qc, projectId, parentId, orderedNodes)
+}
+
 export function assembleTree(
   qc: QueryClient,
   projectId: string,
