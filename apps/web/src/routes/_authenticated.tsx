@@ -5,15 +5,23 @@ import {
 import { useAnalyticsConsent } from "@sohizi/analytics/consent"
 import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
+import {
+  reportBrowserError,
+  reportServerBoundaryError,
+} from "@/lib/sentry-client"
 import { OrgSetupModal } from "@/features/account/components/org-setup-modal"
 import { authClient, organization, useSession } from "@/lib/auth-client"
 
 export const Route = createFileRoute("/_authenticated")({
   component: RouteComponent,
-  errorComponent: ({ error }) => (
-    <div>Error loading dashboard: {error.message}</div>
-  ),
+  errorComponent: ({ error }) => <DashboardError error={error} />,
 })
+
+function DashboardError({ error }: { error: Error }) {
+  reportServerBoundaryError(error)
+  useEffect(() => reportBrowserError(error), [error])
+  return <div>Error loading dashboard: {error.message}</div>
+}
 
 function RouteComponent() {
   const { data: session, isPending, refetch } = useSession()

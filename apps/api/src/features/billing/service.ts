@@ -6,6 +6,7 @@
  */
 
 import * as repo from "./repo"
+import { captureUnexpectedError } from "@/sentry"
 import type {
   BillingReservation,
   Credits,
@@ -105,6 +106,7 @@ export class BillingService {
     if (this.sweepTimer) return
     this.sweepTimer = setInterval(() => {
       this.sweepExpired(batch).catch((err) => {
+        captureUnexpectedError(err, { component: "billing-sweeper" })
         console.error("[billing] sweep failed", err)
       })
     }, intervalMs)

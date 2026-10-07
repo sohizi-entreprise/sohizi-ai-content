@@ -1,3 +1,4 @@
+import { readSentryConfig } from "./sentry-config"
 import type { PublicEnv } from "./public-env"
 
 export function readPublicEnvFromNitro(): PublicEnv {
@@ -12,6 +13,7 @@ export function readPublicEnvFromNitro(): PublicEnv {
   }
 
   return {
+    sentry: readSentryConfig(),
     siteUrl,
     mediaCdnUrl,
     posthogProject: process.env.POSTHOG_PROJECT ?? "",

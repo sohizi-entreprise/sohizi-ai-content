@@ -8,12 +8,14 @@ COPY bun.lock bun.lock
 
 COPY /apps/api/package.json ./apps/api/package.json
 COPY /packages/eslint-config/package.json ./packages/eslint-config/package.json
+COPY /packages/analytics/package.json ./packages/analytics/package.json
 
 RUN bun install
 
 # Copy source only so bun's isolated workspace node_modules stay intact
 COPY /apps/api/src ./apps/api/src
 COPY /apps/api/tsconfig.json ./apps/api/tsconfig.json
+COPY /packages/analytics/src ./packages/analytics/src
 
 ENV NODE_ENV=production
 
@@ -23,8 +25,9 @@ RUN bun build \
 	--compile \
 	--minify-whitespace \
 	--minify-syntax \
+	--sourcemap \
 	--outfile /app/api \
-	src/index.ts \
+	src/entry.ts \
 	&& bun build \
 	--compile \
 	--minify-whitespace \

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { defineConfig, loadEnv } from "vite"
 import { devtools } from "@tanstack/devtools-vite"
 import { tanstackStart } from "@tanstack/react-start/plugin/vite"
+import { sentryTanstackStart } from "@sentry/tanstackstart-react/vite"
 import viteReact from "@vitejs/plugin-react"
 import viteTsConfigPaths from "vite-tsconfig-paths"
 import tailwindcss from "@tailwindcss/vite"
@@ -60,10 +61,14 @@ const config = defineConfig(({ mode }) => {
     ssr: {
       // Bundle so Vite resolves extensionless relative imports (Node ESM requires .js)
       noExternal: ["@cyntler/react-doc-viewer"],
+      external: ["@sentry/tanstackstart-react"],
     },
     plugins: [
       devtools(),
       nitro({
+        // Nitro/Rollup cannot bundle the Sentry server package; trace it into .output.
+        rollupConfig: { external: [/^@sentry\//] },
+        traceDeps: ["@sentry/tanstackstart-react*"],
         routeRules: {
           "/api/auth": { proxy: `${apiUrl}/api/auth` },
           "/api/auth/**": { proxy: `${apiUrl}/api/auth/**` },
@@ -79,6 +84,14 @@ const config = defineConfig(({ mode }) => {
       tailwindcss(),
       tanstackStart(),
       viteReact(),
+      sentryTanstackStart({
+        // Request and function middleware are installed in src/start.ts.
+        autoInstrumentMiddleware: false,
+        org: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT_WEB,
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        release: { name: process.env.SENTRY_RELEASE },
+      }),
     ],
   }
 })

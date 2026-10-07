@@ -1,4 +1,5 @@
 import "./instrumentation"
+import { captureUnexpectedError } from "./sentry"
 import { Elysia } from "elysia"
 import { swagger } from "@elysiajs/swagger"
 import * as routes from "./features"
@@ -25,6 +26,8 @@ const corsConfig = {
     "Last-Event-ID",
     "Accept",
     "Cache-Control",
+    "sentry-trace",
+    "baggage",
   ],
   credentials: true,
 }
@@ -58,7 +61,7 @@ const app = new Elysia()
   .use(cors(corsConfig))
   .use(betterAuthPlugin)
   .error({ ...errors, InsufficientCreditsError, NameConflictError })
-  .onError(({ code, error, request }) => {
+  .onError(({ code, error, request, route }) => {
     const url = new URL(request.url)
     switch (code) {
       case "BadRequest":
@@ -66,22 +69,38 @@ const app = new Elysia()
       case "Forbidden":
       case "Unauthorized":
       case "NotFound":
-      case "InternalServerError":
         return error instanceof errors.BadRequest ||
           error instanceof errors.Conflict ||
           error instanceof errors.Forbidden ||
           error instanceof errors.Unauthorized ||
-          error instanceof errors.NotFound ||
-          error instanceof errors.InternalServerError
+          error instanceof errors.NotFound
           ? error.toResponse()
           : error
       case "InsufficientCreditsError":
         return (error as InsufficientCreditsError).toResponse()
       case "NameConflictError":
         return (error as NameConflictError).toResponse()
+      case "InternalServerError":
+        captureUnexpectedError(error, {
+          service: "api",
+          route,
+          method: request.method,
+          error_code: String(code),
+          request_id: request.headers.get("x-request-id") ?? undefined,
+        })
+        return error instanceof errors.InternalServerError
+          ? error.toResponse()
+          : error
       case "VALIDATION":
         return new errors.BadRequest(error.message)
       default:
+        captureUnexpectedError(error, {
+          service: "api",
+          route,
+          method: request.method,
+          error_code: String(code),
+          request_id: request.headers.get("x-request-id") ?? undefined,
+        })
         console.error(`[${code}] ${request.method} ${url.pathname}\n`, error)
         return Response.json(
           {

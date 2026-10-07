@@ -13,6 +13,10 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      SENTRY_DSN: ${API_SENTRY_DSN}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-rc}
+      SENTRY_LOCAL_ENABLED: ${SENTRY_LOCAL_ENABLED:-false}
+      SENTRY_RELEASE: ${SENTRY_RELEASE}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379
       INNGEST_DEV: "0"
@@ -62,6 +66,10 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      SENTRY_DSN: ${WEB_SENTRY_DSN}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-rc}
+      SENTRY_LOCAL_ENABLED: ${SENTRY_LOCAL_ENABLED:-false}
+      SENTRY_RELEASE: ${SENTRY_RELEASE}
       HOST: 0.0.0.0
       PORT: "3000"
       SITE_URL: ${WEB_SITE_URL}
@@ -91,6 +99,10 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      SENTRY_DSN: ${SITE_SENTRY_DSN}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-rc}
+      SENTRY_LOCAL_ENABLED: ${SENTRY_LOCAL_ENABLED:-false}
+      SENTRY_RELEASE: ${SENTRY_RELEASE}
       HOST: 0.0.0.0
       PORT: "3001"
       APP_URL: ${SITE_APP_URL}

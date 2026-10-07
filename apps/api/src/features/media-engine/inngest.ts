@@ -1,5 +1,6 @@
 import { captureConsentedEvent } from "@/features/analytics-consent"
 import { NonRetriableError } from "inngest"
+import { captureUnexpectedError } from "@/sentry"
 import { inngest } from "@/lib/inngest/client"
 import * as repo from "./repo"
 import * as storage from "./storage"
@@ -120,6 +121,12 @@ export const handleMediaGeneration = inngest.createFunction(
     triggers: [{ event: "media/generate" }],
     onFailure: async ({ event }) => {
       const data = event.data.event.data as ProviderMediaEventData
+      captureUnexpectedError(event.data.error, {
+        job: "media-generate",
+        project_id: data.projectId,
+        request_id: data.requestId,
+        model: data.model,
+      })
       await safeRefund(
         billingService,
         data._reservationId,

@@ -3,6 +3,7 @@ import { billingService, safeRefund } from "@/features/billing"
 import * as repo from "./repo"
 import { reconcileRenderJob } from "./render-service"
 import { RENDER_RESERVATION_TTL_MS } from "./render-pricing"
+import { captureUnexpectedError } from "@/sentry"
 
 const POLL_INTERVAL = "5s"
 const MAX_POLL_ATTEMPTS = 360
@@ -23,6 +24,11 @@ export const handleVideoExportPoll = inngest.createFunction(
     triggers: [{ event: "video-editor/render.poll" }],
     onFailure: async ({ event }) => {
       const data = event.data.event.data as RenderPollEventData
+      captureUnexpectedError(event.data.error, {
+        job: "video-editor-render-poll",
+        project_id: data.projectId,
+        render_job_id: data.renderJobId,
+      })
       const job = await repo.getRenderJobById(data.renderJobId)
       if (!job || !isActiveStatus(job.status)) return
       await safeRefund(

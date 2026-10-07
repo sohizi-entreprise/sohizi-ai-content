@@ -5,7 +5,7 @@
   "scripts": {
     "test": "bun test",
     "test:ci": "bun test src/features/command/resolve.test.ts src/features/routing/tests/limiter.test.ts src/features/video-editor/tests/render-service.test.ts src/features/video-editor/render-pricing.test.ts",
-    "dev": "docker compose -f ../../docker/docker-compose-inngest.yaml up -d && bun run --watch src/index.ts",
+    "dev": "docker compose -f ../../docker/docker-compose-inngest.yaml up -d && bun run --watch src/entry.ts",
     "db:generate": "npx drizzle-kit generate",
     "db:migrate": "MIGRATIONS_FOLDER=./src/db/migrations bun run src/db/migrate.ts",
     "auth:generate": "npx auth@latest generate --config src/lib/auth.ts --output src/db/schema/auth.ts --yes",
@@ -29,6 +29,7 @@
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/sdk-trace-node": "^2.11.0",
     "@remotion/lambda-client": "4.0.459",
+    "@sentry/bun": "11.1.0",
     "@sohizi/analytics": "workspace:*",
     "@toon-format/toon": "^2.1.0",
     "ai": "^7",

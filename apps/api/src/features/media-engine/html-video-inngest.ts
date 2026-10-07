@@ -1,4 +1,5 @@
 import { NonRetriableError } from "inngest"
+import { captureUnexpectedError } from "@/sentry"
 import { inngest } from "@/lib/inngest/client"
 import { createAgentFromDefinition } from "@/features/ai/agent/core/agent-factory"
 import { Session } from "@/features/ai/agent/core/session"
@@ -49,6 +50,11 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
     triggers: [{ event: "media/generate.html-video" }],
     onFailure: async ({ event }) => {
       const data = event.data.event.data as HtmlVideoEventData
+      captureUnexpectedError(event.data.error, {
+        job: "media-generate-html-video",
+        project_id: data.projectId,
+        request_id: data.requestId,
+      })
       if (data.requestId) {
         await finalizeGenerationRequest(data.requestId, "failed")
       }

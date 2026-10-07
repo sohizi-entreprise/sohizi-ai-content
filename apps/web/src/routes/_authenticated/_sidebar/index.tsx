@@ -9,6 +9,7 @@ import ListProjects, {
 } from "@/features/projects/components/list-projects"
 import ProjectHeader from "@/features/projects/components/project-header"
 import StartProject from "@/features/projects/pages/start-project"
+import { reportBrowserError } from "@/lib/sentry-client"
 
 export const Route = createFileRoute("/_authenticated/_sidebar/")({
   validateSearch: z.object({
@@ -24,6 +25,7 @@ function RouteComponent() {
       <Separator className="mt-20" />
       <ProjectHeader />
       <ErrorBoundary
+        onError={reportBrowserError}
         fallbackRender={({ resetErrorBoundary, error }) => (
           <ListProjectsError
             msg={error instanceof Error ? error.message : "Unknown error"}

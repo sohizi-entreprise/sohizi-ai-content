@@ -93,6 +93,13 @@ jobs:
         with:
           context: .
           file: apps/${{ matrix.app }}/Dockerfile
+          build-args: |
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT_WEB=${{ vars.SENTRY_PROJECT_WEB }}
+            SENTRY_PROJECT_SITE=${{ vars.SENTRY_PROJECT_SITE }}
+            SENTRY_RELEASE=${{ github.sha }}
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -128,6 +135,7 @@ jobs:
           cp compose.prod.yaml /tmp/sohizi-deploy/compose.yml
           cp docker/postgres/init.sql /tmp/sohizi-deploy/init.sql
           printf '%s\n' "$ENV_FILE" > /tmp/sohizi-deploy/.env
+          printf '\nSENTRY_RELEASE=%s\nSENTRY_ENVIRONMENT=rc\n' '${{ github.sha }}' >> /tmp/sohizi-deploy/.env
           remote="${SSH_USER}@${SSH_HOST}"
           ssh "$remote" 'mkdir -p ~/sohizi-lab'
           scp /tmp/sohizi-deploy/compose.yml /tmp/sohizi-deploy/init.sql /tmp/sohizi-deploy/.env "$remote:~/sohizi-lab/"

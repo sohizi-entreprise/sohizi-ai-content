@@ -8,6 +8,7 @@ import {
   type AwsRegion,
 } from "@remotion/lambda-client"
 import { BadRequest, InternalServerError } from "../error"
+import { logSentryWarning } from "@/sentry"
 import {
   clampRenderConcurrency,
   DEFAULT_LAMBDA_DISK_MB,
@@ -221,6 +222,9 @@ export async function getRemoteRender(
     return toRemoteJob(renderId, bucketName, functionName, progress)
   } catch (error) {
     if (isTransientProgressError(error)) {
+      logSentryWarning("Render progress temporarily unavailable", {
+        render_id: renderId,
+      })
       console.warn("[render] getRenderProgress throttled, will retry", renderId)
       return {
         jobId: renderId,

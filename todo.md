@@ -38,6 +38,7 @@
 [ ] improve the logos of the file so they look minimalistic and modern
 [ ] handle the no internet state (maybe show a banner)
 [ ] handle the error state for chat and media generation
+[ ] redesign all our loadings
 
 <!-- Observability -->
 [ ] integrate sentry for logs

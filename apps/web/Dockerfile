@@ -8,6 +8,7 @@ COPY bun.lock bun.lock
 
 COPY /apps/web/package.json ./apps/web/package.json
 COPY /packages/eslint-config/package.json ./packages/eslint-config/package.json
+COPY /packages/analytics/package.json ./packages/analytics/package.json
 COPY /packages/ui/package.json ./packages/ui/package.json
 COPY /packages/video-composition/package.json ./packages/video-composition/package.json
 
@@ -20,16 +21,22 @@ COPY /apps/web/vite.config.ts ./apps/web/vite.config.ts
 COPY /apps/web/tsconfig.json ./apps/web/tsconfig.json
 COPY /packages/ui/src ./packages/ui/src
 COPY /packages/ui/tsconfig.json ./packages/ui/tsconfig.json
+COPY /packages/analytics/src ./packages/analytics/src
 COPY /packages/video-composition/src ./packages/video-composition/src
 COPY /packages/video-composition/tsconfig.json ./packages/video-composition/tsconfig.json
 
 ARG API_URL=http://localhost:3030
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT_WEB
+ARG SENTRY_RELEASE
 ENV API_URL=$API_URL
 ENV NODE_ENV=production
 
 WORKDIR /app/apps/web
 
-RUN bun run build
+RUN --mount=type=secret,id=sentry_auth_token \
+    if [ -s /run/secrets/sentry_auth_token ]; then export SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token)"; fi; \
+    bun run build && find .output/public -name '*.map' -delete
 
 FROM oven/bun:1
 

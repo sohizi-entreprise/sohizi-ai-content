@@ -85,6 +85,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="min-h-screen bg-background font-geist antialiased">
         {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__SOHIZI_SENTRY__=${JSON.stringify(Route.useRouteContext().publicEnv.sentry).replace(/</g, "\\u003c")};`,
+          }}
+        />
         <Scripts />
       </body>
     </html>

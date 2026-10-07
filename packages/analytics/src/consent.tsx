@@ -142,48 +142,73 @@ export function AnalyticsProvider({
             right: 16,
             bottom: 16,
             margin: "0 auto",
-            maxWidth: 560,
+            // maxWidth: 760,
             padding: 20,
             borderRadius: 16,
-            border: "1px solid #64748b",
-            background: "#111827",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            background: "rgba(0, 0, 0, 0.8)",
+            backdropFilter: "blur(10px)",
             color: "#f9fafb",
             boxShadow: "0 16px 48px rgba(0,0,0,.35)",
+            display: "flex",
+            alignItems: "center",
           }}
         >
-          <strong style={{ display: "block", marginBottom: 8 }}>
-            Analytics cookies
-          </strong>
-          <p style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.5 }}>
-            We use PostHog to understand which parts of Sohizi Lab help people
-            create videos. Analytics is optional. Your choice applies to this
-            website and the app, and you can change it at any time. See our{" "}
-            <a href={privacyHref} style={{ textDecoration: "underline" }}>
-              privacy policy
-            </a>
-            .
-          </p>
-          {error && (
-            <p role="alert" style={{ color: "#fca5a5", marginBottom: 10 }}>
-              {error}
-            </p>
-          )}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              flex: 1,
+              alignItems: "center",
+              gap: "1rem",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <strong style={{ display: "block", marginBottom: 8 }}>
+                A better experience starts with cookies
+              </strong>
+              <p style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.5 }}>
+                We use cookies to optimise your experience on our app. You can
+                adjust your choice at any time. See our{" "}
+                <a
+                  href={privacyHref}
+                  style={{
+                    textDecoration: "underline",
+                    color: "oklch(0.936036 0.225167 121.2409)",
+                  }}
+                >
+                  privacy policy
+                </a>
+                .
+              </p>
+              {error && (
+                <p role="alert" style={{ color: "#fca5a5", marginBottom: 10 }}>
+                  {error}
+                </p>
+              )}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "1rem" }}>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void choose("rejected")}
+              style={{
+                ...buttonStyle,
+                background: "black",
+                color: "white",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                padding: "0.625rem 1rem",
+              }}
+            >
+              Reject All
+            </button>
             <button
               type="button"
               disabled={saving}
               onClick={() => void choose("accepted")}
               style={buttonStyle}
             >
-              Accept analytics
-            </button>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => void choose("rejected")}
-              style={buttonStyle}
-            >
-              Reject analytics
+              Accept All
             </button>
             {choice !== null && (
               <button
@@ -202,10 +227,8 @@ export function AnalyticsProvider({
 }
 
 const buttonStyle = {
-  flex: "1 1 150px",
-  padding: "10px 14px",
+  padding: "0.625rem 0.875rem",
   borderRadius: 8,
-  border: "1px solid #d1d5db",
   background: "#f9fafb",
   color: "#111827",
   fontWeight: 600,

@@ -55,6 +55,7 @@
     "@radix-ui/react-use-controllable-state": "^1.2.3",
     "@remotion/captions": "4.0.459",
     "@remotion/player": "4.0.459",
+    "@sentry/tanstackstart-react": "11.1.0",
     "@sohizi/analytics": "workspace:*",
     "@sohizi/ui": "workspace:*",
     "@sohizi/video-composition": "workspace:*",

@@ -1,4 +1,7 @@
+import type { SentryPublicConfig } from "./sentry-config"
+
 export type PublicEnv = {
+  sentry: SentryPublicConfig
   posthogProject: string
   posthogApiHost: string
   posthogApiVersion: string

@@ -13,6 +13,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@sentry/tanstackstart-react": "11.1.0",
     "@sohizi/analytics": "workspace:*",
     "@sohizi/ui": "workspace:*",
     "@tabler/icons-react": "^3.44.0",
