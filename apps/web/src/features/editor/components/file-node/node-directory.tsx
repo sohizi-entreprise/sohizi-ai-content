@@ -6,7 +6,7 @@ import {
   Trash,
   Upload,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import {
@@ -25,6 +25,7 @@ import { useEditorStore } from "../../stores/editor-store"
 import { appendDirectoryChild } from "../../stores/directory-children-cache"
 import { insertNodeAt as insertNodeInCache } from "../../stores/file-tree-cache"
 import { getDirectoryIcon } from "../../utils/get-file-icon"
+import { FileGridMenu } from "../sidebar/file-grid-menu"
 import { FILE_TYPE_OPTIONS } from "./node-menu"
 import type { FileNodeType, FileTreeNode, NodeProps } from "../../types"
 import {
@@ -38,11 +39,26 @@ import { useSaveFileBucket } from "@/hooks/use-save-file-bucket"
 const MAX_CHILDREN_PER_DIRECTORY = 100
 
 export function DirectoryNode(props: NodeProps) {
-  const { node, style, dragHandle } = props
+  const { node, tree, onCreateFile, style, dragHandle } = props
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const queryClient = useQueryClient()
+  const { openFileDialog, getInputProps } = useHandleUploadFile({
+    projectId: node.data.projectId,
+    node,
+  })
   const selectedFileId = useEditorStore((s) => s.selectedFileId)
   const openFile = useEditorStore((s) => s.openFile)
   const isSelected = selectedFileId === node.data.id
   const isDir = node.data.directory
+
+  useEffect(() => {
+    if (!node.isEditing) return
+    const frame = requestAnimationFrame(() => {
+      nameInputRef.current?.focus()
+      nameInputRef.current?.select()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [node.isEditing])
 
   useDirectoryChildren(node.data.projectId, node.data.id, isDir && node.isOpen)
 
@@ -67,7 +83,24 @@ export function DirectoryNode(props: NodeProps) {
     e.stopPropagation()
   }
 
-  return (
+  const ensureChildrenLoaded = () =>
+    queryClient.ensureQueryData(
+      getlistFileTreePerDirectoryOptions(node.data.projectId, node.data.id),
+    )
+
+  const createFile = async (type: FileNodeType) => {
+    if (!node.isOpen) node.open()
+    await ensureChildrenLoaded()
+    onCreateFile(node.data.id, 0, false, type)
+  }
+
+  const createFolder = async () => {
+    if (!node.isOpen) node.open()
+    await ensureChildrenLoaded()
+    onCreateFile(node.data.id, 0, true)
+  }
+
+  const row = (
     <div
       ref={dragHandle}
       style={style}
@@ -77,7 +110,9 @@ export function DirectoryNode(props: NodeProps) {
           ? "bg-accent text-foreground"
           : "text-muted-foreground hover:bg-accent hover:text-foreground",
       )}
-      onClick={handleClick}
+      onClick={(event) => {
+        if (event.button === 0) handleClick()
+      }}
       data-type={node.data.type}
       data-format={node.data.format}
       data-fileid={node.data.id}
@@ -94,7 +129,7 @@ export function DirectoryNode(props: NodeProps) {
 
       {node.isEditing ? (
         <input
-          autoFocus
+          ref={nameInputRef}
           className="min-w-0 flex-1 rounded-sm border border-primary/50 bg-background px-1 text-sm outline-none"
           defaultValue={node.data.name}
           onBlur={onInputBlur}
@@ -106,38 +141,55 @@ export function DirectoryNode(props: NodeProps) {
           {node.data.name}
         </span>
       )}
-      <DirectoryMenu {...props} />
+      <DirectoryMenu
+        {...props}
+        onNewFolder={createFolder}
+        onNewFile={createFile}
+        onUpload={openFileDialog}
+      />
     </div>
+  )
+
+  return (
+    <>
+      <FileGridMenu
+        node={node.data}
+        parentType={null}
+        disabled={node.isEditing}
+        modal={false}
+        onNewFolder={() => void createFolder()}
+        onNewFile={(type) => void createFile(type)}
+        onUpload={openFileDialog}
+        onRename={() => node.edit()}
+        onDelete={() => tree.delete(node.id)}
+        onInsert={() => {}}
+      >
+        {row}
+      </FileGridMenu>
+      <input {...getInputProps()} className="sr-only" />
+    </>
   )
 }
 
-function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
+function DirectoryMenu({
+  node,
+  tree,
+  onNewFolder,
+  onNewFile,
+  onUpload,
+}: NodeProps & {
+  onNewFolder: () => Promise<void>
+  onNewFile: (type: FileNodeType) => Promise<void>
+  onUpload: () => void
+}) {
   const [isNewFileSubmenuOpen, setIsNewFileSubmenuOpen] = useState(false)
-  const queryClient = useQueryClient()
-  const { openFileDialog, getInputProps } = useHandleUploadFile({
-    projectId: node.data.projectId,
-    node,
-  })
 
   if (node.isEditing) return null
-
-  const ensureChildrenLoaded = () =>
-    queryClient.ensureQueryData(
-      getlistFileTreePerDirectoryOptions(node.data.projectId, node.data.id),
-    )
-
-  const createFile = async (type: FileNodeType) => {
-    if (!node.isOpen) node.open()
-    await ensureChildrenLoaded()
-    onCreateFile(node.data.id, 0, false, type)
-  }
 
   const onChange = async (action: string) => {
     switch (action) {
       case "new-folder": {
-        if (!node.isOpen) node.open()
-        await ensureChildrenLoaded()
-        onCreateFile(node.data.id, 0, true)
+        await onNewFolder()
         break
       }
 
@@ -150,7 +202,7 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
         break
 
       case "upload-file":
-        openFileDialog()
+        onUpload()
         break
 
       default:
@@ -200,7 +252,7 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
 
             {lockedTypeOption ? (
               <MenubarItem
-                onClick={() => createFile(lockedTypeOption.value)}
+                onClick={() => onNewFile(lockedTypeOption.value)}
                 onFocus={closeNewFileSubmenu}
                 onPointerMove={closeNewFileSubmenu}
               >
@@ -222,7 +274,7 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
                       {FILE_TYPE_OPTIONS.map((option) => (
                         <MenubarItem
                           key={option.value}
-                          onClick={() => createFile(option.value)}
+                          onClick={() => onNewFile(option.value)}
                         >
                           {option.label}
                         </MenubarItem>
@@ -247,7 +299,6 @@ function DirectoryMenu({ node, tree, onCreateFile }: NodeProps) {
           </MenubarContent>
         </MenubarMenu>
       </Menubar>
-      <input {...getInputProps()} className="sr-only" />
     </div>
   )
 }

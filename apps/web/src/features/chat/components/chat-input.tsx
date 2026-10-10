@@ -30,7 +30,7 @@ type ChatInputProps = {
 
 export function ChatInput({
   projectId,
-  placeholder = "Ask anything... Use @ to reference files",
+  placeholder = "Use @ to reference files and / for commands",
   className,
 }: ChatInputProps) {
   const setInputContent = useChatStore((state) => state.setUserPrompt)
@@ -127,7 +127,10 @@ export function ChatInput({
             </PromptInputButton>
             <input {...getInputProps()} className="sr-only" />
 
-            <ContextWindowDonut usage={{ percentage: usagePercentage }} size="xs" />
+            <ContextWindowDonut
+              usage={{ percentage: usagePercentage }}
+              size="xs"
+            />
             <ChatSelectModel projectId={projectId} />
           </PromptInputTools>
 
@@ -135,7 +138,7 @@ export function ChatInput({
             status={submitStatus}
             disabled={isStreaming ? isCancelling : disableSendButton}
             onStop={cancelGeneration}
-            className="rounded-full"
+            className="rounded-full size-6"
           />
         </PromptInputFooter>
       </PromptInput>

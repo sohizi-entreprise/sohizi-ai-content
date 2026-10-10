@@ -61,6 +61,7 @@ export function useDirectoryGrid(projectId: string, folderId: string) {
   const visibleDraft = draft?.node.parentId === folderId ? draft : null
   const visiblePinned = pinned.filter((node) => node.parentId === folderId)
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const serverItems = query.data?.pages.flatMap((page) => page.data) ?? []
   const serverKey = serverItems.map((item) => item.id).join("\0")
 
@@ -93,6 +94,7 @@ export function useDirectoryGrid(projectId: string, folderId: string) {
     })
     void queryClient.invalidateQueries({
       queryKey: fileTreeKey(projectId, parentId),
+      refetchType: "all",
     })
   }
 
@@ -204,6 +206,13 @@ export function useDirectoryGrid(projectId: string, folderId: string) {
         path: updated.path,
         oldPath: current.path,
       })
+      void queryClient.invalidateQueries({
+        // A folder rename also changes the paths of cached descendants.
+        queryKey: current.directory
+          ? ["project", projectId, "file-tree"]
+          : fileTreeKey(projectId, parentId),
+        refetchType: "all",
+      })
     } catch (error) {
       console.error("Failed to rename:", error)
       toast.error("Couldn't rename")
@@ -281,6 +290,7 @@ export function useDirectoryGrid(projectId: string, folderId: string) {
       })
       void queryClient.invalidateQueries({
         queryKey: fileTreeKey(projectId, parentId),
+        refetchType: "all",
       })
     } catch (error) {
       console.error("Failed to delete:", error)
@@ -290,6 +300,7 @@ export function useDirectoryGrid(projectId: string, folderId: string) {
       })
       void queryClient.invalidateQueries({
         queryKey: fileTreeKey(projectId, parentId),
+        refetchType: "all",
       })
     }
   }

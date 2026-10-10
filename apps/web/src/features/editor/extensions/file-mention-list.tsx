@@ -45,12 +45,12 @@ export const FileMentionList = forwardRef<
   }))
 
   return (
-    <div className="rounded-lg border border-border bg-popover p-1 shadow-md">
+    <div className="max-h-70 w-80 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md">
       {props.items.length ? (
         props.items.map((item, index) => (
           <button
             key={item.id}
-            className={`flex w-full items-center rounded-md px-2 py-1.5 text-sm ${
+            className={`flex w-full flex-col items-start rounded-md px-2 py-1.5 text-left text-sm ${
               index === selectedIndex
                 ? "bg-accent text-accent-foreground"
                 : "text-popover-foreground hover:bg-accent/50"
@@ -60,7 +60,10 @@ export const FileMentionList = forwardRef<
               selectItem(index)
             }}
           >
-            {item.display}
+            <span>{item.display}</span>
+            <span className="w-full break-all text-xs text-muted-foreground">
+              {item.path}
+            </span>
           </button>
         ))
       ) : (

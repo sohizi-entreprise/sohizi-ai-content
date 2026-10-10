@@ -57,7 +57,7 @@ type FileGridProps = {
 export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
   function FileGrid({ projectId, rootFolderId }, ref) {
     const [stack, setStack] = useState<Array<FolderCrumb>>([
-      { id: rootFolderId, name: "Workspace", type: null },
+      { id: rootFolderId, name: "", type: null },
     ])
     const current = stack[stack.length - 1]
     const model = useDirectoryGrid(projectId, current.id)
@@ -84,7 +84,7 @@ export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
     )
 
     useEffect(() => {
-      setStack([{ id: rootFolderId, name: "Workspace", type: null }])
+      setStack([{ id: rootFolderId, name: "", type: null }])
     }, [rootFolderId])
 
     useImperativeHandle(
@@ -180,7 +180,12 @@ export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
 
     return (
       <div className="flex h-full min-h-0 min-w-0 flex-col">
-        <div className="flex h-8 shrink-0 items-center gap-1 px-2">
+        <div
+          className={cn(
+            "flex h-8 shrink-0 items-center gap-1 px-2",
+            stack.length <= 1 && "hidden",
+          )}
+        >
           <Button
             type="button"
             variant="ghost"
@@ -487,10 +492,21 @@ function GridNameInput({
   onCancel: () => void
 }) {
   const settled = useRef(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // The context menu finishes closing after the input mounts. Focus on the
+    // next frame so its focus handling cannot leave the new input unfocused.
+    const frame = requestAnimationFrame(() => {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [])
 
   return (
     <input
-      autoFocus
+      ref={inputRef}
       defaultValue={defaultValue}
       aria-label="File name"
       className="h-8 w-full rounded-sm border border-primary/50 bg-background px-1 text-center text-xs leading-4 outline-none"

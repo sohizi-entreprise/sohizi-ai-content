@@ -239,5 +239,4 @@ export const searchCommandsQueryOptions = (
   queryOptions({
     queryKey: keysFactory.commandSearch(projectId, name, limit),
     queryFn: ({ signal }) => searchCommands(projectId, name, limit, { signal }),
-    enabled: name.trim().length > 0,
   })

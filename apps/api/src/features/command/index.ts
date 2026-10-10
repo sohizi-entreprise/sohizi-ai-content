@@ -30,7 +30,7 @@ export const commandRoutes = new Elysia({
     },
     {
       query: z.object({
-        name: z.string().trim().min(1, "Search query is required"),
+        name: z.string().trim(),
         limit: z.coerce.number().int().positive().optional(),
       }),
     },

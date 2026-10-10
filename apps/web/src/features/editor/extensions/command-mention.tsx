@@ -165,11 +165,6 @@ export function createCommandMentionSuggestion(
         if (debounceTimer) clearTimeout(debounceTimer)
         if (abortController) abortController.abort()
 
-        if (!query.trim()) {
-          resolve([])
-          return
-        }
-
         debounceTimer = setTimeout(async () => {
           abortController = new AbortController()
           try {

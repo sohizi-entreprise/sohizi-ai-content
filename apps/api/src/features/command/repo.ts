@@ -64,7 +64,16 @@ export const searchCommands = async (
 ): Promise<Command[]> => {
   const normalizedName = name.trim()
   if (!normalizedName) {
-    return []
+    return db
+      .select()
+      .from(commands)
+      .where(
+        and(
+          eq(commands.visible, true),
+          or(eq(commands.isPublic, true), eq(commands.projectId, projectId)),
+        ),
+      )
+      .orderBy(asc(commands.name))
   }
 
   const escapedName = escapeLikePattern(normalizedName)

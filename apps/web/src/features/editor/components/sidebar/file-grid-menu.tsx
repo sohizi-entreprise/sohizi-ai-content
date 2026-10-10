@@ -18,13 +18,21 @@ import {
 } from "@sohizi/ui/context-menu"
 import { FILE_TYPE_OPTIONS } from "../file-node/node-menu"
 import type { ReactNode } from "react"
-import type { DirectoryChild } from "@/features/projects/type"
 import type { FileNodeType } from "../../types"
 
+type MenuNode = {
+  id: string
+  directory: boolean
+  editable: boolean
+  type: string | null
+}
+
 type FileGridMenuProps = {
-  node: DirectoryChild
+  node: MenuNode
   parentType: string | null
   children: ReactNode
+  disabled?: boolean
+  modal?: boolean
   onNewFolder: () => void
   onNewFile: (type: FileNodeType) => void
   onInsert: (placement: "above" | "below", type: FileNodeType) => void
@@ -37,6 +45,8 @@ export function FileGridMenu({
   node,
   parentType,
   children,
+  disabled = false,
+  modal = true,
   onNewFolder,
   onNewFile,
   onInsert,
@@ -47,9 +57,14 @@ export function FileGridMenu({
   const isTemp = node.id.startsWith("temp-")
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      <ContextMenuContent className="min-w-40">
+    <ContextMenu modal={modal}>
+      <ContextMenuTrigger asChild disabled={disabled}>
+        {children}
+      </ContextMenuTrigger>
+      <ContextMenuContent
+        className="min-w-40"
+        onCloseAutoFocus={(event) => event.preventDefault()}
+      >
         {node.directory ? (
           <FolderActions
             node={node}
@@ -84,7 +99,7 @@ function FolderActions({
   onRename,
   onDelete,
 }: {
-  node: DirectoryChild
+  node: MenuNode
   isTemp: boolean
   onNewFolder: () => void
   onNewFile: (type: FileNodeType) => void
@@ -168,7 +183,7 @@ function FileActions({
   onRename,
   onDelete,
 }: {
-  node: DirectoryChild
+  node: MenuNode
   parentType: string | null
   isTemp: boolean
   onInsert: (placement: "above" | "below", type: FileNodeType) => void

@@ -1,5 +1,10 @@
 import { useRef, useState } from "react"
-import { FilePlus, FolderPlus, LayoutGrid, List, Plus } from "lucide-react"
+import { FilePlus, FolderPlus } from "lucide-react"
+import {
+  IconColumns2Filled,
+  IconLayoutListFilled,
+  IconSquareRoundedPlusFilled,
+} from "@tabler/icons-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@sohizi/ui/button"
 import { FileNodeMenu } from "../file-node/node-menu"
@@ -66,9 +71,9 @@ export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
   return (
     <div className="flex h-full min-w-0 flex-col gap-2 overflow-hidden">
       <div className="flex h-10 shrink-0 items-center justify-between px-4 border-b">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Workspace
-        </span>
+        <div className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Files
+        </div>
         <div className="flex items-center gap-0.5">
           <Button
             type="button"
@@ -77,12 +82,12 @@ export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
             aria-label="List view"
             aria-pressed={view === "list"}
             className={cn(
-              "size-6 text-foreground hover:text-foreground",
-              view === "list" && "bg-accent",
+              "size-6 text-muted-foreground hover:text-foreground cursor-pointer",
+              view === "list" && "bg-accent text-foreground",
             )}
             onClick={() => setView("list")}
           >
-            <List className="size-4" />
+            <IconLayoutListFilled className="size-4" />
           </Button>
           <Button
             type="button"
@@ -91,20 +96,20 @@ export function FileExplorer({ projectId, rootFolderId }: FileExplorerProps) {
             aria-label="Grid view"
             aria-pressed={view === "grid"}
             className={cn(
-              "size-6 text-foreground hover:text-foreground",
-              view === "grid" && "bg-accent",
+              "size-6 text-muted-foreground hover:text-foreground cursor-pointer",
+              view === "grid" && "bg-accent text-foreground",
             )}
             onClick={() => setView("grid")}
           >
-            <LayoutGrid className="size-4" />
+            <IconColumns2Filled className="size-4" />
           </Button>
           <FileNodeMenu options={menuOptions} onChange={handleOnCreate}>
             <Button
               variant="ghost"
               size="icon"
-              className="size-6 text-foreground hover:text-foreground"
+              className="size-6 text-foreground hover:text-foreground cursor-pointer"
             >
-              <Plus className="size-4" />
+              <IconSquareRoundedPlusFilled className="size-5" />
             </Button>
           </FileNodeMenu>
         </div>

@@ -13,7 +13,7 @@ export function useCommandMentionSearch(projectId: string) {
   return useMentionSearch(
     useCallback(
       async (query: string, options?: { signal?: AbortSignal }) => {
-        const commands = await searchCommands(projectId, query, 15, {
+        const commands = await searchCommands(projectId, query, undefined, {
           signal: options?.signal,
         })
 
@@ -29,5 +29,6 @@ export function useCommandMentionSearch(projectId: string) {
       (query: string) => searchCommandsQueryOptions(projectId, query),
       [projectId],
     ),
+    { allowEmptyQuery: true },
   )
 }

@@ -69,6 +69,7 @@ import type {
 } from "react"
 import type { ChatStatus, FileUIPart, SourceDocumentUIPart } from "ai"
 import { cn } from "@/lib/utils"
+import { IconArrowUp } from "@tabler/icons-react"
 
 // ============================================================================
 // Helpers
@@ -1203,12 +1204,12 @@ export const PromptInputSubmit = ({
 }: PromptInputSubmitProps) => {
   const isGenerating = status === "submitted" || status === "streaming"
 
-  let Icon = <CornerDownLeftIcon className="size-4" />
+  let Icon = <IconArrowUp className="size-4" />
 
   if (status === "submitted") {
     Icon = <Spinner />
   } else if (status === "streaming") {
-    Icon = <SquareIcon className="size-4 fill-current" />
+    Icon = <SquareIcon className="size-3 fill-current" />
   } else if (status === "error") {
     Icon = <XIcon className="size-4" />
   }

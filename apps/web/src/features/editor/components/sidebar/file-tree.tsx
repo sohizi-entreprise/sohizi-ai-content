@@ -34,7 +34,6 @@ import {
   deleteFileNodeMutationOptions,
   directoryChildrenKey,
   fileTreeKey,
-  getProjectQueryOptions,
   getlistFileTreePerDirectoryOptions,
   moveFileNodeMutationOptions,
   renameFileNodeMutationOptions,
@@ -68,7 +67,9 @@ export function FileTreeRow({
       {...rest}
       ref={innerRef}
       onFocus={(event) => event.stopPropagation()}
-      onClick={node.handleClick}
+      onClick={(event) => {
+        if (event.button === 0) node.handleClick(event)
+      }}
       className={cn("min-w-0 overflow-hidden", className)}
       style={{ ...style, minWidth: 0, width: "100%" }}
     >
@@ -84,13 +85,9 @@ export function FileTree({ projectId, rootFolderId }: FileTreeProps) {
   const [treeHeight, setTreeHeight] = useState(0)
   const storeRootFolderId = useFileTreeStore((s) => s.rootFolderId)
 
-  // Keep the root directory cache entry observed so TanStack Query won't GC it.
-  useQuery({
-    ...getlistFileTreePerDirectoryOptions(projectId, rootFolderId),
-    initialData: () =>
-      queryClient.getQueryData(getProjectQueryOptions(projectId).queryKey)
-        ?.rootFiles,
-  })
+  // The project snapshot can predate grid edits. Load the root from its own
+  // directory query so entering list view cannot seed it with old rootFiles.
+  useQuery(getlistFileTreePerDirectoryOptions(projectId, rootFolderId))
 
   const treeData = useProjectFileTree(projectId, rootFolderId)
   const setTree = useFileTreeBridge((s) => s.setTree)

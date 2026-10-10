@@ -8,6 +8,7 @@ export function useMentionSearch<TItem>(
     options?: { signal?: AbortSignal },
   ) => Promise<Array<TItem>>,
   getQueryOptions: (query: string) => { queryKey: QueryKey },
+  config?: { allowEmptyQuery?: boolean },
 ) {
   const queryClient = useQueryClient()
 
@@ -17,7 +18,7 @@ export function useMentionSearch<TItem>(
       options?: { signal?: AbortSignal },
     ): Promise<Array<TItem>> => {
       const trimmed = query.trim()
-      if (!trimmed) return []
+      if (!trimmed && !config?.allowEmptyQuery) return []
 
       const { queryKey } = getQueryOptions(trimmed)
 
@@ -27,6 +28,6 @@ export function useMentionSearch<TItem>(
         staleTime: 1000 * 60,
       })
     },
-    [fetchItems, getQueryOptions, queryClient],
+    [fetchItems, getQueryOptions, config?.allowEmptyQuery, queryClient],
   )
 }

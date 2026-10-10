@@ -1,30 +1,35 @@
-import { Clapperboard, Files, Play, Sparkles } from "lucide-react"
 import { Link, useParams, useRouterState } from "@tanstack/react-router"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"
+import {
+  IconCategoryFilled,
+  IconFilesFilled,
+  IconPhotoFilled,
+  IconVideoPlusFilled,
+} from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
 
 const ITEMS = [
   {
     id: "files",
-    icon: Files,
-    label: "Explorer",
+    icon: IconFilesFilled,
+    label: "Files explorer",
     link: "/projects/$projectId/editor",
   },
   {
     id: "media-generator",
-    icon: Play,
+    icon: IconPhotoFilled,
     label: "AI media generator",
     link: "/projects/$projectId/generate",
   },
   {
     id: "video-editor",
-    icon: Clapperboard,
+    icon: IconVideoPlusFilled,
     label: "Video editor",
     link: "/projects/$projectId/video-editor",
   },
   {
     id: "skill-market",
-    icon: Sparkles,
+    icon: IconCategoryFilled,
     label: "Skill market",
     link: "/projects/$projectId/skill-market",
   },
@@ -58,13 +63,13 @@ export function AppNavBar() {
               <TooltipTrigger asChild>
                 <button
                   className={cn(
-                    "flex size-9 items-center justify-center rounded-md transition-colors",
+                    "flex size-9 items-center justify-center rounded-md transition-colors cursor-pointer",
                     activeItem === id
                       ? "text-primary"
                       : "text-muted-foreground hover:bg-accent/30 hover:text-foreground",
                   )}
                 >
-                  <Icon className="size-[18px]" />
+                  <Icon className="size-4.5" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">{label}</TooltipContent>

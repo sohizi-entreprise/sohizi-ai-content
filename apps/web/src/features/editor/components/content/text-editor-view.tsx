@@ -184,7 +184,7 @@ export function TextEditorView({ tab, initialContent }: TextEditorViewProps) {
 
       <div
         ref={setScrollContainer}
-        className="flex-1 overflow-auto overscroll-none scrollbar-hide"
+        className="flex-1 overflow-auto overscroll-none"
       >
         <div className="mx-auto min-w-2xl max-w-3xl px-6 pb-8 pt-12">
           <EditorContent
