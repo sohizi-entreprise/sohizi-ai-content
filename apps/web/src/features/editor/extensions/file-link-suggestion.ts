@@ -10,6 +10,7 @@ import type {
   SuggestionProps,
 } from "@tiptap/suggestion"
 import type { Editor } from "@tiptap/core"
+import type { RefObject } from "react"
 import type { FileMentionItem } from "@/hooks/use-file-mention-search"
 
 const FILE_LINK_SUGGESTION_PLUGIN_KEY = new PluginKey("fileLinkSuggestion")
@@ -44,6 +45,7 @@ export const FileLinkSuggestion = Extension.create<{
 })
 
 function updatePosition(editor: Editor, element: HTMLElement) {
+  element.style.width = "min(20rem, calc(100vw - 16px))"
   const { from, to } = editor.state.selection
   const virtualElement = {
     getBoundingClientRect: () => {
@@ -64,7 +66,6 @@ function updatePosition(editor: Editor, element: HTMLElement) {
     strategy: "fixed",
     middleware: [shift(), flip()],
   }).then(({ x, y }) => {
-    element.style.width = "max-content"
     element.style.position = "fixed"
     element.style.left = `${x}px`
     element.style.top = `${y}px`
@@ -76,6 +77,7 @@ export function createFileLinkSuggestion(
     query: string,
     options?: { signal?: AbortSignal },
   ) => Promise<Array<FileMentionItem>>,
+  anchorRef?: RefObject<HTMLElement | null>,
 ): Omit<SuggestionOptions<FileMentionItem>, "editor"> {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   let abortController: AbortController | null = null
@@ -136,10 +138,20 @@ export function createFileLinkSuggestion(
             editor: props.editor,
           })
 
+          component.element.style.zIndex = "50"
+          const anchor = anchorRef?.current
+          if (anchor) {
+            component.element.style.position = "absolute"
+            component.element.style.left = "0"
+            component.element.style.bottom = "calc(100% + 8px)"
+            component.element.style.width = "100%"
+            anchor.appendChild(component.element)
+            return
+          }
+
           if (!props.clientRect) return
 
           component.element.style.position = "fixed"
-          component.element.style.zIndex = "50"
           document.body.appendChild(component.element)
           updatePosition(props.editor, component.element)
 
@@ -151,6 +163,7 @@ export function createFileLinkSuggestion(
 
         onUpdate(props) {
           component?.updateProps(props)
+          if (anchorRef?.current) return
           if (!props.clientRect) return
           if (component) updatePosition(props.editor, component.element)
         },

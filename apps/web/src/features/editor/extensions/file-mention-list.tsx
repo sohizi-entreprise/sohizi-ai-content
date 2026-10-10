@@ -36,7 +36,7 @@ export const FileMentionList = forwardRef<
         setSelectedIndex((selectedIndex + 1) % props.items.length)
         return true
       }
-      if (event.key === "Enter") {
+      if (event.key === "Enter" && !event.shiftKey) {
         selectItem(selectedIndex)
         return true
       }
@@ -45,7 +45,7 @@ export const FileMentionList = forwardRef<
   }))
 
   return (
-    <div className="max-h-70 w-80 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md">
+    <div className="max-h-70 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md">
       {props.items.length ? (
         props.items.map((item, index) => (
           <button

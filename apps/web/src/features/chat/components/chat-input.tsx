@@ -38,6 +38,7 @@ export function ChatInput({
   const setChatEditor = useEditorInputBridge((state) => state.setChatEditor)
 
   const editorRef = useRef<Editor | null>(null)
+  const suggestionAnchorRef = useRef<HTMLDivElement | null>(null)
 
   const {
     sendMessage,
@@ -88,60 +89,63 @@ export function ChatInput({
 
   return (
     <div className="p-3">
-      <PromptInput
-        onSubmit={handleSubmit}
-        className={cn(
-          "[&>div]:rounded-2xl [&>div]:bg-background! focus-within:[&>div]:border-white/20",
-          className,
-        )}
-      >
-        <PromptInputBody className="">
-          {hasAttachments ? (
-            <div className="w-full px-3 pt-3">
-              <ChatFilesPreview onRemoveFile={onRemoveFile} />
+      <div ref={suggestionAnchorRef} className="relative">
+        <PromptInput
+          onSubmit={handleSubmit}
+          className={cn(
+            "[&>div]:rounded-2xl [&>div]:bg-background! focus-within:[&>div]:border-white/20",
+            className,
+          )}
+        >
+          <PromptInputBody className="">
+            {hasAttachments ? (
+              <div className="w-full px-3 pt-3">
+                <ChatFilesPreview onRemoveFile={onRemoveFile} />
+              </div>
+            ) : null}
+
+            <div className="w-full max-h-40 min-w-0 overflow-y-auto px-3 pt-3">
+              <ChatTextarea
+                projectId={projectId}
+                onChange={setInputContent}
+                onSubmit={handleSubmit}
+                onEditorReady={handleEditorReady}
+                editorRef={editorRef}
+                suggestionAnchorRef={suggestionAnchorRef}
+                placeholder={placeholder}
+                className=""
+              />
             </div>
-          ) : null}
+          </PromptInputBody>
 
-          <div className="w-full max-h-40 min-w-0 overflow-y-auto px-3 pt-3">
-            <ChatTextarea
-              projectId={projectId}
-              onChange={setInputContent}
-              onSubmit={handleSubmit}
-              onEditorReady={handleEditorReady}
-              editorRef={editorRef}
-              placeholder={placeholder}
-              className=""
+          <PromptInputFooter className="border-white/5">
+            <PromptInputTools>
+              <PromptInputButton
+                onClick={openFileDialog}
+                disabled={loadingState}
+                aria-label="Upload file"
+                className="rounded-full"
+              >
+                <IconPlus className="size-4" />
+              </PromptInputButton>
+              <input {...getInputProps()} className="sr-only" />
+
+              <ContextWindowDonut
+                usage={{ percentage: usagePercentage }}
+                size="xs"
+              />
+              <ChatSelectModel projectId={projectId} />
+            </PromptInputTools>
+
+            <PromptInputSubmit
+              status={submitStatus}
+              disabled={isStreaming ? isCancelling : disableSendButton}
+              onStop={cancelGeneration}
+              className="rounded-full size-6"
             />
-          </div>
-        </PromptInputBody>
-
-        <PromptInputFooter className="border-white/5">
-          <PromptInputTools>
-            <PromptInputButton
-              onClick={openFileDialog}
-              disabled={loadingState}
-              aria-label="Upload file"
-              className="rounded-full"
-            >
-              <IconPlus className="size-4" />
-            </PromptInputButton>
-            <input {...getInputProps()} className="sr-only" />
-
-            <ContextWindowDonut
-              usage={{ percentage: usagePercentage }}
-              size="xs"
-            />
-            <ChatSelectModel projectId={projectId} />
-          </PromptInputTools>
-
-          <PromptInputSubmit
-            status={submitStatus}
-            disabled={isStreaming ? isCancelling : disableSendButton}
-            onStop={cancelGeneration}
-            className="rounded-full size-6"
-          />
-        </PromptInputFooter>
-      </PromptInput>
+          </PromptInputFooter>
+        </PromptInput>
+      </div>
     </div>
   )
 }

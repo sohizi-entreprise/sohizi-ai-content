@@ -1,13 +1,6 @@
 "use client"
 
-import {
-  CornerDownLeftIcon,
-  ImageIcon,
-  Monitor,
-  PlusIcon,
-  SquareIcon,
-  XIcon,
-} from "lucide-react"
+import { ImageIcon, Monitor, PlusIcon, SquareIcon, XIcon } from "lucide-react"
 import { nanoid } from "nanoid"
 import {
   Children,
@@ -54,6 +47,7 @@ import {
 } from "@sohizi/ui/select"
 import { Spinner } from "@sohizi/ui/spinner"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"
+import { IconArrowUp } from "@tabler/icons-react"
 import type {
   ChangeEvent,
   ChangeEventHandler,
@@ -69,7 +63,6 @@ import type {
 } from "react"
 import type { ChatStatus, FileUIPart, SourceDocumentUIPart } from "ai"
 import { cn } from "@/lib/utils"
-import { IconArrowUp } from "@tabler/icons-react"
 
 // ============================================================================
 // Helpers

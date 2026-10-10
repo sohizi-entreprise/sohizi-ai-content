@@ -27,6 +27,7 @@ type ChatTextareaProps = {
   className?: ClassValue
   placeholder?: string
   editorRef?: RefObject<Editor | null>
+  suggestionAnchorRef?: RefObject<HTMLDivElement | null>
   /** Called when the user presses Enter (without Shift). */
   onSubmit?: () => void
   /** Called whenever the underlying editor instance changes (ready/destroyed). */
@@ -40,6 +41,7 @@ export default function ChatTextarea(props: ChatTextareaProps) {
     className,
     placeholder,
     editorRef,
+    suggestionAnchorRef,
     onSubmit,
     onEditorReady,
   } = props
@@ -53,13 +55,13 @@ export default function ChatTextarea(props: ChatTextareaProps) {
   }, [onSubmit])
 
   const fileLinkSuggestion = useMemo(
-    () => createFileLinkSuggestion(searchFiles),
-    [searchFiles],
+    () => createFileLinkSuggestion(searchFiles, suggestionAnchorRef),
+    [searchFiles, suggestionAnchorRef],
   )
 
   const commandMentionSuggestion = useMemo(
-    () => createCommandMentionSuggestion(searchCommands),
-    [searchCommands],
+    () => createCommandMentionSuggestion(searchCommands, suggestionAnchorRef),
+    [searchCommands, suggestionAnchorRef],
   )
 
   // Registered as a ProseMirror plugin so it runs *after* the mention
@@ -102,7 +104,6 @@ export default function ChatTextarea(props: ChatTextareaProps) {
         codeBlock: false,
         dropcursor: false,
         gapcursor: false,
-        hardBreak: false,
         heading: false,
         horizontalRule: false,
         italic: false,

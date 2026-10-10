@@ -62,7 +62,7 @@ export const CommandMentionList = forwardRef<
         setSelectedIndex((selectedIndex + 1) % props.items.length)
         return true
       }
-      if (event.key === "Enter") {
+      if (event.key === "Enter" && !event.shiftKey) {
         selectItem(selectedIndex)
         return true
       }
@@ -75,6 +75,9 @@ export const CommandMentionList = forwardRef<
       ref={menuRef}
       className="max-h-70 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md"
     >
+      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+        Commands
+      </div>
       {props.items.length ? (
         props.items.map((item, index) => (
           <button
