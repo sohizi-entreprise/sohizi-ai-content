@@ -94,6 +94,10 @@ export class FileObject {
     return this.fileNode.type
   }
 
+  get path() {
+    return this.fileNode.path
+  }
+
   get id() {
     return this.fileNode.id
   }
@@ -108,6 +112,22 @@ export class FileObject {
 
   get isRoot() {
     return this.fileNode.parentId === null && this.fileNode.directory === true
+  }
+
+  get isSkillFolder() {
+    return (
+      this.fileNode.type === fileType.SKILL && this.fileNode.directory === true
+    )
+  }
+
+  get isSkillFile() {
+    return (
+      this.fileNode.type === fileType.SKILL && this.fileNode.directory === false
+    )
+  }
+
+  get metadata() {
+    return this.fileNode.metadata
   }
 
   async getContent(): Promise<FileObjectResponse<FileNodeContent | null>> {

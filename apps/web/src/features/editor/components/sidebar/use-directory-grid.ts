@@ -42,7 +42,11 @@ export type StartDraftInput = {
   move?: GridDraft["move"]
 }
 
-export function useDirectoryGrid(projectId: string, folderId: string) {
+export function useDirectoryGrid(
+  projectId: string,
+  folderId: string,
+  folderType: string | null,
+) {
   const queryClient = useQueryClient()
   const query = useInfiniteQuery(
     listDirectoryChildrenQueryOptions(projectId, folderId),
@@ -61,7 +65,6 @@ export function useDirectoryGrid(projectId: string, folderId: string) {
   const visibleDraft = draft?.node.parentId === folderId ? draft : null
   const visiblePinned = pinned.filter((node) => node.parentId === folderId)
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const serverItems = query.data?.pages.flatMap((page) => page.data) ?? []
   const serverKey = serverItems.map((item) => item.id).join("\0")
 
@@ -383,6 +386,7 @@ export function useDirectoryGrid(projectId: string, folderId: string) {
         parentId: folderId,
         index: 0,
         isDir,
+        fileType: folderType === "skill" ? "skill" : "document",
         move: { position: "start" },
       })
     },

@@ -361,7 +361,7 @@ export const findCommandSchema = z
 export const existsCommandSchema = z
   .object({
     cmd: z.literal("exists").describe("Check if a file or directory exists."),
-    filepath: filePath,
+    filePath: filePath,
   })
   .describe(
     `

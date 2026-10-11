@@ -8,6 +8,7 @@ import {
 } from "@/db/schema"
 import { and, asc, eq, ilike, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
+import { fileType } from "@/features/file-system/constants"
 import type { MarketCategory, MarketSkill } from "./types"
 
 const aggregateSkills = (
@@ -157,6 +158,7 @@ export const findProjectSkillsFolder = async (projectId: string) => {
         eq(fileNodes.projectId, projectId),
         eq(fileNodes.directory, true),
         eq(fileNodes.name, "skills"),
+        eq(fileNodes.type, fileType.SKILL),
         eq(coreFolder.projectId, projectId),
         eq(coreFolder.directory, true),
         eq(coreFolder.name, "core"),

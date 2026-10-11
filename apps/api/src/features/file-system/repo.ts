@@ -841,6 +841,23 @@ export const createFileWithContentAtPosition = async (
   initialContent?: InitialFileContent,
 ) => {
   return db.transaction(async (tx) => {
+    const kind = resolveCreatedFileKind(data)
+    if (!data.directory && kind.type === fileType.SKILL) {
+      const [parent] = await tx
+        .select({ directory: fileNodes.directory, type: fileNodes.type })
+        .from(fileNodes)
+        .where(
+          and(
+            eq(fileNodes.projectId, projectId),
+            eq(fileNodes.id, data.parentId),
+          ),
+        )
+      if (!parent?.directory || parent.type !== fileType.SKILL) {
+        throw new FileNodeInsertionError(
+          "Skill files can only be created in a skill folder",
+        )
+      }
+    }
     const siblings = await listDirectoryFilesForExecutor(
       tx,
       projectId,
@@ -848,7 +865,6 @@ export const createFileWithContentAtPosition = async (
     )
     const provisionalPosition = getNextPositionFromSiblings(siblings)
     const path = await resolveChildPath(tx, projectId, data.parentId, data.name)
-    const kind = resolveCreatedFileKind(data)
     const metadata =
       kind.type === fileType.SKILL ? DEFAULT_SKILL_METADATA : undefined
     const file = await tx

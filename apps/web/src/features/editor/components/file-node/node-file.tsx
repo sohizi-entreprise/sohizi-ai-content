@@ -15,7 +15,10 @@ import { useFileTreeStore } from "../../stores/file-tree-store"
 import { DirectoryNode } from "../file-node/node-directory"
 import { getFileIcon } from "../../utils/get-file-icon"
 import { FileGridMenu } from "../sidebar/file-grid-menu"
-import { FILE_TYPE_OPTIONS } from "./node-menu"
+import {
+  canCreateFileTypeInFolder,
+  fileTypeOptionsForFolder,
+} from "./node-menu"
 import type { FileNodeType, FileTreeNode, NodeProps } from "../../types"
 import { cn } from "@/lib/utils"
 
@@ -52,6 +55,7 @@ export function DocumentNode(props: NodeProps) {
     placement: "above" | "below",
     type: FileNodeType,
   ) => {
+    if (!canCreateFileTypeInFolder(type, node.parent?.data.type)) return
     const idx = siblings?.findIndex((s) => s.id === node.id) ?? 0
     if (!parentId) return
     onCreateFile(parentId, placement === "above" ? idx : idx + 1, false, type)
@@ -146,9 +150,8 @@ function FileMenu({
   const options = getOptions(node.data)
   const closeInsertSubmenus = () => setActiveInsertSubmenu(null)
   const parentType = node.parent?.data.type
-  const lockedTypeOption = parentType
-    ? FILE_TYPE_OPTIONS.find((option) => option.value === parentType)
-    : undefined
+  const fileTypeOptions = fileTypeOptionsForFolder(parentType)
+  const lockedTypeOption = parentType ? fileTypeOptions[0] : undefined
 
   return (
     <Menubar
@@ -188,7 +191,7 @@ function FileMenu({
                 Insert {lockedTypeOption.label} below
               </MenubarItem>
             </>
-          ) : (
+          ) : fileTypeOptions.length > 0 ? (
             <>
               <MenubarSub
                 open={activeInsertSubmenu === "above"}
@@ -201,7 +204,7 @@ function FileMenu({
                   Insert above
                 </MenubarSubTrigger>
                 <MenubarSubContent onClick={(e) => e.stopPropagation()}>
-                  {FILE_TYPE_OPTIONS.map((option) => (
+                  {fileTypeOptions.map((option) => (
                     <MenubarItem
                       key={option.value}
                       onClick={() => onInsert("above", option.value)}
@@ -222,7 +225,7 @@ function FileMenu({
                   Insert below
                 </MenubarSubTrigger>
                 <MenubarSubContent onClick={(e) => e.stopPropagation()}>
-                  {FILE_TYPE_OPTIONS.map((option) => (
+                  {fileTypeOptions.map((option) => (
                     <MenubarItem
                       key={option.value}
                       onClick={() => onInsert("below", option.value)}
@@ -233,7 +236,7 @@ function FileMenu({
                 </MenubarSubContent>
               </MenubarSub>
             </>
-          )}
+          ) : null}
           {options.map((option) => (
             <MenubarItem
               key={option.value}

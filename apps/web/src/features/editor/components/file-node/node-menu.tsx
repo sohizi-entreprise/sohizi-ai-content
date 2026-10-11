@@ -16,6 +16,27 @@ export const FILE_TYPE_OPTIONS: Array<{
   { label: "Storyboard", value: "storyboard" },
 ]
 
+export function fileTypeOptionsForFolder(
+  folderType: string | null | undefined,
+) {
+  if (folderType === "skill") {
+    return FILE_TYPE_OPTIONS.filter((option) => option.value === "skill")
+  }
+  return FILE_TYPE_OPTIONS.filter(
+    (option) =>
+      option.value !== "skill" && (!folderType || option.value === folderType),
+  )
+}
+
+export function canCreateFileTypeInFolder(
+  fileType: FileNodeType,
+  folderType: string | null | undefined,
+) {
+  return fileTypeOptionsForFolder(folderType).some(
+    (option) => option.value === fileType,
+  )
+}
+
 type Props = {
   onChange: (action: string) => void
   options: Array<{

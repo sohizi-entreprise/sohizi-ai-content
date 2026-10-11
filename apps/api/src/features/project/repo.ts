@@ -14,6 +14,7 @@ import { createProjectSchema } from "./schema"
 import { z } from "zod"
 import { v4 as uuidv4 } from "uuid"
 import { ORDER_GAP } from "../file-system/repo"
+import { fileType } from "../file-system/constants"
 import { joinLtree, serializeFileNode } from "../file-system/utils"
 import { RepositoryError } from "../error"
 import { DatabaseError } from "pg"
@@ -450,6 +451,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
   await tx.insert(fileNodes).values({
     name: "skills",
     directory: true,
+    type: fileType.SKILL,
     projectId: projectId,
     parentId: coreFolder.id,
     position: ORDER_GAP,

@@ -9,6 +9,7 @@ import {
 import { failure, success } from "./utils"
 import { FileContentPayload } from "@/features/file-system/objects/file"
 import { Session } from "../core/session"
+import { SYSTEM_LEVEL_SYNTAX_FILES_MAP } from "../constants/system-files"
 
 const toolSchema = z.discriminatedUnion("cmd", [
   listCommandSchema,
@@ -47,6 +48,10 @@ async function executeListCommand(
   input: z.infer<typeof listCommandSchema>,
   session: Session,
 ) {
+  const { isSystemFile } = maybeReadSystemFile(input.filePathOrId)
+  if (isSystemFile) {
+    return failure(`The list command does not support system files.`)
+  }
   const fileObject = await session.resolveFileByPathOrId(input.filePathOrId)
   if (!fileObject) {
     return failure(`File ${input.filePathOrId} not found`)
@@ -62,7 +67,16 @@ async function executeListCommand(
   let output = `Total files: ${children.length}\n---\n`
   for (let i = 0; i < children.length; i++) {
     const file = children[i]
-    output += `${i + 1}. [ID: ${file.id}] - (${file.isDirectory ? "directory" : "file"}) - Name: ${file.name} ${file.type ? `- [type: ${file.type}, format: ${file.format ?? "unknown"}]` : ""}\n`
+    let line = `${i + 1}. [${file.name}](${file.path}) - (${file.isDirectory ? "directory" : "file"}) ${file.type ? `- [type: ${file.type}, format: ${file.format ?? "unknown"}]` : ""}`
+    if (file.isSkillFile) {
+      const status = file.metadata?.status as string
+      const msg =
+        status.toLowerCase() === "draft"
+          ? "Draft (!! DO NOT USE THIS SKILL YET !!)"
+          : status
+      line += ` - Status: ${msg}`
+    }
+    output += line + "\n"
   }
   return success(output)
 }
@@ -71,12 +85,21 @@ async function executeExistsCommand(
   input: z.infer<typeof existsCommandSchema>,
   session: Session,
 ) {
-  const fileObject = await session.resolveFileByPathOrId(input.filepath)
+  const { isSystemFile, content: sfContent } = maybeReadSystemFile(
+    input.filePath,
+  )
+  if (isSystemFile) {
+    if (!sfContent) {
+      return failure(`System file path "${input.filePath}" does not exist`)
+    }
+    return success(`System file path "${input.filePath}" exists`)
+  }
+  const fileObject = await session.resolveFileByPathOrId(input.filePath)
   if (!fileObject) {
-    return failure(`Path "${input.filepath}" is not found`)
+    return failure(`Path "${input.filePath}" is not found`)
   }
   return success(
-    `${input.filepath} exists. It's a ${fileObject.isDirectory ? "directory" : "file"}. The ID is ${fileObject.id}.`,
+    `${input.filePath} exists. It's a ${fileObject.isDirectory ? "directory" : "file"}. The ID is ${fileObject.id}.`,
   )
 }
 
@@ -84,6 +107,16 @@ async function executeReadCommand(
   input: z.infer<typeof readCommandSchema>,
   session: Session,
 ) {
+  // check if we are trying to read a system-level file
+  const { isSystemFile, content: sfContent } = maybeReadSystemFile(
+    input.filePathOrId,
+  )
+  if (isSystemFile) {
+    if (!sfContent) {
+      return failure(`System file ${input.filePathOrId} not found`)
+    }
+    return success(sfContent)
+  }
   const fileObject = await session.resolveFileByPathOrId(input.filePathOrId)
   if (!fileObject) {
     return failure(`File ${input.filePathOrId} not found`)
@@ -131,4 +164,23 @@ function formatFileContent(data: FileContentPayload): string {
     default:
       return `File of type: ${data.type} is not supported by this tool.`
   }
+}
+
+function maybeReadSystemFile(filePathOrId: string): {
+  isSystemFile: boolean
+  content: string | null
+} {
+  const result: { isSystemFile: boolean; content: string | null } = {
+    isSystemFile: false,
+    content: null,
+  }
+  if (filePathOrId.startsWith("/system/")) {
+    result.isSystemFile = true
+    const systemFile = SYSTEM_LEVEL_SYNTAX_FILES_MAP[filePathOrId]
+    if (!systemFile) {
+      return result
+    }
+    result.content = systemFile.content
+  }
+  return result
 }

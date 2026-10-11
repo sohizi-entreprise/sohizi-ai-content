@@ -10,7 +10,6 @@ import {
   mainAgentPrompt,
   fileSystemPrompt,
   navigateContextPrompt,
-  progressUpdatePrompt,
 } from "../prompts"
 import modelsTracker from "@/catalog/models-tracker"
 
@@ -55,29 +54,27 @@ registerAgent({
     "\n\n" +
     fileSystemPrompt +
     "\n\n" +
-    navigateContextPrompt +
-    "\n\n" +
-    progressUpdatePrompt,
+    navigateContextPrompt,
   modelConfig: {
     tools: getSchemas([
+      allTools.manageTodoListTool,
+      allTools.assignTaskTool,
       allTools.exploreFileTool,
       allTools.searchFileTool,
+      allTools.editFileTool,
       // allTools.timelineExploreTool,
       // allTools.timelineEditTool,
-      allTools.manageTodoListTool,
-      allTools.youtubeAnalyzerTool,
-      allTools.videoAnalyzerTool,
-      allTools.imageAnalyzerTool,
-      allTools.editFileTool,
-      allTools.assignTaskTool,
-      allTools.loadSkillTool,
+      // allTools.loadSkillTool,
+      // allTools.fileSyntaxTool,
+      allTools.mediaAnalyzerTool,
       allTools.listModelsTool,
       allTools.getModelSchemaTool,
       allTools.submitAssetGenerationJob,
       allTools.waitForJob,
       allTools.getJobStatus,
       allTools.provideStatusUpdateTool,
-      allTools.fileSyntaxTool,
+      allTools.webSearchTool,
+      allTools.webPageExtractTool,
     ]),
     reasoningEffort: "medium",
     reasoningSummary: "auto",
@@ -86,7 +83,7 @@ registerAgent({
   modelId: "", // This will be overridden by the model passed to the agent
   contextThreshold: 0.8,
   summaryModelId: "google/gemini-2.5-flash-lite",
-  subAgents: ["explorer", "web-searcher"],
+  subAgents: ["explorer"],
 })
 
 registerAgent({
@@ -115,7 +112,7 @@ registerAgent({
     "Search the live web and fetch public pages for current, cited information.",
   baseSystemPrompt: webSearcherPrompt,
   modelConfig: {
-    tools: getSchemas([allTools.tavilySearchTool, allTools.tavilyExtractTool]),
+    tools: getSchemas([allTools.webSearchTool, allTools.webPageExtractTool]),
     reasoningEffort: "medium",
     reasoningSummary: "auto",
     maxOutputTokens: 4000,

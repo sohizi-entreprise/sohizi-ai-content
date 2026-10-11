@@ -2,12 +2,12 @@ import { z } from "zod"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { buildBaseTool } from "./tool-definition"
 import { failure, success } from "./utils"
-import { tavilyExtract, tavilySearch } from "./tavily-client"
+import { tavilyExtract, tavilySearch } from "@/lib/tavily-client"
 
-export const tavilySearchTool = buildBaseTool({
-  name: "tavily-search",
+export const webSearchTool = buildBaseTool({
+  name: "webSearch",
   description:
-    "Discover web sources and current information. Returns titles, URLs, and short snippets.",
+    "Use to search the web for up-to-date information. Returns titles, URLs, and brief text snippets.",
   inputSchema: z.object({
     query: z.string().describe("The search query."),
     include_images: z
@@ -24,10 +24,10 @@ export const tavilySearchTool = buildBaseTool({
   },
 })
 
-export const tavilyExtractTool = buildBaseTool({
-  name: "tavily-extract",
+export const webPageExtractTool = buildBaseTool({
+  name: "webPageExtract",
   description:
-    "Extract clean markdown content from known URLs. Use after tavily-search when snippets are not enough.",
+    "Extracts full webpage content as clean Markdown from a provided URL. Use when search snippets lack sufficient detail or when given a direct link.",
   inputSchema: z.object({
     urls: z
       .array(z.string())

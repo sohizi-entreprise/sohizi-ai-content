@@ -7,83 +7,52 @@ const fileTagExample = formatFileTag({
 })
 
 export const fileSystemPrompt = `
-## file_system
+<file_system>
+  <structure>
+    Root directory: /root
+    Use absolute paths starting with /root/.
+    Maximum directory depth: 5.
 
-### Structure
-- All files are stored under a root directory: \`/root\`
-- Use absolute paths starting with \`/root/\` (e.g., \`/root/scripts/episode_1\`)
-- Maximum directory depth: 5 levels
+    File names must use lowercase letters, numbers, hyphens,
+    or underscores. Do not include file extensions.
+    Example: /root/scripts/episode_1
+  </structure>
 
-### File Types and Formats
-Every file has a **type** (what it is) and a **format** (how the content is stored).
+  <file_types>
+    Available types: ${FILE_TYPES.join(", ")}
+    Available formats: ${FILE_FORMATS.join(", ")}
 
-Types: ${FILE_TYPES.join(", ")}
-Formats: ${FILE_FORMATS.join(", ")}
+    Each file has a type and a storage format.
 
-| Type | Default format | Description | How to Work With It |
-|------|----------------|-------------|---------------------|
-| document | markdown | Text documents, scripts, notes, json, html, pdf, or other files | Read/write markdown documents with exploreFile/editFile |
-| storyboard | markdown | Scene and shot breakdown | Read/write with exploreFile/editFile using world-bible YAML front matter plus \`:::scene\` / \`:::shot\` container markdown |
-| skill | markdown | Instruction sets for specific tasks | Read/write with exploreFile/editFile. Call fileSyntaxTool before the first write or patch |
-| image | file | Image asset | Read metadata via exploreFile |
-| video | file | Video asset | Read metadata via exploreFile |
-| audio | file | Audio asset | Read metadata via exploreFile; transcribe with processSpeech |
-| video-editor | json | Video timeline composition | Use timelineExplore and timelineEdit tools (NOT exploreFile) |
+    - document: markdown;
+    - storyboard: markdown;
+    - skill: markdown;
+    - image, video: file;
+    - audio: file;
+    - video-editor: json;
+  </file_types>
 
-### Search Command
+  <search>
+    For searchFile queries, use PostgreSQL websearch_to_tsquery syntax. Use keywords, not conversational sentences.
+    Operators:
+    - AND: word1 word2
+    - Exact phrase: "word1 word2"
+    - OR: word1 OR word2
+    - Exclude: word1 -word2
 
-When searching the context in the file system using the search command of the \`searchFile\` tool, you must formulate your queries using PostgreSQL \`websearch_to_tsquery\` syntax.
+    Combine operators when needed. Example: "final showdown" (warehouse OR dock) -flashback
+  </search>
 
-**CRITICAL RULE:** Never send conversational sentences (e.g., "Find the scene where the hero gives up"). Extract the core keywords and use the specific operators below to maximize relevance.
+  <file_references>
+    Use clickable file tags:
+    [Display Name](/root/path/to/file)
 
-### SUPPORTED SEARCH OPERATORS:
+    Example: ${fileTagExample}
 
-*   **AND (Default):** Separate words with spaces to mandate that ALL terms must exist in the chunk.
-    *   *Format:* \`keyword1 keyword2\`
-    *   *Example:* \`rooftop confrontation\` (Requires both "rooftop" and "confrontation")
-*   **Exact Phrase Match (""):** Wrap terms in double quotes to mandate the exact word sequence.
-    *   *Format:* \`"exact phrase"\`
-    *   *Example:* \`"INT. WAREHOUSE"\` (Matches the exact slug line or phrase)
-*   **OR (Uppercase):** Use the uppercase word \`OR\` to match at least one of the terms.
-    *   *Format:* \`keyword1 OR keyword2\`
-    *   *Example:* \`protagonist OR hero\` (Matches either character label)
-*   **Exclude (-):** Prefix a word with a minus sign (no space) to strictly exclude any results containing it.
-    *   *Format:* \`keyword1 -keyword2\`
-    *   *Example:* \`flashback -dream\` (Requires "flashback", but strictly excludes "dream")
+    Selected content is provided separately in &lt;attached_selections&gt;.
+    File tags identify files; they do not contain their contents.
+  </file_references>
+</file_system>
 
-### COMPLEX QUERY EXAMPLE:
-You can combine operators for highly targeted searches.
-*   *Query:* \`"final showdown" warehouse OR dock -flashback\`
-*   *Intent:* Must contain the exact phrase "final showdown", AND either "warehouse" or "dock", AND MUST NOT contain "flashback".
-
-### Syntax Guidelines
-
-1. File Reference Syntax:
-Universal file tag (documents, skills, and chat):
-[Display Name](/root/path/to/file)
-
-The full selected text is provided separately in \`<attached_selections>\` — do not treat the compact file tag as the complete citation.
-
-example (file mention): ${fileTagExample}
-
-2. Our file naming convention is: file_name or file-name.
-- There is NO .format extension in the file name, because the format is already defined on the file level.
-- Use underscores or hyphens to separate words in the file name.
-- Avoid: spaces, uppercase letters, or any other special characters in the file name.
 
 `.trim()
-
-// ### Storyboard syntax
-// Storyboard files are nested container markdown. Preserve existing scene and shot \`id\` values when patching. Example:
-
-// :::scene
-// id: scene-1
-// title: Arrival
-// description: A detective enters an abandoned warehouse.
-
-// :::shot
-// id: shot-1
-// number: 1
-// action: Wide establishing shot of the warehouse.
-// :::
-// :::

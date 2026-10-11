@@ -1,5 +1,5 @@
 import type { FileCreationRequest, UpdateFileContentRequest } from "../payload"
-import { MAX_FILE_DEPTH } from "../constants"
+import { MAX_FILE_DEPTH, fileType } from "../constants"
 import { resolveCreatedFileKind } from "../file-kind"
 import * as fileSystemRepo from "../repo"
 import type { InitialFileContent } from "../repo"
@@ -29,6 +29,15 @@ export const createFileNode = async (
   }
 
   const kind = resolveCreatedFileKind(data)
+  if (
+    !data.directory &&
+    kind.type === fileType.SKILL &&
+    parentFileNode.type !== fileType.SKILL
+  ) {
+    throw new FileSystemInputError(
+      "Skill files can only be created in a skill folder",
+    )
+  }
   if (
     !data.directory &&
     parentFileNode.type &&

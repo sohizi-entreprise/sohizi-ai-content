@@ -24,9 +24,10 @@ import {
   imageAnalyzerTool,
   videoAnalyzerTool,
   youtubeAnalyzerTool,
+  mediaAnalyzerTool,
 } from "./media-analyzer"
 import { getJobStatus, submitAssetGenerationJob, waitForJob } from "./wait-job"
-import { tavilyExtractTool, tavilySearchTool } from "./tavily-tools"
+import { webPageExtractTool, webSearchTool } from "./web-search"
 
 const toolRegistry = new Map<string, BaseTool<z.ZodType>>()
 
@@ -60,12 +61,13 @@ export const allTools = {
   imageAnalyzerTool,
   videoAnalyzerTool,
   youtubeAnalyzerTool,
+  mediaAnalyzerTool,
   submitAssetGenerationJob,
   waitForJob,
   getJobStatus,
   fileSyntaxTool,
-  tavilySearchTool,
-  tavilyExtractTool,
+  webSearchTool,
+  webPageExtractTool,
 } as const
 
 for (const tool of Object.values(allTools)) {

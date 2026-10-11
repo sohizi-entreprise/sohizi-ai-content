@@ -309,6 +309,13 @@
       "when": 1791302042432,
       "tag": "0043_sudden_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791676800000,
+      "tag": "0044_mark_project_skills_folders",
+      "breakpoints": true
     }
   ]
 }

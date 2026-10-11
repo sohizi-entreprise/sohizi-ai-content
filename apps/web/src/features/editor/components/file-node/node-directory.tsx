@@ -26,7 +26,10 @@ import { appendDirectoryChild } from "../../stores/directory-children-cache"
 import { insertNodeAt as insertNodeInCache } from "../../stores/file-tree-cache"
 import { getDirectoryIcon } from "../../utils/get-file-icon"
 import { FileGridMenu } from "../sidebar/file-grid-menu"
-import { FILE_TYPE_OPTIONS } from "./node-menu"
+import {
+  canCreateFileTypeInFolder,
+  fileTypeOptionsForFolder,
+} from "./node-menu"
 import type { FileNodeType, FileTreeNode, NodeProps } from "../../types"
 import {
   directoryChildrenKey,
@@ -89,6 +92,7 @@ export function DirectoryNode(props: NodeProps) {
     )
 
   const createFile = async (type: FileNodeType) => {
+    if (!canCreateFileTypeInFolder(type, node.data.type)) return
     if (!node.isOpen) node.open()
     await ensureChildrenLoaded()
     onCreateFile(node.data.id, 0, false, type)
@@ -213,9 +217,8 @@ function DirectoryMenu({
   const options = getOptions(node.data)
   const [newFolderOption, ...remainingOptions] = options
   const closeNewFileSubmenu = () => setIsNewFileSubmenuOpen(false)
-  const lockedTypeOption = node.data.type
-    ? FILE_TYPE_OPTIONS.find((option) => option.value === node.data.type)
-    : undefined
+  const fileTypeOptions = fileTypeOptionsForFolder(node.data.type)
+  const lockedTypeOption = node.data.type ? fileTypeOptions[0] : undefined
 
   return (
     <div className="shrink-0">
@@ -259,7 +262,7 @@ function DirectoryMenu({
                 <FilePlus className="size-4 text-muted-foreground" />
                 New {lockedTypeOption.label}
               </MenubarItem>
-            ) : (
+            ) : fileTypeOptions.length > 0 ? (
               <MenubarGroup>
                 <MenubarSub
                   open={isNewFileSubmenuOpen}
@@ -271,7 +274,7 @@ function DirectoryMenu({
                   </MenubarSubTrigger>
                   <MenubarSubContent>
                     <MenubarGroup>
-                      {FILE_TYPE_OPTIONS.map((option) => (
+                      {fileTypeOptions.map((option) => (
                         <MenubarItem
                           key={option.value}
                           onClick={() => onNewFile(option.value)}
@@ -283,7 +286,7 @@ function DirectoryMenu({
                   </MenubarSubContent>
                 </MenubarSub>
               </MenubarGroup>
-            )}
+            ) : null}
 
             {remainingOptions.map((option) => (
               <MenubarItem

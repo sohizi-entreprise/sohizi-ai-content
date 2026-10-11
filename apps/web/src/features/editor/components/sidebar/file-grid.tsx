@@ -14,6 +14,7 @@ import { Button } from "@sohizi/ui/button"
 import { useEditorStore } from "../../stores/editor-store"
 import { getDirectoryIcon, getFileIcon } from "../../utils/get-file-icon"
 import { ARBORIST_NODE_DRAG_TYPE } from "../../utils/arborist-dnd"
+import { canCreateFileTypeInFolder } from "../file-node/node-menu"
 import {
   GRID_PREVIEW_SIZE,
   GRID_ROW_HEIGHT,
@@ -60,7 +61,7 @@ export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
       { id: rootFolderId, name: "", type: null },
     ])
     const current = stack[stack.length - 1]
-    const model = useDirectoryGrid(projectId, current.id)
+    const model = useDirectoryGrid(projectId, current.id, current.type)
     const scrollRef = useRef<HTMLDivElement>(null)
     const [width, setWidth] = useState(0)
     const [dragOrder, setDragOrder] = useState<Array<string> | null>(null)
@@ -149,6 +150,7 @@ export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
       isDir: boolean,
       fileType?: FileNodeType,
     ) => {
+      if (fileType && !canCreateFileTypeInFolder(fileType, node.type)) return
       openFolder(node)
       model.startDraft({
         parentId: node.id,
@@ -164,6 +166,7 @@ export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
       placement: "above" | "below",
       fileType: FileNodeType,
     ) => {
+      if (!canCreateFileTypeInFolder(fileType, current.type)) return
       const index = model.items.findIndex((item) => item.id === node.id)
       const insertIndex = index < 0 ? model.items.length : index
       model.startDraft({

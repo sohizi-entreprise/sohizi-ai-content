@@ -16,7 +16,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@sohizi/ui/context-menu"
-import { FILE_TYPE_OPTIONS } from "../file-node/node-menu"
+import { fileTypeOptionsForFolder } from "../file-node/node-menu"
 import type { ReactNode } from "react"
 import type { FileNodeType } from "../../types"
 
@@ -122,9 +122,8 @@ function FolderActions({
     )
   }
 
-  const lockedType = node.type
-    ? FILE_TYPE_OPTIONS.find((option) => option.value === node.type)
-    : undefined
+  const fileTypeOptions = fileTypeOptionsForFolder(node.type)
+  const lockedType = node.type ? fileTypeOptions[0] : undefined
 
   return (
     <>
@@ -137,14 +136,14 @@ function FolderActions({
           <FilePlus />
           New {lockedType.label}
         </ContextMenuItem>
-      ) : (
+      ) : fileTypeOptions.length > 0 ? (
         <ContextMenuSub>
           <ContextMenuSubTrigger>
             <FilePlus />
             New file
           </ContextMenuSubTrigger>
           <ContextMenuSubContent>
-            {FILE_TYPE_OPTIONS.map((option) => (
+            {fileTypeOptions.map((option) => (
               <ContextMenuItem
                 key={option.value}
                 onSelect={() => onNewFile(option.value)}
@@ -154,7 +153,7 @@ function FolderActions({
             ))}
           </ContextMenuSubContent>
         </ContextMenuSub>
-      )}
+      ) : null}
       <ContextMenuItem onSelect={onUpload}>
         <Upload />
         Upload file
@@ -190,9 +189,8 @@ function FileActions({
   onRename: () => void
   onDelete: () => void
 }) {
-  const lockedType = parentType
-    ? FILE_TYPE_OPTIONS.find((option) => option.value === parentType)
-    : undefined
+  const fileTypeOptions = fileTypeOptionsForFolder(parentType)
+  const lockedType = parentType ? fileTypeOptions[0] : undefined
 
   return (
     <>
@@ -207,7 +205,7 @@ function FileActions({
             Insert {lockedType.label} below
           </ContextMenuItem>
         </>
-      ) : (
+      ) : fileTypeOptions.length > 0 ? (
         <>
           <ContextMenuSub>
             <ContextMenuSubTrigger>
@@ -215,7 +213,7 @@ function FileActions({
               Insert above
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
-              {FILE_TYPE_OPTIONS.map((option) => (
+              {fileTypeOptions.map((option) => (
                 <ContextMenuItem
                   key={option.value}
                   onSelect={() => onInsert("above", option.value)}
@@ -231,7 +229,7 @@ function FileActions({
               Insert below
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
-              {FILE_TYPE_OPTIONS.map((option) => (
+              {fileTypeOptions.map((option) => (
                 <ContextMenuItem
                   key={option.value}
                   onSelect={() => onInsert("below", option.value)}
@@ -242,7 +240,7 @@ function FileActions({
             </ContextMenuSubContent>
           </ContextMenuSub>
         </>
-      )}
+      ) : null}
       {node.editable ? (
         <>
           <ContextMenuItem onSelect={onRename}>
