@@ -14,10 +14,15 @@ export const billingRoutes = new Elysia({ prefix: "/billing" })
         query.organizationId,
       )
       await assertOrgMember(user.id, organizationId)
-      const balance = await billingService.getBalance(organizationId)
+      const balances = await billingService.getBalances(organizationId)
       return {
         organizationId,
-        balance: balance.toString(),
+        balance: balances.balance.toString(),
+        subscriptionBalance: balances.subscriptionBalance.toString(),
+        paygBalance: balances.paygBalance.toString(),
+        balanceExpiresAt: balances.balanceExpiresAt?.toISOString() ?? null,
+        paygBalanceExpiresAt:
+          balances.paygBalanceExpiresAt?.toISOString() ?? null,
         currency: "credits" as const,
       }
     },

@@ -9,7 +9,7 @@ import { inngest, functions } from "@/lib/inngest"
 import { serve } from "inngest/bun"
 import { auth } from "@/lib/auth"
 import { analyticsConsentRoutes } from "@/features/analytics-consent"
-import { billingService, InsufficientCreditsError } from "@/features/billing"
+import { InsufficientCreditsError } from "@/features/billing"
 import { NameConflictError } from "@/features/skill-market"
 
 const corsConfig = {
@@ -140,8 +140,6 @@ const app = new Elysia()
     port: 3030,
     hostname: "0.0.0.0",
   })
-
-billingService.startSweeper()
 
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,

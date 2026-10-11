@@ -16,6 +16,7 @@ import {
   serial,
   primaryKey,
   numeric,
+  check,
 } from "drizzle-orm/pg-core"
 import { relations, sql } from "drizzle-orm"
 import { user, organization } from "./auth"
@@ -641,15 +642,41 @@ export const billingLedgerKindEnum = pgEnum("billing_ledger_kind", [
   "overage_uncovered",
 ])
 
-export const organizationWallets = pgTable("organization_wallets", {
-  organizationId: text("organization_id")
-    .primaryKey()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  balance: bigint("balance", { mode: "bigint" })
-    .default(sql`0`)
-    .notNull(),
-  ...timestamps,
-})
+export const organizationWallets = pgTable(
+  "organization_wallets",
+  {
+    organizationId: text("organization_id")
+      .primaryKey()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    balance: bigint("balance", { mode: "bigint" })
+      .default(sql`0`)
+      .notNull(),
+    balanceExpiresAt: timestamp("balance_expires_at", { withTimezone: true }),
+    balanceGeneration: bigint("balance_generation", { mode: "bigint" })
+      .default(sql`0`)
+      .notNull(),
+    paygBalance: bigint("payg_balance", { mode: "bigint" })
+      .default(sql`0`)
+      .notNull(),
+    paygBalanceExpiresAt: timestamp("payg_balance_expires_at", {
+      withTimezone: true,
+    }),
+    paygGeneration: bigint("payg_generation", { mode: "bigint" })
+      .default(sql`0`)
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "organization_wallets_balance_nonnegative",
+      sql`${table.balance} >= 0`,
+    ),
+    check(
+      "organization_wallets_payg_balance_nonnegative",
+      sql`${table.paygBalance} >= 0`,
+    ),
+  ],
+)
 
 export const billingReservations = pgTable(
   "billing_reservations",
@@ -663,6 +690,18 @@ export const billingReservations = pgTable(
     operation: varchar("operation", { length: 100 }).notNull(),
     estimatedCredits: bigint("estimated_credits", { mode: "bigint" }).notNull(),
     actualCredits: bigint("actual_credits", { mode: "bigint" }),
+    balanceReserved: bigint("balance_reserved", { mode: "bigint" })
+      .default(sql`0`)
+      .notNull(),
+    paygReserved: bigint("payg_reserved", { mode: "bigint" })
+      .default(sql`0`)
+      .notNull(),
+    balanceGeneration: bigint("balance_generation", { mode: "bigint" })
+      .default(sql`0`)
+      .notNull(),
+    paygGeneration: bigint("payg_generation", { mode: "bigint" })
+      .default(sql`0`)
+      .notNull(),
     status: billingReservationStatusEnum("status")
       .default("reserved")
       .notNull(),
@@ -682,6 +721,10 @@ export const billingReservations = pgTable(
       table.organizationId,
       table.status,
     ),
+    check(
+      "billing_reservations_source_sum",
+      sql`${table.balanceReserved} + ${table.paygReserved} = ${table.estimatedCredits}`,
+    ),
   ],
 )
 
@@ -697,6 +740,12 @@ export const billingLedger = pgTable(
       .references(() => organization.id, { onDelete: "cascade" })
       .notNull(),
     delta: bigint("delta", { mode: "bigint" }).notNull(),
+    balanceDelta: bigint("balance_delta", { mode: "bigint" })
+      .default(sql`0`)
+      .notNull(),
+    paygDelta: bigint("payg_delta", { mode: "bigint" })
+      .default(sql`0`)
+      .notNull(),
     kind: billingLedgerKindEnum("kind").notNull(),
     balanceAfter: bigint("balance_after", { mode: "bigint" }).notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
@@ -712,6 +761,10 @@ export const billingLedger = pgTable(
       table.createdAt,
     ),
     index("billing_ledger_reservation_id_idx").on(table.reservationId),
+    check(
+      "billing_ledger_source_sum",
+      sql`${table.balanceDelta} + ${table.paygDelta} = ${table.delta}`,
+    ),
   ],
 )
 

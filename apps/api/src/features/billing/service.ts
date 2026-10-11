@@ -6,7 +6,6 @@
  */
 
 import * as repo from "./repo"
-import { captureUnexpectedError } from "@/sentry"
 import type {
   BillingReservation,
   Credits,
@@ -15,11 +14,12 @@ import type {
 } from "./types"
 
 export class BillingService {
-  /** Sweep in the background; throttled by the caller. */
-  private sweepTimer: ReturnType<typeof setInterval> | null = null
-
   async getBalance(organizationId: string): Promise<bigint> {
     return repo.getBalance(organizationId)
+  }
+
+  async getBalances(organizationId: string) {
+    return repo.getBalances(organizationId)
   }
 
   /**
@@ -33,6 +33,16 @@ export class BillingService {
     metadata?: Record<string, unknown>
   }): Promise<bigint> {
     return repo.topup(input)
+  }
+
+  /** Internal-only pooled PAYG grant. Payment and entitlement checks come later. */
+  async grantPaygCredits(input: {
+    organizationId: string
+    amount: Credits
+    idempotencyKey: string
+    metadata?: Record<string, unknown>
+  }): Promise<bigint> {
+    return repo.grantPaygCredits(input)
   }
 
   /**
@@ -96,35 +106,14 @@ export class BillingService {
     return repo.sweepExpired(limit)
   }
 
+  async sweepExpiredWallets(limit = 100): Promise<number> {
+    return repo.sweepExpiredWallets(limit)
+  }
+
   async getReservation(
     reservationId: string,
   ): Promise<BillingReservation | null> {
     return repo.getReservation(reservationId)
-  }
-
-  startSweeper(intervalMs = 60_000, batch = 100): void {
-    if (this.sweepTimer) return
-    this.sweepTimer = setInterval(() => {
-      this.sweepExpired(batch).catch((err) => {
-        captureUnexpectedError(err, { component: "billing-sweeper" })
-        console.error("[billing] sweep failed", err)
-      })
-    }, intervalMs)
-    // Don't hold the event loop open.
-    if (
-      typeof this.sweepTimer === "object" &&
-      this.sweepTimer &&
-      "unref" in this.sweepTimer
-    ) {
-      ;(this.sweepTimer as { unref?: () => void }).unref?.()
-    }
-  }
-
-  stopSweeper(): void {
-    if (this.sweepTimer) {
-      clearInterval(this.sweepTimer)
-      this.sweepTimer = null
-    }
   }
 }
 

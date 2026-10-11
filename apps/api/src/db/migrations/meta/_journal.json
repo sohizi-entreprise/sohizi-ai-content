@@ -316,6 +316,13 @@
       "when": 1791676800000,
       "tag": "0044_mark_project_skills_folders",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1791717968791,
+      "tag": "0045_breezy_scrambler",
+      "breakpoints": true
     }
   ]
 }

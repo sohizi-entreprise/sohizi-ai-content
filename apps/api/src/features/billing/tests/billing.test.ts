@@ -11,12 +11,13 @@ import { db } from "@/db"
 import {
   organization,
   billingLedger,
+  organizationWallets,
+  billingReservations,
   type BillingLedgerKind,
 } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import {
   BillingService,
-  billingService,
   withBilling,
   withBillingAsync,
   InsufficientCreditsError,
@@ -54,6 +55,30 @@ async function seedBalance(orgId: string, amount: bigint): Promise<void> {
     amount,
     idempotencyKey: `seed:${orgId}:${randomUUID()}`,
   })
+}
+
+async function seedPayg(orgId: string, amount: bigint, key = randomUUID()) {
+  return billing.grantPaygCredits({
+    organizationId: orgId,
+    amount,
+    idempotencyKey: `payg:${key}`,
+  })
+}
+
+async function wallet(orgId: string) {
+  const [row] = await db
+    .select()
+    .from(organizationWallets)
+    .where(eq(organizationWallets.organizationId, orgId))
+  return row
+}
+
+async function ledgerTotal(orgId: string) {
+  const rows = await db
+    .select()
+    .from(billingLedger)
+    .where(eq(billingLedger.organizationId, orgId))
+  return rows.reduce((sum, row) => sum + row.delta, 0n)
 }
 
 async function countLedger(
@@ -498,6 +523,226 @@ describe("GET /billing/balance", () => {
     )
     expect(res.status).toBe(401)
     // Stop sweeper started by the module singleton if any.
-    billingService.stopSweeper()
+  })
+})
+
+describe("pooled PAYG credits", () => {
+  const reserveCredits = (organizationId: string, estimatedCredits: bigint) =>
+    billing.reserve({
+      organizationId,
+      operation: "test.payg",
+      estimatedCredits,
+      ttlMs: 60_000,
+      idempotencyKey: `payg-reservation:${randomUUID()}`,
+    })
+
+  test("grant is idempotent and renews the entire pool", async () => {
+    const org = await newOrg()
+    const key = randomUUID()
+    await seedPayg(org, 100n, key)
+    const first = await wallet(org)
+    expect(first.paygBalanceExpiresAt!.getTime()).toBeGreaterThan(
+      Date.now() + 364 * 86400_000,
+    )
+    await seedPayg(org, 100n, key)
+    await seedPayg(org, 50n)
+    const renewed = await wallet(org)
+    expect(renewed.paygBalance).toBe(150n)
+    expect(renewed.paygBalanceExpiresAt!.getTime()).toBeGreaterThanOrEqual(
+      first.paygBalanceExpiresAt!.getTime(),
+    )
+    expect(renewed.paygGeneration).toBe(first.paygGeneration)
+    expect(await ledgerTotal(org)).toBe(150n)
+  })
+
+  test("reusing a grant key for a different grant is rejected", async () => {
+    const org = await newOrg()
+    const key = `shared:${randomUUID()}`
+    await billing.grantPaygCredits({
+      organizationId: org,
+      amount: 30n,
+      idempotencyKey: key,
+    })
+    await expect(
+      billing.grantPaygCredits({
+        organizationId: org,
+        amount: 40n,
+        idempotencyKey: key,
+      }),
+    ).rejects.toThrow()
+    await expect(
+      billing.topup({ organizationId: org, amount: 30n, idempotencyKey: key }),
+    ).rejects.toThrow()
+    expect(await billing.getBalance(org)).toBe(30n)
+  })
+
+  test("reserves subscription first, then PAYG; settlement refunds PAYG first", async () => {
+    const org = await newOrg()
+    await seedBalance(org, 80n)
+    await seedPayg(org, 100n)
+    const reservation = await reserveCredits(org, 120n)
+    expect(reservation.balanceReserved).toBe(80n)
+    expect(reservation.paygReserved).toBe(40n)
+    expect(await billing.getBalances(org)).toMatchObject({
+      balance: 60n,
+      subscriptionBalance: 0n,
+      paygBalance: 60n,
+    })
+    await billing.settle({ reservationId: reservation.id, actualCredits: 90n })
+    expect((await wallet(org)).paygBalance).toBe(90n)
+    expect(await ledgerTotal(org)).toBe(await billing.getBalance(org))
+  })
+
+  test("insufficient combined balance rolls back; overage drains both sources", async () => {
+    const org = await newOrg()
+    await seedBalance(org, 20n)
+    await seedPayg(org, 30n)
+    await expect(reserveCredits(org, 51n)).rejects.toBeInstanceOf(
+      InsufficientCreditsError,
+    )
+    expect(await billing.getBalance(org)).toBe(50n)
+    const reservation = await reserveCredits(org, 10n)
+    await billing.settle({ reservationId: reservation.id, actualCredits: 70n })
+    expect(await billing.getBalance(org)).toBe(0n)
+    expect(await countLedger(org, "overage_uncovered")).toBe(1)
+    expect(await ledgerTotal(org)).toBe(0n)
+  })
+
+  test("expiry boundary clears a pool and prevents spending", async () => {
+    const org = await newOrg()
+    await seedPayg(org, 25n)
+    await db
+      .update(organizationWallets)
+      .set({ paygBalanceExpiresAt: new Date() })
+      .where(eq(organizationWallets.organizationId, org))
+    expect(await billing.getBalance(org)).toBe(0n)
+    await expect(reserveCredits(org, 1n)).rejects.toBeInstanceOf(
+      InsufficientCreditsError,
+    )
+    expect((await wallet(org)).paygBalance).toBe(0n)
+    expect(await ledgerTotal(org)).toBe(0n)
+  })
+
+  test("idle wallet sweep expires due credits once", async () => {
+    const org = await newOrg()
+    await seedPayg(org, 25n)
+    await db
+      .update(organizationWallets)
+      .set({ paygBalanceExpiresAt: new Date(0) })
+      .where(eq(organizationWallets.organizationId, org))
+    expect(await billing.sweepExpiredWallets()).toBeGreaterThanOrEqual(1)
+    expect(await billing.sweepExpiredWallets()).toBe(0)
+    expect((await wallet(org)).paygBalance).toBe(0n)
+    expect(await ledgerTotal(org)).toBe(0n)
+  })
+
+  test("grant after expiry starts a new generation; old refund is discarded", async () => {
+    const org = await newOrg()
+    await seedPayg(org, 100n)
+    const reservation = await reserveCredits(org, 40n)
+    await db
+      .update(organizationWallets)
+      .set({ paygBalanceExpiresAt: new Date(0) })
+      .where(eq(organizationWallets.organizationId, org))
+    await seedPayg(org, 20n)
+    expect((await wallet(org)).paygGeneration).toBe(
+      reservation.paygGeneration + 1n,
+    )
+    await billing.refund(reservation.id)
+    expect((await wallet(org)).paygBalance).toBe(20n)
+    expect(await ledgerTotal(org)).toBe(20n)
+  })
+
+  test("refund after renewal returns to the live PAYG pool once", async () => {
+    const org = await newOrg()
+    await seedPayg(org, 100n)
+    const reservation = await reserveCredits(org, 40n)
+    await seedPayg(org, 20n)
+    await billing.refund(reservation.id)
+    await billing.refund(reservation.id)
+    expect((await wallet(org)).paygBalance).toBe(120n)
+    expect(await countLedger(org, "refund")).toBe(1)
+  })
+
+  test("settlement after PAYG expiry discards the expired refund", async () => {
+    const org = await newOrg()
+    await seedPayg(org, 100n)
+    const reservation = await reserveCredits(org, 80n)
+    await db
+      .update(organizationWallets)
+      .set({ paygBalanceExpiresAt: new Date(0) })
+      .where(eq(organizationWallets.organizationId, org))
+    await billing.settle({ reservationId: reservation.id, actualCredits: 20n })
+    expect(await billing.getBalance(org)).toBe(0n)
+    expect(await ledgerTotal(org)).toBe(0n)
+  })
+
+  test("expired subscription credits cannot return to a replacement generation", async () => {
+    const org = await newOrg()
+    await seedBalance(org, 100n)
+    await db
+      .update(organizationWallets)
+      .set({ balanceExpiresAt: new Date(Date.now() + 60_000) })
+      .where(eq(organizationWallets.organizationId, org))
+    const reservation = await reserveCredits(org, 40n)
+    await db
+      .update(organizationWallets)
+      .set({ balanceExpiresAt: new Date(0) })
+      .where(eq(organizationWallets.organizationId, org))
+    await billing.getBalance(org)
+    await db
+      .update(organizationWallets)
+      .set({ balance: 50n, balanceExpiresAt: new Date(Date.now() + 60_000) })
+      .where(eq(organizationWallets.organizationId, org))
+    await billing.refund(reservation.id)
+    expect((await wallet(org)).balance).toBe(50n)
+  })
+
+  test("reservation sweeper refunds live sources and remains idempotent", async () => {
+    const org = await newOrg()
+    await seedBalance(org, 20n)
+    await seedPayg(org, 30n)
+    const reservation = await reserveCredits(org, 40n)
+    await db
+      .update(billingReservations)
+      .set({ expiresAt: new Date(0) })
+      .where(eq(billingReservations.id, reservation.id))
+    expect(await billing.sweepExpired()).toBeGreaterThanOrEqual(1)
+    expect(await billing.getBalance(org)).toBe(50n)
+    await expect(
+      billing.settle({ reservationId: reservation.id, actualCredits: 1n }),
+    ).rejects.toBeInstanceOf(ReservationExpiredError)
+  })
+
+  test("concurrent reservations and duplicate grants do not overspend", async () => {
+    const org = await newOrg()
+    await seedPayg(org, 100n)
+    const results = await Promise.allSettled(
+      Array.from({ length: 10 }, () => reserveCredits(org, 20n)),
+    )
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(5)
+    expect(await billing.getBalance(org)).toBe(0n)
+    const key = randomUUID()
+    await Promise.all(Array.from({ length: 5 }, () => seedPayg(org, 20n, key)))
+    expect(await billing.getBalance(org)).toBe(20n)
+    expect(await ledgerTotal(org)).toBe(20n)
+  })
+
+  test("a grant racing reservations preserves the ledger and wallet total", async () => {
+    const org = await newOrg()
+    await seedPayg(org, 40n)
+    const operations = await Promise.allSettled([
+      seedPayg(org, 30n),
+      reserveCredits(org, 30n),
+      reserveCredits(org, 30n),
+    ])
+    const reservations = operations
+      .slice(1)
+      .filter((result) => result.status === "fulfilled").length
+    expect(operations[0].status).toBe("fulfilled")
+    expect(await billing.getBalance(org)).toBe(70n - BigInt(reservations * 30))
+    expect(await ledgerTotal(org)).toBe(await billing.getBalance(org))
   })
 })

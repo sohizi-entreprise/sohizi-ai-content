@@ -1,25 +1,16 @@
-/**
- * Billing repository.
- *
- * Concurrency / isolation notes:
- * - Assumes Postgres default isolation (READ COMMITTED). Under READ COMMITTED,
- *   `UPDATE ... WHERE balance >= $1` re-evaluates the WHERE clause after the row
- *   lock is acquired (EvalPlanQual), so the check-and-debit is atomic without
- *   SELECT FOR UPDATE.
- * - Every wallet balance mutation happens in the same transaction as the
- *   corresponding ledger insert and reservation transition.
- * - Reservation transitions are status-guarded (`WHERE status = 'reserved'`),
- *   so duplicate settle/refund/expire calls become no-ops.
- */
-
+/** Wallet mutations are serialized by the organization wallet row lock. */
 import { db } from "@/db"
 import {
   organizationWallets,
   billingReservations,
   billingLedger,
 } from "@/db/schema"
-import type { BillingReservation, BillingLedgerKind } from "@/db/schema"
-import { sql, eq, and, lt } from "drizzle-orm"
+import type {
+  BillingReservation,
+  BillingLedgerKind,
+  OrganizationWallet,
+} from "@/db/schema"
+import { eq, and, lt, lte, or, asc } from "drizzle-orm"
 import {
   InsufficientCreditsError,
   ReservationExpiredError,
@@ -28,33 +19,184 @@ import {
 import type { Credits } from "./types"
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
-type Executor = typeof db | Tx
+type Wallet = OrganizationWallet
 
-const ledgerKey = (
-  reservationId: string,
-  kind: BillingLedgerKind,
-  suffix?: string,
-) =>
-  suffix ? `${reservationId}:${kind}:${suffix}` : `${reservationId}:${kind}`
+const ledgerKey = (reservationId: string, kind: BillingLedgerKind) =>
+  `${reservationId}:${kind}`
+const total = (wallet: Wallet) => wallet.balance + wallet.paygBalance
 
-async function ensureWallet(orgId: string, tx: Executor): Promise<void> {
+async function ensureWallet(orgId: string, tx: Tx): Promise<void> {
   await tx
     .insert(organizationWallets)
-    .values({ organizationId: orgId, balance: 0n })
+    .values({ organizationId: orgId, balance: 0n, paygBalance: 0n })
     .onConflictDoNothing()
 }
 
-async function getBalanceRaw(orgId: string, tx: Executor): Promise<bigint> {
-  const rows = await tx
-    .select({ balance: organizationWallets.balance })
+async function lockWallet(orgId: string, tx: Tx): Promise<Wallet> {
+  await ensureWallet(orgId, tx)
+  const [wallet] = await tx
+    .select()
     .from(organizationWallets)
     .where(eq(organizationWallets.organizationId, orgId))
-    .limit(1)
-  return rows[0]?.balance ?? 0n
+    .for("update")
+  return wallet
+}
+
+async function saveWallet(wallet: Wallet, tx: Tx): Promise<void> {
+  await tx
+    .update(organizationWallets)
+    .set({
+      balance: wallet.balance,
+      balanceExpiresAt: wallet.balanceExpiresAt,
+      balanceGeneration: wallet.balanceGeneration,
+      paygBalance: wallet.paygBalance,
+      paygBalanceExpiresAt: wallet.paygBalanceExpiresAt,
+      paygGeneration: wallet.paygGeneration,
+    })
+    .where(eq(organizationWallets.organizationId, wallet.organizationId))
+}
+
+async function writeLedger(
+  tx: Tx,
+  input: {
+    organizationId: string
+    reservationId?: string | null
+    kind: BillingLedgerKind
+    balanceDelta: bigint
+    paygDelta: bigint
+    balanceAfter: bigint
+    idempotencyKey: string
+    metadata?: Record<string, unknown> | null
+  },
+): Promise<void> {
+  await tx.insert(billingLedger).values({
+    organizationId: input.organizationId,
+    reservationId: input.reservationId ?? null,
+    kind: input.kind,
+    delta: input.balanceDelta + input.paygDelta,
+    balanceDelta: input.balanceDelta,
+    paygDelta: input.paygDelta,
+    balanceAfter: input.balanceAfter,
+    idempotencyKey: input.idempotencyKey,
+    metadata: input.metadata ?? null,
+  })
+}
+
+/** Clear expired pools while holding the wallet lock. Expiry is inclusive. */
+async function expireWallet(wallet: Wallet, tx: Tx, now: Date): Promise<void> {
+  if (wallet.balanceExpiresAt && wallet.balanceExpiresAt <= now) {
+    const expired = wallet.balance
+    const generation = wallet.balanceGeneration
+    wallet.balance = 0n
+    wallet.balanceExpiresAt = null
+    wallet.balanceGeneration += 1n
+    await saveWallet(wallet, tx)
+    if (expired > 0n)
+      await writeLedger(tx, {
+        organizationId: wallet.organizationId,
+        kind: "expire",
+        balanceDelta: -expired,
+        paygDelta: 0n,
+        balanceAfter: total(wallet),
+        idempotencyKey: `wallet:${wallet.organizationId}:balance:${generation}:expire`,
+      })
+  }
+  if (wallet.paygBalanceExpiresAt && wallet.paygBalanceExpiresAt <= now) {
+    const expired = wallet.paygBalance
+    const generation = wallet.paygGeneration
+    wallet.paygBalance = 0n
+    wallet.paygBalanceExpiresAt = null
+    wallet.paygGeneration += 1n
+    await saveWallet(wallet, tx)
+    if (expired > 0n)
+      await writeLedger(tx, {
+        organizationId: wallet.organizationId,
+        kind: "expire",
+        balanceDelta: 0n,
+        paygDelta: -expired,
+        balanceAfter: total(wallet),
+        idempotencyKey: `wallet:${wallet.organizationId}:payg:${generation}:expire`,
+      })
+  }
+}
+
+export async function getBalances(orgId: string): Promise<{
+  balance: bigint
+  subscriptionBalance: bigint
+  paygBalance: bigint
+  balanceExpiresAt: Date | null
+  paygBalanceExpiresAt: Date | null
+}> {
+  return db.transaction(async (tx) => {
+    const wallet = await lockWallet(orgId, tx)
+    await expireWallet(wallet, tx, new Date())
+    return {
+      balance: total(wallet),
+      subscriptionBalance: wallet.balance,
+      paygBalance: wallet.paygBalance,
+      balanceExpiresAt: wallet.balanceExpiresAt,
+      paygBalanceExpiresAt: wallet.paygBalanceExpiresAt,
+    }
+  })
 }
 
 export async function getBalance(orgId: string): Promise<bigint> {
-  return getBalanceRaw(orgId, db)
+  return (await getBalances(orgId)).balance
+}
+
+/** Claim the ledger key before changing the wallet. Retrying an identical grant is a no-op. */
+async function claimGrant(
+  tx: Tx,
+  wallet: Wallet,
+  input: {
+    amount: bigint
+    idempotencyKey: string
+    source: "balance" | "payg"
+    metadata?: Record<string, unknown>
+  },
+): Promise<boolean> {
+  const balanceDelta = input.source === "balance" ? input.amount : 0n
+  const paygDelta = input.source === "payg" ? input.amount : 0n
+  const inserted = await tx
+    .insert(billingLedger)
+    .values({
+      organizationId: wallet.organizationId,
+      reservationId: null,
+      delta: input.amount,
+      balanceDelta,
+      paygDelta,
+      kind: "topup",
+      balanceAfter: total(wallet), // updated in this transaction after the wallet change
+      idempotencyKey: input.idempotencyKey,
+      metadata: { ...input.metadata, source: input.source },
+    })
+    .onConflictDoNothing({ target: billingLedger.idempotencyKey })
+    .returning({ id: billingLedger.id })
+  if (inserted.length > 0) return true
+  const [existing] = await tx
+    .select()
+    .from(billingLedger)
+    .where(eq(billingLedger.idempotencyKey, input.idempotencyKey))
+    .limit(1)
+  if (
+    !existing ||
+    existing.organizationId !== wallet.organizationId ||
+    existing.kind !== "topup" ||
+    existing.delta !== input.amount ||
+    existing.balanceDelta !== balanceDelta ||
+    existing.paygDelta !== paygDelta
+  ) {
+    throw new Error("Billing idempotency key reused for a different grant")
+  }
+  return false
+}
+
+async function finishGrant(tx: Tx, wallet: Wallet, key: string): Promise<void> {
+  await saveWallet(wallet, tx)
+  await tx
+    .update(billingLedger)
+    .set({ balanceAfter: total(wallet) })
+    .where(eq(billingLedger.idempotencyKey, key))
 }
 
 export async function topup(input: {
@@ -65,28 +207,39 @@ export async function topup(input: {
 }): Promise<bigint> {
   if (input.amount <= 0n) throw new Error("topup amount must be positive")
   return db.transaction(async (tx) => {
-    await ensureWallet(input.organizationId, tx)
-    const updated = await tx
-      .update(organizationWallets)
-      .set({ balance: sql`${organizationWallets.balance} + ${input.amount}` })
-      .where(eq(organizationWallets.organizationId, input.organizationId))
-      .returning({ balance: organizationWallets.balance })
-    const balanceAfter = updated[0].balance
-    await tx.insert(billingLedger).values({
-      reservationId: null,
-      organizationId: input.organizationId,
-      delta: input.amount,
-      kind: "topup",
-      balanceAfter,
-      idempotencyKey: input.idempotencyKey,
-      metadata: input.metadata ?? null,
-    })
-    return balanceAfter
+    const wallet = await lockWallet(input.organizationId, tx)
+    await expireWallet(wallet, tx, new Date())
+    if (await claimGrant(tx, wallet, { ...input, source: "balance" })) {
+      wallet.balance += input.amount
+      await finishGrant(tx, wallet, input.idempotencyKey)
+    }
+    return total(wallet)
+  })
+}
+
+export async function grantPaygCredits(input: {
+  organizationId: string
+  amount: Credits
+  idempotencyKey: string
+  metadata?: Record<string, unknown>
+}): Promise<bigint> {
+  if (input.amount <= 0n) throw new Error("PAYG grant amount must be positive")
+  return db.transaction(async (tx) => {
+    const wallet = await lockWallet(input.organizationId, tx)
+    const now = new Date()
+    await expireWallet(wallet, tx, now)
+    if (await claimGrant(tx, wallet, { ...input, source: "payg" })) {
+      wallet.paygBalance += input.amount
+      const renewed = new Date(now)
+      renewed.setUTCFullYear(renewed.getUTCFullYear() + 1)
+      wallet.paygBalanceExpiresAt = renewed
+      await finishGrant(tx, wallet, input.idempotencyKey)
+    }
+    return total(wallet)
   })
 }
 
 export interface ReserveRow extends BillingReservation {
-  /** true if a brand-new reservation was created in this call. */
   created: boolean
 }
 
@@ -102,14 +255,15 @@ export async function reserve(input: {
 }): Promise<ReserveRow> {
   if (input.estimatedCredits < 0n)
     throw new Error("estimatedCredits must be >= 0")
-  const expiresAt = new Date(Date.now() + input.ttlMs)
-
   return db.transaction(async (tx) => {
-    await ensureWallet(input.organizationId, tx)
-
-    // Try to claim the idempotency key first. If another tx has already inserted
-    // the same key, ON CONFLICT DO NOTHING returns no row; we then read and
-    // return the existing reservation without debiting again.
+    const wallet = await lockWallet(input.organizationId, tx)
+    await expireWallet(wallet, tx, new Date())
+    const balanceReserved =
+      input.estimatedCredits < wallet.balance
+        ? input.estimatedCredits
+        : wallet.balance
+    const paygReserved = input.estimatedCredits - balanceReserved
+    // Claim the key first; a duplicate must not require the current balance.
     const inserted = await tx
       .insert(billingReservations)
       .values({
@@ -119,76 +273,116 @@ export async function reserve(input: {
         userId: input.userId ?? null,
         operation: input.operation,
         estimatedCredits: input.estimatedCredits,
+        balanceReserved,
+        paygReserved,
+        balanceGeneration: wallet.balanceGeneration,
+        paygGeneration: wallet.paygGeneration,
         status: "reserved",
-        expiresAt,
+        expiresAt: new Date(Date.now() + input.ttlMs),
         metadata: input.metadata ?? null,
       })
       .onConflictDoNothing({ target: billingReservations.idempotencyKey })
       .returning()
-
     if (inserted.length === 0) {
-      const existing = await tx
+      const [existing] = await tx
         .select()
         .from(billingReservations)
         .where(eq(billingReservations.idempotencyKey, input.idempotencyKey))
         .limit(1)
-      if (!existing[0]) {
+      if (!existing)
+        throw new Error("Reservation idempotency conflict without a row")
+      if (
+        existing.organizationId !== input.organizationId ||
+        existing.estimatedCredits !== input.estimatedCredits ||
+        existing.operation !== input.operation
+      ) {
         throw new Error(
-          "Reservation insert returned no row but no existing row found",
+          "Billing idempotency key reused for a different reservation",
         )
       }
-      return { ...existing[0], created: false }
+      return { ...existing, created: false }
     }
-
-    const reservation = inserted[0]
-
-    if (input.estimatedCredits > 0n) {
-      const debited = await tx
-        .update(organizationWallets)
-        .set({
-          balance: sql`${organizationWallets.balance} - ${input.estimatedCredits}`,
-        })
-        .where(
-          and(
-            eq(organizationWallets.organizationId, input.organizationId),
-            sql`${organizationWallets.balance} >= ${input.estimatedCredits}`,
-          ),
-        )
-        .returning({ balance: organizationWallets.balance })
-
-      if (debited.length === 0) {
-        const current = await getBalanceRaw(input.organizationId, tx)
-        throw new InsufficientCreditsError(
-          input.organizationId,
-          input.estimatedCredits,
-          current,
-        )
-      }
-
-      await tx.insert(billingLedger).values({
-        reservationId: reservation.id,
-        organizationId: input.organizationId,
-        delta: -input.estimatedCredits,
-        kind: "reserve",
-        balanceAfter: debited[0].balance,
-        idempotencyKey: ledgerKey(reservation.id, "reserve"),
-        metadata: input.metadata ?? null,
-      })
-    } else {
-      const balance = await getBalanceRaw(input.organizationId, tx)
-      await tx.insert(billingLedger).values({
-        reservationId: reservation.id,
-        organizationId: input.organizationId,
-        delta: 0n,
-        kind: "reserve",
-        balanceAfter: balance,
-        idempotencyKey: ledgerKey(reservation.id, "reserve"),
-        metadata: input.metadata ?? null,
-      })
+    if (paygReserved > wallet.paygBalance) {
+      throw new InsufficientCreditsError(
+        input.organizationId,
+        input.estimatedCredits,
+        total(wallet),
+      )
     }
-
-    return { ...reservation, created: true }
+    wallet.balance -= balanceReserved
+    wallet.paygBalance -= paygReserved
+    await saveWallet(wallet, tx)
+    await writeLedger(tx, {
+      reservationId: inserted[0].id,
+      organizationId: input.organizationId,
+      kind: "reserve",
+      balanceDelta: -balanceReserved,
+      paygDelta: -paygReserved,
+      balanceAfter: total(wallet),
+      idempotencyKey: ledgerKey(inserted[0].id, "reserve"),
+      metadata: input.metadata,
+    })
+    return { ...inserted[0], created: true }
   })
+}
+
+async function lockReservationWallet(
+  tx: Tx,
+  reservationId: string,
+): Promise<{ reservation: BillingReservation; wallet: Wallet }> {
+  const [reservation] = await tx
+    .select()
+    .from(billingReservations)
+    .where(eq(billingReservations.id, reservationId))
+    .limit(1)
+  if (!reservation) throw new ReservationNotFoundError(reservationId)
+  const wallet = await lockWallet(reservation.organizationId, tx)
+  await expireWallet(wallet, tx, new Date())
+  return { reservation, wallet }
+}
+
+/** Refund the PAYG portion first, then subscription, preserving subscription-first spend. */
+function returnReserved(
+  wallet: Wallet,
+  reservation: BillingReservation,
+  amount: bigint,
+): { balanceDelta: bigint; paygDelta: bigint } {
+  const paygDelta =
+    reservation.paygGeneration === wallet.paygGeneration &&
+    wallet.paygBalanceExpiresAt
+      ? amount < reservation.paygReserved
+        ? amount
+        : reservation.paygReserved
+      : 0n
+  const remaining =
+    amount -
+    (amount < reservation.paygReserved ? amount : reservation.paygReserved)
+  const balanceDelta =
+    reservation.balanceGeneration === wallet.balanceGeneration &&
+    (!wallet.balanceExpiresAt || wallet.balanceExpiresAt > new Date())
+      ? remaining < reservation.balanceReserved
+        ? remaining
+        : reservation.balanceReserved
+      : 0n
+  wallet.paygBalance += paygDelta
+  wallet.balance += balanceDelta
+  return { balanceDelta, paygDelta }
+}
+
+function debitAvailable(
+  wallet: Wallet,
+  amount: bigint,
+): { balanceDelta: bigint; paygDelta: bigint; uncovered: bigint } {
+  const fromBalance = amount < wallet.balance ? amount : wallet.balance
+  wallet.balance -= fromBalance
+  const rest = amount - fromBalance
+  const fromPayg = rest < wallet.paygBalance ? rest : wallet.paygBalance
+  wallet.paygBalance -= fromPayg
+  return {
+    balanceDelta: -fromBalance,
+    paygDelta: -fromPayg,
+    uncovered: rest - fromPayg,
+  }
 }
 
 export async function settle(input: {
@@ -197,9 +391,9 @@ export async function settle(input: {
   metadata?: Record<string, unknown>
 }): Promise<BillingReservation> {
   if (input.actualCredits < 0n) throw new Error("actualCredits must be >= 0")
-
   return db.transaction(async (tx) => {
-    const updated = await tx
+    const { wallet } = await lockReservationWallet(tx, input.reservationId)
+    const [reservation] = await tx
       .update(billingReservations)
       .set({ status: "settled", actualCredits: input.actualCredits })
       .where(
@@ -209,157 +403,123 @@ export async function settle(input: {
         ),
       )
       .returning()
-
-    if (updated.length === 0) {
-      const current = await tx
+    if (!reservation) {
+      const [current] = await tx
         .select()
         .from(billingReservations)
         .where(eq(billingReservations.id, input.reservationId))
         .limit(1)
-      if (!current[0]) throw new ReservationNotFoundError(input.reservationId)
-      throw new ReservationExpiredError(input.reservationId, current[0].status)
+      throw new ReservationExpiredError(input.reservationId, current.status)
     }
-
-    const reservation = updated[0]
     const diff = reservation.estimatedCredits - input.actualCredits
-
     if (diff > 0n) {
-      const credited = await tx
-        .update(organizationWallets)
-        .set({ balance: sql`${organizationWallets.balance} + ${diff}` })
-        .where(
-          eq(organizationWallets.organizationId, reservation.organizationId),
-        )
-        .returning({ balance: organizationWallets.balance })
-      await tx.insert(billingLedger).values({
-        reservationId: reservation.id,
-        organizationId: reservation.organizationId,
-        delta: diff,
-        kind: "settle_diff",
-        balanceAfter: credited[0].balance,
-        idempotencyKey: ledgerKey(reservation.id, "settle_diff"),
-        metadata: input.metadata ?? null,
-      })
-    } else if (diff < 0n) {
-      const owed = -diff
-      const debited = await tx
-        .update(organizationWallets)
-        .set({ balance: sql`${organizationWallets.balance} - ${owed}` })
-        .where(
-          and(
-            eq(organizationWallets.organizationId, reservation.organizationId),
-            sql`${organizationWallets.balance} >= ${owed}`,
-          ),
-        )
-        .returning({ balance: organizationWallets.balance })
-
-      if (debited.length > 0) {
-        await tx.insert(billingLedger).values({
+      const { balanceDelta, paygDelta } = returnReserved(
+        wallet,
+        reservation,
+        diff,
+      )
+      await saveWallet(wallet, tx)
+      if (balanceDelta + paygDelta > 0n)
+        await writeLedger(tx, {
           reservationId: reservation.id,
-          organizationId: reservation.organizationId,
-          delta: -owed,
+          organizationId: wallet.organizationId,
           kind: "settle_diff",
-          balanceAfter: debited[0].balance,
+          balanceDelta,
+          paygDelta,
+          balanceAfter: total(wallet),
           idempotencyKey: ledgerKey(reservation.id, "settle_diff"),
-          metadata: input.metadata ?? null,
+          metadata: input.metadata,
         })
-      } else {
-        // Balance insufficient to cover overage. Debit down to 0 and record
-        // the uncovered remainder so we never let the wallet go negative.
-        const current = await getBalanceRaw(reservation.organizationId, tx)
-        if (current > 0n) {
-          const drained = await tx
-            .update(organizationWallets)
-            .set({ balance: 0n })
-            .where(
-              eq(
-                organizationWallets.organizationId,
-                reservation.organizationId,
-              ),
-            )
-            .returning({ balance: organizationWallets.balance })
-          await tx.insert(billingLedger).values({
-            reservationId: reservation.id,
-            organizationId: reservation.organizationId,
-            delta: -current,
-            kind: "settle_diff",
-            balanceAfter: drained[0].balance,
-            idempotencyKey: ledgerKey(reservation.id, "settle_diff"),
-            metadata: input.metadata ?? null,
-          })
-        }
-        const uncovered = owed - current
-        await tx.insert(billingLedger).values({
+    } else if (diff < 0n) {
+      const { balanceDelta, paygDelta, uncovered } = debitAvailable(
+        wallet,
+        -diff,
+      )
+      await saveWallet(wallet, tx)
+      if (balanceDelta + paygDelta < 0n)
+        await writeLedger(tx, {
           reservationId: reservation.id,
-          organizationId: reservation.organizationId,
-          delta: 0n,
-          kind: "overage_uncovered",
-          balanceAfter: 0n,
-          idempotencyKey: ledgerKey(reservation.id, "overage_uncovered"),
-          metadata: {
-            ...(input.metadata ?? {}),
-            uncovered: uncovered.toString(),
-          },
+          organizationId: wallet.organizationId,
+          kind: "settle_diff",
+          balanceDelta,
+          paygDelta,
+          balanceAfter: total(wallet),
+          idempotencyKey: ledgerKey(reservation.id, "settle_diff"),
+          metadata: input.metadata,
         })
-      }
+      if (uncovered > 0n)
+        await writeLedger(tx, {
+          reservationId: reservation.id,
+          organizationId: wallet.organizationId,
+          kind: "overage_uncovered",
+          balanceDelta: 0n,
+          paygDelta: 0n,
+          balanceAfter: total(wallet),
+          idempotencyKey: ledgerKey(reservation.id, "overage_uncovered"),
+          metadata: { ...input.metadata, uncovered: uncovered.toString() },
+        })
     }
-
     return reservation
   })
+}
+
+async function refundReserved(
+  tx: Tx,
+  reservationId: string,
+  status: "refunded" | "expired",
+  reason?: string,
+): Promise<BillingReservation | null> {
+  const { wallet } = await lockReservationWallet(tx, reservationId)
+  const [reservation] = await tx
+    .update(billingReservations)
+    .set({ status })
+    .where(
+      and(
+        eq(billingReservations.id, reservationId),
+        eq(billingReservations.status, "reserved"),
+      ),
+    )
+    .returning()
+  if (!reservation) return null
+  const { balanceDelta, paygDelta } = returnReserved(
+    wallet,
+    reservation,
+    reservation.estimatedCredits,
+  )
+  await saveWallet(wallet, tx)
+  if (balanceDelta + paygDelta > 0n)
+    await writeLedger(tx, {
+      reservationId,
+      organizationId: wallet.organizationId,
+      kind: status === "expired" ? "expire" : "refund",
+      balanceDelta,
+      paygDelta,
+      balanceAfter: total(wallet),
+      idempotencyKey: ledgerKey(
+        reservationId,
+        status === "expired" ? "expire" : "refund",
+      ),
+      metadata: reason ? { reason } : null,
+    })
+  return reservation
 }
 
 export async function refund(input: {
   reservationId: string
   reason?: string
 }): Promise<BillingReservation | null> {
-  return db.transaction(async (tx) => {
-    const updated = await tx
-      .update(billingReservations)
-      .set({ status: "refunded" })
-      .where(
-        and(
-          eq(billingReservations.id, input.reservationId),
-          eq(billingReservations.status, "reserved"),
-        ),
-      )
-      .returning()
-
-    if (updated.length === 0) return null
-
-    const reservation = updated[0]
-    if (reservation.estimatedCredits > 0n) {
-      const credited = await tx
-        .update(organizationWallets)
-        .set({
-          balance: sql`${organizationWallets.balance} + ${reservation.estimatedCredits}`,
-        })
-        .where(
-          eq(organizationWallets.organizationId, reservation.organizationId),
-        )
-        .returning({ balance: organizationWallets.balance })
-      await tx.insert(billingLedger).values({
-        reservationId: reservation.id,
-        organizationId: reservation.organizationId,
-        delta: reservation.estimatedCredits,
-        kind: "refund",
-        balanceAfter: credited[0].balance,
-        idempotencyKey: ledgerKey(reservation.id, "refund"),
-        metadata: input.reason ? { reason: input.reason } : null,
-      })
-    }
-
-    return reservation
-  })
+  return db.transaction((tx) =>
+    refundReserved(tx, input.reservationId, "refunded", input.reason),
+  )
 }
 
 export async function extend(input: {
   reservationId: string
   ttlMs: number
 }): Promise<BillingReservation> {
-  const newExpiresAt = new Date(Date.now() + input.ttlMs)
   const updated = await db
     .update(billingReservations)
-    .set({ expiresAt: newExpiresAt })
+    .set({ expiresAt: new Date(Date.now() + input.ttlMs) })
     .where(
       and(
         eq(billingReservations.id, input.reservationId),
@@ -367,72 +527,21 @@ export async function extend(input: {
       ),
     )
     .returning()
-
-  if (updated.length === 0) {
-    const current = await db
-      .select()
-      .from(billingReservations)
-      .where(eq(billingReservations.id, input.reservationId))
-      .limit(1)
-    if (!current[0]) throw new ReservationNotFoundError(input.reservationId)
-    throw new ReservationExpiredError(input.reservationId, current[0].status)
-  }
-  return updated[0]
+  if (updated.length > 0) return updated[0]
+  const current = await getReservation(input.reservationId)
+  if (!current) throw new ReservationNotFoundError(input.reservationId)
+  throw new ReservationExpiredError(input.reservationId, current.status)
 }
 
 export async function getReservation(
   reservationId: string,
 ): Promise<BillingReservation | null> {
-  const rows = await db
+  const [row] = await db
     .select()
     .from(billingReservations)
     .where(eq(billingReservations.id, reservationId))
     .limit(1)
-  return rows[0] ?? null
-}
-
-/**
- * Refund one expired reservation in a single short transaction. Returns
- * `true` if it actually transitioned a row; `false` if it was already moved.
- */
-async function expireOne(reservationId: string): Promise<boolean> {
-  return db.transaction(async (tx) => {
-    const updated = await tx
-      .update(billingReservations)
-      .set({ status: "expired" })
-      .where(
-        and(
-          eq(billingReservations.id, reservationId),
-          eq(billingReservations.status, "reserved"),
-        ),
-      )
-      .returning()
-
-    if (updated.length === 0) return false
-
-    const reservation = updated[0]
-    if (reservation.estimatedCredits > 0n) {
-      const credited = await tx
-        .update(organizationWallets)
-        .set({
-          balance: sql`${organizationWallets.balance} + ${reservation.estimatedCredits}`,
-        })
-        .where(
-          eq(organizationWallets.organizationId, reservation.organizationId),
-        )
-        .returning({ balance: organizationWallets.balance })
-      await tx.insert(billingLedger).values({
-        reservationId: reservation.id,
-        organizationId: reservation.organizationId,
-        delta: reservation.estimatedCredits,
-        kind: "expire",
-        balanceAfter: credited[0].balance,
-        idempotencyKey: ledgerKey(reservation.id, "expire"),
-        metadata: null,
-      })
-    }
-    return true
-  })
+  return row ?? null
 }
 
 export async function sweepExpired(limit = 100): Promise<number> {
@@ -445,16 +554,67 @@ export async function sweepExpired(limit = 100): Promise<number> {
         lt(billingReservations.expiresAt, new Date()),
       ),
     )
+    .orderBy(asc(billingReservations.expiresAt))
     .limit(limit)
-
   let processed = 0
+  const failures: unknown[] = []
   for (const row of candidates) {
     try {
-      const ok = await expireOne(row.id)
-      if (ok) processed += 1
+      const result = await db.transaction((tx) =>
+        refundReserved(tx, row.id, "expired"),
+      )
+      if (result) processed++
     } catch (err) {
       console.error("[billing.sweepExpired] failed to expire", row.id, err)
+      failures.push(err)
     }
+  }
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures,
+      `Failed to expire ${failures.length} billing reservation(s)`,
+    )
+  }
+  return processed
+}
+
+/** Proactively expire idle wallets; normal reads and writes also expire lazily. */
+export async function sweepExpiredWallets(limit = 100): Promise<number> {
+  const now = new Date()
+  const candidates = await db
+    .select({ organizationId: organizationWallets.organizationId })
+    .from(organizationWallets)
+    .where(
+      or(
+        lte(organizationWallets.balanceExpiresAt, now),
+        lte(organizationWallets.paygBalanceExpiresAt, now),
+      ),
+    )
+    .orderBy(asc(organizationWallets.organizationId))
+    .limit(limit)
+  let processed = 0
+  const failures: unknown[] = []
+  for (const { organizationId } of candidates) {
+    try {
+      await db.transaction(async (tx) => {
+        const wallet = await lockWallet(organizationId, tx)
+        await expireWallet(wallet, tx, new Date())
+      })
+      processed++
+    } catch (err) {
+      console.error(
+        "[billing.sweepExpiredWallets] failed to expire",
+        organizationId,
+        err,
+      )
+      failures.push(err)
+    }
+  }
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures,
+      `Failed to expire ${failures.length} organization wallet(s)`,
+    )
   }
   return processed
 }
