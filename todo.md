@@ -6,7 +6,7 @@
 [ ] Make context donut work
 [ ] test assigning tasks
 [ ] create a skill using the agent
-[ ] create a command that can build an entire video from scratch
+[ ] create commands (plan, brainstorm, remix)
 [ ] add youtube link to the slash command
 [ ] add file citation tag
 [ ] add websearch sub-agent
@@ -15,6 +15,7 @@
 [ ] create text editor supported rules for formatting and adding different elements
 [ ] Media generator tool in the main agent
 [ ] Design a kind of story board using the document (we'll need a skill for that)
+[ ] Test context summarizing
 
 ----
 
