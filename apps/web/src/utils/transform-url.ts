@@ -101,6 +101,23 @@ export const buildOptimizeddImageUrl = (
 ): string => {
   const cdnUrl = getPublicEnv().mediaCdnUrl
 
+  // Storage keys are relative paths on our CDN. Absolute URLs can only use
+  // Cloudflare image transforms when they point at that same CDN host.
+  if (/^(?:[a-z][a-z\d+.-]*:|\/)/i.test(sourceUrl)) {
+    try {
+      const source = new URL(sourceUrl, cdnUrl)
+      const cdn = new URL(cdnUrl)
+      if (
+        !["http:", "https:"].includes(source.protocol) ||
+        source.hostname !== cdn.hostname
+      ) {
+        return sourceUrl
+      }
+    } catch {
+      return sourceUrl
+    }
+  }
+
   // Convert the options object into a comma-separated string (e.g., "width=500,height=500,fit=cover")
   const optionsString = Object.entries(options)
     .filter(([_, value]) => value !== undefined)
