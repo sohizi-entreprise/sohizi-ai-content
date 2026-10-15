@@ -3,9 +3,10 @@ import {
   calculateMediaProviderCost,
   resolveMediaPricingParams,
 } from "./credits"
+import type { ModelBasePricing } from "@/type"
 
-const tablePricing = {
-  unit: "parameter_table" as const,
+const tablePricing: Extract<ModelBasePricing, { unit: "parameter_table" }> = {
+  unit: "parameter_table",
   rate: [
     { when: { quality: "medium", resolution: "1k" }, usd: 0.06 },
     { when: { quality: "high", resolution: "2k" }, usd: 0.4 },
@@ -16,13 +17,10 @@ const tablePricing = {
 describe("resolveMediaPricingParams", () => {
   test("fills missing keys from catalog defaults", () => {
     expect(
-      resolveMediaPricingParams(
-        { prompt: "a cat" },
-        [
-          { key: "quality", defaultValue: "medium" },
-          { key: "resolution", defaultValue: "1k" },
-        ],
-      ),
+      resolveMediaPricingParams({ prompt: "a cat" }, [
+        { key: "quality", defaultValue: "medium" },
+        { key: "resolution", defaultValue: "1k" },
+      ]),
     ).toEqual({
       quality: "medium",
       resolution: "1k",
@@ -32,13 +30,10 @@ describe("resolveMediaPricingParams", () => {
 
   test("keeps explicit payload values over defaults", () => {
     expect(
-      resolveMediaPricingParams(
-        { quality: "high", resolution: "2k" },
-        [
-          { key: "quality", defaultValue: "medium" },
-          { key: "resolution", defaultValue: "1k" },
-        ],
-      ),
+      resolveMediaPricingParams({ quality: "high", resolution: "2k" }, [
+        { key: "quality", defaultValue: "medium" },
+        { key: "resolution", defaultValue: "1k" },
+      ]),
     ).toEqual({
       quality: "high",
       resolution: "2k",

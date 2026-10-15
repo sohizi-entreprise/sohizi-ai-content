@@ -10,8 +10,11 @@ import { Elysia } from "elysia"
 import { db } from "@/db"
 import {
   organization,
-  billingLedger,
+  user,
+  member,
   organizationWallets,
+  polarProcessedOrders,
+  billingLedger,
   billingReservations,
   type BillingLedgerKind,
 } from "@/db/schema"
@@ -26,6 +29,16 @@ import {
   BillableConfigError,
 } from "../index"
 import type { Billable, BillableAsync } from "../types"
+import { billingContext } from "../index"
+import {
+  grantOrder,
+  handleOrderRefunded,
+  hasPaidAccess,
+  planChangeBehavior,
+  planTier,
+  syncSubscription,
+} from "../polar"
+import type { models } from "@polar-sh/sdk/2026-10"
 
 const billing = new BillingService()
 
@@ -63,6 +76,13 @@ async function seedPayg(orgId: string, amount: bigint, key = randomUUID()) {
     amount,
     idempotencyKey: `payg:${key}`,
   })
+}
+
+async function expirePayg(orgId: string) {
+  await db
+    .update(organizationWallets)
+    .set({ paygBalanceExpiresAt: new Date(0) })
+    .where(eq(organizationWallets.organizationId, orgId))
 }
 
 async function wallet(orgId: string) {
@@ -126,6 +146,405 @@ describe("BillingService.getBalance / topup", () => {
     expect(await billing.getBalance(org)).toBe(1000n)
   })
 })
+
+describe("organization billing access", () => {
+  test("members can view but only owners and admins can manage", async () => {
+    const org = await newOrg()
+    const ids = [randomUUID(), randomUUID(), randomUUID()]
+    try {
+      for (const [index, role] of ["owner", "admin", "member"].entries()) {
+        await db.insert(user).values({
+          id: ids[index],
+          name: role,
+          email: `${ids[index]}@example.com`,
+        })
+        await db.insert(member).values({
+          id: randomUUID(),
+          userId: ids[index],
+          organizationId: org,
+          role,
+        })
+      }
+      expect(
+        (await billingContext(ids[2], { activeOrganizationId: org })).canManage,
+      ).toBe(false)
+      expect(
+        (await billingContext(ids[0], { activeOrganizationId: org }, true))
+          .canManage,
+      ).toBe(true)
+      expect(
+        (await billingContext(ids[1], { activeOrganizationId: org }, true))
+          .canManage,
+      ).toBe(true)
+      await expect(
+        billingContext(ids[2], { activeOrganizationId: org }, true),
+      ).rejects.toThrow("billing manager")
+      await expect(
+        billingContext(ids[0], { activeOrganizationId: "another-org" }, true),
+      ).rejects.toThrow("Not a member")
+    } finally {
+      for (const id of ids) await db.delete(user).where(eq(user.id, id))
+    }
+  })
+
+  test("Free and expired organizations cannot buy packs", async () => {
+    const org = await newOrg()
+    expect(hasPaidAccess(await getBillingForTest(org))).toBe(false)
+    await db.insert(organizationWallets).values({
+      organizationId: org,
+      productId: "plan",
+      allowance: 100n,
+      status: "active",
+      periodEnd: new Date(Date.now() - 1000),
+    })
+    expect(hasPaidAccess(await getBillingForTest(org))).toBe(false)
+    await db
+      .update(organizationWallets)
+      .set({
+        periodEnd: new Date(Date.now() + 86_400_000),
+        cancelAtPeriodEnd: true,
+      })
+      .where(eq(organizationWallets.organizationId, org))
+    expect(hasPaidAccess(await getBillingForTest(org))).toBe(true)
+  })
+})
+
+describe("Polar order grants", () => {
+  test("plan tiers must be positive integers and determine change timing", () => {
+    expect(planTier({ planTier: 1 })).toBe(1)
+    expect(planTier({ planTier: "2" })).toBe(2)
+    for (const value of [undefined, 0, -1, 1.5, "0", "1.5", "abc"])
+      expect(planTier({ planTier: value })).toBeNull()
+    expect(planChangeBehavior(1, 2)).toBe("reset")
+    expect(planChangeBehavior(2, 1)).toBe("next_period")
+    expect(planChangeBehavior(1, 1)).toBeNull()
+  })
+
+  test("a refunded credit pack removes its unspent balance once", async () => {
+    const org = await newOrg()
+    const customerId = randomUUID()
+    const orderId = randomUUID()
+    await db.insert(organizationWallets).values({
+      organizationId: org,
+      polarCustomerId: customerId,
+    })
+    const product = {
+      id: "credits-pack",
+      name: "Credits",
+      metadata: { creditAmount: 100 },
+      is_recurring: false,
+    } as unknown as models.Product
+    const order = {
+      id: orderId,
+      paid: true,
+      customer_id: customerId,
+      product_id: product.id,
+      product,
+      subscription_id: null,
+      created_at: new Date().toISOString(),
+      refunded_amount: 100,
+      net_amount: 100,
+    } as unknown as models.Order
+    const client = {
+      products: { get: async () => product },
+      subscriptions: { get: async () => null as never },
+    }
+    await grantOrder(order, client)
+    const reservation = await billing.reserve({
+      organizationId: org,
+      operation: "pack-spend",
+      estimatedCredits: 30n,
+      ttlMs: 60_000,
+      idempotencyKey: randomUUID(),
+    })
+    await billing.settle({ reservationId: reservation.id, actualCredits: 30n })
+    const payload = { data: order } as Parameters<typeof handleOrderRefunded>[0]
+    await handleOrderRefunded(payload)
+    await handleOrderRefunded(payload)
+    expect(await billing.getBalance(org)).toBe(0n)
+    expect(await countLedger(org, "refund")).toBe(1)
+  })
+
+  test("adds full upgrade credits after payment and resets the shared expiry", async () => {
+    const org = await newOrg()
+    const customerId = randomUUID()
+    const subscriptionId = randomUUID()
+    let periodStart = new Date(Date.now() - 86_400_000).toISOString()
+    let periodEnd = new Date(Date.now() + 29 * 86_400_000).toISOString()
+    await db
+      .insert(organizationWallets)
+      .values({ organizationId: org, polarCustomerId: customerId })
+    let productId = "creator"
+    const product = (id: string) =>
+      ({
+        id,
+        name: id,
+        metadata: { creditAmount: id === "creator" ? 100 : 200 },
+        is_recurring: true,
+        recurring_interval: "month",
+        recurring_interval_count: 1,
+        trial_interval: null,
+      }) as unknown as models.Product
+    const subscription = () =>
+      ({
+        id: subscriptionId,
+        customer_id: customerId,
+        product_id: productId,
+        status: "active",
+        current_period_start: periodStart,
+        current_period_end: periodEnd,
+        cancel_at_period_end: false,
+        pending_update: null,
+      }) as unknown as models.Subscription
+    const client = {
+      products: { get: async (id: string) => product(id) },
+      subscriptions: { get: async () => subscription() },
+    }
+    const order = (id: string, reason: models.Order["billing_reason"]) =>
+      ({
+        id,
+        paid: true,
+        customer_id: customerId,
+        product_id: productId,
+        subscription_id: subscriptionId,
+        billing_reason: reason,
+        created_at: new Date().toISOString(),
+        subscription: {
+          current_period_start: periodStart,
+          current_period_end: periodEnd,
+        },
+      }) as unknown as models.Order
+
+    const initial = order(randomUUID(), "subscription_create")
+    await grantOrder(initial, client)
+    await grantOrder(initial, client)
+    expect(await billing.getBalance(org)).toBe(100n)
+    expect(
+      (
+        await db
+          .select()
+          .from(polarProcessedOrders)
+          .where(eq(polarProcessedOrders.organizationId, org))
+      ).length,
+    ).toBe(1)
+
+    const reservation = await billing.reserve({
+      organizationId: org,
+      operation: "generation-before-upgrade",
+      estimatedCredits: 30n,
+      ttlMs: 60_000,
+      idempotencyKey: randomUUID(),
+    })
+    const oldPeriodEnd = (await wallet(org)).periodEnd
+    productId = "studio"
+    periodStart = new Date().toISOString()
+    periodEnd = new Date(Date.now() + 30 * 86_400_000).toISOString()
+    await syncSubscription(subscription())
+    expect((await wallet(org)).pendingProductId).toBe("studio")
+    expect((await wallet(org)).periodEnd?.getTime()).toBe(
+      oldPeriodEnd?.getTime(),
+    )
+    expect(await billing.getBalance(org)).toBe(70n)
+    const upgrade = order(randomUUID(), "subscription_update")
+    await grantOrder(upgrade, client)
+    await grantOrder(upgrade, client)
+    expect(await billing.getBalance(org)).toBe(270n)
+    expect((await getBillingForTest(org))?.allowance).toBe(200n)
+    expect((await wallet(org)).balanceExpiresAt?.getTime()).toBe(
+      new Date(periodEnd).getTime(),
+    )
+    expect((await wallet(org)).pendingProductId).toBeNull()
+    await billing.refund(reservation.id)
+    expect(await billing.getBalance(org)).toBe(300n)
+    const refundedUpgrade = {
+      ...upgrade,
+      refunded_amount: 2000,
+      net_amount: 2000,
+    } as models.Order
+    await handleOrderRefunded({ data: refundedUpgrade } as Parameters<
+      typeof handleOrderRefunded
+    >[0])
+    await handleOrderRefunded({ data: refundedUpgrade } as Parameters<
+      typeof handleOrderRefunded
+    >[0])
+    expect(await billing.getBalance(org)).toBe(100n)
+  })
+
+  test("does not advance the paid snapshot or grant credits for an unpaid reset", async () => {
+    const org = await newOrg()
+    const customerId = randomUUID()
+    const originalStart = new Date(Date.now() - 86_400_000)
+    const originalEnd = new Date(Date.now() + 29 * 86_400_000)
+    await db.insert(organizationWallets).values({
+      organizationId: org,
+      polarCustomerId: customerId,
+      polarSubscriptionId: randomUUID(),
+      productId: "starter",
+      productName: "Starter",
+      allowance: 100n,
+      status: "active",
+      periodStart: originalStart,
+      periodEnd: originalEnd,
+    })
+    await billing.grantSubscriptionCredits({
+      organizationId: org,
+      amount: 100n,
+      periodEnd: originalEnd,
+      idempotencyKey: randomUUID(),
+    })
+    await syncSubscription({
+      id: (await wallet(org)).polarSubscriptionId,
+      customer_id: customerId,
+      product_id: "pro",
+      status: "past_due",
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+      cancel_at_period_end: false,
+      pending_update: null,
+    } as models.Subscription)
+    const pending = await wallet(org)
+    expect(pending.productId).toBe("starter")
+    expect(pending.pendingProductId).toBe("pro")
+    expect(pending.periodStart?.getTime()).toBe(originalStart.getTime())
+    expect(pending.periodEnd?.getTime()).toBe(originalEnd.getTime())
+    expect(pending.balanceExpiresAt?.getTime()).toBe(originalEnd.getTime())
+    expect(await billing.getBalance(org)).toBe(100n)
+  })
+
+  test("a scheduled downgrade grants the next plan only after its paid cycle", async () => {
+    const org = await newOrg()
+    const customerId = randomUUID()
+    const subscriptionId = randomUUID()
+    const oldStart = new Date(Date.now() - 30 * 86_400_000)
+    const oldEnd = new Date(Date.now() - 1000)
+    await db.insert(organizationWallets).values({
+      organizationId: org,
+      polarCustomerId: customerId,
+      polarSubscriptionId: subscriptionId,
+      productId: "pro",
+      productName: "Pro",
+      allowance: 200n,
+      status: "active",
+      periodStart: oldStart,
+      periodEnd: oldEnd,
+      balance: 200n,
+      balanceExpiresAt: oldEnd,
+    })
+    const nextStart = new Date().toISOString()
+    const nextEnd = new Date(Date.now() + 30 * 86_400_000).toISOString()
+    const subscription = {
+      id: subscriptionId,
+      customer_id: customerId,
+      product_id: "starter",
+      status: "active",
+      current_period_start: nextStart,
+      current_period_end: nextEnd,
+      cancel_at_period_end: false,
+      pending_update: null,
+    } as models.Subscription
+    await syncSubscription(subscription)
+    expect((await wallet(org)).productId).toBe("pro")
+    expect((await wallet(org)).periodEnd?.getTime()).toBe(oldEnd.getTime())
+    const order = {
+      id: randomUUID(),
+      paid: true,
+      customer_id: customerId,
+      product_id: "starter",
+      subscription_id: subscriptionId,
+      billing_reason: "subscription_cycle",
+      created_at: nextStart,
+      subscription: {
+        current_period_start: nextStart,
+        current_period_end: nextEnd,
+      },
+    } as models.Order
+    const product = {
+      id: "starter",
+      name: "Starter",
+      metadata: { creditAmount: 100, planTier: 1 },
+      is_recurring: true,
+      recurring_interval: "month",
+      recurring_interval_count: 1,
+    } as unknown as models.Product
+    await grantOrder(order, {
+      products: { get: async () => product },
+      subscriptions: { get: async () => subscription },
+    })
+    expect((await wallet(org)).productId).toBe("starter")
+    expect((await wallet(org)).balanceExpiresAt?.getTime()).toBe(
+      new Date(nextEnd).getTime(),
+    )
+    expect(await billing.getBalance(org)).toBe(100n)
+  })
+
+  test("keeps prorated credits for an in-flight invoice upgrade", async () => {
+    const org = await newOrg()
+    const customerId = randomUUID()
+    const subscriptionId = randomUUID()
+    const periodStart = new Date(Date.now() - 15 * 86_400_000)
+    const periodEnd = new Date(Date.now() + 15 * 86_400_000)
+    await db.insert(organizationWallets).values({
+      organizationId: org,
+      polarCustomerId: customerId,
+      polarSubscriptionId: subscriptionId,
+      productId: "starter",
+      allowance: 100n,
+      status: "active",
+      periodStart,
+      periodEnd,
+    })
+    const subscription = {
+      id: subscriptionId,
+      customer_id: customerId,
+      product_id: "pro",
+      status: "active",
+      current_period_start: periodStart.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      cancel_at_period_end: false,
+      pending_update: null,
+    } as models.Subscription
+    const order = {
+      id: randomUUID(),
+      paid: true,
+      customer_id: customerId,
+      product_id: "pro",
+      subscription_id: subscriptionId,
+      billing_reason: "subscription_update",
+      created_at: new Date().toISOString(),
+      subscription: {
+        current_period_start: periodStart.toISOString(),
+        current_period_end: periodEnd.toISOString(),
+      },
+    } as models.Order
+    const product = {
+      id: "pro",
+      name: "Pro",
+      metadata: { creditAmount: 200 },
+      is_recurring: true,
+      recurring_interval: "month",
+      recurring_interval_count: 1,
+    } as unknown as models.Product
+    await grantOrder(order, {
+      products: { get: async () => product },
+      subscriptions: { get: async () => subscription },
+    })
+    const granted = (await wallet(org)).balance
+    expect(granted).toBeGreaterThan(0n)
+    expect(granted).toBeLessThan(100n)
+    expect((await wallet(org)).balanceExpiresAt?.getTime()).toBe(
+      periodEnd.getTime(),
+    )
+  })
+})
+
+async function getBillingForTest(organizationId: string) {
+  const [row] = await db
+    .select()
+    .from(organizationWallets)
+    .where(eq(organizationWallets.organizationId, organizationId))
+    .limit(1)
+  return row ?? null
+}
 
 // ----------------------------------------------------------------------------
 // 2. reserve
@@ -611,10 +1030,7 @@ describe("pooled PAYG credits", () => {
   test("expiry boundary clears a pool and prevents spending", async () => {
     const org = await newOrg()
     await seedPayg(org, 25n)
-    await db
-      .update(organizationWallets)
-      .set({ paygBalanceExpiresAt: new Date() })
-      .where(eq(organizationWallets.organizationId, org))
+    await expirePayg(org)
     expect(await billing.getBalance(org)).toBe(0n)
     await expect(reserveCredits(org, 1n)).rejects.toBeInstanceOf(
       InsufficientCreditsError,
@@ -626,24 +1042,53 @@ describe("pooled PAYG credits", () => {
   test("idle wallet sweep expires due credits once", async () => {
     const org = await newOrg()
     await seedPayg(org, 25n)
-    await db
-      .update(organizationWallets)
-      .set({ paygBalanceExpiresAt: new Date(0) })
-      .where(eq(organizationWallets.organizationId, org))
+    await expirePayg(org)
     expect(await billing.sweepExpiredWallets()).toBeGreaterThanOrEqual(1)
     expect(await billing.sweepExpiredWallets()).toBe(0)
     expect((await wallet(org)).paygBalance).toBe(0n)
     expect(await ledgerTotal(org)).toBe(0n)
   })
 
+  test("a new purchase extends the expiry of the entire PAYG pool", async () => {
+    const org = await newOrg()
+    await billing.grantPaygCredits({
+      organizationId: org,
+      amount: 100n,
+      idempotencyKey: `payg:${randomUUID()}`,
+      purchasedAt: new Date(Date.now() - 30 * 86_400_000),
+    })
+    const firstExpiry = (await wallet(org)).paygBalanceExpiresAt!
+    await billing.grantPaygCredits({
+      organizationId: org,
+      amount: 200n,
+      idempotencyKey: `payg:${randomUUID()}`,
+    })
+    const current = await wallet(org)
+    expect(current.paygBalance).toBe(300n)
+    expect(current.paygBalanceExpiresAt!.getTime()).toBeGreaterThan(
+      firstExpiry.getTime(),
+    )
+    expect(await ledgerTotal(org)).toBe(300n)
+  })
+
+  test("subscription grant expires at its paid period end", async () => {
+    const org = await newOrg()
+    await billing.grantSubscriptionCredits({
+      organizationId: org,
+      amount: 80n,
+      periodEnd: new Date(Date.now() + 86_400_000),
+      idempotencyKey: `period:${org}`,
+    })
+    expect(await billing.getBalance(org)).toBe(80n)
+    await billing.expireSubscriptionCredits(org)
+    expect(await billing.getBalance(org)).toBe(0n)
+  })
+
   test("grant after expiry starts a new generation; old refund is discarded", async () => {
     const org = await newOrg()
     await seedPayg(org, 100n)
     const reservation = await reserveCredits(org, 40n)
-    await db
-      .update(organizationWallets)
-      .set({ paygBalanceExpiresAt: new Date(0) })
-      .where(eq(organizationWallets.organizationId, org))
+    await expirePayg(org)
     await seedPayg(org, 20n)
     expect((await wallet(org)).paygGeneration).toBe(
       reservation.paygGeneration + 1n,
@@ -668,10 +1113,7 @@ describe("pooled PAYG credits", () => {
     const org = await newOrg()
     await seedPayg(org, 100n)
     const reservation = await reserveCredits(org, 80n)
-    await db
-      .update(organizationWallets)
-      .set({ paygBalanceExpiresAt: new Date(0) })
-      .where(eq(organizationWallets.organizationId, org))
+    await expirePayg(org)
     await billing.settle({ reservationId: reservation.id, actualCredits: 20n })
     expect(await billing.getBalance(org)).toBe(0n)
     expect(await ledgerTotal(org)).toBe(0n)

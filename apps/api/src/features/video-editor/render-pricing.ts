@@ -1,8 +1,8 @@
 import {
-  CREDIT_RATE,
   ESTIMATE_OVERBOOKING_FACTOR,
   VIDEO_OVERHEAD_RATE,
 } from "@/features/billing/constants"
+import { credits_to_charge } from "@/features/billing/credits"
 
 /** Conservative Lambda-ms charged per output frame (workers + orchestrator). */
 export const MS_PER_FRAME = 300
@@ -75,14 +75,14 @@ export function estimatedLambdaDurationMs(durationInFrames: number): number {
  * Convert a Remotion Lambda USD estimate into credits.
  *
  * Uses the video overhead and, for reserves, the shared overbooking factor.
- * Does not apply the AI-generation retail margin.
+ * Uses the same loaded-cost unit as AI generations.
  */
 export function lambdaUsdToCredits(
   providerCostUsd: number,
   options: { overbook: boolean },
 ): bigint {
   const loaded = Math.max(0, providerCostUsd) * (1 + VIDEO_OVERHEAD_RATE)
-  const baseCredits = Math.ceil(loaded / CREDIT_RATE)
+  const baseCredits = credits_to_charge(loaded)
   const factor = options.overbook ? ESTIMATE_OVERBOOKING_FACTOR : 1
   return BigInt(Math.max(Math.ceil(baseCredits * factor), 1))
 }

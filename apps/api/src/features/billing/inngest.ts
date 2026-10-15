@@ -1,6 +1,9 @@
 import { inngest } from "@/lib/inngest/client"
 import { billingService } from "./service"
 import { captureUnexpectedError } from "@/sentry"
+import { db } from "@/db"
+import { organizationWallets } from "@/db/schema"
+import { reconcileOrganization } from "./polar"
 
 const BATCH_SIZE = 100
 const MAX_BATCHES_PER_RUN = 10
@@ -86,5 +89,27 @@ export const sweepBillingWallets = inngest.createFunction(
       walletsExpired: wallets.processed,
       backlogPossible: wallets.backlogPossible,
     }
+  },
+)
+
+/** Repair missing or out-of-order Polar webhooks from Polar's authoritative state. */
+export const reconcilePolarBilling = inngest.createFunction(
+  {
+    id: "polar-billing-reconciliation",
+    triggers: [{ cron: "0 3 * * *" }],
+    concurrency: { limit: 1 },
+    retries: 3,
+  },
+  async ({ step }) => {
+    if (!process.env.POLAR_ACCESS_TOKEN) return { checked: 0 }
+    const rows = await db
+      .select({ organizationId: organizationWallets.organizationId })
+      .from(organizationWallets)
+    for (const row of rows) {
+      await step.run(`reconcile-${row.organizationId}`, () =>
+        reconcileOrganization(row.organizationId),
+      )
+    }
+    return { checked: rows.length }
   },
 )

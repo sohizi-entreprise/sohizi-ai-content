@@ -11,7 +11,9 @@ export const authMiddleware = new Elysia({ name: "auth-middleware" }).derive(
     }
     return {
       user: session.user,
-      session: session.session,
+      session: session.session as typeof session.session & {
+        activeOrganizationId: string | null
+      },
     }
   },
 )

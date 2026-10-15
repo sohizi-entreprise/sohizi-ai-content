@@ -1,4 +1,4 @@
-import { CREDIT_RATE, TOKEN_OVERHEAD_RATE } from "./constants"
+import { LOADED_COST_USD_PER_CREDIT, TOKEN_OVERHEAD_RATE } from "./constants"
 import { ModelBasePricing, TextTokenUsage } from "@/type"
 
 type PricedModel = {
@@ -17,10 +17,10 @@ type BillingUnit =
 const TOKENS_PER_PRICING_UNIT = 1_000_000
 
 export const calculateCreditCost = (
-  retailPriceUsd: number,
-  creditRate = CREDIT_RATE,
+  loadedCostUsd: number,
+  loadedCostUsdPerCredit = LOADED_COST_USD_PER_CREDIT,
 ) => {
-  return Math.ceil(retailPriceUsd / creditRate)
+  return Math.ceil(loadedCostUsd / loadedCostUsdPerCredit)
 }
 
 export const productOfMultipliers = (
@@ -90,19 +90,11 @@ export const loaded_cost_usd = (
   return raw_provider_cost_usd * (1 + overhead_rate)
 }
 
-export const retail_price_usd = (
-  loaded_cost_usd: number,
-  target_margin: number,
-  payment_fee_reserve: number,
-) => {
-  return loaded_cost_usd / (1 - target_margin - payment_fee_reserve)
-}
-
 export const credits_to_charge = (
-  retail_price_usd: number,
-  credit_rate: number,
+  loaded_cost_usd: number,
+  loaded_cost_usd_per_credit = LOADED_COST_USD_PER_CREDIT,
 ) => {
-  return Math.ceil(retail_price_usd / credit_rate)
+  return Math.ceil(loaded_cost_usd / loaded_cost_usd_per_credit)
 }
 
 export const calculateTextProviderCost = (
@@ -209,11 +201,8 @@ export const calculateTextCredits = (
   usage: TextTokenUsage,
   options: {
     overheadRate?: number
-    targetMargin: number
-    paymentFeeReserve: number
-    creditRate?: number
     priceMultiplier?: number
-  },
+  } = {},
 ) => {
   const rawCostUsd = rawProviderCost(
     model,
@@ -225,11 +214,5 @@ export const calculateTextCredits = (
     rawCostUsd,
     options.overheadRate ?? TOKEN_OVERHEAD_RATE,
   )
-  const retailPriceUsd = retail_price_usd(
-    loadedCostUsd,
-    options.targetMargin,
-    options.paymentFeeReserve,
-  )
-
-  return credits_to_charge(retailPriceUsd, options.creditRate ?? CREDIT_RATE)
+  return credits_to_charge(loadedCostUsd)
 }

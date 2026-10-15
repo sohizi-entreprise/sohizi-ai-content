@@ -35,14 +35,45 @@ export class BillingService {
     return repo.topup(input)
   }
 
-  /** Internal-only pooled PAYG grant. Payment and entitlement checks come later. */
+  /** Credit the pooled PAYG balance after payment and entitlement checks. */
   async grantPaygCredits(input: {
     organizationId: string
     amount: Credits
     idempotencyKey: string
+    purchasedAt?: Date
     metadata?: Record<string, unknown>
   }): Promise<bigint> {
     return repo.grantPaygCredits(input)
+  }
+
+  async grantSubscriptionCredits(input: {
+    organizationId: string
+    amount: Credits
+    periodEnd: Date
+    idempotencyKey: string
+    metadata?: Record<string, unknown>
+  }): Promise<bigint> {
+    return repo.grantSubscriptionCredits(input)
+  }
+
+  async revokePaygGrant(input: {
+    organizationId: string
+    sourceKey: string
+    idempotencyKey: string
+  }): Promise<void> {
+    return repo.revokePaygGrant(input)
+  }
+
+  async revokeSubscriptionGrant(input: {
+    organizationId: string
+    sourceKey: string
+    idempotencyKey: string
+  }): Promise<void> {
+    return repo.revokeSubscriptionGrant(input)
+  }
+
+  async expireSubscriptionCredits(organizationId: string): Promise<void> {
+    return repo.expireSubscriptionCredits(organizationId)
   }
 
   /**

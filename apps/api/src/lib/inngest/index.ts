@@ -4,6 +4,7 @@ import { handleVideoExportPoll } from "@/features/video-editor/inngest"
 import {
   sweepBillingReservations,
   sweepBillingWallets,
+  reconcilePolarBilling,
 } from "@/features/billing/inngest"
 
 export { inngest } from "./client"
@@ -14,4 +15,5 @@ export const functions = [
   handleVideoExportPoll,
   sweepBillingReservations,
   sweepBillingWallets,
+  reconcilePolarBilling,
 ]

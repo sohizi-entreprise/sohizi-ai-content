@@ -17,15 +17,11 @@ import type { ResolvedTextModel } from "@/features/models/repo"
 import {
   calculateTextCredits,
   loaded_cost_usd,
-  retail_price_usd,
   credits_to_charge,
 } from "@/features/billing/credits"
 import {
-  TOPUP_TARGET_MARGIN,
-  PAYMENT_FEE_RESERVE,
   ESTIMATE_OVERBOOKING_FACTOR,
   TOKEN_OVERHEAD_RATE,
-  CREDIT_RATE,
 } from "@/features/billing/constants"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { simpleHash } from "@/utils/simple-hash"
@@ -320,12 +316,7 @@ export function createBillableLlmClient(
   const creditsFromUsage = (usage: TokenUsage): Credits => {
     if (usage.cost > 0) {
       const loadedCostUsd = loaded_cost_usd(usage.cost, TOKEN_OVERHEAD_RATE)
-      const retailPriceUsd = retail_price_usd(
-        loadedCostUsd,
-        TOPUP_TARGET_MARGIN,
-        PAYMENT_FEE_RESERVE,
-      )
-      return BigInt(credits_to_charge(retailPriceUsd, CREDIT_RATE))
+      return BigInt(credits_to_charge(loadedCostUsd))
     }
 
     const actualCredits = calculateTextCredits(
@@ -334,10 +325,6 @@ export function createBillableLlmClient(
         inputTokens: usage.input,
         outputTokens: usage.output,
         cachedInputTokens: usage.cached,
-      },
-      {
-        targetMargin: TOPUP_TARGET_MARGIN,
-        paymentFeeReserve: PAYMENT_FEE_RESERVE,
       },
     )
     return BigInt(actualCredits)
@@ -375,10 +362,7 @@ export function createBillableLlmClient(
         inputTokens: input.estimatedInputTokens,
         outputTokens: input.estimatedOutputTokens,
       }
-      const credits = calculateTextCredits(model, estimatedUsage, {
-        targetMargin: TOPUP_TARGET_MARGIN,
-        paymentFeeReserve: PAYMENT_FEE_RESERVE,
-      })
+      const credits = calculateTextCredits(model, estimatedUsage)
       const overbooked = Math.ceil(credits * ESTIMATE_OVERBOOKING_FACTOR)
       return BigInt(overbooked)
     },

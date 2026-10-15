@@ -217,10 +217,101 @@ export async function topup(input: {
   })
 }
 
+export async function grantSubscriptionCredits(input: {
+  organizationId: string
+  amount: Credits
+  periodEnd: Date
+  idempotencyKey: string
+  metadata?: Record<string, unknown>
+}): Promise<bigint> {
+  if (input.amount <= 0n || input.periodEnd <= new Date())
+    throw new Error("Invalid subscription credit grant")
+  return db.transaction(async (tx) => {
+    const wallet = await lockWallet(input.organizationId, tx)
+    await expireWallet(wallet, tx, new Date())
+    if (await claimGrant(tx, wallet, { ...input, source: "balance" })) {
+      wallet.balance += input.amount
+      wallet.balanceExpiresAt = input.periodEnd
+      await finishGrant(tx, wallet, input.idempotencyKey)
+    }
+    return total(wallet)
+  })
+}
+
+export async function expireSubscriptionCredits(
+  organizationId: string,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const wallet = await lockWallet(organizationId, tx)
+    if (wallet.balanceExpiresAt && wallet.balanceExpiresAt > new Date())
+      wallet.balanceExpiresAt = new Date()
+    await expireWallet(wallet, tx, new Date())
+  })
+}
+
+async function revokeGrant(input: {
+  organizationId: string
+  sourceKey: string
+  idempotencyKey: string
+  source: "balance" | "payg"
+}): Promise<void> {
+  await db.transaction(async (tx) => {
+    const wallet = await lockWallet(input.organizationId, tx)
+    await expireWallet(wallet, tx, new Date())
+    const [existing] = await tx
+      .select({ id: billingLedger.id })
+      .from(billingLedger)
+      .where(eq(billingLedger.idempotencyKey, input.idempotencyKey))
+      .limit(1)
+    if (existing) return
+    const [grant] = await tx
+      .select()
+      .from(billingLedger)
+      .where(
+        and(
+          eq(billingLedger.organizationId, input.organizationId),
+          eq(billingLedger.idempotencyKey, input.sourceKey),
+        ),
+      )
+      .limit(1)
+    if (!grant || grant.kind !== "topup") return
+    const granted =
+      input.source === "balance" ? grant.balanceDelta : grant.paygDelta
+    const available =
+      input.source === "balance" ? wallet.balance : wallet.paygBalance
+    const revoked = granted < available ? granted : available
+    if (input.source === "balance") wallet.balance -= revoked
+    else wallet.paygBalance -= revoked
+    await saveWallet(wallet, tx)
+    await writeLedger(tx, {
+      organizationId: input.organizationId,
+      kind: "refund",
+      balanceDelta: input.source === "balance" ? -revoked : 0n,
+      paygDelta: input.source === "payg" ? -revoked : 0n,
+      balanceAfter: total(wallet),
+      idempotencyKey: input.idempotencyKey,
+      metadata: { sourceKey: input.sourceKey },
+    })
+  })
+}
+
+export const revokePaygGrant = (input: {
+  organizationId: string
+  sourceKey: string
+  idempotencyKey: string
+}) => revokeGrant({ ...input, source: "payg" })
+
+export const revokeSubscriptionGrant = (input: {
+  organizationId: string
+  sourceKey: string
+  idempotencyKey: string
+}) => revokeGrant({ ...input, source: "balance" })
+
 export async function grantPaygCredits(input: {
   organizationId: string
   amount: Credits
   idempotencyKey: string
+  purchasedAt?: Date
   metadata?: Record<string, unknown>
 }): Promise<bigint> {
   if (input.amount <= 0n) throw new Error("PAYG grant amount must be positive")
@@ -230,9 +321,11 @@ export async function grantPaygCredits(input: {
     await expireWallet(wallet, tx, now)
     if (await claimGrant(tx, wallet, { ...input, source: "payg" })) {
       wallet.paygBalance += input.amount
-      const renewed = new Date(now)
+      const renewed = new Date(input.purchasedAt ?? now)
       renewed.setUTCFullYear(renewed.getUTCFullYear() + 1)
-      wallet.paygBalanceExpiresAt = renewed
+      if (renewed <= now) throw new Error("Purchased credits have expired")
+      if (!wallet.paygBalanceExpiresAt || renewed > wallet.paygBalanceExpiresAt)
+        wallet.paygBalanceExpiresAt = renewed
       await finishGrant(tx, wallet, input.idempotencyKey)
     }
     return total(wallet)

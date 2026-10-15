@@ -29,6 +29,6 @@ describe("catalog media credit conversion", () => {
           overheadRate: mediaOverheadRate("image"),
         }),
       ),
-    ).toBe(17)
+    ).toBe(15)
   })
 })

@@ -664,9 +664,25 @@ export const organizationWallets = pgTable(
     paygGeneration: bigint("payg_generation", { mode: "bigint" })
       .default(sql`0`)
       .notNull(),
+    polarCustomerId: text("polar_customer_id"),
+    polarSubscriptionId: text("polar_subscription_id"),
+    productId: text("product_id"),
+    productName: text("product_name"),
+    allowance: bigint("allowance", { mode: "bigint" }),
+    status: text("status").notNull().default("free"),
+    periodStart: timestamp("period_start", { withTimezone: true }),
+    periodEnd: timestamp("period_end", { withTimezone: true }),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    pendingProductId: text("pending_product_id"),
     ...timestamps,
   },
   (table) => [
+    uniqueIndex("organization_wallets_polar_customer_id_unique").on(
+      table.polarCustomerId,
+    ),
+    uniqueIndex("organization_wallets_polar_subscription_id_unique").on(
+      table.polarSubscriptionId,
+    ),
     check(
       "organization_wallets_balance_nonnegative",
       sql`${table.balance} >= 0`,
@@ -727,6 +743,20 @@ export const billingReservations = pgTable(
     ),
   ],
 )
+
+export const polarProcessedOrders = pgTable("polar_processed_orders", {
+  orderId: text("order_id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  productId: text("product_id").notNull(),
+  creditsGranted: bigint("credits_granted", { mode: "bigint" }).notNull(),
+  kind: text("kind").notNull(),
+  refunded: boolean("refunded").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+})
 
 export const billingLedger = pgTable(
   "billing_ledger",

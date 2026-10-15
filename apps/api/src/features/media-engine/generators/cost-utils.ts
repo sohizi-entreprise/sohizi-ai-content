@@ -1,14 +1,5 @@
-import {
-  CREDIT_RATE,
-  ESTIMATE_OVERBOOKING_FACTOR,
-  TOPUP_TARGET_MARGIN,
-  PAYMENT_FEE_RESERVE,
-} from "@/features/billing/constants"
-import {
-  credits_to_charge,
-  loaded_cost_usd,
-  retail_price_usd,
-} from "@/features/billing/credits"
+import { ESTIMATE_OVERBOOKING_FACTOR } from "@/features/billing/constants"
+import { credits_to_charge, loaded_cost_usd } from "@/features/billing/credits"
 import { LUMEN_BASE_URL } from "@/features/media-engine/constants"
 
 export type LumenDryRunComponent = {
@@ -71,15 +62,12 @@ export const lumenDryRun = async (
 
 export type CreditConversionOptions = {
   overheadRate: number
-  targetMargin?: number
-  paymentFeeReserve?: number
-  creditRate?: number
   overbookingFactor?: number
 }
 
 /**
  * Convert a raw provider USD cost into credits using the standard billing
- * formula: overhead -> margin -> credit rate -> ceil. Applies the overbooking
+ * formula: overhead -> loaded cost per credit -> ceil. Applies the overbooking
  * factor on top so estimates reserve a bit more than expected actual.
  */
 export const providerCostToCredits = (
@@ -87,14 +75,10 @@ export const providerCostToCredits = (
   options: CreditConversionOptions,
 ): bigint => {
   const overhead = options.overheadRate
-  const margin = options.targetMargin ?? TOPUP_TARGET_MARGIN
-  const fee = options.paymentFeeReserve ?? PAYMENT_FEE_RESERVE
-  const rate = options.creditRate ?? CREDIT_RATE
   const overbook = options.overbookingFactor ?? ESTIMATE_OVERBOOKING_FACTOR
 
   const loaded = loaded_cost_usd(providerCostUsd, overhead)
-  const retail = retail_price_usd(loaded, margin, fee)
-  const baseCredits = credits_to_charge(retail, rate)
+  const baseCredits = credits_to_charge(loaded)
   const overbooked = Math.ceil(baseCredits * overbook)
   return BigInt(Math.max(overbooked, 1))
 }
