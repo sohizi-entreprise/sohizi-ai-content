@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test"
-import { preservePatchBaseContent } from "./pending-patch"
+import {
+  getPendingEditContent,
+  preservePatchBaseContent,
+} from "./pending-patch"
 import type { FilePendingOperation } from "@/type"
 
 function patch(
@@ -39,5 +42,25 @@ describe("preservePatchBaseContent", () => {
     }
 
     expect(preservePatchBaseContent(refresh, patch())).toEqual(refresh)
+  })
+})
+
+describe("getPendingEditContent", () => {
+  it("continues from an unapplied proposal instead of the committed file", () => {
+    expect(
+      getPendingEditContent("original", {
+        payload: patch({ content: "first edit" }),
+        diffApplied: false,
+      }),
+    ).toBe("first edit")
+  })
+
+  it("uses committed content after the proposal has been applied", () => {
+    expect(
+      getPendingEditContent("first edit plus user changes", {
+        payload: patch({ content: "first edit" }),
+        diffApplied: true,
+      }),
+    ).toBe("first edit plus user changes")
   })
 })

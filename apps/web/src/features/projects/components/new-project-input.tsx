@@ -6,20 +6,25 @@ import {
   IconX,
 } from "@tabler/icons-react"
 import { toast } from "sonner"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { DotsLoader } from "@sohizi/ui/loaders"
 import { Badge } from "@sohizi/ui/badge"
 import { Button } from "@sohizi/ui/button"
 import { useRef } from "react"
-import { createProjectMutationOptions } from "../query-mutation"
+import {
+  createProjectMutationOptions,
+  getProjectOptionsQueryOptions,
+} from "../query-mutation"
 import { createProjectSchema } from "../schema"
-import { PROJECT_MODES, useNewProjectStore } from "../store/new-project-store"
+import {
+  PROJECT_MODES,
+  isAdditionalSettingKey,
+  useNewProjectStore,
+} from "../store/new-project-store"
 import DropMenuSettings from "./drop-menu-settings"
 import NewProjectSelectModel from "./new-project-select-model"
-import NewProjectSettings, {
-  PROJECT_SETTING_META,
-} from "./new-project-settings"
+import NewProjectSettings from "./new-project-settings"
 import StoryIdeaEditor from "./story-idea-editor"
 import type { ProjectAttachment, ProjectMode } from "../store/new-project-store"
 import type { Editor } from "@tiptap/core"
@@ -55,6 +60,9 @@ export default function NewProjectInput() {
 
   const { mutate: createProject, isPending } = useMutation(
     createProjectMutationOptions,
+  )
+  const { data: projectOptions } = useQuery(
+    getProjectOptionsQueryOptions("project"),
   )
   const navigate = useNavigate()
 
@@ -104,10 +112,11 @@ export default function NewProjectInput() {
     })
   }
 
-  const selectedSettings = PROJECT_SETTING_META.flatMap((setting) => {
-    const value = additionalSettings[setting.storeKey]
+  const selectedSettings = (projectOptions?.presets ?? []).flatMap((preset) => {
+    if (!isAdditionalSettingKey(preset.key)) return []
+    const value = additionalSettings[preset.key]
     if (!value) return []
-    return [{ ...setting, value }]
+    return [{ key: preset.key, label: preset.label, value }]
   })
 
   const handleCardMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -133,7 +142,7 @@ export default function NewProjectInput() {
         <div className="flex flex-wrap items-center gap-2">
           {selectedSettings.map((setting) => (
             <Badge
-              key={setting.storeKey}
+              key={setting.key}
               variant="secondary"
               className="gap-1.5 rounded-full border-white/10 bg-white/5 px-3 py-1.5 pr-2 text-xs text-slate-400"
             >
@@ -142,7 +151,7 @@ export default function NewProjectInput() {
                 type="button"
                 aria-label={`Remove ${setting.label}`}
                 className="inline-flex size-4 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-                onClick={() => clearAdditionalSetting(setting.storeKey)}
+                onClick={() => clearAdditionalSetting(setting.key)}
               >
                 <IconX className="size-3" />
               </button>
@@ -152,7 +161,7 @@ export default function NewProjectInput() {
       ) : null}
 
       <div
-        className="h-fit rounded-3xl border border-white/10 bg-white/5 p-4 focus-within:ring-2 focus-within:ring-primary/20"
+        className="relative h-fit rounded-2xl border border-border bg-white/5 p-4 shadow-sm focus-within:ring-1 focus-within:ring-white sm:p-5"
         onMouseDown={handleCardMouseDown}
       >
         <div className="flex flex-col items-start gap-3">
@@ -168,7 +177,7 @@ export default function NewProjectInput() {
               />
             ) : null}
           </div>
-          <div className="max-h-45 min-w-0 w-full flex-1 overflow-y-auto">
+          <div className="max-h-45 min-w-0 w-full flex-1 overflow-y-auto text-white">
             <StoryIdeaEditor
               onChange={setStoryIdea}
               onSubmit={onSubmit}
@@ -177,8 +186,8 @@ export default function NewProjectInput() {
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <DropMenuSettings
               options={PROJECT_MODES.map((option) => ({
                 label: option.label,
@@ -188,20 +197,20 @@ export default function NewProjectInput() {
             >
               <button
                 type="button"
-                className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm text-primary transition-colors hover:bg-primary/5"
+                className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-primary transition-colors hover:bg-primary/5"
               >
-                <span className="max-w-50 truncate">{selectedMode.label}</span>
+                <span className="max-w-50 truncate">/{selectedMode.label}</span>
                 <ChevronDown className="size-4 opacity-50" />
               </button>
             </DropMenuSettings>
             <NewProjectSettings />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <NewProjectSelectModel />
             <Button
               variant="default"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold"
               onClick={onSubmit}
               disabled={!storyIdea.trim()}
             >
@@ -333,11 +342,11 @@ function AddAttachment({
         type="button"
         variant="outline"
         size="icon"
-        className="size-10 shrink-0 rounded-lg border-white/15 bg-transparent text-muted-foreground hover:bg-white/5"
+        className="size-10 shrink-0 rounded-lg border-white/15 bg-card! text-muted-foreground hover:scale-105 transition-transform duration-200 cursor-pointer"
         onClick={openFileDialog}
         aria-label="Attach PDF, image, or video"
       >
-        <IconPlus className="size-4" />
+        <IconPlus className="size-4 text-foreground" />
       </Button>
       <input {...getInputProps()} className="sr-only" />
     </>

@@ -131,12 +131,14 @@ export type TokenUsage = {
 
 export type ChatMetadata = {
   usage: TokenUsage | null
+  latestRunUsage?: TokenUsage | null
 }
 
 export type AgentState = {
   jobs: AgentJob[]
   messages: ModelMessage[]
   usage: TokenUsage | null
+  latestRunUsage: TokenUsage | null
   status: Runstatus
   finishReason: CompleteReason | "need-approval" | null
   error: string | null

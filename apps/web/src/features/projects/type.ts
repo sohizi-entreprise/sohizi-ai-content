@@ -64,51 +64,29 @@ export type ProjectListItem = {
   updatedAt: string
 }
 
-export type ProjectFormatOption = {
-  id: string
-  name: string
-  description: string
+export type ProjectGenerationTarget = "image" | "video" | "audio" | "project"
+
+export type ProjectPresetIllustration = {
+  url: string | null
+  type: "video" | "image"
 }
 
-export type ProjectGenreOption = {
-  id: string
-  name: string
-  description: string
-  image: string
+export type ProjectPresetOption = {
+  label: string
+  value: string
+  illustration: ProjectPresetIllustration
 }
 
-export type ProjectToneOption = {
+export type ProjectPreset = {
   id: string
-  name: string
-  description: string
-}
-
-export type ProjectAudienceOption = {
-  id: string
-  name: string
-  description: string
-  ageRange: string
-}
-
-export type ProjectDurationPreset = {
-  id: string
-  name: string
-  minutes: number
-  description: string
-}
-
-export type ProjectDurationOption = {
-  min: number
-  max: number
-  presets: Array<ProjectDurationPreset>
+  key: string
+  label: string
+  generationTarget: ProjectGenerationTarget
+  options: Array<ProjectPresetOption>
 }
 
 export type ProjectOptions = {
-  formats: Array<ProjectFormatOption>
-  genres: Array<ProjectGenreOption>
-  duration: ProjectDurationOption
-  tones: Array<ProjectToneOption>
-  audiences: Array<ProjectAudienceOption>
+  presets: Array<ProjectPreset>
 }
 
 export type Template = {

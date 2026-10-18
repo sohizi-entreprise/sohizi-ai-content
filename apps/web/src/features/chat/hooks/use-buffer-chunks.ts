@@ -48,8 +48,13 @@ export function useBufferChunks({
         if (payload.source === "subAgent") {
           chunk.source = "subAgent"
         }
-        if (chunk.type === "usage") {
-          patchConversation({ metadata: { usage: chunk.usage } })
+        if (chunk.type === "usage" && chunk.source !== "subAgent") {
+          patchConversation({
+            metadata: {
+              usage: chunk.usage,
+              latestRunUsage: chunk.latestRunUsage ?? null,
+            },
+          })
         }
         setMessages((prev) => applyChunk(chunk, prev, onOperation))
       },

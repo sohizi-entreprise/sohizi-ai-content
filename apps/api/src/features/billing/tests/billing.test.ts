@@ -31,6 +31,7 @@ import {
 import type { Billable, BillableAsync } from "../types"
 import { billingContext } from "../index"
 import {
+  catalogEntry,
   grantOrder,
   handleOrderRefunded,
   hasPaidAccess,
@@ -220,6 +221,88 @@ describe("Polar order grants", () => {
     expect(planChangeBehavior(1, 1)).toBeNull()
   })
 
+  test("catalog entry distinguishes fixed plans from unit-based packs", () => {
+    const plan = catalogEntry({
+      id: "plan",
+      name: "Creator",
+      description: null,
+      is_archived: false,
+      visibility: "public",
+      is_recurring: true,
+      recurring_interval: "month",
+      recurring_interval_count: 1,
+      trial_interval: null,
+      metadata: { creditAmount: 2500, planTier: 1 },
+      prices: [
+        {
+          amount_type: "fixed",
+          is_archived: false,
+          price_amount: 3200,
+          price_currency: "usd",
+        },
+      ],
+    } as unknown as models.Product)
+    expect(plan).toMatchObject({
+      kind: "plan",
+      credits: 2500,
+      planTier: 1,
+      priceAmount: 3200,
+      currency: "usd",
+      unitAmount: null,
+    })
+
+    const pack = catalogEntry({
+      id: "pack",
+      name: "Pay as you go",
+      description: null,
+      is_archived: false,
+      visibility: "public",
+      is_recurring: false,
+      metadata: {},
+      prices: [
+        {
+          amount_type: "unit_based",
+          is_archived: false,
+          price_currency: "usd",
+          minimum_units: 250,
+          maximum_units: null,
+          tiers: { type: "volume", tiers: [{ unit_amount: "2" }] },
+        },
+      ],
+    } as unknown as models.Product)
+    expect(pack).toMatchObject({
+      kind: "pack",
+      credits: null,
+      planTier: null,
+      priceAmount: null,
+      unitAmount: 2,
+      minimumUnits: 250,
+      maximumUnits: null,
+      currency: "usd",
+    })
+
+    expect(
+      catalogEntry({
+        id: "draft",
+        name: "Hidden",
+        is_archived: false,
+        visibility: "draft",
+        is_recurring: false,
+        metadata: {},
+        prices: [
+          {
+            amount_type: "unit_based",
+            is_archived: false,
+            price_currency: "usd",
+            minimum_units: 1,
+            maximum_units: null,
+            tiers: { type: "volume", tiers: [{ unit_amount: "2" }] },
+          },
+        ],
+      } as unknown as models.Product),
+    ).toBeNull()
+  })
+
   test("a refunded credit pack removes its unspent balance once", async () => {
     const org = await newOrg()
     const customerId = randomUUID()
@@ -231,8 +314,18 @@ describe("Polar order grants", () => {
     const product = {
       id: "credits-pack",
       name: "Credits",
-      metadata: { creditAmount: 100 },
+      metadata: {},
       is_recurring: false,
+      prices: [
+        {
+          amount_type: "unit_based",
+          is_archived: false,
+          price_currency: "usd",
+          minimum_units: 250,
+          maximum_units: null,
+          tiers: { type: "volume", tiers: [{ unit_amount: "2", bound: null }] },
+        },
+      ],
     } as unknown as models.Product
     const order = {
       id: orderId,
@@ -240,6 +333,7 @@ describe("Polar order grants", () => {
       customer_id: customerId,
       product_id: product.id,
       product,
+      units: 100,
       subscription_id: null,
       created_at: new Date().toISOString(),
       refunded_amount: 100,

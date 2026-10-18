@@ -13,6 +13,7 @@ import {
   getBilling,
   getCatalogProduct,
   hasPaidAccess,
+  packUnitBounds,
   planChangeBehavior,
   planTier,
   reconcileOrganization,
@@ -55,6 +56,22 @@ function publicBillingUrl() {
   return new URL("/account/billing", origin).toString()
 }
 
+function packQuantity(
+  product: Awaited<ReturnType<typeof getCatalogProduct>>,
+  units: number | undefined,
+) {
+  const bounds = packUnitBounds(product)
+  if (!bounds)
+    throw new BadRequest("Product is not available for this purchase")
+  if (units == null) throw new BadRequest("Choose how many credits to buy")
+  if (
+    units < bounds.minimumUnits ||
+    (bounds.maximumUnits != null && units > bounds.maximumUnits)
+  )
+    throw new BadRequest("Credit quantity is outside the allowed range")
+  return units
+}
+
 export const billingRoutes = new Elysia({ prefix: "/billing" })
   .use(authMiddleware)
   .get("/catalog", async () => ({ products: await catalog() }))
@@ -89,7 +106,7 @@ export const billingRoutes = new Elysia({ prefix: "/billing" })
     "/checkout",
     async ({ session, user, body }) => {
       const { organizationId } = await billingContext(user.id, session, true)
-      await getCatalogProduct(body.productId, body.kind)
+      const product = await getCatalogProduct(body.productId, body.kind)
       const billing = await getBilling(organizationId)
       if (body.kind === "pack" && !hasPaidAccess(billing))
         throw new Forbidden("An active paid plan is required to buy credits")
@@ -97,6 +114,8 @@ export const billingRoutes = new Elysia({ prefix: "/billing" })
         throw new BadRequest(
           "Change the current plan instead of starting another subscription",
         )
+      const quantity =
+        body.kind === "pack" ? packQuantity(product, body.units) : null
       const customerId = await ensurePolarCustomer(organizationId)
       const checkout = await requirePolar().checkouts.create({
         customer_id: customerId,
@@ -105,11 +124,22 @@ export const billingRoutes = new Elysia({ prefix: "/billing" })
         metadata: { organizationId },
         success_url: publicBillingUrl() + "?checkout=success",
         return_url: publicBillingUrl(),
+        ...(quantity
+          ? {
+              units: quantity,
+              min_units: quantity,
+              max_units: quantity,
+            }
+          : {}),
       })
       return { url: checkout.url }
     },
     {
-      body: z.object({ productId: z.string(), kind: z.enum(["plan", "pack"]) }),
+      body: z.object({
+        productId: z.string(),
+        kind: z.enum(["plan", "pack"]),
+        units: z.number().int().positive().optional(),
+      }),
     },
   )
   .post(
@@ -193,8 +223,20 @@ export const billingRoutes = new Elysia({ prefix: "/billing" })
     const billing = await getBilling(organizationId)
     if (!billing?.polarCustomerId)
       throw new BadRequest("No billing customer yet")
+    const [owner] = await db
+      .select({ userId: member.userId })
+      .from(member)
+      .where(
+        and(
+          eq(member.organizationId, organizationId),
+          eq(member.role, "owner"),
+        ),
+      )
+      .limit(1)
+    if (!owner) throw new BadRequest("Organization owner not found")
     const portal = await requirePolar().customerSessions.create({
       customer_id: billing.polarCustomerId,
+      external_member_id: owner.userId,
       return_url: publicBillingUrl(),
     })
     return { url: portal.customer_portal_url }

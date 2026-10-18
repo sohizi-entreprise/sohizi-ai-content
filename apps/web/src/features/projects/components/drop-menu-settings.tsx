@@ -29,15 +29,15 @@ export default function DropMenuSettings({
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
-        className="w-56 border-white/10 bg-black/90 backdrop-blur-xl"
+        className="w-56 border-white/10 bg-card/40 backdrop-blur-sm"
       >
         {options.map((option) => (
           <DropdownMenuItem
             key={option.value}
             onClick={() => onSelect(option.value)}
+            className="text-base"
           >
-            {option.icon ?? null}
-            {option.label}
+            {option.icon ?? null}/{option.label}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

@@ -34,6 +34,7 @@ export class AgentStateManager {
       todos: [],
       messages: [],
       usage: null,
+      latestRunUsage: null,
     }
   }
   get status(): Runstatus {
@@ -60,6 +61,7 @@ export class AgentStateManager {
     this.state = {
       ...state,
       jobs: state.jobs ?? [],
+      latestRunUsage: state.latestRunUsage ?? null,
     }
   }
   startRun(): void {
@@ -111,6 +113,11 @@ export class AgentStateManager {
   incrementUsage(usage: TokenUsage) {
     this.state.usage = addUsage(this.state.usage, usage)
     this.runUsage = addUsage(this.runUsage, usage)
+  }
+
+  recordModelStepUsage(usage: TokenUsage) {
+    this.incrementUsage(usage)
+    if (usage.input > 0) this.state.latestRunUsage = usage
   }
 
   getPendingJobs() {

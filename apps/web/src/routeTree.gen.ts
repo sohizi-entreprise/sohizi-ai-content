@@ -34,6 +34,7 @@ import { Route as AdminParametersIndexRouteImport } from './routes/admin/paramet
 import { Route as AdminParametersParameterIdRouteImport } from './routes/admin/parameters/$parameterId'
 import { Route as AuthenticatedSidebarAccountIndexRouteImport } from './routes/_authenticated/_sidebar/account/index'
 import { Route as AuthenticatedSidebarAccountBillingRouteImport } from './routes/_authenticated/_sidebar/account/billing'
+import { Route as AuthenticatedSidebarAccountCookiesRouteImport } from './routes/_authenticated/_sidebar/account/cookies'
 import { Route as AuthenticatedSidebarAccountOrganizationRouteImport } from './routes/_authenticated/_sidebar/account/organization'
 import { Route as AuthenticatedSidebarAccountProfileRouteImport } from './routes/_authenticated/_sidebar/account/profile'
 import { Route as AuthenticatedProjectsProjectIdEditorRouteImport } from './routes/_authenticated/projects/$projectId/editor'
@@ -171,6 +172,12 @@ const AuthenticatedSidebarAccountBillingRoute =
     path: '/billing',
     getParentRoute: () => AuthenticatedSidebarAccountRoute,
   } as any)
+const AuthenticatedSidebarAccountCookiesRoute =
+  AuthenticatedSidebarAccountCookiesRouteImport.update({
+    id: '/cookies',
+    path: '/cookies',
+    getParentRoute: () => AuthenticatedSidebarAccountRoute,
+  } as any)
 const AuthenticatedSidebarAccountOrganizationRoute =
   AuthenticatedSidebarAccountOrganizationRouteImport.update({
     id: '/organization',
@@ -237,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/admin/models/': typeof AdminModelsIndexRoute
   '/admin/parameters/': typeof AdminParametersIndexRoute
   '/account/billing': typeof AuthenticatedSidebarAccountBillingRoute
+  '/account/cookies': typeof AuthenticatedSidebarAccountCookiesRoute
   '/account/organization': typeof AuthenticatedSidebarAccountOrganizationRoute
   '/account/profile': typeof AuthenticatedSidebarAccountProfileRoute
   '/projects/$projectId/editor': typeof AuthenticatedProjectsProjectIdEditorRoute
@@ -265,6 +273,7 @@ export interface FileRoutesByTo {
   '/admin/models': typeof AdminModelsIndexRoute
   '/admin/parameters': typeof AdminParametersIndexRoute
   '/account/billing': typeof AuthenticatedSidebarAccountBillingRoute
+  '/account/cookies': typeof AuthenticatedSidebarAccountCookiesRoute
   '/account/organization': typeof AuthenticatedSidebarAccountOrganizationRoute
   '/account/profile': typeof AuthenticatedSidebarAccountProfileRoute
   '/projects/$projectId/editor': typeof AuthenticatedProjectsProjectIdEditorRoute
@@ -300,6 +309,7 @@ export interface FileRoutesById {
   '/admin/models/': typeof AdminModelsIndexRoute
   '/admin/parameters/': typeof AdminParametersIndexRoute
   '/_authenticated/_sidebar/account/billing': typeof AuthenticatedSidebarAccountBillingRoute
+  '/_authenticated/_sidebar/account/cookies': typeof AuthenticatedSidebarAccountCookiesRoute
   '/_authenticated/_sidebar/account/organization': typeof AuthenticatedSidebarAccountOrganizationRoute
   '/_authenticated/_sidebar/account/profile': typeof AuthenticatedSidebarAccountProfileRoute
   '/_authenticated/projects/$projectId/editor': typeof AuthenticatedProjectsProjectIdEditorRoute
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/admin/models/'
     | '/admin/parameters/'
     | '/account/billing'
+    | '/account/cookies'
     | '/account/organization'
     | '/account/profile'
     | '/projects/$projectId/editor'
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | '/admin/models'
     | '/admin/parameters'
     | '/account/billing'
+    | '/account/cookies'
     | '/account/organization'
     | '/account/profile'
     | '/projects/$projectId/editor'
@@ -396,6 +408,7 @@ export interface FileRouteTypes {
     | '/admin/models/'
     | '/admin/parameters/'
     | '/_authenticated/_sidebar/account/billing'
+    | '/_authenticated/_sidebar/account/cookies'
     | '/_authenticated/_sidebar/account/organization'
     | '/_authenticated/_sidebar/account/profile'
     | '/_authenticated/projects/$projectId/editor'
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSidebarAccountBillingRouteImport
       parentRoute: typeof AuthenticatedSidebarAccountRoute
     }
+    '/_authenticated/_sidebar/account/cookies': {
+      id: '/_authenticated/_sidebar/account/cookies'
+      path: '/cookies'
+      fullPath: '/account/cookies'
+      preLoaderRoute: typeof AuthenticatedSidebarAccountCookiesRouteImport
+      parentRoute: typeof AuthenticatedSidebarAccountRoute
+    }
     '/_authenticated/_sidebar/account/organization': {
       id: '/_authenticated/_sidebar/account/organization'
       path: '/organization'
@@ -645,6 +665,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedSidebarAccountRouteChildren {
   AuthenticatedSidebarAccountBillingRoute: typeof AuthenticatedSidebarAccountBillingRoute
+  AuthenticatedSidebarAccountCookiesRoute: typeof AuthenticatedSidebarAccountCookiesRoute
   AuthenticatedSidebarAccountOrganizationRoute: typeof AuthenticatedSidebarAccountOrganizationRoute
   AuthenticatedSidebarAccountProfileRoute: typeof AuthenticatedSidebarAccountProfileRoute
   AuthenticatedSidebarAccountIndexRoute: typeof AuthenticatedSidebarAccountIndexRoute
@@ -654,6 +675,8 @@ const AuthenticatedSidebarAccountRouteChildren: AuthenticatedSidebarAccountRoute
   {
     AuthenticatedSidebarAccountBillingRoute:
       AuthenticatedSidebarAccountBillingRoute,
+    AuthenticatedSidebarAccountCookiesRoute:
+      AuthenticatedSidebarAccountCookiesRoute,
     AuthenticatedSidebarAccountOrganizationRoute:
       AuthenticatedSidebarAccountOrganizationRoute,
     AuthenticatedSidebarAccountProfileRoute:

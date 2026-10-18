@@ -20,6 +20,7 @@ import { Session } from "../core/session"
 import { fileType } from "@/features/file-system/constants"
 import { isMarkdownEditable } from "@/features/file-system/file-kind"
 import { validateStoryboardSyntax } from "@/features/file-system/storyboard-syntax"
+import { getPendingEditContent } from "@/features/file-system/pending-patch"
 
 const toolSchema = z.discriminatedUnion("cmd", [
   writeCommandSchema,
@@ -86,52 +87,55 @@ async function executeWriteCommand(
     )
   }
 
-  const fileContent = await fileObject.getFileContent()
-  if (!fileContent.ok || fileContent.data === null) {
-    return failure(
-      fileContent.error || "Failed to get the content of the file.",
+  return session.withFileEdit(fileObject.id, async () => {
+    const pending = await fileSystemRepo.getPendingFileOperation(fileObject.id)
+    if (pending?.diffApplied) fileObject.clearFileContentCache()
+    const fileContent = await fileObject.getFileContent()
+    if (!fileContent.ok || fileContent.data === null) {
+      return failure(
+        fileContent.error || "Failed to get the content of the file.",
+      )
+    }
+
+    if (fileContent.data.type !== "markdown") {
+      return failure(
+        `The file content type ${fileContent.data.type} is not supported for editing.`,
+      )
+    }
+
+    const currentContent = getPendingEditContent(fileContent.data.data, pending)
+    const finalContent = buildContent(strategy, currentContent, content)
+    const syntaxError = rejectInvalidStoryboardSyntax(
+      fileObject.type,
+      finalContent,
     )
-  }
+    if (syntaxError) return syntaxError
 
-  if (fileContent.data.type !== "markdown") {
-    return failure(
-      `The file content type ${fileContent.data.type} is not supported for editing.`,
+    const newContentPayload: FileContentPayload = {
+      type: "markdown",
+      data: finalContent,
+    }
+
+    const operation: PatchOperation = {
+      type: "patch",
+      content: finalContent,
+      baseContent: currentContent,
+      fileId: fileObject.id,
+      fileName: fileObject.name,
+    }
+
+    await fileSystemRepo.upsertPendingFileOperation(
+      session.projectId,
+      fileObject.id,
+      operation,
     )
-  }
 
-  const currentContent = fileContent.data.data
-  const finalContent = buildContent(strategy, currentContent, content)
-  const syntaxError = rejectInvalidStoryboardSyntax(
-    fileObject.type,
-    finalContent,
-  )
-  if (syntaxError) return syntaxError
+    fileObject.updateFileContentCache(newContentPayload)
 
-  const newContentPayload: FileContentPayload = {
-    type: "markdown",
-    data: finalContent,
-  }
+    const message = `Content written and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`
 
-  const operation: PatchOperation = {
-    type: "patch",
-    content: finalContent,
-    baseContent: currentContent,
-    fileId: fileObject.id,
-    fileName: fileObject.name,
-  }
-
-  await fileSystemRepo.upsertPendingFileOperation(
-    session.projectId,
-    fileObject.id,
-    operation,
-  )
-
-  // We update the file cache to make sure that the next read operation will use the latest content.
-  fileObject.updateFileContentCache(newContentPayload)
-
-  const message = `Content written and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`
-
-  return success(message, [operation])
+    return success(message, [operation])
+  })
 }
 
 async function executePatchCommand(
@@ -157,55 +161,59 @@ async function executePatchCommand(
     )
   }
 
-  const fileContent = await fileObject.getFileContent()
-  if (!fileContent.ok || fileContent.data === null) {
-    return failure(
-      fileContent.error || "Failed to get the content of the file.",
+  return session.withFileEdit(fileObject.id, async () => {
+    const pending = await fileSystemRepo.getPendingFileOperation(fileObject.id)
+    if (pending?.diffApplied) fileObject.clearFileContentCache()
+    const fileContent = await fileObject.getFileContent()
+    if (!fileContent.ok || fileContent.data === null) {
+      return failure(
+        fileContent.error || "Failed to get the content of the file.",
+      )
+    }
+
+    if (fileContent.data.type !== "markdown") {
+      return failure(
+        `The file content type ${fileContent.data.type} is not supported for editing.`,
+      )
+    }
+
+    const currentContent = getPendingEditContent(fileContent.data.data, pending)
+    if (oldText === "" || !currentContent.includes(oldText)) {
+      return failure(`Text to replace was not found in ${filePathOrId}.`)
+    }
+    const finalContent = replaceAll
+      ? currentContent.replaceAll(oldText, newText)
+      : currentContent.replace(oldText, newText)
+
+    const syntaxError = rejectInvalidStoryboardSyntax(
+      fileObject.type,
+      finalContent,
     )
-  }
+    if (syntaxError) return syntaxError
 
-  if (fileContent.data.type !== "markdown") {
-    return failure(
-      `The file content type ${fileContent.data.type} is not supported for editing.`,
+    const operation: PatchOperation = {
+      type: "patch",
+      content: finalContent,
+      baseContent: currentContent,
+      fileName: fileObject.name,
+      fileId: fileObject.id,
+    }
+
+    await fileSystemRepo.upsertPendingFileOperation(
+      session.projectId,
+      fileObject.id,
+      operation,
     )
-  }
 
-  let finalContent = fileContent.data.data
-  if (replaceAll) {
-    finalContent = finalContent.replaceAll(oldText, newText)
-  } else {
-    finalContent = finalContent.replace(oldText, newText)
-  }
+    fileObject.updateFileContentCache({
+      type: "markdown",
+      data: finalContent,
+    })
 
-  const syntaxError = rejectInvalidStoryboardSyntax(
-    fileObject.type,
-    finalContent,
-  )
-  if (syntaxError) return syntaxError
+    const msg = `Content patched and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`
 
-  const operation: PatchOperation = {
-    type: "patch",
-    content: finalContent,
-    baseContent: fileContent.data.data,
-    fileName: fileObject.name,
-    fileId: fileObject.id,
-  }
-
-  await fileSystemRepo.upsertPendingFileOperation(
-    session.projectId,
-    fileObject.id,
-    operation,
-  )
-
-  // We update the file cache to make sure that the next read operation will use the latest content.
-  fileObject.updateFileContentCache({
-    type: "markdown",
-    data: finalContent,
+    return success(msg, [operation])
   })
-
-  const msg = `Content patched and send to the user for approval. The user will see the content and can approve or reject the change. Do not repeat the content in your response, they will see it directly on the editor.`
-
-  return success(msg, [operation])
 }
 
 async function executeDeleteCommand(

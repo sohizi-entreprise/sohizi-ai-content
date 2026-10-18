@@ -46,7 +46,7 @@ function ListProjectsContent({ organizationId }: { organizationId: string }) {
   return (
     <div
       className={cn("grid gap-6 grid-cols-1", {
-        "sm:grid-cols-2 lg:grid-cols-3": display === "grid",
+        "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4": display === "grid",
       })}
     >
       {projects.map((project) => (
@@ -70,8 +70,8 @@ function ListProjectsContent({ organizationId }: { organizationId: string }) {
 
 export const ListProjectsSkeleton = () => {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, index) => (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, index) => (
         <Skeleton key={index} className="h-70 w-full" />
       ))}
     </div>

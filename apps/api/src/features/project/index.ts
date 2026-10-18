@@ -1,7 +1,12 @@
 import { Elysia } from "elysia"
 import { z } from "zod"
 import * as projectService from "./service"
-import * as projectOptions from "@/constants/project-options"
+import {
+  filterPresets,
+  generationTargets,
+  getPresets,
+  toPublicPresets,
+} from "@/catalog/presets"
 import {
   createProjectSchema,
   createTemplateSchema,
@@ -11,15 +16,22 @@ import { assertProjectAccess, requireActiveOrganization } from "@/lib/authorize"
 import { authMiddleware } from "@/lib/auth-middleware"
 
 export const projectRoutes = new Elysia({ prefix: "/projects" })
-  .get("/options", () => {
-    return {
-      formats: projectOptions.projectFormats,
-      genres: projectOptions.projectGenres,
-      duration: projectOptions.projectDuration,
-      tones: projectOptions.projectTones,
-      audiences: projectOptions.projectAudiences,
-    }
-  })
+  .get(
+    "/options",
+    async ({ query }) => {
+      const presets = await getPresets()
+      return {
+        presets: toPublicPresets(
+          filterPresets(presets, query.generationTarget),
+        ),
+      }
+    },
+    {
+      query: z.object({
+        generationTarget: z.enum(generationTargets).optional(),
+      }),
+    },
+  )
   .get(
     "/templates/published",
     ({ query }) => {

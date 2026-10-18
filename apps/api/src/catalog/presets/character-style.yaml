@@ -1,0 +1,77 @@
+id: preset_characterStyle
+key: characterStyle
+label: Character Style
+generationTarget: project
+options:
+  - label: 3D Pixar Style
+    value: 3d-pixar
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters in a rounded 3D animated style. Use expressive eyes and appealing proportions.
+  - label: 3D Realistic
+    value: 3d-realistic
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters as realistic 3D people. Match human proportions, skin, and lighting.
+  - label: 2D Anime
+    value: 2d-anime
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters as 2D anime. Use stylized features, clean line art, and expressive faces.
+  - label: 2D Cartoon
+    value: 2d-cartoon
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters as 2D cartoons. Use bold shapes, simple features, and graphic color.
+  - label: Claymation
+    value: claymation
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters as claymation. Give them handmade clay texture and stop-motion movement.
+  - label: Stop Motion
+    value: stop-motion
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters for stop motion. Use physical puppet materials and slightly stepped movement.
+  - label: Watercolor
+    value: watercolor
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters in watercolor. Use soft edges, paper texture, and translucent color.
+  - label: Comic Book
+    value: comic-book
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters as comic-book art. Use inked lines, flat color, and graphic shadows.
+  - label: Minimalist
+    value: minimalist
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters in a minimalist style. Use few shapes, limited detail, and open space.
+  - label: Retro/Vintage
+    value: retro
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters in a retro style. Use vintage color, period design, and older print or film texture.
+  - label: Studio Ghibli
+    value: studio-ghibli
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters in a painterly animated style. Use gentle faces, natural movement, and soft backgrounds.
+  - label: Disney Classic
+    value: disney-classic
+    illustration:
+      url: null
+      type: image
+    promptModifier: Design characters in a classic 2D animation style. Use clear silhouettes and theatrical acting.

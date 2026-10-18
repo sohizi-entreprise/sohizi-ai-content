@@ -87,8 +87,8 @@ export default function CreateProject() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-primary hover:bg-primary/90 cursor-pointer text-black font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-xl shadow-primary/10 hover:scale-105">
-          <IconCirclePlusFilled className="size-6" />
+        <Button className="flex items-center gap-2 rounded-xl px-5 font-semibold">
+          <IconCirclePlusFilled className="size-5" />
           Start blank project
         </Button>
       </DialogTrigger>

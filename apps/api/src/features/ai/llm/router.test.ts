@@ -71,6 +71,16 @@ function rateLimitError() {
   })
 }
 
+function insufficientFundsError() {
+  return new APICallError({
+    message: "A positive credit balance is required",
+    url: "https://ai-gateway.vercel.sh/v4/ai/language-model",
+    requestBodyValues: {},
+    statusCode: 402,
+    isRetryable: false,
+  })
+}
+
 function badRequestError() {
   return new APICallError({
     message: "bad request",
@@ -223,6 +233,26 @@ describe("llm failover", () => {
     expect(await redis.pttl(`${prefix}llm:cd:primary:model`)).toBeGreaterThan(0)
   })
 
+  test("a 402 insufficient balance falls back to the next vendor", async () => {
+    const result = await generateTextWithFailover(
+      request,
+      options({
+        primary: {
+          generateText: async () => {
+            throw insufficientFundsError()
+          },
+          streamText: () => streamOf([]),
+        },
+        secondary: {
+          generateText: async () => textResult("secondary"),
+          streamText: () => streamOf([]),
+        },
+      }),
+    )
+    expect(result.vendorName).toBe("secondary")
+    expect(calls).toEqual(["primary", "secondary"])
+  })
+
   test("a cooled vendor is skipped until the key expires", async () => {
     await redis.set(`${prefix}llm:cd:primary:model`, "1", "PX", 60)
     const adapters = {
@@ -365,6 +395,32 @@ describe("llm failover", () => {
               { type: "start" },
               { type: "error", error: serverError() },
             ]),
+        },
+        secondary: {
+          generateText: async () => textResult("secondary"),
+          streamText: () =>
+            streamOf([{ type: "text-delta", id: "2", text: "other" }]),
+        },
+      }),
+    )
+
+    const parts: string[] = []
+    for await (const part of handle.stream) {
+      if (part.type === "text-delta") parts.push(part.text)
+    }
+    expect(parts).toEqual(["other"])
+    expect(handle.vendorName).toBe("secondary")
+    expect(calls).toEqual(["primary", "secondary"])
+  })
+
+  test("a 402 stream error before content falls back to the next vendor", async () => {
+    const handle = await streamTextWithFailover(
+      request,
+      options({
+        primary: {
+          generateText: async () => textResult("primary"),
+          streamText: () =>
+            streamOf([{ type: "error", error: insufficientFundsError() }]),
         },
         secondary: {
           generateText: async () => textResult("secondary"),

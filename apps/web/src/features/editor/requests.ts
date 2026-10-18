@@ -20,7 +20,11 @@ export const saveFileContent = async (
   fileId: string,
   content: string,
   diffApplied?: boolean,
-): Promise<{ content: string; revision: number }> => {
+): Promise<{
+  content: string
+  revision: number
+  pendingDiffApplied: boolean
+}> => {
   const response = await api.put(
     `/projects/${projectId}/files/${fileId}/content`,
     { content, diffApplied },

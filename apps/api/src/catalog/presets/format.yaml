@@ -1,0 +1,29 @@
+id: preset_format
+key: format
+label: Format
+generationTarget: project
+options:
+  - label: Storytime
+    value: storytime
+    illustration:
+      url: null
+      type: image
+    promptModifier: Tell it as a story. Follow a character through a clear beginning, turn, and ending.
+  - label: Explainer
+    value: explainer
+    illustration:
+      url: null
+      type: image
+    promptModifier: Explain one idea. Define terms, use a concrete example, and move from simple to specific.
+  - label: Documentary
+    value: documentary
+    illustration:
+      url: null
+      type: image
+    promptModifier: Present the subject as observed fact. Use evidence, context, and a neutral narrator.
+  - label: Presenter
+    value: presenter
+    illustration:
+      url: null
+      type: image
+    promptModifier: Write for a host speaking to the viewer. Keep the lines conversational and address the audience directly.

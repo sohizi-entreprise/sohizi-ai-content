@@ -157,6 +157,34 @@ describe("AgentStateManager usage", () => {
       }),
     )
   })
+
+  it("keeps the latest metered model step separate from cumulative usage", () => {
+    const state = new AgentStateManager()
+    state.setState({
+      ...state.getState(),
+      usage: usage({ input: 1_700_000, total: 1_750_000 }),
+    })
+
+    state.recordModelStepUsage(
+      usage({ input: 102_000, output: 100, total: 102_100 }),
+    )
+    state.incrementUsage(usage({ input: 500, total: 504 }))
+
+    expect(state.getState().usage?.input).toBe(1_802_500)
+    expect(state.getState().latestRunUsage?.input).toBe(102_000)
+    expect(state.usageThisRun?.input).toBe(102_500)
+
+    state.recordModelStepUsage(usage({ input: 0, output: 0, total: 0 }))
+    expect(state.getState().latestRunUsage?.input).toBe(102_000)
+  })
+
+  it("loads checkpoints created before latestRunUsage existed", () => {
+    const state = new AgentStateManager()
+    const legacy = { ...state.getState() }
+    delete (legacy as Partial<typeof legacy>).latestRunUsage
+    state.setState(legacy)
+    expect(state.getState().latestRunUsage).toBeNull()
+  })
 })
 
 describe("AgentStateManager fulfilled vendor", () => {

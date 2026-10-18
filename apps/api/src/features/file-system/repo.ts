@@ -1484,11 +1484,17 @@ export const deletePendingFileOperation = async (fileNodeId: string) => {
 
 export const markPendingFileOperationDiffApplied = async (
   fileNodeId: string,
+  content: string,
 ) => {
   const response = await db
     .update(pendingFileOperations)
     .set({ diffApplied: true })
-    .where(eq(pendingFileOperations.fileNodeId, fileNodeId))
+    .where(
+      and(
+        eq(pendingFileOperations.fileNodeId, fileNodeId),
+        sql`${pendingFileOperations.payload}->>'content' = ${content}`,
+      ),
+    )
   if (response.rowCount === 0) {
     return false
   }

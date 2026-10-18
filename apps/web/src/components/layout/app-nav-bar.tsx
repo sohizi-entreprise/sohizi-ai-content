@@ -4,6 +4,7 @@ import {
   IconCategoryFilled,
   IconFilesFilled,
   IconPhotoFilled,
+  IconUserFilled,
   IconVideoPlusFilled,
 } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
@@ -78,15 +79,10 @@ export function AppNavBar() {
         ))}
       </div>
 
-      <div className="flex flex-col items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger>
-            <div className="size-7 rounded-full bg-primary/20 ring-2 ring-primary/40 flex items-center justify-center">
-              <span className="text-xs font-medium text-primary">JD</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="right">Settings</TooltipContent>
-        </Tooltip>
+      <div className="flex flex-col items-center gap-1 mb-4">
+        <Link to="/account/profile">
+          <IconUserFilled className="size-4.5 text-muted-foreground" />
+        </Link>
       </div>
     </div>
   )

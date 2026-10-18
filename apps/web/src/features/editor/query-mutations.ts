@@ -93,11 +93,18 @@ export function markPendingOperationApplied(
   client: QueryClient,
   projectId: string,
   fileId: string,
+  content: string,
 ) {
   client.setQueryData(
     keysFactory.pendingOperation(projectId, fileId),
     (current: { operation: PendingFileOperation | null } | undefined) => {
-      if (!current?.operation) return current
+      if (
+        !current?.operation ||
+        current.operation.payload.type !== "patch" ||
+        current.operation.payload.content !== content
+      ) {
+        return current
+      }
       return {
         operation: { ...current.operation, diffApplied: true },
       }
@@ -165,8 +172,13 @@ export const saveFileContentMutationOptions = (
         revision: data.revision,
       })
 
-      if (variables.diffApplied) {
-        markPendingOperationApplied(context.client, projectId, fileId)
+      if (data.pendingDiffApplied) {
+        markPendingOperationApplied(
+          context.client,
+          projectId,
+          fileId,
+          variables.content,
+        )
       }
     },
   })

@@ -45,23 +45,89 @@ export function planChangeBehavior(currentTier: number, nextTier: number) {
   return nextTier > currentTier ? "reset" : "next_period"
 }
 
+type ProductPrice = Product["prices"][number]
+
+function activePrice(product: Product): ProductPrice | null {
+  return (
+    product.prices.find((price) => {
+      if (price.is_archived) return false
+      if (price.amount_type === "fixed") return price.price_amount > 0
+      return price.amount_type === "unit_based"
+    }) ?? null
+  )
+}
+
 function productKind(
   product: Product,
   availableOnly = true,
 ): "plan" | "pack" | null {
-  if (
-    !creditAmount(product.metadata) ||
-    (availableOnly && (product.is_archived || product.visibility !== "public"))
-  )
+  if (availableOnly && (product.is_archived || product.visibility !== "public"))
     return null
+  const price = activePrice(product)
+  if (!price) return null
   if (
+    price.amount_type === "fixed" &&
     product.recurring_interval === "month" &&
     product.recurring_interval_count === 1 &&
     !product.trial_interval &&
-    planTier(product.metadata)
+    planTier(product.metadata) &&
+    creditAmount(product.metadata)
   )
     return "plan"
-  if (!product.is_recurring) return "pack"
+  if (price.amount_type === "unit_based" && !product.is_recurring) return "pack"
+  return null
+}
+
+export function packUnitBounds(product: Product) {
+  const price = activePrice(product)
+  if (!price || price.amount_type !== "unit_based") return null
+  const raw = price.tiers.tiers[0]?.unit_amount
+  const unitAmount = raw == null ? Number.NaN : Number(raw)
+  if (!Number.isFinite(unitAmount) || unitAmount <= 0) return null
+  return {
+    unitAmount,
+    minimumUnits: price.minimum_units ?? 1,
+    maximumUnits: price.maximum_units,
+    currency: price.price_currency,
+  }
+}
+
+export function catalogEntry(product: Product) {
+  const kind = productKind(product)
+  const price = activePrice(product)
+  if (!kind || !price) return null
+  if (kind === "plan" && price.amount_type === "fixed") {
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      kind,
+      credits: creditAmount(product.metadata),
+      planTier: planTier(product.metadata),
+      priceAmount: price.price_amount,
+      currency: price.price_currency,
+      unitAmount: null,
+      minimumUnits: null,
+      maximumUnits: null,
+    }
+  }
+  if (kind === "pack") {
+    const bounds = packUnitBounds(product)
+    if (!bounds) return null
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      kind,
+      credits: null,
+      planTier: null,
+      priceAmount: null,
+      currency: bounds.currency,
+      unitAmount: bounds.unitAmount,
+      minimumUnits: bounds.minimumUnits,
+      maximumUnits: bounds.maximumUnits,
+    }
+  }
   return null
 }
 
@@ -73,41 +139,19 @@ export async function catalog() {
     limit: 100,
   }))
     products.push(product)
-  return products
-    .filter((product) => productKind(product) !== null)
-    .map((product) => {
-      const price = product.prices.find(
-        (candidate) =>
-          candidate.amount_type === "fixed" &&
-          !candidate.is_archived &&
-          candidate.price_amount > 0,
-      )
-      return {
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        kind: productKind(product)!,
-        credits: creditAmount(product.metadata)!,
-        planTier:
-          productKind(product) === "plan" ? planTier(product.metadata) : null,
-        priceAmount: price?.amount_type === "fixed" ? price.price_amount : null,
-        currency: price?.amount_type === "fixed" ? price.price_currency : null,
-      }
-    })
-    .filter((product) => product.priceAmount !== null)
+  return products.flatMap((product) => {
+    const entry = catalogEntry(product)
+    return entry ? [entry] : []
+  })
 }
 
 export async function getCatalogProduct(id: string, kind: "plan" | "pack") {
   const product = await requirePolar().products.get(id)
-  if (
-    productKind(product) !== kind ||
-    !product.prices.some(
-      (price) =>
-        price.amount_type === "fixed" &&
-        !price.is_archived &&
-        price.price_amount > 0,
-    )
-  ) {
+  const price = activePrice(product)
+  const priceMatches =
+    (kind === "plan" && price?.amount_type === "fixed") ||
+    (kind === "pack" && price?.amount_type === "unit_based")
+  if (productKind(product) !== kind || !priceMatches) {
     throw new BadRequest("Product is not available for this purchase")
   }
   return product
@@ -232,10 +276,6 @@ export async function grantOrder(
     .limit(1)
   if (processed) return
   const product = order.product ?? (await client.products.get(order.product_id))
-  const amount = creditAmount(product.metadata)
-  if (!amount)
-    throw new Error(`Invalid creditAmount on Polar product ${product.id}`)
-  let credits = amount
   const kind = order.subscription_id
     ? product.recurring_interval === "month" &&
       product.recurring_interval_count === 1
@@ -245,7 +285,12 @@ export async function grantOrder(
       ? "pack"
       : null
   if (!kind) throw new Error(`Unsupported Polar product ${product.id}`)
+  let credits: number
   if (kind === "pack") {
+    const units = order.units
+    if (typeof units !== "number" || !Number.isSafeInteger(units) || units <= 0)
+      throw new Error(`Invalid unit quantity on Polar order ${order.id}`)
+    credits = units
     const purchasedAt = new Date(order.created_at)
     const expiresAt = new Date(purchasedAt)
     expiresAt.setUTCFullYear(expiresAt.getUTCFullYear() + 1)
@@ -259,6 +304,10 @@ export async function grantOrder(
         metadata: { productId: product.id },
       })
   } else {
+    const amount = creditAmount(product.metadata)
+    if (!amount)
+      throw new Error(`Invalid creditAmount on Polar product ${product.id}`)
+    credits = amount
     if (!order.subscription_id)
       throw new Error(`Subscription order ${order.id} has no subscription`)
     const subscription = await client.subscriptions.get(order.subscription_id)

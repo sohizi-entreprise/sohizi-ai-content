@@ -1,0 +1,59 @@
+id: preset_outlineStructure
+key: outlineStructure
+label: Outline Structure
+generationTarget: project
+options:
+  - label: Three-Act Structure
+    value: three-act
+    illustration:
+      url: null
+      type: image
+    promptModifier: Structure the outline in three acts. Setup, confrontation, then resolution.
+  - label: Five-Act Structure
+    value: five-act
+    illustration:
+      url: null
+      type: image
+    promptModifier: Structure the outline in five acts. Exposition, rising action, climax, falling action, then denouement.
+  - label: Hero's Journey
+    value: heros-journey
+    illustration:
+      url: null
+      type: image
+    promptModifier: Structure the outline as the hero's journey. Call, trials, ordeal, then a return that shows the change.
+  - label: Save the Cat
+    value: save-the-cat
+    illustration:
+      url: null
+      type: image
+    promptModifier: Structure the outline with Save the Cat beats. Opening image, catalyst, midpoint, all is lost, then finale.
+  - label: Nonlinear
+    value: nonlinear
+    illustration:
+      url: null
+      type: image
+    promptModifier: Structure the outline out of chronological order. Make each time jump reveal new information.
+  - label: Episodic
+    value: episodic
+    illustration:
+      url: null
+      type: image
+    promptModifier: Structure the outline as episodes. Each part has its own problem and ending, tied by one through-line.
+  - label: Circular
+    value: circular
+    illustration:
+      url: null
+      type: image
+    promptModifier: Structure the outline as a circle. Return to the opening image, changed by what happened.
+  - label: Parallel
+    value: parallel
+    illustration:
+      url: null
+      type: image
+    promptModifier: Structure the outline as parallel threads. Cut between storylines that meet or comment on each other.
+  - label: Freeform
+    value: freeform
+    illustration:
+      url: null
+      type: image
+    promptModifier: Do not force a classic plot template. Follow the material's own order and make each next section necessary.

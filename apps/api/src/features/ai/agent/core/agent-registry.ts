@@ -78,7 +78,7 @@ registerAgent({
     ]),
     reasoningEffort: "medium",
     reasoningSummary: "auto",
-    maxOutputTokens: 3000,
+    maxOutputTokens: 30000,
   },
   modelId: "", // This will be overridden by the model passed to the agent
   contextThreshold: 0.8,

@@ -1,0 +1,59 @@
+id: preset_genre
+key: genre
+label: Genre
+generationTarget: project
+options:
+  - label: Drama
+    value: drama
+    illustration:
+      url: https://storage.googleapis.com/sohizi-content/genres/drama.avif
+      type: image
+    promptModifier: Tell the story as drama. Center the conflict on character choices and emotional consequence.
+  - label: Comedy
+    value: comedy
+    illustration:
+      url: https://storage.googleapis.com/sohizi-content/genres/comedy.avif
+      type: image
+    promptModifier: Tell the story as comedy. Use timing, contrast, and payoff without dropping the plot.
+  - label: Thriller
+    value: thriller
+    illustration:
+      url: https://storage.googleapis.com/sohizi-content/genres/thriller.avif
+      type: image
+    promptModifier: Tell the story as a thriller. Raise the stakes, withhold information, and keep the next event uncertain.
+  - label: Horror
+    value: horror
+    illustration:
+      url: https://storage.googleapis.com/sohizi-content/genres/horror.avif
+      type: image
+    promptModifier: Tell the story as horror. Build dread through threat, atmosphere, and what stays unseen.
+  - label: Romance
+    value: romance
+    illustration:
+      url: https://storage.googleapis.com/sohizi-content/genres/romance.avif
+      type: image
+    promptModifier: Tell the story as romance. Center the relationship and the obstacles between the people who want each other.
+  - label: Sci-Fi
+    value: sci-fi
+    illustration:
+      url: https://storage.googleapis.com/sohizi-content/genres/sci_fi.avif
+      type: image
+    promptModifier: Tell the story as science fiction. Ground the plot in one speculative idea and show how it changes people.
+  - label: Fantasy
+    value: fantasy
+    illustration:
+      url: https://storage.googleapis.com/sohizi-content/genres/fantasy.avif
+      type: image
+    promptModifier: Tell the story as fantasy. Keep the invented world coherent and let its rules drive the conflict.
+  - label: Action
+    value: action
+    illustration:
+      url: https://storage.googleapis.com/sohizi-content/genres/action.avif
+      type: image
+    promptModifier: Tell the story as action. Drive scenes with physical goals, obstacles, and visible cause and effect.
+  - label: Mystery
+    value: mystery
+    illustration:
+      url: https://storage.googleapis.com/sohizi-content/genres/mystery.avif
+      type: image
+    promptModifier: Tell the story as a mystery. Plant clues fairly and reveal the answer through investigation.

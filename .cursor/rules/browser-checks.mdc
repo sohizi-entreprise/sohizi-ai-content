@@ -1,0 +1,10 @@
+---
+description: Open the browser only when the user explicitly asks
+alwaysApply: true
+---
+
+# Browser checks
+
+Do not open the browser, navigate it, or use browser tools unless the user explicitly asks you to open or check the browser.
+
+When a web change would normally be verified in the browser, use the closest check that stays out of the browser, such as tests or a code review, and say that the browser was not opened.

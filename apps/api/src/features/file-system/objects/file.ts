@@ -579,6 +579,10 @@ export class FileObject {
     }
     this.fileContentCache = content
   }
+
+  clearFileContentCache(): void {
+    this.fileContentCache = undefined
+  }
 }
 
 /**

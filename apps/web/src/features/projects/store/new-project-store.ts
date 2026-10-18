@@ -74,6 +74,11 @@ const initialAdditionalSettings: AdditionalSettings = {
   characterStyle: null,
 }
 
+export const isAdditionalSettingKey = (
+  key: string,
+): key is AdditionalSettingKey =>
+  Object.prototype.hasOwnProperty.call(initialAdditionalSettings, key)
+
 const initialState: NewProjectState = {
   duration: "< 2",
   storyIdea: "",

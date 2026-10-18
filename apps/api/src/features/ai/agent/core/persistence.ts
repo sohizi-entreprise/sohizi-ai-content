@@ -101,7 +101,10 @@ export class CheckpointPersistence extends Persistence {
   async persistConversationUsage(state: AgentState) {
     if (!state.usage) return
     await repo.updateConversation(this.checkpoint.conversationId, {
-      metadata: { usage: state.usage },
+      metadata: {
+        usage: state.usage,
+        latestRunUsage: state.latestRunUsage ?? null,
+      },
     })
   }
 }

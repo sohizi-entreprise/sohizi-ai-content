@@ -63,6 +63,7 @@ type ReasoningDelta = {
 type Usage = {
   type: typeof streamEvents.usage
   usage: TokenUsage
+  latestRunUsage: TokenUsage | null
 }
 
 type ToolCallDelta = {

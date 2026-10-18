@@ -27,3 +27,13 @@ export function preservePatchBaseContent(
     baseContent: existing.baseContent,
   }
 }
+
+export function getPendingEditContent(
+  committedContent: string,
+  pending: { payload: FilePendingOperation; diffApplied: boolean } | null,
+): string {
+  if (pending && !pending.diffApplied && isPatchOperation(pending.payload)) {
+    return pending.payload.content
+  }
+  return committedContent
+}

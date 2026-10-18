@@ -86,7 +86,7 @@ export default function NewProjectSelectModel() {
       <ModelSelectorTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1.5 rounded-full px-2 py-1.5 text-base text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex items-center gap-1.5 rounded-full px-2 py-1.5 text-base text-foreground transition-colors cursor-pointer bg-card hover:bg-card/50"
         >
           {selected ? (
             <>

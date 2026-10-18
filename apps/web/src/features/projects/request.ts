@@ -5,6 +5,7 @@ import type {
   FileNode,
   PaginatedResponse,
   ProjectAssetFile,
+  ProjectGenerationTarget,
   ProjectListItem,
   ProjectOptions,
   ProjectResponse,
@@ -51,8 +52,12 @@ export const createProject = async (
   return response.data
 }
 
-export const getProjectOptions = async (): Promise<ProjectOptions> => {
-  const response = await api.get("/projects/options")
+export const getProjectOptions = async (
+  generationTarget?: ProjectGenerationTarget,
+): Promise<ProjectOptions> => {
+  const response = await api.get("/projects/options", {
+    params: generationTarget ? { generationTarget } : undefined,
+  })
   return response.data
 }
 

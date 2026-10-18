@@ -195,6 +195,7 @@ export type StreamTokenUsage = {
 
 export type ChatMetadata = {
   usage: StreamTokenUsage | null
+  latestRunUsage?: StreamTokenUsage | null
 }
 
 // ============================================================================
@@ -375,7 +376,11 @@ export type ChatStreamChunk = {
   | { type: "text_delta"; text: string }
   | { type: "reasoning_delta"; text: string }
   | { type: "progress_update"; toolCallId: string; text: string }
-  | { type: "usage"; usage: StreamTokenUsage }
+  | {
+      type: "usage"
+      usage: StreamTokenUsage
+      latestRunUsage?: StreamTokenUsage | null
+    }
   | { type: "tool_call_delta"; toolCallId: string; input: string }
   | {
       type: "tool_call_start"
@@ -433,10 +438,14 @@ export type LlmModel = {
 export const DEFAULT_CONTEXT_WINDOW = 250_000
 
 export function contextWindowPercentage(
-  usageTotal: number | undefined,
-  contextWindow: number | null | undefined,
-): number {
-  const window = contextWindow ?? DEFAULT_CONTEXT_WINDOW
-  if (window <= 0) return 0
-  return Math.min(100, ((usageTotal ?? 0) / window) * 100)
+  latestRunUsage:
+    Pick<StreamTokenUsage, "input" | "modelId"> | null | undefined,
+  model: Pick<LlmModel, "id" | "contextWindow"> | null | undefined,
+): number | null {
+  if (!latestRunUsage || !model || latestRunUsage.modelId !== model.id) {
+    return null
+  }
+  const window = model.contextWindow ?? DEFAULT_CONTEXT_WINDOW
+  if (window <= 0) return null
+  return Math.min(100, (latestRunUsage.input / window) * 100)
 }

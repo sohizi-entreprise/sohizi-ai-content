@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query"
 import * as requests from "./request"
 import type { z } from "zod"
-import type { CreateTemplateInput } from "./type"
+import type { CreateTemplateInput, ProjectGenerationTarget } from "./type"
 import type { createProjectSchema } from "./schema"
 
 const keysFactory = {
@@ -91,14 +91,17 @@ export const deleteProjectMutationOptions = mutationOptions({
   },
 })
 
-export const getProjectOptionsQueryOptions = queryOptions({
-  queryKey: keysFactory.projectOptions(),
-  queryFn: () => requests.getProjectOptions(),
-  staleTime: 1000 * 60 * 5, // 5 minutes
-  refetchOnWindowFocus: false,
-  refetchOnMount: false,
-  refetchOnReconnect: false,
-})
+export const getProjectOptionsQueryOptions = (
+  generationTarget?: ProjectGenerationTarget,
+) =>
+  queryOptions({
+    queryKey: [...keysFactory.projectOptions(), generationTarget ?? "all"],
+    queryFn: () => requests.getProjectOptions(generationTarget),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  })
 
 // =========== FILE SYSTEM ===========
 export const getlistFileTreePerDirectoryOptions = (

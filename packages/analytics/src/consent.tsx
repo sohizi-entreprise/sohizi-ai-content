@@ -18,7 +18,10 @@ export type ConsentChoice = "accepted" | "rejected" | null
 type ConsentContextValue = {
   choice: ConsentChoice
   ready: boolean
+  saving: boolean
+  error: string
   openSettings: () => void
+  choose: (next: Exclude<ConsentChoice, null>) => Promise<void>
   trackPageview: (url: string) => void
 }
 
@@ -127,7 +130,10 @@ export function AnalyticsProvider({
       value={{
         choice,
         ready,
+        saving,
+        error,
         openSettings: () => setSettingsOpen(true),
+        choose,
         trackPageview,
       }}
     >

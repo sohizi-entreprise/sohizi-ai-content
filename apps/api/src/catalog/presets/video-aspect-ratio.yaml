@@ -1,0 +1,47 @@
+id: preset_videoAspectRatio
+key: videoAspectRatio
+label: Video Aspect Ratio
+generationTarget: project
+options:
+  - label: 16:9 (Landscape)
+    value: "16:9"
+    illustration:
+      url: null
+      type: image
+    promptModifier: Compose for 16:9 landscape. Frame scenes wide and keep important action in the horizontal center.
+  - label: 9:16 (Portrait/TikTok)
+    value: "9:16"
+    illustration:
+      url: null
+      type: image
+    promptModifier: Compose for 9:16 portrait. Stack the subject vertically and keep faces and text in the center.
+  - label: 1:1 (Square)
+    value: "1:1"
+    illustration:
+      url: null
+      type: image
+    promptModifier: Compose for a 1:1 square. Center the subject and keep important detail away from the edges.
+  - label: 4:3 (Classic)
+    value: "4:3"
+    illustration:
+      url: null
+      type: image
+    promptModifier: Compose for 4:3. Use a classic frame and keep the action inside a safe center.
+  - label: 21:9 (Cinematic)
+    value: "21:9"
+    illustration:
+      url: null
+      type: image
+    promptModifier: Compose for 21:9 cinematic widescreen. Use horizontal space and wide establishing frames.
+  - label: 4:5 (Instagram Portrait)
+    value: "4:5"
+    illustration:
+      url: null
+      type: image
+    promptModifier: Compose for 4:5 portrait. Fit the subject in a tall frame that still reads in a phone feed.
+  - label: 2.39:1 (Anamorphic)
+    value: "2.39:1"
+    illustration:
+      url: null
+      type: image
+    promptModifier: Compose for 2.39:1 anamorphic widescreen. Use a very wide frame and place subjects along the horizon.

@@ -87,7 +87,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-background font-space-grotesk antialiased">
+      <body className="min-h-screen bg-background font-space-grotesk antialiased selection:bg-[Highlight] selection:text-foreground">
         {children}
         <script
           dangerouslySetInnerHTML={{

@@ -42,11 +42,9 @@ export function AppHeader() {
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <img
-            src="/logo.svg"
-            alt=""
-            width={32}
-            height={28}
-            className="h-7 w-8 shrink-0 object-contain sm:h-8 sm:w-9 -mt-2"
+            src="/logo-monochrome-white.svg"
+            alt="sohizi lab monochrome white"
+            className="size-8 shrink-0 object-contain relative -top-1 opacity-90"
           />
 
           <div className="flex items-center gap-2">

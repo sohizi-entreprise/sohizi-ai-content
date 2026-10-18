@@ -74,7 +74,6 @@ export class Agent {
   private readonly modelConfig: ModelConfig
   private readonly model: ResolvedTextModel
   private readonly contextManager: ContextManager
-  private lastInputTokens: number
   public artifacts: Map<string, unknown>
 
   constructor(config: AgentConfig) {
@@ -89,7 +88,6 @@ export class Agent {
     }
     this.modelConfig = config.modelConfig
     this.model = config.model
-    this.lastInputTokens = 0
     this.contextManager = new ContextManager({
       maxContextTokens: config.maxContextTokens,
       threshold: config.contextThreshold,
@@ -139,7 +137,7 @@ export class Agent {
 
         await this.contextManager.maybeCompress(
           this.stateManager,
-          this.lastInputTokens,
+          this.stateManager.getState().latestRunUsage?.input ?? 0,
           abortSignal,
           this.ensureRunId(),
         )
@@ -180,6 +178,12 @@ export class Agent {
     let assistantMessageRegistered = false
     let toolCallsStarted = false
 
+    await this.contextManager.maybeCompress(
+      this.stateManager,
+      estimateInputTokens(this.stateManager.getState().messages, 1.15),
+      abortSignal,
+      this.ensureRunId(),
+    )
     const stateMessages = this.stateManager.getState().messages
 
     const billableInput: BillableLlmInput = {
@@ -236,9 +240,8 @@ export class Agent {
             yield this.buildEvent(chunk)
             break
           case streamEvents.complete:
-            this.stateManager.incrementUsage(chunk.usage)
+            this.stateManager.recordModelStepUsage(chunk.usage)
             if (chunk.vendor) this.stateManager.recordVendor(chunk.vendor)
-            this.lastInputTokens = chunk.usage.input || this.lastInputTokens
             this.updateStatus(chunk.finishReason, chunk.error)
             text = chunk.text || text
             reasoning_text = chunk.reasoningText ?? reasoning_text
@@ -246,6 +249,7 @@ export class Agent {
               stepError = chunk.error ?? "Unknown agent error"
               this.captureStepError(stepError)
             }
+            yield this.buildUsageEvent()
             break
           case streamEvents.toolCallStart:
             if (chunk.toolName === PROVIDE_STATUS_UPDATE_TOOL_NAME) {
@@ -344,6 +348,7 @@ export class Agent {
       todos: [],
       jobs: [],
       usage: null,
+      latestRunUsage: null,
     }
     if (existingState) {
       const messages = existingState.messages.filter(
@@ -353,6 +358,7 @@ export class Agent {
         ...existingState,
         status: "idle",
         jobs: existingState.jobs ?? [],
+        latestRunUsage: existingState.latestRunUsage ?? null,
         messages: [{ role: "system", content: systemPrompt }, ...messages],
       }
     }
@@ -587,6 +593,7 @@ export class Agent {
     return this.buildEvent({
       type: streamEvents.usage,
       usage: usage ?? this.emptyUsage(),
+      latestRunUsage: this.stateManager.getState().latestRunUsage,
     })
   }
 

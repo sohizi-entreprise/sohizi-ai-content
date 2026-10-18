@@ -15,6 +15,8 @@ export type SessionInitData = {
   conversationId?: string
 }
 
+const fileEditQueue = new Map<string, Promise<void>>()
+
 export class Session {
   public readonly id: string
   public readonly userId: string
@@ -50,8 +52,11 @@ export class Session {
     if (!result.success) {
       return null
     }
-    this.fileCache.set(filePathOrId, result.file)
-    return result.file
+    const file = this.fileCache.get(result.file.id) ?? result.file
+    this.fileCache.set(filePathOrId, file)
+    this.fileCache.set(file.id, file)
+    this.fileCache.set(file.path, file)
+    return file
   }
 
   async resolveModel(modelId: string): Promise<ResolvedTextModel | null> {
@@ -78,6 +83,29 @@ export class Session {
   }
 
   async removeFileFromCache(filePathOrId: string) {
-    this.fileCache.delete(filePathOrId)
+    const file = this.fileCache.get(filePathOrId)
+    if (!file) return
+    for (const [key, cached] of this.fileCache) {
+      if (cached.id === file.id) this.fileCache.delete(key)
+    }
+  }
+
+  async withFileEdit<T>(fileId: string, edit: () => Promise<T>): Promise<T> {
+    const previous = fileEditQueue.get(fileId) ?? Promise.resolve()
+    let release!: () => void
+    const current = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    fileEditQueue.set(fileId, current)
+
+    await previous
+    try {
+      return await edit()
+    } finally {
+      release()
+      if (fileEditQueue.get(fileId) === current) {
+        fileEditQueue.delete(fileId)
+      }
+    }
   }
 }

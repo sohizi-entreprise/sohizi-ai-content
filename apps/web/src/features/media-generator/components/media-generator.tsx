@@ -1,6 +1,6 @@
 import { Download, Folder, ImagePlus, Trash2, X } from "lucide-react"
 import { useParams } from "@tanstack/react-router"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { ScrollArea } from "@sohizi/ui/scroll-area"
@@ -28,6 +28,7 @@ import {
 } from "../query-mutations"
 import MediaCardRenderer from "./media-card-renderer"
 import MediaComposer from "./media-composer"
+import type { RefObject } from "react"
 import type { MediaFilter } from "../types"
 import { cn } from "@/lib/utils"
 import { useFolderSearch } from "@/hooks/use-folder-search"
@@ -58,6 +59,7 @@ export function MediaGenerator() {
   })
 
   const [filter, setFilter] = useState<MediaFilter>("all")
+  const historyScrollRef = useRef<HTMLDivElement>(null)
   const showComposer = useEditorStore(
     (s) => s.chatOpenByContext["media-generator"],
   )
@@ -74,8 +76,12 @@ export function MediaGenerator() {
         <div className="flex h-full w-full flex-col">
           <RenderHeader filter={filter} setFilter={setFilter} />
 
-          <ScrollArea className="flex-1 min-h-0 px-4">
-            <RenderAssets projectId={projectId} filter={filter} />
+          <ScrollArea ref={historyScrollRef} className="flex-1 min-h-0 px-4">
+            <RenderAssets
+              projectId={projectId}
+              filter={filter}
+              scrollRootRef={historyScrollRef}
+            />
           </ScrollArea>
         </div>
       </ResizablePanel>
@@ -100,15 +106,47 @@ export function MediaGenerator() {
 function RenderAssets({
   projectId,
   filter,
+  scrollRootRef,
 }: {
   projectId: string
   filter: MediaFilter
+  scrollRootRef: RefObject<HTMLDivElement | null>
 }) {
   const listOptions = filter === "all" ? undefined : { type: filter }
-  const { data: requests, isLoading } = useInfiniteQuery(
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const {
+    data: requests,
+    isLoading,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery(
     listAiGeneratedAssetsQueryOptions(projectId, listOptions),
   )
   const [selectedAssetIds, setSelectedAssetIds] = useState<Array<string>>([])
+
+  const loadMore = useCallback(() => {
+    if (!hasNextPage || isFetchingNextPage) return
+    void fetchNextPage()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    const root = scrollRootRef.current
+    if (!sentinel || !root) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMore()
+        }
+      },
+      { root, rootMargin: "240px", threshold: 0 },
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [loadMore, scrollRootRef])
 
   useEffect(() => {
     if (!requests) return
@@ -154,6 +192,14 @@ function RenderAssets({
           />
         ))}
       </div>
+      {hasNextPage ? (
+        <div
+          ref={sentinelRef}
+          className="flex h-10 items-center justify-center text-sm text-muted-foreground"
+        >
+          {isFetchingNextPage ? "Loading more..." : null}
+        </div>
+      ) : null}
       <BulkAssetActionBar
         projectId={projectId}
         selectedAssetIds={selectedAssetIds}

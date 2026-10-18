@@ -182,11 +182,14 @@ export const updateFileContent = async (
       fileNodeId,
       { content },
     )
-    if (data.diffApplied) {
-      await fileSystemRepo.markPendingFileOperationDiffApplied(fileNodeId)
-    }
+    const pendingDiffApplied = data.diffApplied
+      ? await fileSystemRepo.markPendingFileOperationDiffApplied(
+          fileNodeId,
+          content,
+        )
+      : false
     await mirrorSkillContentIfNeeded(fileNode.type, fileNodeId, content)
-    return updatedFileContent
+    return { ...updatedFileContent, pendingDiffApplied }
   } catch (error) {
     if (error instanceof Conflict || error instanceof NotFound) {
       throw error

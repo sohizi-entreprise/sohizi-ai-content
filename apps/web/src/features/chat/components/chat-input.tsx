@@ -54,14 +54,11 @@ export function ChatInput({
 
   const attachedFiles = useChatStore((state) => state.attachedFiles)
   const hasAttachments = attachedFiles.length > 0
-  const usageTotal = useChatStore(
-    (state) => state.activeConversation?.metadata?.usage?.total,
+  const latestRunUsage = useChatStore(
+    (state) => state.activeConversation?.metadata?.latestRunUsage,
   )
   const model = useChatStore((state) => state.model)
-  const usagePercentage = contextWindowPercentage(
-    usageTotal,
-    model?.contextWindow,
-  )
+  const usagePercentage = contextWindowPercentage(latestRunUsage, model)
 
   // Register the chat editor with the cross-editor bridge so document
   // selections can be inserted as references into the prompt.
@@ -130,10 +127,12 @@ export function ChatInput({
               </PromptInputButton>
               <input {...getInputProps()} className="sr-only" />
 
-              <ContextWindowDonut
-                usage={{ percentage: usagePercentage }}
-                size="xs"
-              />
+              {usagePercentage !== null ? (
+                <ContextWindowDonut
+                  usage={{ percentage: usagePercentage }}
+                  size="xs"
+                />
+              ) : null}
               <ChatSelectModel projectId={projectId} />
             </PromptInputTools>
 

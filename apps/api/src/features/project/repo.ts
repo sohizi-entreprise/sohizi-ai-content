@@ -126,6 +126,17 @@ export const updateProject = async (id: string, data: { title: string }) => {
   return result[0]
 }
 
+export const getProjectBrief = async (projectId: string) => {
+  const result = await db
+    .select({
+      additionalSettings: projectBriefs.additionalSettings,
+    })
+    .from(projectBriefs)
+    .where(eq(projectBriefs.projectId, projectId))
+    .limit(1)
+  return result[0] ?? null
+}
+
 export const getProjectById = async (id: string) => {
   const result = await db
     .select({

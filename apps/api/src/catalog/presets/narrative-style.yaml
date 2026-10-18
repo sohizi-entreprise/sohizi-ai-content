@@ -1,0 +1,53 @@
+id: preset_narrativeStyle
+key: narrativeStyle
+label: Narrative Style
+generationTarget: project
+options:
+  - label: First Person
+    value: first-person
+    illustration:
+      url: null
+      type: image
+    promptModifier: Narrate in first person. The viewer only knows what the narrator sees, thinks, and admits.
+  - label: Third Person Limited
+    value: third-person-limited
+    illustration:
+      url: null
+      type: image
+    promptModifier: Narrate in third person limited. Stay inside one character's knowledge and perceptions.
+  - label: Third Person Omniscient
+    value: third-person-omniscient
+    illustration:
+      url: null
+      type: image
+    promptModifier: Narrate in third person omniscient. You may reveal what any character knows, including what others do not.
+  - label: Documentary
+    value: documentary
+    illustration:
+      url: null
+      type: image
+    promptModifier: Narrate in a documentary voice. State what is known, attribute claims, and separate fact from interpretation.
+  - label: Voiceover
+    value: voiceover
+    illustration:
+      url: null
+      type: image
+    promptModifier: Use voiceover to carry the story. Pictures show the scene. The voice supplies meaning and transitions.
+  - label: Interview
+    value: interview
+    illustration:
+      url: null
+      type: image
+    promptModifier: Tell the story through interviews. Let speakers deliver the facts and use the edit to connect them.
+  - label: Stream of Consciousness
+    value: stream-of-consciousness
+    illustration:
+      url: null
+      type: image
+    promptModifier: Narrate as stream of consciousness. Follow the narrator's shifting thoughts instead of a tidy plot order.
+  - label: Epistolary
+    value: epistolary
+    illustration:
+      url: null
+      type: image
+    promptModifier: Tell the story through documents such as letters, messages, diaries, or recordings. Let the format reveal the plot.

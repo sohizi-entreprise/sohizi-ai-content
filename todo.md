@@ -40,6 +40,7 @@
 [ ] handle the no internet state (maybe show a banner)
 [ ] handle the error state for chat and media generation
 [ ] redesign all our loadings
+[ ] Add a table which will track the R2 object that needs to be deleted, then a cron job will clean periodically
 
 <!-- Observability -->
 [ ] integrate sentry for logs
@@ -59,3 +60,9 @@
 [ ] create product in polar.sh
 [ ] validate account with polar.sh
 [ ] connect payments
+
+<!-- Issues -->
+[ ] Add throttle on the inngest media generation function
+[ ] Instruct the agent to work step by step (so it doesn't directly generate all the medias at once)
+[ ] Add an error when the streaming fails, and when a run fails too (currently we display a raw message - replace it with a generic one)
+[ ] Some types of files do not require user approval, like context file

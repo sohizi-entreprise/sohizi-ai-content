@@ -1,6 +1,7 @@
 import { APICallError } from "ai"
 
-const FAILOVER_STATUS = new Set([408, 409, 429])
+// A vendor's exhausted balance is specific to that vendor, so try another route.
+const FAILOVER_STATUS = new Set([402, 408, 409, 429])
 
 export class LlmConfigurationError extends Error {
   constructor(message: string) {

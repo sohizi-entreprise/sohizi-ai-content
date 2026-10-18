@@ -1,0 +1,59 @@
+id: preset_primaryPlatform
+key: primaryPlatform
+label: Primary Platform
+generationTarget: project
+options:
+  - label: YouTube
+    value: youtube
+    illustration:
+      url: null
+      type: image
+    promptModifier: Shape it for YouTube. Open with a clear hook, use followable sections, and reward watching to the end.
+  - label: TikTok
+    value: tiktok
+    illustration:
+      url: null
+      type: image
+    promptModifier: Shape it for TikTok. Start in the action and make the idea land in the first seconds.
+  - label: Instagram Reels
+    value: instagram-reels
+    illustration:
+      url: null
+      type: image
+    promptModifier: Shape it for Instagram Reels. Lead with a visual hook and keep it short enough to loop.
+  - label: Facebook
+    value: facebook
+    illustration:
+      url: null
+      type: image
+    promptModifier: Shape it for Facebook. Make the point clear without sound and easy to share.
+  - label: Twitter/X
+    value: twitter
+    illustration:
+      url: null
+      type: image
+    promptModifier: Shape it for X. Keep it short, specific, and built around one claim or moment.
+  - label: LinkedIn
+    value: linkedin
+    illustration:
+      url: null
+      type: image
+    promptModifier: Shape it for LinkedIn. Frame the story as a professional insight with a concrete takeaway.
+  - label: Podcast
+    value: podcast
+    illustration:
+      url: null
+      type: image
+    promptModifier: Shape it for a podcast. Write for the ear, with clear speakers and no reliance on pictures.
+  - label: Streaming (Netflix, etc.)
+    value: streaming
+    illustration:
+      url: null
+      type: image
+    promptModifier: Shape it for a streaming episode. Use act breaks and an ending that can lead into the next episode.
+  - label: Cinema
+    value: cinema
+    illustration:
+      url: null
+      type: image
+    promptModifier: Shape it for a cinema screen. Use wide visual storytelling and a full dramatic arc.

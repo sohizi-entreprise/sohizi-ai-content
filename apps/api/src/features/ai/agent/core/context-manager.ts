@@ -77,19 +77,18 @@ export class ContextManager {
     this.summaryStream = undefined
   }
 
-  /**
-   * Entry point called at the end of each agent step. Measures context
-   * consumption from the latest LLM call's input tokens and, when the
-   * threshold is exceeded, compresses the message history in place. Owns all
-   * summary-model wiring so the agent stays lean.
-   */
+  /** Compress before a call or after a metered step reaches the threshold. */
   async maybeCompress(
     stateManager: AgentStateManager,
     inputTokens: number,
     abortSignal: AbortSignal,
     runId: string,
   ): Promise<void> {
-    if (stateManager.isExitStatus) {
+    if (
+      abortSignal.aborted ||
+      stateManager.status === "error" ||
+      stateManager.status === "paused"
+    ) {
       return
     }
 
@@ -112,10 +111,13 @@ export class ContextManager {
             abortSignal,
             runId,
           ),
+          stateManager.isRunning,
         )
       : this.pruneMessages(messages)
 
-    stateManager.replaceMessages(compressed)
+    if (compressed !== messages) {
+      stateManager.replaceMessages(compressed)
+    }
   }
 
   getConsumption(inputTokens: number): ConsumptionInfo {
@@ -135,12 +137,13 @@ export class ContextManager {
    * append a marker so the model knows the content was shortened.
    */
   pruneMessages(messages: ModelMessage[]): ModelMessage[] {
-    return messages.map((message) => {
+    const pruned = messages.map((message) => {
       if (message.role !== "tool" || !Array.isArray(message.content)) {
         return message
       }
 
-      const content = message.content.map((part) => {
+      const originalContent = message.content
+      const content = originalContent.map((part) => {
         if (part.type !== "tool-result") {
           return part
         }
@@ -162,8 +165,13 @@ export class ContextManager {
         return part
       })
 
-      return { ...message, content }
+      return content.every((part, index) => part === originalContent[index])
+        ? message
+        : { ...message, content }
     })
+    return pruned.every((message, index) => message === messages[index])
+      ? messages
+      : pruned
   }
 
   /**
@@ -207,6 +215,7 @@ export class ContextManager {
       systemPrompt: SUMMARY_SYSTEM_PROMPT,
       transcript,
     })
+    if (!summary.trim()) return messages
 
     const summaryMessage: ModelMessage = {
       role: "user",
@@ -233,9 +242,12 @@ export class ContextManager {
   async compress(
     messages: ModelMessage[],
     summarizeFn: SummarizeFn,
+    resume = true,
   ): Promise<ModelMessage[]> {
     const pruned = this.pruneMessages(messages)
     const summarized = await this.summarizeMessages(pruned, summarizeFn)
+    if (summarized === pruned) return pruned
+    if (!resume) return summarized
 
     const explain: ModelMessage = {
       role: "user",

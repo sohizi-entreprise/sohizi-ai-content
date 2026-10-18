@@ -7,7 +7,6 @@ import ListProjects, {
   ListProjectsError,
   ListProjectsSkeleton,
 } from "@/features/projects/components/list-projects"
-import ProjectHeader from "@/features/projects/components/project-header"
 import StartProject from "@/features/projects/pages/start-project"
 import { reportBrowserError } from "@/lib/sentry-client"
 
@@ -20,23 +19,32 @@ export const Route = createFileRoute("/_authenticated/_sidebar/")({
 
 function RouteComponent() {
   return (
-    <div className="space-y-8 py-10">
+    <div className="space-y-16 py-12 sm:py-16 relative">
       <StartProject />
-      <Separator className="mt-20" />
-      <ProjectHeader />
-      <ErrorBoundary
-        onError={reportBrowserError}
-        fallbackRender={({ resetErrorBoundary, error }) => (
-          <ListProjectsError
-            msg={error instanceof Error ? error.message : "Unknown error"}
-            reset={resetErrorBoundary}
-          />
-        )}
-      >
-        <Suspense fallback={<ListProjectsSkeleton />}>
-          <ListProjects />
-        </Suspense>
-      </ErrorBoundary>
+      <section className="space-y-6" aria-label="Projects">
+        <div>
+          <h2 className="text-3xl text-white font-semibold tracking-tight">
+            Your projects
+          </h2>
+          <p className="mt-1 text-muted-foreground">
+            Pick up where you left off.
+          </p>
+        </div>
+        <Separator />
+        <ErrorBoundary
+          onError={reportBrowserError}
+          fallbackRender={({ resetErrorBoundary, error }) => (
+            <ListProjectsError
+              msg={error instanceof Error ? error.message : "Unknown error"}
+              reset={resetErrorBoundary}
+            />
+          )}
+        >
+          <Suspense fallback={<ListProjectsSkeleton />}>
+            <ListProjects />
+          </Suspense>
+        </ErrorBoundary>
+      </section>
     </div>
   )
 }

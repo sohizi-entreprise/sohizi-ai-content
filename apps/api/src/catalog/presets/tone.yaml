@@ -1,0 +1,59 @@
+id: preset_tone
+key: tone
+label: Tone
+generationTarget: project
+options:
+  - label: Serious
+    value: serious
+    illustration:
+      url: null
+      type: image
+    promptModifier: Keep the tone serious. Treat the subject with weight and avoid jokes that undercut it.
+  - label: Lighthearted
+    value: lighthearted
+    illustration:
+      url: null
+      type: image
+    promptModifier: Keep the tone lighthearted. Stay warm and playful, even when the subject is difficult.
+  - label: Dark
+    value: dark
+    illustration:
+      url: null
+      type: image
+    promptModifier: Keep the tone dark. Lean into unease, moral cost, and consequence.
+  - label: Humorous
+    value: humorous
+    illustration:
+      url: null
+      type: image
+    promptModifier: Keep the tone humorous. Use wit and comic beats without abandoning the story.
+  - label: Inspirational
+    value: inspirational
+    illustration:
+      url: null
+      type: image
+    promptModifier: Keep the tone inspirational. Show effort, setback, and a credible reason to hope.
+  - label: Suspenseful
+    value: suspenseful
+    illustration:
+      url: null
+      type: image
+    promptModifier: Keep the tone suspenseful. Delay answers and make each scene raise a question.
+  - label: Melancholic
+    value: melancholic
+    illustration:
+      url: null
+      type: image
+    promptModifier: Keep the tone melancholic. Let loss and reflection sit in the scenes.
+  - label: Uplifting
+    value: uplifting
+    illustration:
+      url: null
+      type: image
+    promptModifier: Keep the tone uplifting. End beats on connection, progress, or relief.
+  - label: Satirical
+    value: satirical
+    illustration:
+      url: null
+      type: image
+    promptModifier: Keep the tone satirical. Expose a specific flaw by exaggerating it.

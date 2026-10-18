@@ -51,3 +51,15 @@ a.file-tag-link:visited {
   padding: 0.1em 0.3em;
   cursor: pointer;
 }
+
+/* Shared surfaces for account settings; project cards retain their own design. */
+.account-dashboard [data-slot="card"] {
+  border-color: var(--border);
+  background-color: color-mix(in oklch, var(--card) 78%, var(--background));
+  border-radius: 1rem;
+  box-shadow: none;
+}
+
+.account-dashboard [data-slot="card-title"] {
+  letter-spacing: -0.02em;
+}

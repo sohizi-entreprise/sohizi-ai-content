@@ -220,8 +220,13 @@ export function useAutoSave({
         content: result.content,
         revision: result.revision,
       })
-      if (payload.diffApplied) {
-        markPendingOperationApplied(queryClient, ctx.projectId, ctx.fileId)
+      if (result.pendingDiffApplied) {
+        markPendingOperationApplied(
+          queryClient,
+          ctx.projectId,
+          ctx.fileId,
+          payload.content,
+        )
       }
     },
   })

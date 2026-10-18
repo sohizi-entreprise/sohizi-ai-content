@@ -1,0 +1,47 @@
+id: preset_targetAudience
+key: targetAudience
+label: Target Audience
+generationTarget: project
+options:
+  - label: Children (5-12)
+    value: children
+    illustration:
+      url: null
+      type: image
+    promptModifier: Write for children ages 5–12. Use simple language, a clear point, and no frightening or adult content.
+  - label: Teens (13-17)
+    value: teens
+    illustration:
+      url: null
+      type: image
+    promptModifier: Write for teens ages 13–17. Use direct language and conflicts about identity, friendship, and independence.
+  - label: Young Adults (18-25)
+    value: young-adults
+    illustration:
+      url: null
+      type: image
+    promptModifier: Write for young adults ages 18–25. Focus on ambition, relationships, and first adult choices.
+  - label: Adults (26-45)
+    value: adults
+    illustration:
+      url: null
+      type: image
+    promptModifier: Write for adults ages 26–45. Assume life experience and allow complexity without explaining the obvious.
+  - label: Mature (46+)
+    value: mature
+    illustration:
+      url: null
+      type: image
+    promptModifier: Write for viewers 46 and older. Favor reflection, consequence, and earned emotion.
+  - label: Family
+    value: family
+    illustration:
+      url: null
+      type: image
+    promptModifier: Write for a family watching together. Keep it understandable to children and interesting to adults.
+  - label: General
+    value: general
+    illustration:
+      url: null
+      type: image
+    promptModifier: Write for a general audience. Avoid niche jargon and content that shuts out a broad viewer.

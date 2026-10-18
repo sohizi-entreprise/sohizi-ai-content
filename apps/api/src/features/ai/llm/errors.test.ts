@@ -13,7 +13,8 @@ function apiError(statusCode: number, isRetryable: boolean) {
 }
 
 describe("isFailoverError", () => {
-  test("fails over server errors and the SDK retryable statuses", () => {
+  test("fails over vendor billing, server, and retryable statuses", () => {
+    expect(isFailoverError(apiError(402, false))).toBe(true)
     expect(isFailoverError(apiError(408, true))).toBe(true)
     expect(isFailoverError(apiError(409, true))).toBe(true)
     expect(isFailoverError(apiError(429, true))).toBe(true)

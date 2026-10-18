@@ -1,8 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { AccountOrganizationPage } from "@/features/account/components/organization-page"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
 export const Route = createFileRoute(
   "/_authenticated/_sidebar/account/organization",
 )({
-  component: AccountOrganizationPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/account/profile" })
+  },
+  component: () => null,
 })

@@ -31,7 +31,8 @@ import {
   streamChunksAsSse,
   writeStreamData,
 } from "../generation-request/stream-handler"
-import { getProjectById } from "../project/repo"
+import { getProjectBrief, getProjectById } from "../project/repo"
+import { buildProjectSettingsPrompt, getPresets } from "@/catalog/presets"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { listSkills } from "../file-system/repo"
 import * as commandService from "../command/service"
@@ -212,13 +213,19 @@ async function runAgent(payload: RunAgentPayload) {
   try {
     await repo.updateConversationAgentRun(runId, { status: "running" })
 
-    const [project, checkpoint, projectSkills, userPromptText] =
+    const [project, checkpoint, projectSkills, userPromptText, brief, presets] =
       await Promise.all([
         getProjectById(projectId),
         repo.getCheckpoint(projectId, conversationId),
         listSkills(projectId),
         Promise.resolve(extractTextFromUserMessage(userPrompt)),
+        getProjectBrief(projectId),
+        getPresets(),
       ])
+    const projectSettingsPrompt = buildProjectSettingsPrompt(
+      presets,
+      brief?.additionalSettings,
+    )
 
     const invokedCommandNames = extractCommandNames(userPromptText)
     const invokedCommands =
@@ -250,6 +257,7 @@ async function runAgent(payload: RunAgentPayload) {
           projectSkills,
           definition.subAgents,
           invokedCommands,
+          projectSettingsPrompt,
           // editorContext,
         ),
     })
@@ -330,6 +338,7 @@ function enrichSystemPrompt(
   projectSkills: { name: string; description: string; instructions: string }[],
   subAgents: AgentName[],
   invokedCommands: Array<{ name: string; action: string }> = [],
+  projectSettingsPrompt = "",
   editorContext?: EditorContext,
 ) {
   let finalPrompt = systemPrompt
@@ -377,6 +386,10 @@ ${subAgentPrompts}
   const invokedCommandsPrompt = buildInvokedCommandsPrompt(invokedCommands)
   if (invokedCommandsPrompt.length > 0) {
     finalPrompt += `\n\n${invokedCommandsPrompt}`
+  }
+
+  if (projectSettingsPrompt.length > 0) {
+    finalPrompt += `\n\n${projectSettingsPrompt}`
   }
 
   const editorContextPrompt = buildEditorContextPrompt(editorContext)
