@@ -4,8 +4,15 @@ import {
 } from "@/features/billing/constants"
 import { credits_to_charge } from "@/features/billing/credits"
 
-/** Conservative Lambda-ms charged per output frame (workers + orchestrator). */
-export const MS_PER_FRAME = 300
+/**
+ * Total Lambda time per output frame at 1920×1080, across workers and the
+ * orchestrator. Heavier pixels scale this up in `resolutionScale`.
+ */
+export const MS_PER_FRAME_AT_1080P = 400
+export const REFERENCE_WIDTH = 1920
+export const REFERENCE_HEIGHT = 1080
+/** Outputs smaller than 1080p still cover orchestrator time. */
+export const MIN_RESOLUTION_SCALE = 0.5
 /**
  * Renderer Lambdas launched for one export.
  *
@@ -67,8 +74,28 @@ export function lambdasInvokedForDuration(
   return chunkCountForDuration(durationInFrames, concurrency) + 1
 }
 
-export function estimatedLambdaDurationMs(durationInFrames: number): number {
-  return Math.max(1, durationInFrames) * MS_PER_FRAME
+const REFERENCE_PIXELS = REFERENCE_WIDTH * REFERENCE_HEIGHT
+
+/** Pixel area relative to 1920×1080, never below `MIN_RESOLUTION_SCALE`. */
+export function resolutionScale(width: number, height: number): number {
+  const pixels = width * height
+  if (!Number.isFinite(pixels) || pixels <= 0) return 1
+  return Math.max(pixels / REFERENCE_PIXELS, MIN_RESOLUTION_SCALE)
+}
+
+/**
+ * Total Lambda milliseconds for a render. `estimatePrice` treats this as the
+ * sum across every function, not the time of one function.
+ */
+export function estimatedLambdaDurationMs(
+  durationInFrames: number,
+  width: number,
+  height: number,
+): number {
+  const frames = Math.max(1, durationInFrames)
+  return Math.ceil(
+    frames * MS_PER_FRAME_AT_1080P * resolutionScale(width, height),
+  )
 }
 
 /**

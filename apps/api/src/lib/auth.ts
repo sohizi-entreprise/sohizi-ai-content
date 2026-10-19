@@ -11,8 +11,10 @@ import {
   handleOrderRefunded,
   syncPolarSubscription,
 } from "@/features/billing/polar"
+import { prepareAccountDeletion } from "@/features/account/delete-account"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+const REPLY_TO = "support@sohizi.com"
 
 const WELCOME_CREDITS = 500n
 const polarWebhookSecret = process.env.POLAR_WEBHOOK_SECRET
@@ -31,6 +33,12 @@ export const auth = betterAuth({
         input: false,
       },
     },
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async (user) => {
+        await prepareAccountDeletion(user.id)
+      },
+    },
   },
   emailAndPassword: {
     enabled: true,
@@ -38,6 +46,7 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
         from: process.env.EMAIL_FROM || "noreply@sohizi.com",
+        replyTo: REPLY_TO,
         to: user.email,
         subject: "Reset your password",
         html: `<p>Click the link below to reset your password:</p><a href="${url}">Reset Password</a>`,
@@ -48,6 +57,7 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }) => {
       await resend.emails.send({
         from: process.env.EMAIL_FROM || "noreply@sohizi.com",
+        replyTo: REPLY_TO,
         to: user.email,
         subject: "Verify your email address",
         html: `<p>Click the link below to verify your email:</p><a href="${url}">Verify Email</a>`,
@@ -122,6 +132,7 @@ export const auth = betterAuth({
         }
         await resend.emails.send({
           from: process.env.EMAIL_FROM || "noreply@sohizi.com",
+          replyTo: REPLY_TO,
           to: email,
           subject: subjectMap[type] || "Your verification code",
           html: `<div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:24px;">

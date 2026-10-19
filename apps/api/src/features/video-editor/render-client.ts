@@ -136,6 +136,8 @@ export async function estimateRenderCost(
     region: spec.region as AwsRegion,
     durationInMilliseconds: estimatedLambdaDurationMs(
       composition.durationInFrames,
+      composition.width,
+      composition.height,
     ),
     memorySizeInMb: spec.memorySizeInMb,
     diskSizeInMb: spec.diskSizeInMb,

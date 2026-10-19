@@ -2,9 +2,12 @@ import { describe, expect, test } from "bun:test"
 import {
   chunkCountForDuration,
   DEFAULT_RENDER_CONCURRENCY,
+  estimatedLambdaDurationMs,
   framesPerLambdaForDuration,
   lambdaUsdToCredits,
   lambdasInvokedForDuration,
+  MS_PER_FRAME_AT_1080P,
+  resolutionScale,
 } from "./render-pricing"
 
 describe("framesPerLambdaForDuration", () => {
@@ -31,6 +34,35 @@ describe("framesPerLambdaForDuration", () => {
     expect(framesPerLambdaForDuration(36_000, 200)).toBe(180)
     expect(chunkCountForDuration(36_000, 200)).toBe(200)
     expect(lambdasInvokedForDuration(36_000, 200)).toBe(201)
+  })
+})
+
+describe("estimatedLambdaDurationMs", () => {
+  test("charges 400ms per frame at 1080p", () => {
+    expect(resolutionScale(1920, 1080)).toBe(1)
+    expect(estimatedLambdaDurationMs(300, 1920, 1080)).toBe(
+      300 * MS_PER_FRAME_AT_1080P,
+    )
+  })
+
+  test("treats portrait 1080p the same as landscape", () => {
+    expect(estimatedLambdaDurationMs(300, 1080, 1920)).toBe(
+      estimatedLambdaDurationMs(300, 1920, 1080),
+    )
+  })
+
+  test("scales 4K to four times the 1080p duration", () => {
+    expect(resolutionScale(3840, 2160)).toBe(4)
+    expect(estimatedLambdaDurationMs(300, 3840, 2160)).toBe(
+      300 * MS_PER_FRAME_AT_1080P * 4,
+    )
+  })
+
+  test("floors outputs smaller than 1080p at half the 1080p rate", () => {
+    expect(resolutionScale(1280, 720)).toBe(0.5)
+    expect(estimatedLambdaDurationMs(300, 1280, 720)).toBe(
+      300 * MS_PER_FRAME_AT_1080P * 0.5,
+    )
   })
 })
 

@@ -18,6 +18,8 @@ export function AccountProfilePage() {
   const { data: session, refetch } = useSession()
   const navigate = useNavigate()
   const [signingOut, setSigningOut] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [orgs, setOrgs] = useState<Array<Organization>>([])
   const [loadingOrgs, setLoadingOrgs] = useState(true)
   const [switchingId, setSwitchingId] = useState<string | null>(null)
@@ -41,6 +43,23 @@ export function AccountProfilePage() {
   const handleSignOut = async () => {
     setSigningOut(true)
     await authClient.signOut()
+    resetAnalyticsUser()
+    navigate({ to: "/sign-in" })
+  }
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Delete your account? This permanently deletes your account and any workspace where you are the only member, including its projects and subscription. This cannot be undone.",
+    )
+    if (!confirmed) return
+    setDeleting(true)
+    setDeleteError(null)
+    const { error } = await authClient.deleteUser()
+    if (error) {
+      setDeleteError(error.message || "Could not delete your account.")
+      setDeleting(false)
+      return
+    }
     resetAnalyticsUser()
     navigate({ to: "/sign-in" })
   }
@@ -147,6 +166,30 @@ export function AccountProfilePage() {
               })}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white/5! border-none">
+        <CardContent className="space-y-4">
+          <div className="space-y-1">
+            <h3 className="font-semibold tracking-tight">Delete account</h3>
+            <p className="text-sm text-muted-foreground">
+              Permanently delete your account and any workspace where you are
+              the only member.
+            </p>
+          </div>
+          {deleteError ? (
+            <p className="text-sm text-destructive">{deleteError}</p>
+          ) : null}
+          <Button
+            variant="destructive"
+            onClick={() => void handleDeleteAccount()}
+            disabled={deleting}
+            className="cursor-pointer"
+          >
+            {deleting ? <Spinner /> : null}
+            {deleting ? "Deleting..." : "Delete account"}
+          </Button>
         </CardContent>
       </Card>
     </div>
