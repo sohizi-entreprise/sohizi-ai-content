@@ -63,4 +63,17 @@ describe("presets", () => {
     expect(prompt).not.toContain("Tone:")
     expect(prompt).not.toContain("nope")
   })
+
+  it("resolves preset selections by id", async () => {
+    const presets = await getPresets()
+    const format = presets.find((preset) => preset.key === "format")
+    const prompt = buildProjectSettingsPrompt(presets, {
+      presets: [{ id: format?.id ?? "", value: "explainer" }],
+      commandId: "plan",
+      modelId: null,
+    })
+
+    expect(prompt).toContain("Format: Explain one idea.")
+    expect(prompt).not.toContain("Genre:")
+  })
 })

@@ -12,7 +12,6 @@ import type { CursorPaginationOptions, CursorPaginationResult } from "@/type"
 import { eq, desc, asc, lt, and, isNull, or, gt } from "drizzle-orm"
 import { createProjectSchema } from "./schema"
 import { z } from "zod"
-import { v4 as uuidv4 } from "uuid"
 import { ORDER_GAP } from "../file-system/repo"
 import { fileType } from "../file-system/constants"
 import { joinLtree, serializeFileNode } from "../file-system/utils"
@@ -32,7 +31,6 @@ export const createProject = async (
   data: z.infer<typeof createProjectSchema>,
   organizationId: string,
 ) => {
-  // const metadata = {format: data.brief.format, genre: data.additionalSettings.genre?.value || ''};
   const result = await db.transaction(async (tx) => {
     const response = await tx
       .insert(projects)
@@ -43,21 +41,19 @@ export const createProject = async (
       .returning()
     const project = response[0]
 
-    // Populate the project brief
-    const { format, durationMin, storyIdea } = data.brief
-    const additionalSettings = {
-      format,
-      durationMin,
-      ...data.additionalSettings,
+    if ("presets" in data) {
+      await tx.insert(projectBriefs).values({
+        projectId: project.id,
+        content: "",
+        additionalSettings: {
+          presets: data.presets,
+          commandId: data.commandId,
+          modelId: data.modelId,
+        },
+      })
     }
-    await tx.insert(projectBriefs).values({
-      projectId: project.id,
-      content: storyIdea,
-      additionalSettings,
-    })
 
-    // Create initial files for the project
-    await createFileFromTemplate(tx, data.templateId, project.id)
+    await createInitialFiles(tx, project.id)
 
     return project
   })
@@ -442,22 +438,18 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
     })
     .returning()
 
-  const resp3 = await tx
-    .insert(fileNodes)
-    .values({
-      name: "assets",
-      directory: true,
-      projectId: projectId,
-      parentId: rootFolder.id,
-      position: ORDER_GAP * 2,
-      editable: false,
-      format: null,
-      path: joinLtree(rootFolder.path, "assets"),
-    })
-    .returning()
+  await tx.insert(fileNodes).values({
+    name: "assets",
+    directory: true,
+    projectId: projectId,
+    parentId: rootFolder.id,
+    position: ORDER_GAP * 2,
+    editable: false,
+    format: null,
+    path: joinLtree(rootFolder.path, "assets"),
+  })
 
   const coreFolder = resp2[0]
-  const assetsFolder = resp3[0]
 
   await tx.insert(fileNodes).values({
     name: "skills",
@@ -469,17 +461,6 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
     editable: false,
     format: null,
     path: joinLtree(coreFolder.path, "skills"),
-  })
-
-  await tx.insert(fileNodes).values({
-    name: "uploads",
-    directory: true,
-    projectId: projectId,
-    parentId: assetsFolder.id,
-    position: ORDER_GAP,
-    editable: false,
-    format: null,
-    path: joinLtree(assetsFolder.path, "uploads"),
   })
 
   const resp4 = await tx
@@ -505,85 +486,11 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
     content: getDefaultInstructionFileContent(),
   })
 
-  await createSecondaryFiles(tx, projectId, rootFolder.id)
-}
-
-async function createFileFromTemplate(
-  tx: DbTransaction,
-  templateId: string,
-  newProjectId: string,
-) {
-  const templateResponse = await tx
-    .select()
-    .from(templates)
-    .where(eq(templates.id, templateId))
-  const template = templateResponse[0]
-  if (!template) {
-    throw new RepositoryError("Template not found", "NotFound")
-  }
-
-  const templateFiles = await tx
-    .select()
-    .from(fileNodes)
-    .where(eq(fileNodes.projectId, template.projectId))
-  if (templateFiles.length === 0) {
-    return
-  }
-
-  const fileNodeIdMap = new Map<string, string>()
-  for (const file of templateFiles) {
-    fileNodeIdMap.set(file.id, uuidv4())
-  }
-
-  const copiedFiles = await tx
-    .insert(fileNodes)
-    .values(
-      templateFiles.map((file) => ({
-        id: fileNodeIdMap.get(file.id)!,
-        name: file.name,
-        directory: file.directory,
-        projectId: newProjectId,
-        parentId: file.parentId
-          ? (fileNodeIdMap.get(file.parentId) ?? null)
-          : null,
-        position: file.position,
-        editable: file.editable,
-        type: file.type,
-        format: file.format,
-        path: file.path,
-      })),
-    )
-    .returning()
-
-  const rootFolder = copiedFiles.find(
-    (file) => file.parentId === null && file.directory && file.name === "root",
-  )
-  if (!rootFolder) {
-    throw new RepositoryError("Root folder not found", "NotFound")
-  }
-
-  const templateFileContents = await tx
-    .select()
-    .from(fileNodeContents)
-    .where(eq(fileNodeContents.projectId, template.projectId))
-
-  const copiedFileContents = templateFileContents
-    .filter((content) => fileNodeIdMap.has(content.fileNodeId))
-    .map((content) => ({
-      fileNodeId: fileNodeIdMap.get(content.fileNodeId)!,
-      projectId: newProjectId,
-      content: content.content,
-      metadata: content.metadata,
-    }))
-
-  if (copiedFileContents.length > 0) {
-    await tx.insert(fileNodeContents).values(copiedFileContents)
-  }
-
-  await createSecondaryFiles(tx, newProjectId, rootFolder.id)
+  // await createSecondaryFiles(tx, projectId, rootFolder.id)
 }
 
 // Those are files on the root folder, like image and video editors
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function createSecondaryFiles(
   tx: DbTransaction,
   projectId: string,

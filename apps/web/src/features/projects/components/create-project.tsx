@@ -18,34 +18,28 @@ import {
 import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
 import { Spinner } from "@sohizi/ui/spinner"
-import { createTemplateMutationOptions } from "../query-mutation"
-import { createTemplateSchema } from "../schema"
-import type { FormEvent } from "react"
+import { createProjectMutationOptions } from "../query-mutation"
+import { createProjectSchema } from "../schema"
+import type { FormEvent, ReactNode } from "react"
 
-function toSlug(name: string) {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_]+/g, "-")
-    .replace(/-+/g, "-")
+type CreateProjectProps = {
+  trigger?: ReactNode
 }
 
-export default function CreateProject() {
+export default function CreateProject({ trigger }: CreateProjectProps) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [error, setError] = useState("")
   const { mutate: createProject, isPending } = useMutation(
-    createTemplateMutationOptions,
+    createProjectMutationOptions,
   )
   const navigate = useNavigate()
-  const slug = toSlug(name)
 
   const handleCreateProject = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError("")
 
-    const output = createTemplateSchema.safeParse({ name: name.trim() })
+    const output = createProjectSchema.safeParse({ title: name.trim() })
     if (!output.success) {
       setError(output.error.issues[0]?.message ?? "Invalid project name")
       return
@@ -54,7 +48,7 @@ export default function CreateProject() {
     createProject(output.data, {
       onSuccess: async (response) => {
         captureAnalyticsEvent("project_created", {
-          project_id: response.project.id,
+          project_id: response.id,
           mode: "blank",
         })
         toast.success("Blank project created")
@@ -63,7 +57,7 @@ export default function CreateProject() {
         await navigate({
           to: "/projects/$projectId/editor",
           params: {
-            projectId: response.project.id,
+            projectId: response.id,
           },
         })
       },
@@ -87,10 +81,12 @@ export default function CreateProject() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="flex items-center gap-2 rounded-xl px-5 font-semibold">
-          <IconCirclePlusFilled className="size-5" />
-          Start blank project
-        </Button>
+        {trigger ?? (
+          <Button className="flex items-center gap-2 rounded-xl px-5 font-semibold">
+            <IconCirclePlusFilled className="size-5" />
+            Start blank project
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -115,9 +111,6 @@ export default function CreateProject() {
               required
               autoFocus
             />
-            {name && (
-              <p className="text-xs text-muted-foreground">Slug: {slug}</p>
-            )}
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

@@ -1,0 +1,21 @@
+commands:
+  - id: plan
+    name: Plan
+    promptModifier: >
+      Plan the video before producing it. Lay out the story, structure, and
+      the steps required, and stop before writing a full script or generating media.
+  - id: script
+    name: Script
+    promptModifier: >
+      Write the script. Turn the idea into spoken lines, scene beats, and
+      narration that the video can be produced from.
+  - id: storyboard
+    name: Storyboard
+    promptModifier: >
+      Build the storyboard. Break the video into scenes with visual direction,
+      framing, and what happens in each shot.
+  - id: end-to-end
+    name: End to end
+    promptModifier: >
+      Build the entire video. Take the idea from plan through script,
+      storyboard, and finished scenes.

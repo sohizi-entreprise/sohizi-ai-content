@@ -87,8 +87,10 @@ const ltree = customType<{ data: string; driverData: string }>({
 })
 
 const timestamps = {
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
@@ -101,8 +103,8 @@ export const analyticsConsents = pgTable("analytics_consents", {
     .$type<"accepted" | "rejected">(),
   policyVersion: varchar("policy_version", { length: 32 }).notNull(),
   userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
-  chosenAt: timestamp("chosen_at").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
+  chosenAt: timestamp("chosen_at", { withTimezone: true }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 })
 
 export const generationRequests = pgTable(
@@ -780,7 +782,9 @@ export const billingLedger = pgTable(
     balanceAfter: bigint("balance_after", { mode: "bigint" }).notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     uniqueIndex("billing_ledger_idempotency_key_unique").on(
@@ -934,8 +938,8 @@ export const videoRenderJobs = pgTable(
     /** Operator-safe failure summary; never raw upstream output. */
     failureCode: varchar("failure_code", { length: 100 }),
     failureMessage: text("failure_message"),
-    startedAt: timestamp("started_at"),
-    finishedAt: timestamp("finished_at"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [

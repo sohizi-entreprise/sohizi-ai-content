@@ -478,7 +478,6 @@ export const getAssetFolder = async (projectId: string) => {
   if (!rootFolder) {
     return {
       assetsFolder: null,
-      uploadsFolder: null,
     }
   }
   const result = await db
@@ -492,27 +491,8 @@ export const getAssetFolder = async (projectId: string) => {
         eq(fileNodes.name, "assets"),
       ),
     )
-  const assetsFolder = result[0]
-  if (!assetsFolder) {
-    return {
-      assetsFolder: null,
-      uploadsFolder: null,
-    }
-  }
-  const uploadsFolder = await db
-    .select()
-    .from(fileNodes)
-    .where(
-      and(
-        eq(fileNodes.projectId, projectId),
-        eq(fileNodes.parentId, assetsFolder.id),
-        eq(fileNodes.directory, true),
-        eq(fileNodes.name, "uploads"),
-      ),
-    )
   return {
-    assetsFolder: result[0],
-    uploadsFolder: uploadsFolder[0],
+    assetsFolder: result[0] ?? null,
   }
 }
 

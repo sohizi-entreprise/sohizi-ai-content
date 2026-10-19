@@ -1,25 +1,11 @@
-import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Trash } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarSub,
-  MenubarSubContent,
-  MenubarSubTrigger,
-  MenubarTrigger,
-} from "@sohizi/ui/menubar"
+import { useEffect, useRef } from "react"
 import { useEditorStore } from "../../stores/editor-store"
 import { useFileTreeStore } from "../../stores/file-tree-store"
 import { DirectoryNode } from "../file-node/node-directory"
 import { getFileIcon } from "../../utils/get-file-icon"
-import { FileGridMenu } from "../sidebar/file-grid-menu"
-import {
-  canCreateFileTypeInFolder,
-  fileTypeOptionsForFolder,
-} from "./node-menu"
-import type { FileNodeType, FileTreeNode, NodeProps } from "../../types"
+import { canCreateFileTypeInFolder } from "./node-menu"
+import { FileActionsMenu } from "./file-node-actions"
+import type { FileNodeType, NodeProps } from "../../types"
 import { cn } from "@/lib/utils"
 
 export function DocumentNode(props: NodeProps) {
@@ -61,7 +47,7 @@ export function DocumentNode(props: NodeProps) {
     onCreateFile(parentId, placement === "above" ? idx : idx + 1, false, type)
   }
 
-  const row = (
+  return (
     <div
       ref={dragHandle}
       style={style}
@@ -98,170 +84,15 @@ export function DocumentNode(props: NodeProps) {
           {node.data.name}
         </span>
       )}
-      <FileMenu {...props} onInsert={createSiblingFile} />
+      {node.isEditing ? null : (
+        <FileActionsMenu
+          editable={node.data.editable}
+          parentType={node.parent?.data.type}
+          onInsert={createSiblingFile}
+          onRename={() => node.edit()}
+          onDelete={() => tree.delete(node.id)}
+        />
+      )}
     </div>
   )
-
-  return (
-    <FileGridMenu
-      node={node.data}
-      parentType={node.parent?.data.type ?? null}
-      disabled={node.isEditing}
-      modal={false}
-      onInsert={createSiblingFile}
-      onRename={() => node.edit()}
-      onDelete={() => tree.delete(node.id)}
-      onNewFolder={() => {}}
-      onNewFile={() => {}}
-      onUpload={() => {}}
-    >
-      {row}
-    </FileGridMenu>
-  )
-}
-
-function FileMenu({
-  node,
-  tree,
-  onInsert,
-}: NodeProps & {
-  onInsert: (placement: "above" | "below", type: FileNodeType) => void
-}) {
-  const [activeInsertSubmenu, setActiveInsertSubmenu] = useState<
-    "above" | "below" | null
-  >(null)
-  if (node.isEditing) return null
-
-  const onChange = (action: string) => {
-    switch (action) {
-      case "rename":
-        node.edit()
-        break
-
-      case "delete":
-        tree.delete(node.id)
-        break
-
-      default:
-        break
-    }
-  }
-
-  const options = getOptions(node.data)
-  const closeInsertSubmenus = () => setActiveInsertSubmenu(null)
-  const parentType = node.parent?.data.type
-  const fileTypeOptions = fileTypeOptionsForFolder(parentType)
-  const lockedTypeOption = parentType ? fileTypeOptions[0] : undefined
-
-  return (
-    <Menubar
-      className="h-auto shrink-0 border-0 bg-transparent p-0 shadow-none"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <MenubarMenu>
-        <MenubarTrigger asChild>
-          <button
-            type="button"
-            className="flex shrink-0 items-center justify-center px-1! cursor-pointer rounded-sm text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:bg-accent/50 hover:text-foreground data-[state=open]:opacity-100"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <MoreHorizontal className="size-3.5" />
-          </button>
-        </MenubarTrigger>
-        <MenubarContent
-          align="start"
-          side="bottom"
-          className="min-w-40"
-          onCloseAutoFocus={(e) => e.preventDefault()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {lockedTypeOption ? (
-            <>
-              <MenubarItem
-                onClick={() => onInsert("above", lockedTypeOption.value)}
-              >
-                <ArrowUp className="size-4" />
-                Insert {lockedTypeOption.label} above
-              </MenubarItem>
-              <MenubarItem
-                onClick={() => onInsert("below", lockedTypeOption.value)}
-              >
-                <ArrowDown className="size-4" />
-                Insert {lockedTypeOption.label} below
-              </MenubarItem>
-            </>
-          ) : fileTypeOptions.length > 0 ? (
-            <>
-              <MenubarSub
-                open={activeInsertSubmenu === "above"}
-                onOpenChange={(open) =>
-                  setActiveInsertSubmenu(open ? "above" : null)
-                }
-              >
-                <MenubarSubTrigger>
-                  <ArrowUp className="size-4" />
-                  Insert above
-                </MenubarSubTrigger>
-                <MenubarSubContent onClick={(e) => e.stopPropagation()}>
-                  {fileTypeOptions.map((option) => (
-                    <MenubarItem
-                      key={option.value}
-                      onClick={() => onInsert("above", option.value)}
-                    >
-                      {option.label}
-                    </MenubarItem>
-                  ))}
-                </MenubarSubContent>
-              </MenubarSub>
-              <MenubarSub
-                open={activeInsertSubmenu === "below"}
-                onOpenChange={(open) =>
-                  setActiveInsertSubmenu(open ? "below" : null)
-                }
-              >
-                <MenubarSubTrigger>
-                  <ArrowDown className="size-4" />
-                  Insert below
-                </MenubarSubTrigger>
-                <MenubarSubContent onClick={(e) => e.stopPropagation()}>
-                  {fileTypeOptions.map((option) => (
-                    <MenubarItem
-                      key={option.value}
-                      onClick={() => onInsert("below", option.value)}
-                    >
-                      {option.label}
-                    </MenubarItem>
-                  ))}
-                </MenubarSubContent>
-              </MenubarSub>
-            </>
-          ) : null}
-          {options.map((option) => (
-            <MenubarItem
-              key={option.value}
-              onClick={() => onChange(option.value)}
-              onFocus={closeInsertSubmenus}
-              onPointerMove={closeInsertSubmenus}
-            >
-              {option.icon ?? null}
-              {option.label}
-            </MenubarItem>
-          ))}
-        </MenubarContent>
-      </MenubarMenu>
-    </Menubar>
-  )
-}
-
-function getOptions(
-  node: FileTreeNode,
-): Array<{ label: string; value: string; icon: React.ReactNode }> {
-  if (node.editable) {
-    return [
-      { label: "Rename", value: "rename", icon: <Pencil className="size-4" /> },
-      { label: "Delete", value: "delete", icon: <Trash className="size-4" /> },
-    ]
-  }
-  return []
 }

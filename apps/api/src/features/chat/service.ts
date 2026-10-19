@@ -32,6 +32,7 @@ import {
   writeStreamData,
 } from "../generation-request/stream-handler"
 import { getProjectBrief, getProjectById } from "../project/repo"
+import { buildCommandPrompt, getCommands } from "@/catalog/commands"
 import { buildProjectSettingsPrompt, getPresets } from "@/catalog/presets"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { listSkills } from "../file-system/repo"
@@ -213,18 +214,30 @@ async function runAgent(payload: RunAgentPayload) {
   try {
     await repo.updateConversationAgentRun(runId, { status: "running" })
 
-    const [project, checkpoint, projectSkills, userPromptText, brief, presets] =
-      await Promise.all([
-        getProjectById(projectId),
-        repo.getCheckpoint(projectId, conversationId),
-        listSkills(projectId),
-        Promise.resolve(extractTextFromUserMessage(userPrompt)),
-        getProjectBrief(projectId),
-        getPresets(),
-      ])
+    const [
+      project,
+      checkpoint,
+      projectSkills,
+      userPromptText,
+      brief,
+      presets,
+      commands,
+    ] = await Promise.all([
+      getProjectById(projectId),
+      repo.getCheckpoint(projectId, conversationId),
+      listSkills(projectId),
+      Promise.resolve(extractTextFromUserMessage(userPrompt)),
+      getProjectBrief(projectId),
+      getPresets(),
+      getCommands(),
+    ])
     const projectSettingsPrompt = buildProjectSettingsPrompt(
       presets,
       brief?.additionalSettings,
+    )
+    const commandPrompt = buildCommandPrompt(
+      commands,
+      readStoredCommandId(brief?.additionalSettings),
     )
 
     const invokedCommandNames = extractCommandNames(userPromptText)
@@ -258,6 +271,7 @@ async function runAgent(payload: RunAgentPayload) {
           definition.subAgents,
           invokedCommands,
           projectSettingsPrompt,
+          commandPrompt,
           // editorContext,
         ),
     })
@@ -333,12 +347,22 @@ async function handleTitleGeneration(
   return title
 }
 
+function readStoredCommandId(
+  settings: Record<string, unknown> | null | undefined,
+) {
+  const commandId = settings?.commandId
+  return typeof commandId === "string" && commandId.length > 0
+    ? commandId
+    : null
+}
+
 function enrichSystemPrompt(
   systemPrompt: string,
   projectSkills: { name: string; description: string; instructions: string }[],
   subAgents: AgentName[],
   invokedCommands: Array<{ name: string; action: string }> = [],
   projectSettingsPrompt = "",
+  commandPrompt = "",
   editorContext?: EditorContext,
 ) {
   let finalPrompt = systemPrompt
@@ -390,6 +414,10 @@ ${subAgentPrompts}
 
   if (projectSettingsPrompt.length > 0) {
     finalPrompt += `\n\n${projectSettingsPrompt}`
+  }
+
+  if (commandPrompt.length > 0) {
+    finalPrompt += `\n\n${commandPrompt}`
   }
 
   const editorContextPrompt = buildEditorContextPrompt(editorContext)

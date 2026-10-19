@@ -186,21 +186,55 @@ export const toPublicPresets = (presets: CatalogPreset[]): PublicPreset[] =>
     })),
   }))
 
-export const buildProjectSettingsPrompt = (
+export type PresetSelection = {
+  id: string
+  value: string
+}
+
+const isPresetSelection = (value: unknown): value is PresetSelection => {
+  if (value == null || typeof value !== "object") {
+    return false
+  }
+  const record = value as Record<string, unknown>
+  return typeof record.id === "string" && typeof record.value === "string"
+}
+
+const selectionsFromSettings = (
   presets: CatalogPreset[],
-  settings: Record<string, unknown> | null | undefined,
-): string => {
+  settings: Array<PresetSelection> | Record<string, unknown> | null | undefined,
+): PresetSelection[] => {
   if (!settings) {
-    return ""
+    return []
+  }
+  if (Array.isArray(settings)) {
+    return settings.filter(isPresetSelection)
+  }
+  if (Array.isArray(settings.presets)) {
+    return settings.presets.filter(isPresetSelection)
   }
 
-  const lines: string[] = []
+  const selections: PresetSelection[] = []
   for (const preset of presets) {
     const value = readOptionValue(settings[preset.key])
     if (!value) {
       continue
     }
-    const option = preset.options.find((item) => item.value === value)
+    selections.push({ id: preset.id, value })
+  }
+  return selections
+}
+
+export const buildProjectSettingsPrompt = (
+  presets: CatalogPreset[],
+  settings: Array<PresetSelection> | Record<string, unknown> | null | undefined,
+): string => {
+  const lines: string[] = []
+  for (const selection of selectionsFromSettings(presets, settings)) {
+    const preset = presets.find((item) => item.id === selection.id)
+    if (!preset) {
+      continue
+    }
+    const option = preset.options.find((item) => item.value === selection.value)
     if (!option) {
       continue
     }

@@ -1,4 +1,8 @@
-import { MoreVertical, Trash2 } from "lucide-react"
+import { MoreVertical, Pencil, Trash2 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useMutation } from "@tanstack/react-query"
+import { isAxiosError } from "axios"
+import { toast } from "sonner"
 import {
   Card,
   CardContent,
@@ -12,7 +16,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sohizi/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@sohizi/ui/dialog"
 import { Button } from "@sohizi/ui/button"
+import { Input } from "@sohizi/ui/input"
+import { Label } from "@sohizi/ui/label"
+import { Spinner } from "@sohizi/ui/spinner"
+import { updateProjectMutationOptions } from "../query-mutation"
+import { renameProjectSchema } from "../schema"
+import type { FormEvent } from "react"
 import type { ProjectListItem } from "../type"
 import { timeFromNow } from "@/lib/utils"
 
@@ -22,7 +40,7 @@ type ProjectCardProps = ProjectListItem & {
 }
 
 export default function ProjectCard(props: ProjectCardProps) {
-  const { title, onDelete, updatedAt, display = "grid" } = props
+  const { id, title, onDelete, createdAt, display = "grid" } = props
 
   if (display === "list") {
     return <ProjectCardList {...props} />
@@ -40,7 +58,7 @@ export default function ProjectCard(props: ProjectCardProps) {
                             {genre}
                         </p> */}
           </div>
-          <ProjectCardAction onDelete={onDelete} />
+          <ProjectCardAction projectId={id} title={title} onDelete={onDelete} />
         </div>
       </CardHeader>
 
@@ -53,7 +71,7 @@ export default function ProjectCard(props: ProjectCardProps) {
       <CardFooter>
         <div className="flex items-center justify-between w-full">
           <p className="text-xs text-muted-foreground font-medium uppercase">
-            Upd. {timeFromNow(updatedAt)}
+            {timeFromNow(createdAt)}
           </p>
           {/* <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
                         {durationMin} MIN
@@ -65,7 +83,7 @@ export default function ProjectCard(props: ProjectCardProps) {
 }
 
 function ProjectCardList(props: ProjectCardProps) {
-  const { title, onDelete, updatedAt } = props
+  const { id, title, onDelete, createdAt } = props
 
   return (
     <div className="glass-panel py-4 px-6 rounded-2xl transition-all duration-400 hover:border-primary/30! group cursor-pointer flex gap-4 items-center">
@@ -84,44 +102,183 @@ function ProjectCardList(props: ProjectCardProps) {
         {/* <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest text-right">
                     {durationMin} MIN
                 </p> */}
-        <div className="bg-primary w-full h-[2px] rounded-full" />
+        <div className="bg-primary w-full h-0.5 rounded-full" />
         <p className="text-xs text-muted-foreground font-medium uppercase">
-          Upd. {timeFromNow(updatedAt)}
+          {timeFromNow(createdAt)}
         </p>
       </div>
 
       <div>
-        <ProjectCardAction onDelete={onDelete} />
+        <ProjectCardAction projectId={id} title={title} onDelete={onDelete} />
       </div>
     </div>
   )
 }
 
-function ProjectCardAction({ onDelete }: { onDelete?: () => void }) {
+function ProjectCardAction({
+  projectId,
+  title,
+  onDelete,
+}: {
+  projectId: string
+  title: string
+  onDelete?: () => void
+}) {
+  const [renameOpen, setRenameOpen] = useState(false)
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="transition-opacity h-8 w-8"
-        >
-          <MoreVertical className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          className="text-destructive focus:text-destructive"
-          onClick={(e) => {
-            e.preventDefault()
-            onDelete?.()
-          }}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div
+      onClick={(event) => event.preventDefault()}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="transition-opacity h-8 w-8"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setRenameOpen(true)
+            }}
+          >
+            <Pencil className="mr-2 h-4 w-4" />
+            Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onDelete?.()
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <RenameProjectDialog
+        open={renameOpen}
+        title={title}
+        projectId={projectId}
+        onOpenChange={setRenameOpen}
+      />
+    </div>
+  )
+}
+
+function RenameProjectDialog({
+  open,
+  title,
+  projectId,
+  onOpenChange,
+}: {
+  open: boolean
+  title: string
+  projectId: string
+  onOpenChange: (open: boolean) => void
+}) {
+  const [name, setName] = useState(title)
+  const [error, setError] = useState("")
+  const { mutate: updateProject, isPending } = useMutation(
+    updateProjectMutationOptions,
+  )
+
+  useEffect(() => {
+    if (!open) return
+    setName(title)
+    setError("")
+  }, [open, title])
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setError("")
+
+    const output = renameProjectSchema.safeParse({ title: name.trim() })
+    if (!output.success) {
+      setError(output.error.issues[0]?.message ?? "Invalid project name")
+      return
+    }
+
+    updateProject(
+      { id: projectId, title: output.data.title },
+      {
+        onSuccess: () => {
+          toast.success("Project renamed")
+          onOpenChange(false)
+        },
+        onError: (updateError) => {
+          if (
+            isAxiosError(updateError) &&
+            typeof updateError.response?.data?.error === "string"
+          ) {
+            setError(updateError.response.data.error)
+            return
+          }
+          setError(
+            updateError instanceof Error
+              ? updateError.message
+              : "Failed to rename project",
+          )
+        },
+      },
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <DialogHeader>
+          <DialogTitle>Rename project</DialogTitle>
+          <DialogDescription>
+            Update the name shown on this project.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor={`rename-project-${projectId}`}>Project name</Label>
+            <Input
+              id={`rename-project-${projectId}`}
+              type="text"
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value)
+                setError("")
+              }}
+              required
+              autoFocus
+            />
+          </div>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending || !name.trim()}>
+              {isPending ? <Spinner /> : null}
+              {isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 

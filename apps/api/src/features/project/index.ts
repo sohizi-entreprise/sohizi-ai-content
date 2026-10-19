@@ -1,6 +1,7 @@
 import { Elysia } from "elysia"
 import { z } from "zod"
 import * as projectService from "./service"
+import { getCommands, toPublicCommands } from "@/catalog/commands"
 import {
   filterPresets,
   generationTargets,
@@ -19,11 +20,15 @@ export const projectRoutes = new Elysia({ prefix: "/projects" })
   .get(
     "/options",
     async ({ query }) => {
-      const presets = await getPresets()
+      const [presets, commands] = await Promise.all([
+        getPresets(),
+        getCommands(),
+      ])
       return {
         presets: toPublicPresets(
           filterPresets(presets, query.generationTarget),
         ),
+        commands: toPublicCommands(commands),
       }
     },
     {

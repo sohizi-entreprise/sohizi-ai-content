@@ -10,7 +10,7 @@ import type {
   ProjectOptions,
   ProjectResponse,
 } from "./type"
-import type { createProjectSchema } from "./schema"
+import type { createProjectSchema, renameProjectSchema } from "./schema"
 import type { z } from "zod"
 import api from "@/lib/axios"
 import { throwApiError } from "@/lib/errors"
@@ -42,6 +42,14 @@ export const getProject = async (
 
 export const deleteProject = async (id: string) => {
   const response = await api.delete(`/projects/${id}`)
+  return response.data
+}
+
+export const updateProject = async (
+  id: string,
+  data: z.infer<typeof renameProjectSchema>,
+) => {
+  const response = await api.put(`/projects/${id}`, data)
   return response.data
 }
 

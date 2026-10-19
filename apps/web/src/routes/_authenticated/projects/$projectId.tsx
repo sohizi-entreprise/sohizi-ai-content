@@ -1,12 +1,22 @@
-import { Outlet, createFileRoute } from "@tanstack/react-router"
+import { useLayoutEffect } from "react"
+import { Outlet, createFileRoute, useParams } from "@tanstack/react-router"
 import { AppHeader } from "@/components/layout/app-header"
 import { AppNavBar } from "@/components/layout/app-nav-bar"
+import { useEditorStore } from "@/features/editor/stores/editor-store"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   component: RouteComponent,
 })
 
 function RouteComponent() {
+  const { projectId } = useParams({
+    from: "/_authenticated/projects/$projectId",
+  })
+
+  useLayoutEffect(() => {
+    useEditorStore.getState().closeAllTabs()
+  }, [projectId])
+
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background pr-2">
       <AppHeader />

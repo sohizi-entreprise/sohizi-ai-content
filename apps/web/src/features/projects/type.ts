@@ -85,8 +85,14 @@ export type ProjectPreset = {
   options: Array<ProjectPresetOption>
 }
 
+export type ProjectCommand = {
+  id: string
+  name: string
+}
+
 export type ProjectOptions = {
   presets: Array<ProjectPreset>
+  commands: Array<ProjectCommand>
 }
 
 export type Template = {

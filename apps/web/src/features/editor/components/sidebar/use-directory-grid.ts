@@ -324,6 +324,7 @@ export function useDirectoryGrid(
           { projectId, folderId: targetId, file: file.file as File },
           {
             onSuccess: (result) => {
+              if (!result.fileNode) return
               const previewUrl =
                 result.fileNode.type === "image" ||
                 result.fileNode.type === "video"

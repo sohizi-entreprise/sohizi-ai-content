@@ -17,14 +17,6 @@ export type AdditionalSettings = {
   characterStyle: SettingOption | null
 }
 
-export const PROJECT_MODES = [
-  { label: "Build the entire video", value: "build-video" },
-  { label: "Prepare the structure", value: "prepare-structure" },
-  { label: "Build the world", value: "build-world" },
-] as const
-
-export type ProjectMode = (typeof PROJECT_MODES)[number]["value"]
-
 export type ProjectAttachment = {
   id: string
   name: string
@@ -39,7 +31,7 @@ export type NewProjectState = {
   additionalSettings: AdditionalSettings
   modelId: string | null
   reasoningEffortByModelId: Record<string, string>
-  mode: ProjectMode
+  commandId: string | null
   attachments: Array<ProjectAttachment>
 }
 
@@ -55,7 +47,7 @@ type NewProjectActions = {
   clearAdditionalSetting: (key: AdditionalSettingKey) => void
   setModelId: (modelId: string) => void
   setReasoningEffort: (modelId: string, reasoningEffort: string) => void
-  setMode: (mode: ProjectMode) => void
+  setCommandId: (commandId: string) => void
   addAttachments: (attachments: Array<ProjectAttachment>) => void
   removeAttachment: (id: string) => void
   reset: () => void
@@ -85,7 +77,7 @@ const initialState: NewProjectState = {
   additionalSettings: initialAdditionalSettings,
   modelId: null,
   reasoningEffortByModelId: {},
-  mode: PROJECT_MODES[0].value,
+  commandId: null,
   attachments: [],
 }
 
@@ -113,7 +105,7 @@ export const useNewProjectStore = create<NewProjectState & NewProjectActions>(
         },
       })),
 
-    setMode: (mode) => set({ mode }),
+    setCommandId: (commandId) => set({ commandId }),
 
     addAttachments: (attachments) =>
       set((state) => ({

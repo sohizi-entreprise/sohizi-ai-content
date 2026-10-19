@@ -1,7 +1,10 @@
 import * as error from "../error"
 import * as projectRepo from "./repo"
 import { z } from "zod"
+import { getCommands } from "@/catalog/commands"
+import { getPresets } from "@/catalog/presets"
 import {
+  createInputProjectSchema,
   createProjectSchema,
   createTemplateSchema,
   deleteProjectSchema,
@@ -12,12 +15,49 @@ import { CursorPaginationOptions } from "@/type"
 import { RepositoryError } from "../error"
 import { generateSlug } from "@/utils/slug"
 
+const isInputProject = (
+  data: z.infer<typeof createProjectSchema>,
+): data is z.infer<typeof createInputProjectSchema> => "presets" in data
+
 export const startProject = async (
   data: z.infer<typeof createProjectSchema>,
   organizationId: string,
 ) => {
+  if (isInputProject(data)) {
+    await assertInputProject(data)
+  }
   const project = await projectRepo.createProject(data, organizationId)
   return project
+}
+
+async function assertInputProject(
+  data: z.infer<typeof createInputProjectSchema>,
+) {
+  const [presets, commands] = await Promise.all([getPresets(), getCommands()])
+  const seenPresetIds = new Set<string>()
+
+  for (const selection of data.presets) {
+    if (seenPresetIds.has(selection.id)) {
+      throw new error.BadRequest(`Duplicate preset "${selection.id}"`)
+    }
+    seenPresetIds.add(selection.id)
+
+    const preset = presets.find((item) => item.id === selection.id)
+    if (!preset) {
+      throw new error.BadRequest(`Unknown preset "${selection.id}"`)
+    }
+    const option = preset.options.find((item) => item.value === selection.value)
+    if (!option) {
+      throw new error.BadRequest(`Invalid value for preset "${selection.id}"`)
+    }
+  }
+
+  if (
+    data.commandId &&
+    !commands.some((command) => command.id === data.commandId)
+  ) {
+    throw new error.BadRequest("Unknown command")
+  }
 }
 
 export const createTemplate = async (

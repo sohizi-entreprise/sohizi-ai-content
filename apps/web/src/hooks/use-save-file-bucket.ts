@@ -12,7 +12,7 @@ type UploadUrlResponse = {
 }
 
 type UploadSuccessResponse = {
-  fileNode: FileNode
+  fileNode: FileNode | null
   asset: AssetContent & { id: string }
 }
 

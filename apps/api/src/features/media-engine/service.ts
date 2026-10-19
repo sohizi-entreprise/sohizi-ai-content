@@ -69,24 +69,9 @@ export async function uploadSuccess(
   data: z.infer<typeof uploadSuccessSchema>,
 ) {
   const { folderId, storageKey } = data
-  let uploadfolderId = folderId
   const project = await getProjectById(projectId)
   if (!project) {
     throw new NotFound("Project not found")
-  }
-  if (!folderId) {
-    const { uploadsFolder } = await repo.getAssetFolder(projectId)
-    uploadfolderId = uploadsFolder?.id ?? null
-  } else {
-    const folder = await getFileNodeById(projectId, folderId)
-    if (!folder || !folder.directory) {
-      throw new BadRequest("Required a folder to upload the file to")
-    }
-    uploadfolderId = folder.id
-  }
-
-  if (!uploadfolderId) {
-    throw new NotFound("Folder not found")
   }
 
   const fileExists = await storage.fileExists(storageKey)
@@ -104,6 +89,26 @@ export async function uploadSuccess(
   }
 
   const fileName = getFileName(storageKey)
+
+  if (!folderId) {
+    const asset = await repo.createAsset({
+      projectId,
+      name: fileName,
+      type: storage.classifyContentType(fileMetadata.contentType).assetType,
+      url: storage.buildPublicUrl(storageKey),
+      source: "user-uploaded",
+      metadata: fileMetadata,
+      storageKey,
+    })
+    return { asset, fileNode: null }
+  }
+
+  const folder = await getFileNodeById(projectId, folderId)
+  if (!folder || !folder.directory) {
+    throw new BadRequest("Required a folder to upload the file to")
+  }
+  const uploadfolderId = folder.id
+
   const siblingsFiles = await listDirectoryFiles(projectId, uploadfolderId)
   const isOverwrite = siblingsFiles.some((file) => file.name === fileName)
   if (siblingsFiles.length >= 100 && !isOverwrite) {

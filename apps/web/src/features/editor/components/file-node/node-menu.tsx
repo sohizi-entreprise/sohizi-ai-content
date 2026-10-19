@@ -14,6 +14,7 @@ export const FILE_TYPE_OPTIONS: Array<{
   { label: "Document", value: "document" },
   { label: "Skill", value: "skill" },
   { label: "Storyboard", value: "storyboard" },
+  { label: "Video editor", value: "video-editor" },
 ]
 
 export function fileTypeOptionsForFolder(

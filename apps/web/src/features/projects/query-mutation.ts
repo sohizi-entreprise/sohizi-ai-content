@@ -91,6 +91,19 @@ export const deleteProjectMutationOptions = mutationOptions({
   },
 })
 
+export const updateProjectMutationOptions = mutationOptions({
+  mutationFn: (data: { id: string; title: string }) =>
+    requests.updateProject(data.id, { title: data.title }),
+  meta: {
+    invalidateQueries: [keysFactory.projects()],
+  },
+  onSuccess: (_data, variables, _onMutateResult, context) => {
+    void context.client.invalidateQueries({
+      queryKey: keysFactory.project(variables.id),
+    })
+  },
+})
+
 export const getProjectOptionsQueryOptions = (
   generationTarget?: ProjectGenerationTarget,
 ) =>

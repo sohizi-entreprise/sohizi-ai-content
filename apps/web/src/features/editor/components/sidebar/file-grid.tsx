@@ -16,6 +16,10 @@ import { getDirectoryIcon, getFileIcon } from "../../utils/get-file-icon"
 import { ARBORIST_NODE_DRAG_TYPE } from "../../utils/arborist-dnd"
 import { canCreateFileTypeInFolder } from "../file-node/node-menu"
 import {
+  DirectoryActionsMenu,
+  FileActionsMenu,
+} from "../file-node/file-node-actions"
+import {
   GRID_PREVIEW_SIZE,
   GRID_ROW_HEIGHT,
   GRID_TILE_GAP,
@@ -23,7 +27,6 @@ import {
   gridColumnCount,
   gridRowWidth,
 } from "./file-grid-layout"
-import { FileGridMenu } from "./file-grid-menu"
 import { createGridDragItem, moveGridItem } from "./file-grid-dnd"
 import { useDirectoryGrid } from "./use-directory-grid"
 import type { DirectoryChild } from "@/features/projects/type"
@@ -213,7 +216,7 @@ export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
 
         <div
           ref={scrollRef}
-          className="min-h-0 min-w-0 flex-1 overflow-auto px-1 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="min-h-0 min-w-0 flex-1 overflow-auto px-1 pb-3 scrollbar-none [&::-webkit-scrollbar]:hidden"
         >
           {model.isLoading && model.items.length === 0 ? (
             <div className="flex h-full min-h-24 items-center justify-center">
@@ -417,73 +420,88 @@ function GridTile({
   )
 
   return (
-    <FileGridMenu
-      node={node}
-      parentType={parentType}
-      onNewFolder={onNewFolder}
-      onNewFile={onNewFile}
-      onInsert={onInsert}
-      onRename={onRename}
-      onDelete={onDelete}
-      onUpload={onUpload}
+    <div
+      ref={(element) => {
+        drag(drop(element))
+      }}
+      role="button"
+      tabIndex={0}
+      className={cn(
+        "group relative flex shrink-0 cursor-grab flex-col gap-1 rounded-md p-1 text-center outline-none active:cursor-grabbing",
+        selected
+          ? "bg-accent text-foreground"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+        isDragging && "opacity-40",
+        isOver && canDrop && "ring-2 ring-primary",
+      )}
+      style={{
+        width: GRID_TILE_WIDTH,
+        height: GRID_ROW_HEIGHT,
+        transform: transform
+          ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+          : undefined,
+        transition: isDragging ? undefined : "transform 180ms ease",
+      }}
+      onClick={() => {
+        if (!isDragging) onOpen()
+      }}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          onOpen()
+        }
+      }}
     >
+      {editing ? null : node.directory ? (
+        <DirectoryActionsMenu
+          editable={node.editable}
+          folderType={node.type}
+          overlay
+          triggerClassName={gridMenuTriggerClassName}
+          onNewFolder={onNewFolder}
+          onNewFile={onNewFile}
+          onUpload={onUpload}
+          onRename={onRename}
+          onDelete={onDelete}
+        />
+      ) : (
+        <FileActionsMenu
+          editable={node.editable}
+          parentType={parentType}
+          overlay
+          triggerClassName={gridMenuTriggerClassName}
+          onInsert={onInsert}
+          onRename={onRename}
+          onDelete={onDelete}
+        />
+      )}
       <div
-        ref={(element) => {
-          drag(drop(element))
-        }}
-        role="button"
-        tabIndex={0}
-        className={cn(
-          "flex shrink-0 cursor-grab flex-col gap-1 rounded-md p-1 text-center outline-none active:cursor-grabbing",
-          selected
-            ? "bg-accent text-foreground"
-            : "text-muted-foreground hover:bg-accent hover:text-foreground",
-          isDragging && "opacity-40",
-          isOver && canDrop && "ring-2 ring-primary",
-        )}
-        style={{
-          width: GRID_TILE_WIDTH,
-          height: GRID_ROW_HEIGHT,
-          transform: transform
-            ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
-            : undefined,
-          transition: isDragging ? undefined : "transform 180ms ease",
-        }}
-        onClick={() => {
-          if (!isDragging) onOpen()
-        }}
-        onKeyDown={(event) => {
-          if (event.target !== event.currentTarget) return
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault()
-            onOpen()
-          }
-        }}
+        className="flex w-full items-center justify-center overflow-hidden rounded-md bg-muted/50"
+        style={{ height: GRID_PREVIEW_SIZE }}
       >
-        <div
-          className="flex w-full items-center justify-center overflow-hidden rounded-md bg-muted/50"
-          style={{ height: GRID_PREVIEW_SIZE }}
-        >
-          <GridPreview node={node} />
-        </div>
-        {editing ? (
-          <GridNameInput
-            defaultValue={node.name}
-            onCommit={onCommit}
-            onCancel={onCancel}
-          />
-        ) : (
-          <span
-            className="line-clamp-2 h-8 break-all text-xs leading-4"
-            title={node.name}
-          >
-            {node.name}
-          </span>
-        )}
+        <GridPreview node={node} />
       </div>
-    </FileGridMenu>
+      {editing ? (
+        <GridNameInput
+          defaultValue={node.name}
+          onCommit={onCommit}
+          onCancel={onCancel}
+        />
+      ) : (
+        <span
+          className="line-clamp-2 h-8 break-all text-xs leading-4"
+          title={node.name}
+        >
+          {node.name}
+        </span>
+      )}
+    </div>
   )
 }
+
+const gridMenuTriggerClassName =
+  "size-6 bg-background/80 shadow-sm hover:bg-accent"
 
 function GridNameInput({
   defaultValue,
@@ -498,8 +516,6 @@ function GridNameInput({
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    // The context menu finishes closing after the input mounts. Focus on the
-    // next frame so its focus handling cannot leave the new input unfocused.
     const frame = requestAnimationFrame(() => {
       inputRef.current?.focus()
       inputRef.current?.select()
@@ -625,7 +641,7 @@ function FileGridDragOverlay() {
 
   return createPortal(
     <div
-      className="pointer-events-none fixed left-0 top-0 z-[100] flex flex-col gap-1 rounded-md border border-primary/50 bg-background/95 p-1 text-center shadow-xl"
+      className="pointer-events-none fixed left-0 top-0 z-100 flex flex-col gap-1 rounded-md border border-primary/50 bg-background/95 p-1 text-center shadow-xl"
       style={{
         width: GRID_TILE_WIDTH,
         height: GRID_ROW_HEIGHT,

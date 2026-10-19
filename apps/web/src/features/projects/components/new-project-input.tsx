@@ -11,14 +11,23 @@ import { useNavigate } from "@tanstack/react-router"
 import { DotsLoader } from "@sohizi/ui/loaders"
 import { Badge } from "@sohizi/ui/badge"
 import { Button } from "@sohizi/ui/button"
-import { useRef } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@sohizi/ui/dialog"
+import { Input } from "@sohizi/ui/input"
+import { Label } from "@sohizi/ui/label"
+import { useRef, useState } from "react"
 import {
   createProjectMutationOptions,
   getProjectOptionsQueryOptions,
 } from "../query-mutation"
 import { createProjectSchema } from "../schema"
 import {
-  PROJECT_MODES,
   isAdditionalSettingKey,
   useNewProjectStore,
 } from "../store/new-project-store"
@@ -26,7 +35,7 @@ import DropMenuSettings from "./drop-menu-settings"
 import NewProjectSelectModel from "./new-project-select-model"
 import NewProjectSettings from "./new-project-settings"
 import StoryIdeaEditor from "./story-idea-editor"
-import type { ProjectAttachment, ProjectMode } from "../store/new-project-store"
+import type { ProjectAttachment } from "../store/new-project-store"
 import type { Editor } from "@tiptap/core"
 import {
   Attachment,
@@ -47,11 +56,10 @@ export default function NewProjectInput() {
     storyIdea,
     setStoryIdea,
     additionalSettings,
-    duration,
     validate,
     modelId,
-    mode,
-    setMode,
+    commandId,
+    setCommandId,
     clearAdditionalSetting,
     attachments,
     addAttachments,
@@ -67,6 +75,13 @@ export default function NewProjectInput() {
   const navigate = useNavigate()
 
   const editorRef = useRef<Editor>(null)
+  const [nameOpen, setNameOpen] = useState(false)
+  const [title, setTitle] = useState("")
+  const [titleError, setTitleError] = useState("")
+
+  const commands = projectOptions?.commands ?? []
+  const selectedCommand =
+    commands.find((command) => command.id === commandId) ?? commands.at(0)
 
   const onSubmit = () => {
     const { valid, errors } = validate()
@@ -76,23 +91,27 @@ export default function NewProjectInput() {
       })
       return
     }
-    const { format, ...restAdditionalSettings } = additionalSettings
+    setTitle("")
+    setTitleError("")
+    setNameOpen(true)
+  }
+
+  const onConfirmName = () => {
+    const presets = (projectOptions?.presets ?? []).flatMap((preset) => {
+      if (!isAdditionalSettingKey(preset.key)) return []
+      const selected = additionalSettings[preset.key]
+      if (!selected) return []
+      return [{ id: preset.id, value: selected.value }]
+    })
     const payload = {
-      brief: {
-        format: format?.value ?? "",
-        durationMin: duration,
-        storyIdea,
-      },
-      additionalSettings: restAdditionalSettings,
+      title: title.trim(),
+      presets,
+      commandId: selectedCommand?.id ?? null,
       modelId,
     }
     const output = createProjectSchema.safeParse(payload)
     if (!output.success) {
-      let errorMessage = ""
-      for (const [_, value] of Object.entries(output.error.issues)) {
-        errorMessage += value.path.join(".") + ": " + value.message + "\n\n"
-      }
-      toast.error(errorMessage)
+      setTitleError(output.error.issues[0]?.message ?? "Invalid project name")
       return
     }
 
@@ -102,6 +121,7 @@ export default function NewProjectInput() {
           project_id: response.id,
           mode: "guided",
         })
+        setNameOpen(false)
         await navigate({
           to: "/projects/$projectId/editor",
           params: {
@@ -132,9 +152,6 @@ export default function NewProjectInput() {
 
     editor.commands.focus("end")
   }
-
-  const selectedMode =
-    PROJECT_MODES.find((option) => option.value === mode) ?? PROJECT_MODES[0]
 
   return (
     <div className="space-y-3">
@@ -189,17 +206,19 @@ export default function NewProjectInput() {
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <DropMenuSettings
-              options={PROJECT_MODES.map((option) => ({
-                label: option.label,
-                value: option.value,
+              options={commands.map((command) => ({
+                label: command.name,
+                value: command.id,
               }))}
-              onSelect={(value) => setMode(value as ProjectMode)}
+              onSelect={setCommandId}
             >
               <button
                 type="button"
                 className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-primary transition-colors hover:bg-primary/5"
               >
-                <span className="max-w-50 truncate">/{selectedMode.label}</span>
+                <span className="max-w-50 truncate">
+                  /{selectedCommand?.name ?? "Command"}
+                </span>
                 <ChevronDown className="size-4 opacity-50" />
               </button>
             </DropMenuSettings>
@@ -222,6 +241,55 @@ export default function NewProjectInput() {
 
         <LoaderOverlay isLoading={isPending} />
       </div>
+
+      <Dialog open={nameOpen} onOpenChange={setNameOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Name your project</DialogTitle>
+            <DialogDescription>
+              Give this project a name before it is created.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              onConfirmName()
+            }}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="project-title">Project name</Label>
+              <Input
+                id="project-title"
+                type="text"
+                placeholder="Short film storyboard"
+                value={title}
+                onChange={(event) => {
+                  setTitle(event.target.value)
+                  setTitleError("")
+                }}
+                autoFocus
+              />
+            </div>
+            {titleError ? (
+              <p className="text-sm text-destructive">{titleError}</p>
+            ) : null}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setNameOpen(false)}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending || !title.trim()}>
+                {isPending ? "Creating..." : "Start project"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -330,6 +330,13 @@
       "when": 1791745891951,
       "tag": "0046_aberrant_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792341550315,
+      "tag": "0047_timestamptz_timestamps",
+      "breakpoints": true
     }
   ]
 }

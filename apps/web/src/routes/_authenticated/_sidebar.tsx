@@ -23,6 +23,7 @@ import {
   IconSettingsFilled,
 } from "@tabler/icons-react"
 import { getInitials } from "@/features/account/lib"
+import CreateProject from "@/features/projects/components/create-project"
 import { authClient, useSession } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 
@@ -205,10 +206,14 @@ function LogoutMenuItem() {
 
 function StartProjectAction() {
   return (
-    <Button className="hidden sm:inline-flex rounded-xl font-bold cursor-pointer hover:scale-105 transition-transform duration-200">
-      <IconCirclePlusFilled className="size-5" />
-      New blank project
-    </Button>
+    <CreateProject
+      trigger={
+        <Button className="hidden sm:inline-flex rounded-xl font-bold cursor-pointer hover:scale-105 transition-transform duration-200">
+          <IconCirclePlusFilled className="size-5" />
+          New blank project
+        </Button>
+      }
+    />
   )
 }
 

@@ -246,6 +246,9 @@ function ImageUploadSlot({
         folderId: rootFolderId,
         file,
       })
+      if (!result.fileNode) {
+        throw new Error("Upload did not create a file.")
+      }
       insertNodeInCache(queryClient, projectId, rootFolderId, result.fileNode)
 
       const { data: content } = await api.get<AssetFileContent>(

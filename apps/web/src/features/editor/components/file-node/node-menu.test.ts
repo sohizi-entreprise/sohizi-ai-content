@@ -8,7 +8,7 @@ describe("file types allowed by folder", () => {
   it("offers skills only inside skill folders", () => {
     expect(
       fileTypeOptionsForFolder(null).map((option) => option.value),
-    ).toEqual(["document", "storyboard"])
+    ).toEqual(["document", "storyboard", "video-editor"])
     expect(
       fileTypeOptionsForFolder("skill").map((option) => option.value),
     ).toEqual(["skill"])
