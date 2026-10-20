@@ -62,9 +62,11 @@ describe("validateCatalog", () => {
       }),
     )
 
-    expect(errors.some((error) => error.includes('duplicate parameter id "parameter_prompt"'))).toBe(
-      true,
-    )
+    expect(
+      errors.some((error) =>
+        error.includes('duplicate parameter id "parameter_prompt"'),
+      ),
+    ).toBe(true)
   })
 
   it("rejects duplicate option ids", () => {
@@ -74,24 +76,22 @@ describe("validateCatalog", () => {
           parameter({
             id: "parameter_quality",
             key: "quality",
-            options: [
-              { id: "option_quality_low", value: "low", label: "Low" },
-            ],
+            options: [{ id: "option_quality_low", value: "low", label: "Low" }],
           }),
           parameter({
             id: "parameter_resolution",
             key: "resolution",
-            options: [
-              { id: "option_quality_low", value: "1k", label: "1K" },
-            ],
+            options: [{ id: "option_quality_low", value: "1k", label: "1K" }],
           }),
         ],
       }),
     )
 
-    expect(errors.some((error) => error.includes('duplicate option id "option_quality_low"'))).toBe(
-      true,
-    )
+    expect(
+      errors.some((error) =>
+        error.includes('duplicate option id "option_quality_low"'),
+      ),
+    ).toBe(true)
   })
 
   it("rejects a vendor without an adapter", () => {
@@ -113,9 +113,9 @@ describe("validateCatalog", () => {
       }),
     )
 
-    expect(errors.some((error) => error.includes("is missing an adapter"))).toBe(
-      true,
-    )
+    expect(
+      errors.some((error) => error.includes("is missing an adapter")),
+    ).toBe(true)
   })
 
   it("rejects a model that references an unknown parameter", () => {

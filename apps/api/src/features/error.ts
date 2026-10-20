@@ -54,6 +54,27 @@ export class Unauthorized extends BaseError {
   }
 }
 
+export class TooManyRequests extends BaseError {
+  readonly status = 429
+
+  constructor(
+    message: string = "Too many requests",
+    readonly retryAfterMs = 5_000,
+  ) {
+    super(message)
+  }
+
+  toResponse() {
+    return Response.json(
+      { error: this.message, code: this.status },
+      {
+        status: this.status,
+        headers: { "Retry-After": String(Math.ceil(this.retryAfterMs / 1000)) },
+      },
+    )
+  }
+}
+
 export class InternalServerError extends BaseError {
   readonly status = 500
   constructor(message: string = "Internal Server Error") {

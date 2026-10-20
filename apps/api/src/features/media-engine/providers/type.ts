@@ -148,6 +148,18 @@ export class MediaProviderError extends MediaError {
   }
 }
 
+export class MediaSubmissionUnknownError extends MediaError {
+  readonly isRetriable = false
+  readonly code = "SUBMISSION_UNKNOWN"
+
+  constructor(message: string, cause?: Error) {
+    super(
+      message || "The provider request may have been sent. It was not retried.",
+      cause,
+    )
+  }
+}
+
 export class MediaValidationError extends MediaError {
   readonly isRetriable = false
   readonly code = "VALIDATION_ERROR"

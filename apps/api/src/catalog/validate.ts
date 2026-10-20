@@ -20,7 +20,9 @@ const addDuplicateErrors = (
     if (previous) {
       errors.push(
         `duplicate ${kind} id "${item.id}"` +
-          (item.source || previous ? ` (${[previous, item.source].filter(Boolean).join(", ")})` : ""),
+          (item.source || previous
+            ? ` (${[previous, item.source].filter(Boolean).join(", ")})`
+            : ""),
       )
       continue
     }
@@ -44,7 +46,9 @@ export const validateCatalog = (catalog: Catalog): string[] => {
 
   const parameterKeys = new Map<string, string>()
   const optionIds: Array<{ id: string; source: string }> = []
-  const parametersById = new Map(catalog.parameters.map((parameter) => [parameter.id, parameter]))
+  const parametersById = new Map(
+    catalog.parameters.map((parameter) => [parameter.id, parameter]),
+  )
 
   for (const parameter of catalog.parameters) {
     if (parameter.key) {
@@ -82,7 +86,10 @@ export const validateCatalog = (catalog: Catalog): string[] => {
   addDuplicateErrors(
     errors,
     "vendor",
-    catalog.vendors.map((vendor) => ({ id: vendor.id, source: vendor.sourceFile })),
+    catalog.vendors.map((vendor) => ({
+      id: vendor.id,
+      source: vendor.sourceFile,
+    })),
   )
 
   const categoryIds = new Set(catalog.categories.map((category) => category.id))
@@ -141,7 +148,9 @@ export const validateCatalog = (catalog: Catalog): string[] => {
       boundModels.add(binding.id)
     }
 
-    for (const [parameterId, mapping] of Object.entries(vendor.parametersMapping)) {
+    for (const [parameterId, mapping] of Object.entries(
+      vendor.parametersMapping,
+    )) {
       const parameter = parametersById.get(parameterId)
       if (!parameter) {
         errors.push(`${source} maps unknown parameter "${parameterId}"`)

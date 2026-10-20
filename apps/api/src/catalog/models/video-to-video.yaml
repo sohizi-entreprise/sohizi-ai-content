@@ -13,9 +13,22 @@ models:
     parameters:
       - { id: parameter_prompt, required: true }
       - { id: parameter_video, required: true }
-      - { id: parameter_reference_images, required: false, constraints: { max: 30 } }
-      - { id: parameter_reference_audios, required: false, constraints: { max: 10 } }
-      - { id: parameter_resolution, required: true, defaultValue: 720p, allowedValues: [480p, 720p, 1080p, 4k] }
+      - {
+          id: parameter_reference_images,
+          required: false,
+          constraints: { max: 30 },
+        }
+      - {
+          id: parameter_reference_audios,
+          required: false,
+          constraints: { max: 10 },
+        }
+      - {
+          id: parameter_resolution,
+          required: true,
+          defaultValue: 720p,
+          allowedValues: [480p, 720p, 1080p, 4k],
+        }
       - { id: parameter_generate_audio, required: false, defaultValue: true }
 
   - id: bytedance/seedance-2.0/video-edit
@@ -31,11 +44,33 @@ models:
     parameters:
       - { id: parameter_prompt, required: true }
       - { id: parameter_video, required: true }
-      - { id: parameter_reference_images, required: false, constraints: { max: 9 } }
-      - { id: parameter_reference_audios, required: false, constraints: { max: 3 } }
-      - { id: parameter_aspect_ratio, required: false, allowedValues: [16:9, 9:16, 4:3, 3:4, 1:1, 21:9] }
-      - { id: parameter_duration, required: true, defaultValue: 5, constraints: { min: 4, max: 15, step: 1 } }
-      - { id: parameter_resolution, required: true, defaultValue: 720p, allowedValues: [480p, 720p, 1080p, 4k] }
+      - {
+          id: parameter_reference_images,
+          required: false,
+          constraints: { max: 9 },
+        }
+      - {
+          id: parameter_reference_audios,
+          required: false,
+          constraints: { max: 3 },
+        }
+      - {
+          id: parameter_aspect_ratio,
+          required: false,
+          allowedValues: [16:9, 9:16, 4:3, 3:4, 1:1, 21:9],
+        }
+      - {
+          id: parameter_duration,
+          required: true,
+          defaultValue: 5,
+          constraints: { min: 4, max: 15, step: 1 },
+        }
+      - {
+          id: parameter_resolution,
+          required: true,
+          defaultValue: 720p,
+          allowedValues: [480p, 720p, 1080p, 4k],
+        }
       - { id: parameter_generate_audio, required: false, defaultValue: true }
 
   - id: kwaivgi/kling-video-o3-pro/video-edit
@@ -81,7 +116,12 @@ models:
     parameters:
       - { id: parameter_prompt, required: true }
       - { id: parameter_video, required: true }
-      - { id: parameter_resolution, required: true, defaultValue: 720p, allowedValues: [360p, 720p, 1080p, 4k] }
+      - {
+          id: parameter_resolution,
+          required: true,
+          defaultValue: 720p,
+          allowedValues: [360p, 720p, 1080p, 4k],
+        }
 
   - id: google/gemini-omni-flash/video-edit
     name: Gemini Omni Flash Edit

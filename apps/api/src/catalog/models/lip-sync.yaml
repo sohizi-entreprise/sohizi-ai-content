@@ -13,4 +13,9 @@ models:
     parameters:
       - { id: parameter_video, required: true }
       - { id: parameter_audio, required: true }
-      - { id: parameter_sync_mode, required: false, defaultValue: cut_off, allowedValues: [bounce, loop, cut_off, silence, remap] }
+      - {
+          id: parameter_sync_mode,
+          required: false,
+          defaultValue: cut_off,
+          allowedValues: [bounce, loop, cut_off, silence, remap],
+        }

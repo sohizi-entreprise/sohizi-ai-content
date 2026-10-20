@@ -206,7 +206,9 @@ describe("prepareAccountDeletion", () => {
           },
         }),
       }),
-    ).rejects.toThrow(/could not cancel the subscription in the payment system/i)
+    ).rejects.toThrow(
+      /could not cancel the subscription in the payment system/i,
+    )
 
     expect(deletedCustomer).toBe(false)
     const [org] = await db

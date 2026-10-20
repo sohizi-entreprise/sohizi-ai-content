@@ -3,10 +3,7 @@ import { IconLoader2 } from "@tabler/icons-react"
 import { Check, Music } from "lucide-react"
 import type { PickerAsset } from "../lib/parameter-assets"
 import { cn } from "@/lib/utils"
-import {
-  buildOptimizeddImageUrl,
-  imageUrlTransforms,
-} from "@/utils/transform-url"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 type AssetPickerGridProps = {
   items: Array<PickerAsset>
@@ -95,10 +92,7 @@ export function AssetPickerGrid({
 
 function PickerPreview({ asset }: { asset: PickerAsset }) {
   if (asset.type === "image") {
-    const thumbnailUrl = buildOptimizeddImageUrl(
-      asset.url,
-      imageUrlTransforms.thumbnails.small,
-    )
+    const thumbnailUrl = thumbnailImageUrl(asset.url)
     return (
       <img
         src={thumbnailUrl}

@@ -1,6 +1,8 @@
 import { z } from "zod"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { billingService, withBilling, type Billable } from "@/features/billing"
+import { classifyWebError } from "@/features/capacity/classify"
+import { runWithCapacity } from "@/features/capacity/router"
 import { buildBaseTool } from "./tool-definition"
 import { failure, success } from "./utils"
 import { tavilyExtract, tavilySearch } from "@/lib/tavily-client"
@@ -54,7 +56,17 @@ export const webSearchTool = buildBaseTool({
       const output = await runWebSearch(
         {
           toolCallId,
-          run: (signal) => tavilySearch(input, signal),
+          run: (signal) =>
+            runWithCapacity({
+              task: "web.search",
+              holderId: toolCallId,
+              leaseTtlMs: WEB_TOOL_TIMEOUT_MS,
+              waitMs: WEB_TOOL_TIMEOUT_MS,
+              signal,
+              classify: classifyWebError,
+              run: ({ account }) =>
+                tavilySearch(account.credential, input, signal),
+            }),
         },
         {
           organizationId: session.organizationId,
@@ -91,7 +103,17 @@ export const webPageExtractTool = buildBaseTool({
       const output = await runWebPageExtract(
         {
           toolCallId,
-          run: (signal) => tavilyExtract(input, signal),
+          run: (signal) =>
+            runWithCapacity({
+              task: "web.extract",
+              holderId: toolCallId,
+              leaseTtlMs: WEB_TOOL_TIMEOUT_MS,
+              waitMs: WEB_TOOL_TIMEOUT_MS,
+              signal,
+              classify: classifyWebError,
+              run: ({ account }) =>
+                tavilyExtract(account.credential, input, signal),
+            }),
         },
         {
           organizationId: session.organizationId,

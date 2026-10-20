@@ -25,10 +25,7 @@ import { AssetPickerUploadTab } from "./asset-picker-upload-tab"
 import type { PickerAsset, PickerAssetType } from "../lib/parameter-assets"
 import type { ModelParameterBinding } from "@/features/admin/types"
 import { cn } from "@/lib/utils"
-import {
-  buildOptimizeddImageUrl,
-  imageUrlTransforms,
-} from "@/utils/transform-url"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 type SelectedAsset = {
   url: string
@@ -162,10 +159,7 @@ function ReferenceThumbnail({ item }: { item: SelectedAsset }) {
   if (item.type === "image") {
     return (
       <img
-        src={buildOptimizeddImageUrl(
-          item.url,
-          imageUrlTransforms.thumbnails.small,
-        )}
+        src={thumbnailImageUrl(item.url)}
         alt=""
         className="size-full object-cover"
       />

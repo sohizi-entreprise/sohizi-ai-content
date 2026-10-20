@@ -128,3 +128,10 @@ export const buildOptimizeddImageUrl = (
   // Example result: /cdn-cgi/image/width=500,height=500,fit=cover/https://example.com/image.jpg
   return `${cdnUrl.replace(/\/$/, "")}/${optionsString}/${sourceUrl}`
 }
+
+export function thumbnailImageUrl(
+  sourceUrl: string,
+  size: keyof typeof imageUrlTransforms.thumbnails = "small",
+): string {
+  return buildOptimizeddImageUrl(sourceUrl, imageUrlTransforms.thumbnails[size])
+}

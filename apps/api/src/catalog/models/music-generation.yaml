@@ -43,8 +43,18 @@ models:
     parameters:
       - { id: parameter_lyrics, required: true }
       - { id: parameter_prompt, required: false }
-      - { id: parameter_number_of_songs, required: false, defaultValue: 1, constraints: { min: 1, max: 3, step: 1 } }
-      - { id: parameter_audio_format, required: false, defaultValue: mp3, allowedValues: [mp3, wav, flac] }
+      - {
+          id: parameter_number_of_songs,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 1, max: 3, step: 1 },
+        }
+      - {
+          id: parameter_audio_format,
+          required: false,
+          defaultValue: mp3,
+          allowedValues: [mp3, wav, flac],
+        }
 
   - id: mureka-ai/mureka-v8/generate-bgm
     name: Mureka V8 BGM
@@ -58,8 +68,18 @@ models:
     categories: [music-generation]
     parameters:
       - { id: parameter_prompt, required: true }
-      - { id: parameter_number_of_songs, required: false, defaultValue: 1, constraints: { min: 1, max: 3, step: 1 } }
-      - { id: parameter_audio_format, required: false, defaultValue: mp3, allowedValues: [mp3, wav, flac] }
+      - {
+          id: parameter_number_of_songs,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 1, max: 3, step: 1 },
+        }
+      - {
+          id: parameter_audio_format,
+          required: false,
+          defaultValue: mp3,
+          allowedValues: [mp3, wav, flac],
+        }
 
   - id: kwaivgi/kling-text-to-audio
     name: Kling Text to Audio
@@ -73,7 +93,12 @@ models:
     categories: [music-generation]
     parameters:
       - { id: parameter_prompt, required: true }
-      - { id: parameter_duration, required: true, defaultValue: 10, constraints: { min: 3, max: 10, step: 0.1 } }
+      - {
+          id: parameter_duration,
+          required: true,
+          defaultValue: 10,
+          constraints: { min: 3, max: 10, step: 0.1 },
+        }
 
   - id: minimax/music-cover
     name: MiniMax Music Cover
@@ -101,5 +126,14 @@ models:
     categories: [music-generation]
     parameters:
       - { id: parameter_prompt, required: true }
-      - { id: parameter_duration, required: true, constraints: { min: 1, max: 180, step: 1 } }
-      - { id: parameter_audio_format, required: false, defaultValue: aac, allowedValues: [wav, mp3, aac, flac] }
+      - {
+          id: parameter_duration,
+          required: true,
+          constraints: { min: 1, max: 180, step: 1 },
+        }
+      - {
+          id: parameter_audio_format,
+          required: false,
+          defaultValue: aac,
+          allowedValues: [wav, mp3, aac, flac],
+        }

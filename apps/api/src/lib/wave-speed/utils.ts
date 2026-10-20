@@ -3,8 +3,10 @@ import {
   MediaProviderError,
   MediaRateLimitError,
   MediaServiceUnavailableError,
+  MediaSubmissionUnknownError,
   MediaValidationError,
 } from "@/features/media-engine/providers/type"
+import { parseRetryAfterHeader } from "@/features/capacity/retry-after"
 
 type SubmitJobResponse = {
   code: number
@@ -59,7 +61,9 @@ export const submitJob = async (
     headers: buildHeader(apiKey),
     body: JSON.stringify(input),
   }
-  const result = (await requestJson(url, options)) as SubmitJobResponse
+  const result = (await requestJson(url, options, {
+    ambiguousOnNetwork: true,
+  })) as SubmitJobResponse
   return {
     jobId: result.data.id,
     status: result.data.status,
@@ -122,26 +126,24 @@ export const getInferencePrice = async (
 }
 
 function retryAfterMsFrom(response: Response): number | undefined {
-  const header = response.headers.get("retry-after")
-  if (!header) return undefined
-  const seconds = Number(header)
-  if (Number.isFinite(seconds) && seconds >= 0) {
-    return seconds * 1000
-  }
-  const dateMs = Date.parse(header)
-  if (Number.isNaN(dateMs)) return undefined
-  return Math.max(dateMs - Date.now(), 0)
+  return parseRetryAfterHeader(response.headers.get("retry-after") ?? "")
 }
 
-async function requestJson(url: string, options: RequestInit = {}) {
+async function requestJson(
+  url: string,
+  options: RequestInit = {},
+  flags: { ambiguousOnNetwork?: boolean } = {},
+) {
   let response: Response
   try {
     response = await fetch(url, options)
   } catch (error) {
-    throw new MediaServiceUnavailableError(
-      error instanceof Error ? error.message : "Request timed out",
-      error instanceof Error ? error : undefined,
-    )
+    const cause = error instanceof Error ? error : undefined
+    const message = cause?.message ?? "Request timed out"
+    if (flags.ambiguousOnNetwork) {
+      throw new MediaSubmissionUnknownError(message, cause)
+    }
+    throw new MediaServiceUnavailableError(message, cause)
   }
 
   if (!response.ok) {

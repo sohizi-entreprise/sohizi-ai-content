@@ -12,5 +12,15 @@ models:
     categories: [image-upscaler]
     parameters:
       - { id: parameter_image, required: true }
-      - { id: parameter_creativity, required: false, defaultValue: 0, constraints: { min: -10, max: 10, step: 1 } }
-      - { id: parameter_target_megapixels, required: false, defaultValue: 4, constraints: { min: 1, max: 64, step: 1 } }
+      - {
+          id: parameter_creativity,
+          required: false,
+          defaultValue: 0,
+          constraints: { min: -10, max: 10, step: 1 },
+        }
+      - {
+          id: parameter_target_megapixels,
+          required: false,
+          defaultValue: 4,
+          constraints: { min: 1, max: 64, step: 1 },
+        }

@@ -28,6 +28,7 @@ import {
 import type { SequenceShot } from "../../extensions/storyboard/storyboard-sequence"
 import type { CallbackListener, PlayerRef } from "@remotion/player"
 import type { MainCompositionProps } from "@sohizi/video-composition"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 type SequenceMode = "slides" | "video"
 
@@ -298,7 +299,10 @@ function SequenceSlide({ shot }: { shot: SequenceShot | undefined }) {
     <div className="storyboard-sequence-slide">
       <div className="storyboard-sequence-slide-frame">
         {shot.image ? (
-          <img src={shot.image} alt={shot.subtitle || "Shot"} />
+          <img
+            src={thumbnailImageUrl(shot.image, "large")}
+            alt={shot.subtitle || "Shot"}
+          />
         ) : (
           <div className="storyboard-sequence-slide-empty">
             <ImageIcon className="size-8" />

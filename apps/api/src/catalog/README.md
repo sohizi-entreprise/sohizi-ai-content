@@ -220,13 +220,13 @@ modelParameterOverrides:
 - `adapter` is the implementation (`wavespeed`, `openrouter`, `vercel-gateway`). Media adapters are registered in the media factory. LLM adapters are registered in `src/features/ai/llm/adapters/factory.ts`.
 - `apiName` for WaveSpeed is the full WaveSpeed model id.
 - `apiName` for OpenRouter is the OpenRouter model id (`x-ai/grok-4.6`, `anthropic/claude-opus-5.5`). For Vercel AI Gateway it is the gateway model id (`openai/gpt-5.4`, `spacexai/grok-4.6`, `anthropic/claude-opus-5.5`).
-- Routing tries the lowest `priority` number first. Gateway bindings use 200 so OpenRouter (65–100) is tried first.
+- Routing tries the lowest `priority` number first. Gateway bindings use 50 so Vercel AI Gateway is tried before OpenRouter (65–100).
 - `parametersMapping` is vendor-wide. Use `modelParameterOverrides` only when one endpoint uses a different field.
 
 Current vendors:
 
 - `vendors/openrouter.yaml` — all `leading-agent` and `text-to-text` models
-- `vendors/vercel-gateway.yaml` — the same text models as OpenRouter, fallback after OpenRouter
+- `vendors/vercel-gateway.yaml` — the same text models as OpenRouter, tried first with OpenRouter as fallback
 - `vendors/wavespeed.yaml` — all image, video, and audio media models
 
 ## Common update recipes

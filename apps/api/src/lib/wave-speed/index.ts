@@ -1,9 +1,4 @@
-import {
-  submitJob,
-  getJobResult,
-  deleteJob,
-  getInferencePrice,
-} from "./utils"
+import { submitJob, getJobResult, deleteJob, getInferencePrice } from "./utils"
 
 export const waveSpeedFuncs = {
   submitJob,

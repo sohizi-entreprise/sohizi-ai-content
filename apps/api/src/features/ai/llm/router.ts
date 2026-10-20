@@ -1,14 +1,24 @@
 import type { TextStreamPart, ToolSet } from "ai"
-import type Redis from "ioredis"
-import { redis as defaultRedis } from "@/lib/redis"
-import { DEFAULT_VENDOR_CIRCUIT_CONFIG } from "@/type"
+import { randomUUID } from "node:crypto"
 import { createLlmAdapter } from "./adapters/factory"
-import {
-  AllLlmVendorsUnavailableError,
-  isFailoverError,
-  retryAfterMsFrom,
-} from "./errors"
+import { AllLlmVendorsUnavailableError, isFailoverError } from "./errors"
 import { listLlmRoutes } from "./routes"
+import { classifyLlmError } from "@/features/capacity/classify"
+import { rateLimitRetryAfterMs } from "@/features/capacity/retry-after"
+import {
+  CapacityLeaseStore,
+  leaseStore as defaultLeaseStore,
+} from "@/features/capacity/lease-store"
+import {
+  CapacityBusyError,
+  CapacityUnavailableError,
+  NoCapacityRouteError,
+  releaseCapacityLease,
+  tryAcquireCapacity,
+  type CapacitySelection,
+} from "@/features/capacity/router"
+import type { CapacityBinding } from "@/features/capacity/bindings"
+import type { ReleaseOutcome } from "@/features/capacity/types"
 import type {
   LlmAdapter,
   LlmCallInput,
@@ -19,14 +29,13 @@ import type {
   LlmStream,
 } from "./types"
 
-const ROUTE_CACHE_TTL_SEC = 30
-
 /** Silence before the first streamed content part, then the next vendor is tried. */
 export const LLM_STREAM_ATTEMPT_TIMEOUT_MS = 120_000
 
 /** Whole non-streaming attempt. Stays under the 10 minute billing abort. */
 export const LLM_GENERATE_ATTEMPT_TIMEOUT_MS = 240_000
 
+const STREAM_LEASE_TTL_MS = 60_000
 const CONTENT_PARTS = new Set([
   "text-delta",
   "reasoning-delta",
@@ -37,146 +46,50 @@ const CONTENT_PARTS = new Set([
 ])
 
 export type LlmRouterOptions = {
-  redis?: Redis
   listRoutes?: (modelId: string) => Promise<LlmRoute[]>
-  resolveAdapter?: (adapter: string, vendorName: string) => LlmAdapter
-  keyPrefix?: string
-  random?: () => number
+  resolveAdapter?: (
+    adapter: string,
+    vendorName: string,
+    credential: string,
+  ) => LlmAdapter
+  store?: CapacityLeaseStore
   streamAttemptTimeoutMs?: number
   generateAttemptTimeoutMs?: number
 }
 
-function cooldownKey(prefix: string, vendorName: string, modelId: string) {
-  return `${prefix}llm:cd:${vendorName}:${modelId}`
-}
-
-function routesKey(prefix: string, modelId: string) {
-  return `${prefix}llm:routes:${modelId}`
-}
-
-function jitteredTtl(baseMs: number, random: () => number): number {
-  const factor = 0.8 + random() * 0.4
-  return Math.max(1, Math.round(baseMs * factor))
-}
-
-function compareRoutes(a: LlmRoute, b: LlmRoute): number {
-  return a.priority - b.priority || a.vendorName.localeCompare(b.vendorName)
-}
-
-async function loadRoutes(
-  modelId: string,
-  redis: Redis,
-  prefix: string,
-  listRoutes: (modelId: string) => Promise<LlmRoute[]>,
-): Promise<LlmRoute[]> {
-  const key = routesKey(prefix, modelId)
-  try {
-    const cached = await redis.get(key)
-    if (cached) {
-      const parsed = JSON.parse(cached) as LlmRoute[]
-      if (Array.isArray(parsed)) return parsed
-    }
-  } catch (error) {
-    console.error("[llm] route cache read failed", modelId, error)
-  }
-
-  const routes = await listRoutes(modelId)
-  try {
-    await redis.set(key, JSON.stringify(routes), "EX", ROUTE_CACHE_TTL_SEC)
-  } catch (error) {
-    console.error("[llm] route cache write failed", modelId, error)
-  }
-  return routes
-}
-
-async function soonestTtl(redis: Redis, keys: string[]): Promise<number> {
-  if (keys.length === 0) return 0
-  try {
-    const pipeline = redis.pipeline()
-    for (const key of keys) pipeline.pttl(key)
-    const rows = await pipeline.exec()
-    let soonest = Number.POSITIVE_INFINITY
-    for (const row of rows ?? []) {
-      const ttl = Number(row?.[1])
-      if (ttl > 0 && ttl < soonest) soonest = ttl
-    }
-    return Number.isFinite(soonest) ? soonest : 0
-  } catch (error) {
-    console.error("[llm] cooldown ttl read failed", error)
-    return 0
+function resolveOptions(options: LlmRouterOptions = {}) {
+  return {
+    listRoutes: options.listRoutes ?? listLlmRoutes,
+    resolveAdapter: options.resolveAdapter ?? createLlmAdapter,
+    store: options.store ?? defaultLeaseStore,
+    streamAttemptTimeoutMs:
+      options.streamAttemptTimeoutMs ?? LLM_STREAM_ATTEMPT_TIMEOUT_MS,
+    generateAttemptTimeoutMs:
+      options.generateAttemptTimeoutMs ?? LLM_GENERATE_ATTEMPT_TIMEOUT_MS,
   }
 }
 
-async function markCooldown(
-  redis: Redis,
-  key: string,
-  ttlMs: number,
-): Promise<void> {
-  try {
-    await redis.set(key, "1", "PX", ttlMs)
-  } catch (error) {
-    console.error("[llm] cooldown write failed", key, error)
-  }
-}
-
-type Candidates = {
-  routes: LlmRoute[]
-  soonestCooldownMs: number
-}
-
-async function selectCandidates(
-  modelId: string,
-  options: Required<
-    Pick<LlmRouterOptions, "redis" | "listRoutes" | "keyPrefix">
-  >,
-): Promise<Candidates> {
-  const loaded = await loadRoutes(
-    modelId,
-    options.redis,
-    options.keyPrefix,
-    options.listRoutes,
-  )
-  const routes = [...loaded].sort(compareRoutes)
-  if (routes.length === 0) {
-    throw new AllLlmVendorsUnavailableError(modelId, 0)
-  }
-
-  const keys = routes.map((route) =>
-    cooldownKey(options.keyPrefix, route.vendorName, modelId),
-  )
-  try {
-    const cooling = await options.redis.mget(...keys)
-    const open: LlmRoute[] = []
-    const coolingKeys: string[] = []
-    for (let index = 0; index < routes.length; index++) {
-      const route = routes[index]
-      if (!route) continue
-      if (cooling[index]) {
-        coolingKeys.push(keys[index] ?? "")
-      } else {
-        open.push(route)
-      }
-    }
-    if (open.length === 0) {
-      return {
-        routes: [],
-        soonestCooldownMs: await soonestTtl(options.redis, coolingKeys),
-      }
-    }
-    return { routes: open, soonestCooldownMs: 0 }
-  } catch (error) {
-    console.error("[llm] cooldown read failed", modelId, error)
-    return { routes, soonestCooldownMs: 0 }
-  }
+function toBindings(routes: LlmRoute[]): CapacityBinding[] {
+  return [...routes]
+    .sort(
+      (a, b) =>
+        a.priority - b.priority || a.vendorName.localeCompare(b.vendorName),
+    )
+    .map((route) => ({
+      providerName: route.vendorName,
+      adapter: route.adapter,
+      apiName: route.apiName,
+      priority: route.priority,
+    }))
 }
 
 function callInput(
   request: LlmFailoverRequest,
-  route: LlmRoute,
+  binding: CapacityBinding,
   abortSignal: AbortSignal,
 ): LlmCallInput {
   return {
-    apiName: route.apiName,
+    apiName: binding.apiName,
     messages: request.messages,
     abortSignal,
     tools: request.tools,
@@ -238,18 +151,13 @@ async function openStream(
   }
 }
 
-function resolveOptions(options: LlmRouterOptions = {}) {
-  return {
-    redis: options.redis ?? defaultRedis,
-    listRoutes: options.listRoutes ?? listLlmRoutes,
-    resolveAdapter: options.resolveAdapter ?? createLlmAdapter,
-    keyPrefix: options.keyPrefix ?? "",
-    random: options.random ?? Math.random,
-    streamAttemptTimeoutMs:
-      options.streamAttemptTimeoutMs ?? LLM_STREAM_ATTEMPT_TIMEOUT_MS,
-    generateAttemptTimeoutMs:
-      options.generateAttemptTimeoutMs ?? LLM_GENERATE_ATTEMPT_TIMEOUT_MS,
-  }
+function unavailable(
+  modelId: string,
+  error?: unknown,
+): AllLlmVendorsUnavailableError {
+  const retryAfterMs =
+    error instanceof CapacityBusyError ? error.retryAfterMs : 0
+  return new AllLlmVendorsUnavailableError(modelId, retryAfterMs, error)
 }
 
 async function withAttemptDeadline<T>(
@@ -262,11 +170,9 @@ async function withAttemptDeadline<T>(
       ? parent.reason
       : new DOMException("The operation was aborted.", "AbortError")
   }
-
   const controller = new AbortController()
   const onParentAbort = () => controller.abort(parent.reason)
   parent.addEventListener("abort", onParentAbort, { once: true })
-
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
     return await new Promise<T>((resolve, reject) => {
@@ -278,7 +184,6 @@ async function withAttemptDeadline<T>(
         controller.abort(error)
         reject(error)
       }, timeoutMs)
-
       run(controller.signal).then(resolve, reject)
     })
   } finally {
@@ -287,70 +192,175 @@ async function withAttemptDeadline<T>(
   }
 }
 
-async function failover<T>(
-  request: LlmFailoverRequest,
-  options: LlmRouterOptions,
-  run: (adapter: LlmAdapter, route: LlmRoute) => Promise<T>,
-): Promise<T> {
-  const resolved = resolveOptions(options)
-  const selected = await selectCandidates(request.modelId, resolved)
-  if (selected.routes.length === 0) {
-    throw new AllLlmVendorsUnavailableError(
-      request.modelId,
-      selected.soonestCooldownMs,
-    )
-  }
-
-  let lastError: unknown
-  let soonest = Number.POSITIVE_INFINITY
-  for (const route of selected.routes) {
-    try {
-      const adapter = resolved.resolveAdapter(route.adapter, route.vendorName)
-      return await run(adapter, route)
-    } catch (error) {
-      if (!isFailoverError(error)) throw error
-      const base = Math.max(
-        retryAfterMsFrom(error),
-        route.cooldownMs ?? DEFAULT_VENDOR_CIRCUIT_CONFIG.cooldownMs,
+function leaseWatcher(
+  selection: CapacitySelection,
+  store: CapacityLeaseStore,
+  parent: AbortSignal,
+) {
+  const timer = setInterval(() => {
+    void store
+      .renew(
+        selection.lease,
+        STREAM_LEASE_TTL_MS,
+        selection.account.limits.probeTtlMs,
       )
-      const ttl = jitteredTtl(base, resolved.random)
-      soonest = Math.min(soonest, ttl)
-      console.warn("[llm] failover", {
-        modelId: request.modelId,
-        vendor: route.vendorName,
-        adapter: route.adapter,
-        ttlMs: ttl,
+      .catch((error) => {
+        console.error("[llm] lease renew failed", selection.account.id, error)
       })
-      await markCooldown(
-        resolved.redis,
-        cooldownKey(resolved.keyPrefix, route.vendorName, request.modelId),
-        ttl,
-      )
-      lastError = error
+  }, 20_000)
+  let released = false
+  const release = async (outcome: ReleaseOutcome) => {
+    if (released) return
+    released = true
+    clearInterval(timer)
+    parent.removeEventListener("abort", onAbort)
+    const result = await releaseCapacityLease(
+      selection.lease,
+      outcome,
+      {
+        cooldownMs: selection.account.limits.cooldownMs,
+        burst:
+          selection.account.limits.burst ?? selection.account.limits.rpm ?? 0,
+      },
+      store,
+    )
+    if (!result.ok && result.reason === "unavailable") {
+      console.error("[llm] lease release unavailable", selection.account.id)
     }
   }
-
-  throw new AllLlmVendorsUnavailableError(
-    request.modelId,
-    Number.isFinite(soonest) ? soonest : 0,
-    lastError,
-  )
+  const onAbort = () => {
+    void release("not_sent")
+  }
+  parent.addEventListener("abort", onAbort)
+  return release
 }
 
-export function generateTextWithFailover(
+function guardStream(
+  stream: LlmStream,
+  release: (outcome: ReleaseOutcome) => Promise<void>,
+): LlmStream {
+  return {
+    ...stream,
+    stream: (async function* () {
+      const iterator = stream.stream[Symbol.asyncIterator]()
+      try {
+        while (true) {
+          const next = await iterator.next()
+          if (next.done) break
+          yield next.value
+        }
+        await release("completed")
+      } catch (error) {
+        await release("abandoned")
+        throw error
+      } finally {
+        await iterator.return?.().catch(() => undefined)
+        await release("completed")
+      }
+    })(),
+  }
+}
+
+export async function generateTextWithFailover(
   request: LlmFailoverRequest,
   options?: LlmRouterOptions,
 ): Promise<FulfilledLlmText> {
-  const timeoutMs =
-    options?.generateAttemptTimeoutMs ?? LLM_GENERATE_ATTEMPT_TIMEOUT_MS
-  return failover(request, options ?? {}, async (adapter, route) => {
-    const result = await withAttemptDeadline(
-      request.abortSignal,
-      timeoutMs,
-      (signal) => adapter.generateText(callInput(request, route, signal)),
-    )
-    return { ...result, vendorName: route.vendorName }
-  })
+  const resolved = resolveOptions(options)
+  const timeoutMs = resolved.generateAttemptTimeoutMs
+  const bindings = toBindings(await resolved.listRoutes(request.modelId))
+  const excludeAccountIds: string[] = []
+  const excludeProviders: string[] = []
+  let lastError: unknown
+  const holderId = randomUUID()
+
+  while (true) {
+    let acquired: Awaited<ReturnType<typeof tryAcquireCapacity>>
+    try {
+      acquired = await tryAcquireCapacity({
+        task: `llm:${request.modelId}`,
+        holderId,
+        leaseTtlMs: timeoutMs + 30_000,
+        bindings,
+        excludeAccountIds,
+        excludeProviders,
+        store: resolved.store,
+      })
+    } catch (error) {
+      throw unavailable(request.modelId, error)
+    }
+    if (!acquired.ok) {
+      if (acquired.reason === "no_route" && lastError instanceof Error)
+        throw lastError
+      throw unavailable(
+        request.modelId,
+        acquired.reason === "saturated"
+          ? new CapacityBusyError(
+              `llm:${request.modelId}`,
+              acquired.retryAfterMs,
+            )
+          : new CapacityUnavailableError(`llm:${request.modelId}`),
+      )
+    }
+    const { selection } = acquired
+    try {
+      const result = await withAttemptDeadline(
+        request.abortSignal,
+        timeoutMs,
+        (signal) =>
+          resolved
+            .resolveAdapter(
+              selection.binding.adapter,
+              selection.account.providerName,
+              selection.account.credential,
+            )
+            .generateText(callInput(request, selection.binding, signal)),
+      )
+      await releaseCapacityLease(
+        selection.lease,
+        "completed",
+        {},
+        resolved.store,
+      )
+      return { ...result, vendorName: selection.account.providerName }
+    } catch (error) {
+      const action = classifyLlmError(error)
+      if (action === "account_failure") {
+        await releaseCapacityLease(
+          selection.lease,
+          "rate_limited",
+          {
+            retryAfterMs: rateLimitRetryAfterMs(error),
+            cooldownMs: selection.account.limits.cooldownMs,
+          },
+          resolved.store,
+        )
+        excludeAccountIds.push(selection.account.id)
+        lastError = error
+        continue
+      }
+      if (action === "route_failure") {
+        await releaseCapacityLease(
+          selection.lease,
+          "completed",
+          {},
+          resolved.store,
+        )
+        excludeProviders.push(selection.binding.providerName)
+        lastError = error
+        continue
+      }
+      await releaseCapacityLease(
+        selection.lease,
+        action === "abort" || action === "not_sent" ? "not_sent" : "completed",
+        {
+          burst:
+            selection.account.limits.burst ?? selection.account.limits.rpm ?? 0,
+        },
+        resolved.store,
+      )
+      throw error
+    }
+  }
 }
 
 export async function streamTextWithFailover(
@@ -358,77 +368,144 @@ export async function streamTextWithFailover(
   options?: LlmRouterOptions,
 ): Promise<FulfilledLlmStream> {
   const resolved = resolveOptions(options)
-  const selected = await selectCandidates(request.modelId, resolved)
-  if (selected.routes.length === 0) {
-    throw new AllLlmVendorsUnavailableError(
-      request.modelId,
-      selected.soonestCooldownMs,
-    )
-  }
-
+  const bindings = toBindings(await resolved.listRoutes(request.modelId))
+  const excludeAccountIds: string[] = []
+  const excludeProviders: string[] = []
   let lastError: unknown
-  let soonest = Number.POSITIVE_INFINITY
-  for (const route of selected.routes) {
-    try {
-      const opened = await withAttemptDeadline(
-        request.abortSignal,
-        resolved.streamAttemptTimeoutMs,
-        async (signal) => {
-          const adapter = resolved.resolveAdapter(
-            route.adapter,
-            route.vendorName,
-          )
-          const handle = adapter.streamText(callInput(request, route, signal))
-          return openStream(handle)
-        },
-      )
-      if (opened.ok) {
-        return { ...opened.stream, vendorName: route.vendorName }
-      }
-      lastError = opened.error
-      soonest = await cool(
-        resolved,
+  const holderId = randomUUID()
+
+  while (true) {
+    const acquired = await tryAcquireCapacity({
+      task: `llm:${request.modelId}`,
+      holderId,
+      leaseTtlMs: STREAM_LEASE_TTL_MS,
+      bindings,
+      excludeAccountIds,
+      excludeProviders,
+      store: resolved.store,
+    })
+    if (!acquired.ok) {
+      if (acquired.reason === "no_route" && lastError instanceof Error)
+        throw lastError
+      throw unavailable(
         request.modelId,
-        route,
-        opened.error,
-        soonest,
+        acquired.reason === "saturated"
+          ? new CapacityBusyError(
+              `llm:${request.modelId}`,
+              acquired.retryAfterMs,
+            )
+          : acquired.reason === "no_route"
+            ? new NoCapacityRouteError(`llm:${request.modelId}`)
+            : new CapacityUnavailableError(`llm:${request.modelId}`),
       )
+    }
+    const { selection } = acquired
+    const lifetime = new AbortController()
+    const onParentAbort = () => lifetime.abort(request.abortSignal.reason)
+    if (request.abortSignal.aborted) onParentAbort()
+    else request.abortSignal.addEventListener("abort", onParentAbort)
+    const timer = setTimeout(() => {
+      lifetime.abort(
+        new DOMException(
+          `LLM vendor attempt timed out after ${resolved.streamAttemptTimeoutMs}ms`,
+          "TimeoutError",
+        ),
+      )
+    }, resolved.streamAttemptTimeoutMs)
+    let handedOff = false
+    try {
+      const adapter = resolved.resolveAdapter(
+        selection.binding.adapter,
+        selection.account.providerName,
+        selection.account.credential,
+      )
+      const opened = await Promise.race([
+        openStream(
+          adapter.streamText(
+            callInput(request, selection.binding, lifetime.signal),
+          ),
+        ),
+        new Promise<never>((_, reject) => {
+          if (lifetime.signal.aborted) {
+            reject(
+              lifetime.signal.reason instanceof Error
+                ? lifetime.signal.reason
+                : new DOMException("The operation was aborted.", "AbortError"),
+            )
+            return
+          }
+          lifetime.signal.addEventListener(
+            "abort",
+            () => {
+              reject(
+                lifetime.signal.reason instanceof Error
+                  ? lifetime.signal.reason
+                  : new DOMException(
+                      "The operation was aborted.",
+                      "AbortError",
+                    ),
+              )
+            },
+            { once: true },
+          )
+        }),
+      ])
+      if (!opened.ok) throw opened.error
+      clearTimeout(timer)
+      handedOff = true
+      const release = leaseWatcher(
+        selection,
+        resolved.store,
+        request.abortSignal,
+      )
+      const releaseOnce = async (outcome: ReleaseOutcome) => {
+        request.abortSignal.removeEventListener("abort", onParentAbort)
+        await release(outcome)
+      }
+      return {
+        ...guardStream(opened.stream, releaseOnce),
+        vendorName: selection.account.providerName,
+      }
     } catch (error) {
-      if (!isFailoverError(error)) throw error
-      lastError = error
-      soonest = await cool(resolved, request.modelId, route, error, soonest)
+      clearTimeout(timer)
+      const action = classifyLlmError(error)
+      if (action === "account_failure") {
+        await releaseCapacityLease(
+          selection.lease,
+          "rate_limited",
+          {
+            retryAfterMs: rateLimitRetryAfterMs(error),
+            cooldownMs: selection.account.limits.cooldownMs,
+          },
+          resolved.store,
+        )
+        excludeAccountIds.push(selection.account.id)
+        lastError = error
+        continue
+      }
+      if (action === "route_failure") {
+        await releaseCapacityLease(
+          selection.lease,
+          "completed",
+          {},
+          resolved.store,
+        )
+        excludeProviders.push(selection.binding.providerName)
+        lastError = error
+        continue
+      }
+      await releaseCapacityLease(
+        selection.lease,
+        action === "abort" || action === "not_sent" ? "not_sent" : "abandoned",
+        {},
+        resolved.store,
+      )
+      throw error
+    } finally {
+      if (!handedOff) {
+        clearTimeout(timer)
+        request.abortSignal.removeEventListener("abort", onParentAbort)
+      }
     }
   }
-
-  throw new AllLlmVendorsUnavailableError(
-    request.modelId,
-    Number.isFinite(soonest) ? soonest : 0,
-    lastError,
-  )
-}
-
-async function cool(
-  resolved: ReturnType<typeof resolveOptions>,
-  modelId: string,
-  route: LlmRoute,
-  error: unknown,
-  soonest: number,
-): Promise<number> {
-  const base = Math.max(
-    retryAfterMsFrom(error),
-    route.cooldownMs ?? DEFAULT_VENDOR_CIRCUIT_CONFIG.cooldownMs,
-  )
-  const ttl = jitteredTtl(base, resolved.random)
-  console.warn("[llm] failover", {
-    modelId,
-    vendor: route.vendorName,
-    adapter: route.adapter,
-    ttlMs: ttl,
-  })
-  await markCooldown(
-    resolved.redis,
-    cooldownKey(resolved.keyPrefix, route.vendorName, modelId),
-    ttl,
-  )
-  return Math.min(soonest, ttl)
 }

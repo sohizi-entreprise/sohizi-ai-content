@@ -170,7 +170,11 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
             </div>
           ) : null}
           {form.kind === "media" ? (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs">
+                Runtime capacity limits now live in the capacity registry. These stored values are kept for catalog compatibility and are not used for admission.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="vendor-rpm">RPM</Label>
                 <Input
@@ -178,12 +182,7 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                   type="number"
                   min={1}
                   value={form.rpm}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      rpm: Number(event.target.value),
-                    }))
-                  }
+                  disabled
                 />
               </div>
               <div className="space-y-2">
@@ -193,12 +192,7 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                   type="number"
                   min={1}
                   value={form.burst}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      burst: Number(event.target.value),
-                    }))
-                  }
+                  disabled
                 />
               </div>
               <div className="space-y-2">
@@ -208,14 +202,10 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
                   type="number"
                   min={1}
                   value={form.maxConcurrency}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      maxConcurrency: Number(event.target.value),
-                    }))
-                  }
+                  disabled
                 />
               </div>
+            </div>
             </div>
           ) : null}
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">

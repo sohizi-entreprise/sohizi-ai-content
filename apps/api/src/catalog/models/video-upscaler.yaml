@@ -12,7 +12,12 @@ models:
     categories: [video-upscaler]
     parameters:
       - { id: parameter_video, required: true }
-      - { id: parameter_resolution, required: false, defaultValue: 1080p, allowedValues: [720p, 1080p, 2k, 4k] }
+      - {
+          id: parameter_resolution,
+          required: false,
+          defaultValue: 1080p,
+          allowedValues: [720p, 1080p, 2k, 4k],
+        }
 
   - id: bytedance/video-upscaler
     name: ByteDance Video Upscaler
@@ -26,4 +31,9 @@ models:
     categories: [video-upscaler]
     parameters:
       - { id: parameter_video, required: true }
-      - { id: parameter_resolution, required: false, defaultValue: 1080p, allowedValues: [1080p, 2k, 4k] }
+      - {
+          id: parameter_resolution,
+          required: false,
+          defaultValue: 1080p,
+          allowedValues: [1080p, 2k, 4k],
+        }

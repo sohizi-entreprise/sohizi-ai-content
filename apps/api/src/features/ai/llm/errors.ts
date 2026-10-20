@@ -34,7 +34,7 @@ function isGatewayRateLimit(error: unknown): boolean {
   return errorName(error) === "GatewayRateLimitError"
 }
 
-function isUserAbort(error: unknown): boolean {
+export function isUserAbort(error: unknown): boolean {
   const name = errorName(error)
   return name === "AbortError" || name === "ResponseAborted"
 }
@@ -69,24 +69,6 @@ function statusCodeOf(error: unknown, depth = 0): number | undefined {
   return undefined
 }
 
-function responseHeadersOf(
-  error: unknown,
-  depth = 0,
-): Record<string, string> | undefined {
-  if (!error || typeof error !== "object" || depth > 5) return undefined
-  if (
-    "responseHeaders" in error &&
-    error.responseHeaders &&
-    typeof error.responseHeaders === "object"
-  ) {
-    return error.responseHeaders as Record<string, string>
-  }
-  if (error instanceof Error && error.cause) {
-    return responseHeadersOf(error.cause, depth + 1)
-  }
-  return undefined
-}
-
 export function isFailoverError(error: unknown, depth = 0): boolean {
   if (depth > 5 || !error || typeof error !== "object") return false
   if (error instanceof LlmConfigurationError) return false
@@ -116,27 +98,4 @@ export function isFailoverError(error: unknown, depth = 0): boolean {
   return false
 }
 
-export function retryAfterMsFrom(error: unknown, now = Date.now()): number {
-  const headers = responseHeadersOf(error)
-  const raw = headers?.["retry-after"] ?? headers?.["Retry-After"]
-  if (raw) {
-    const seconds = Number(raw)
-    if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000)
-    const date = Date.parse(raw)
-    if (Number.isFinite(date)) return Math.max(0, date - now)
-  }
-
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "retryAfterMs" in error &&
-    typeof (error as { retryAfterMs?: unknown }).retryAfterMs === "number"
-  ) {
-    return Math.max(0, (error as { retryAfterMs: number }).retryAfterMs)
-  }
-
-  if (error instanceof Error && error.cause) {
-    return retryAfterMsFrom(error.cause, now)
-  }
-  return 0
-}
+export { retryAfterMsFrom } from "@/features/capacity/retry-after"

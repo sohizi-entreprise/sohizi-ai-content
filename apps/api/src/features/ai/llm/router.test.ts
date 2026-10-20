@@ -7,13 +7,18 @@ import {
   type TextStreamPart,
   type ToolSet,
 } from "ai"
-import type Redis from "ioredis"
-import { redis } from "@/lib/redis"
 import {
   generateTextWithFailover,
   streamTextWithFailover,
   type LlmRouterOptions,
 } from "./router"
+import { CapacityLeaseStore } from "@/features/capacity/lease-store"
+import {
+  accountPoolId,
+  registerProvider,
+  unregisterProvider,
+} from "@/features/capacity/registry"
+import { redis } from "@/lib/redis"
 import type {
   LlmAdapter,
   LlmCallInput,
@@ -150,25 +155,45 @@ function routes(): LlmRoute[] {
 describe("llm failover", () => {
   let prefix: string
   let calls: string[]
+  let store: CapacityLeaseStore
 
   beforeEach(() => {
     prefix = `test:${randomUUID()}:`
     calls = []
+    store = new CapacityLeaseStore({ redis, keyPrefix: prefix })
+    for (const name of ["primary", "secondary"]) {
+      registerProvider({
+        name,
+        adapter: name,
+        tasks: ["llm"],
+        strategy: "priority",
+        accounts: [
+          {
+            id: `${name}:test`,
+            limits: {
+              maxConcurrency: 20,
+              probeTtlMs: 30_000,
+              cooldownMs: 15_000,
+            },
+            credential: () => "test",
+          },
+        ],
+      })
+    }
   })
 
   afterEach(async () => {
+    unregisterProvider("primary")
+    unregisterProvider("secondary")
     const keys = await redis.keys(`${prefix}*`)
     if (keys.length > 0) await redis.del(...keys)
   })
 
   function options(
     adapters: Record<string, Pick<LlmAdapter, "generateText" | "streamText">>,
-    redisClient: Redis = redis,
   ): LlmRouterOptions {
     return {
-      redis: redisClient,
-      keyPrefix: prefix,
-      random: () => 0.5,
+      store,
       listRoutes: async () => routes(),
       resolveAdapter: (adapter) => ({
         name: adapter,
@@ -210,6 +235,7 @@ describe("llm failover", () => {
   })
 
   test("a 429 cools the vendor and the next vendor serves the call", async () => {
+    const before = Date.now()
     const result = await generateTextWithFailover(
       request,
       options({
@@ -228,9 +254,11 @@ describe("llm failover", () => {
     expect(result.text).toBe("secondary")
     expect(result.vendorName).toBe("secondary")
     expect(calls).toEqual(["primary", "secondary"])
-    const cooled = await redis.get(`${prefix}llm:cd:primary:model`)
-    expect(cooled).toBe("1")
-    expect(await redis.pttl(`${prefix}llm:cd:primary:model`)).toBeGreaterThan(0)
+    const circuit = await store.circuitState(accountPoolId("primary:test"))
+    expect(circuit.state).toBe("open")
+    const until = Number(circuit.open_until)
+    expect(until).toBeGreaterThan(before + 500)
+    expect(until).toBeLessThan(before + 2_000)
   })
 
   test("a 402 insufficient balance falls back to the next vendor", async () => {
@@ -253,11 +281,12 @@ describe("llm failover", () => {
     expect(calls).toEqual(["primary", "secondary"])
   })
 
-  test("a cooled vendor is skipped until the key expires", async () => {
-    await redis.set(`${prefix}llm:cd:primary:model`, "1", "PX", 60)
+  test("an open account circuit is skipped on the next call", async () => {
     const adapters = {
       primary: {
-        generateText: async () => textResult("primary"),
+        generateText: async () => {
+          throw rateLimitError()
+        },
         streamText: () => streamOf([]),
       },
       secondary: {
@@ -265,12 +294,11 @@ describe("llm failover", () => {
         streamText: () => streamOf([]),
       },
     }
-    const first = await generateTextWithFailover(request, options(adapters))
-    expect(first.text).toBe("secondary")
-
-    await redis.del(`${prefix}llm:cd:primary:model`)
+    await generateTextWithFailover(request, options(adapters))
+    calls.length = 0
     const second = await generateTextWithFailover(request, options(adapters))
-    expect(second.text).toBe("primary")
+    expect(second.text).toBe("secondary")
+    expect(calls).toEqual(["secondary"])
   })
 
   test("a 400 is not failed over", async () => {
@@ -325,26 +353,14 @@ describe("llm failover", () => {
     expect(calls).toEqual(["primary"])
   })
 
-  test("a redis read error still attempts the primary vendor", async () => {
-    const broken = {
-      get: async () => {
-        throw new Error("redis down")
-      },
-      set: async () => {
-        throw new Error("redis down")
-      },
-      mget: async () => {
-        throw new Error("redis down")
-      },
-      pipeline: () => {
-        throw new Error("redis down")
-      },
-    } as unknown as Redis
-
-    const result = await generateTextWithFailover(
-      request,
-      options(
-        {
+  test("a redis outage fails closed before calling a vendor", async () => {
+    const broken = new CapacityLeaseStore({
+      redis: { eval: async () => Promise.reject(new Error("down")) } as never,
+      keyPrefix: prefix,
+    })
+    await expect(
+      generateTextWithFailover(request, {
+        ...options({
           primary: {
             generateText: async () => textResult("primary"),
             streamText: () => streamOf([]),
@@ -353,16 +369,15 @@ describe("llm failover", () => {
             generateText: async () => textResult("secondary"),
             streamText: () => streamOf([]),
           },
-        },
-        broken,
-      ),
-    )
-    expect(result.text).toBe("primary")
-    expect(result.vendorName).toBe("primary")
-    expect(calls).toEqual(["primary"])
+        }),
+        store: broken,
+      }),
+    ).rejects.toThrow(/unavailable/i)
+    expect(calls).toEqual([])
   })
 
   test("a 500 cools the vendor and the next vendor serves the call", async () => {
+    const before = Date.now()
     const result = await generateTextWithFailover(
       request,
       options({
@@ -381,7 +396,9 @@ describe("llm failover", () => {
     expect(result.text).toBe("secondary")
     expect(result.vendorName).toBe("secondary")
     expect(calls).toEqual(["primary", "secondary"])
-    expect(await redis.get(`${prefix}llm:cd:primary:model`)).toBe("1")
+    const circuit = await store.circuitState(accountPoolId("primary:test"))
+    expect(circuit.state).toBe("open")
+    expect(Number(circuit.open_until)).toBeGreaterThan(before + 14_000)
   })
 
   test("a stream error before the first text delta fails over", async () => {
@@ -456,7 +473,9 @@ describe("llm failover", () => {
     expect(result.text).toBe("secondary")
     expect(result.vendorName).toBe("secondary")
     expect(calls).toEqual(["primary", "secondary"])
-    expect(await redis.get(`${prefix}llm:cd:primary:model`)).toBe("1")
+    expect(
+      (await store.circuitState(accountPoolId("primary:test"))).state,
+    ).toBe("open")
   })
 
   test("a silent stream times out before the first content part", async () => {
@@ -535,5 +554,28 @@ describe("llm failover", () => {
     controller.abort()
     await expect(pending).rejects.toThrow(/abort/i)
     expect(calls).toEqual(["primary"])
+  })
+
+  test("disconnect releases the stream lease", async () => {
+    const controller = new AbortController()
+    const handle = await streamTextWithFailover(
+      { ...request, abortSignal: controller.signal },
+      options({
+        primary: {
+          generateText: async () => textResult("primary"),
+          streamText: () =>
+            streamOf([{ type: "text-delta", id: "1", text: "hello" }]),
+        },
+        secondary: {
+          generateText: async () => textResult("secondary"),
+          streamText: () => streamOf([]),
+        },
+      }),
+    )
+    const iterator = handle.stream[Symbol.asyncIterator]()
+    await iterator.next()
+    controller.abort()
+    await iterator.return?.()
+    expect(await store.inflightCount(accountPoolId("primary:test"))).toBe(0)
   })
 })

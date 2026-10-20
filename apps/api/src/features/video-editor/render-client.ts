@@ -9,8 +9,9 @@ import {
 } from "@remotion/lambda-client"
 import { BadRequest, InternalServerError } from "../error"
 import { logSentryWarning } from "@/sentry"
+import type { RemotionAccountConfig } from "@/features/capacity/registry"
+import { retryAfterMsFrom } from "@/features/capacity/retry-after"
 import {
-  clampRenderConcurrency,
   DEFAULT_LAMBDA_DISK_MB,
   DEFAULT_LAMBDA_MEMORY_MB,
   DEFAULT_LAMBDA_REGION,
@@ -20,6 +21,7 @@ import {
   lambdasInvokedForDuration,
   type LambdaFunctionSpec,
 } from "./render-pricing"
+import { clampRenderConcurrency } from "./render-pricing"
 import type { RenderComposition } from "./render-schema"
 
 /**
@@ -56,33 +58,59 @@ export type RenderCostEstimate = {
   lambdasInvoked: number
 } & LambdaFunctionSpec
 
-type LambdaConfig = {
-  region: AwsRegion
-  functionName: string
-  serveUrl: string
-}
-
 type RenderRefs = {
   bucketName?: string | null
   functionName?: string | null
 }
 
-let functionSpecPromise: Promise<LambdaFunctionSpec> | null = null
+const specCache = new Map<string, Promise<LambdaFunctionSpec>>()
 
-function getRegion(): AwsRegion {
-  return (process.env.REMOTION_AWS_REGION ?? DEFAULT_LAMBDA_REGION) as AwsRegion
-}
-
-function getConfig(): LambdaConfig {
+function accountConfig(account?: RemotionAccountConfig): RemotionAccountConfig {
+  if (account?.functionName && account.serveUrl && account.region)
+    return account
   const functionName = process.env.REMOTION_FUNCTION_NAME
   const serveUrl = process.env.REMOTION_SERVE_URL
-
   if (!functionName || !serveUrl) {
     console.error("REMOTION_FUNCTION_NAME or REMOTION_SERVE_URL is not set")
     throw new InternalServerError("Rendering is not configured")
   }
+  return {
+    region: process.env.REMOTION_AWS_REGION ?? DEFAULT_LAMBDA_REGION,
+    functionName,
+    serveUrl,
+  }
+}
 
-  return { region: getRegion(), functionName, serveUrl }
+async function loadFunctionSpec(
+  account?: RemotionAccountConfig,
+): Promise<LambdaFunctionSpec> {
+  const config = accountConfig(account)
+  const parsed = LambdaClientInternals.parseFunctionName(config.functionName)
+  return {
+    region: config.region,
+    memorySizeInMb: readPositiveInt(
+      process.env.REMOTION_FUNCTION_MEMORY_MB,
+      config.memorySizeInMb ??
+        parsed?.memorySizeInMb ??
+        DEFAULT_LAMBDA_MEMORY_MB,
+    ),
+    diskSizeInMb: readPositiveInt(
+      process.env.REMOTION_FUNCTION_DISK_MB,
+      config.diskSizeInMb ?? parsed?.diskSizeInMb ?? DEFAULT_LAMBDA_DISK_MB,
+    ),
+  }
+}
+
+function getFunctionSpec(
+  account?: RemotionAccountConfig,
+): Promise<LambdaFunctionSpec> {
+  const config = accountConfig(account)
+  const key = `${config.region}:${config.functionName}`
+  const cached = specCache.get(key)
+  if (cached) return cached
+  const pending = loadFunctionSpec(config)
+  specCache.set(key, pending)
+  return pending
 }
 
 export function parseAllowedMediaHosts(): string[] {
@@ -90,27 +118,6 @@ export function parseAllowedMediaHosts(): string[] {
     .split(",")
     .map((host) => host.trim().toLowerCase())
     .filter((host) => host.length > 0)
-}
-
-async function loadFunctionSpec(): Promise<LambdaFunctionSpec> {
-  const { region, functionName } = getConfig()
-  const parsed = LambdaClientInternals.parseFunctionName(functionName)
-  return {
-    region,
-    memorySizeInMb: readPositiveInt(
-      process.env.REMOTION_FUNCTION_MEMORY_MB,
-      parsed?.memorySizeInMb ?? DEFAULT_LAMBDA_MEMORY_MB,
-    ),
-    diskSizeInMb: readPositiveInt(
-      process.env.REMOTION_FUNCTION_DISK_MB,
-      parsed?.diskSizeInMb ?? DEFAULT_LAMBDA_DISK_MB,
-    ),
-  }
-}
-
-function getFunctionSpec(): Promise<LambdaFunctionSpec> {
-  functionSpecPromise ??= loadFunctionSpec()
-  return functionSpecPromise
 }
 
 function getRenderConcurrency(): number {
@@ -121,8 +128,9 @@ function getRenderConcurrency(): number {
 
 export async function estimateRenderCost(
   composition: RenderComposition,
+  account?: RemotionAccountConfig,
 ): Promise<RenderCostEstimate> {
-  const spec = await getFunctionSpec()
+  const spec = await getFunctionSpec(account)
   const concurrency = getRenderConcurrency()
   const framesPerLambda = framesPerLambdaForDuration(
     composition.durationInFrames,
@@ -160,12 +168,13 @@ export async function createRemoteRender(input: {
   fileName: string
   composition: RenderComposition
   concurrency: number
+  account?: RemotionAccountConfig
 }): Promise<RemoteRenderJob> {
-  const { region, functionName, serveUrl } = getConfig()
+  const { region, functionName, serveUrl } = accountConfig(input.account)
 
   try {
     const { renderId, bucketName } = await renderMediaOnLambda({
-      region,
+      region: region as AwsRegion,
       functionName,
       serveUrl,
       composition: MAIN_COMPOSITION_ID,
@@ -204,12 +213,14 @@ export async function createRemoteRender(input: {
 export async function getRemoteRender(
   renderId: string,
   refs: RenderRefs = {},
+  account?: RemotionAccountConfig,
 ): Promise<RemoteRenderJob | null> {
   const bucketName = refs.bucketName
-  const functionName = refs.functionName ?? process.env.REMOTION_FUNCTION_NAME
+  const config = accountConfig(account)
+  const functionName = refs.functionName ?? config.functionName
   if (!bucketName || !functionName) return null
 
-  const region = getRegion()
+  const region = config.region as AwsRegion
 
   try {
     const progress = await getRenderProgress({
@@ -247,11 +258,12 @@ export async function getRemoteRender(
 export async function cancelRemoteRender(
   renderId: string,
   refs: RenderRefs = {},
+  account?: RemotionAccountConfig,
 ): Promise<void> {
   const bucketName = refs.bucketName
   if (!bucketName) return
 
-  const region = getRegion()
+  const region = accountConfig(account).region as AwsRegion
   try {
     await deleteRender({
       region,
@@ -267,8 +279,9 @@ export async function presignRenderOutput(input: {
   bucketName: string
   objectKey: string
   fileName: string
+  account?: RemotionAccountConfig
 }): Promise<{ url: string }> {
-  const region = getRegion()
+  const region = accountConfig(input.account).region as AwsRegion
   const url = await presignUrl({
     region,
     bucketName: input.bucketName,
@@ -398,10 +411,50 @@ function publicRenderError(message: string | undefined): string {
   return line || "The render failed"
 }
 
+export class RenderRateLimitError extends Error {
+  readonly retryAfterMs?: number
+
+  constructor(message: string, retryAfterMs?: number) {
+    super(message)
+    this.name = "RenderRateLimitError"
+    this.retryAfterMs = retryAfterMs
+  }
+}
+
+function isRenderRateLimit(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const name = error instanceof Error ? error.name : ""
+  const message = error instanceof Error ? error.message : ""
+  const status =
+    "statusCode" in error && typeof error.statusCode === "number"
+      ? error.statusCode
+      : "$metadata" in error &&
+          error.$metadata &&
+          typeof error.$metadata === "object" &&
+          "httpStatusCode" in error.$metadata &&
+          typeof error.$metadata.httpStatusCode === "number"
+        ? error.$metadata.httpStatusCode
+        : undefined
+  return (
+    status === 429 ||
+    name === "TooManyRequestsException" ||
+    name === "RenderRateLimitError" ||
+    /rate exceeded|too many requests|throttl|ConcurrentInvocationLimitExceeded/i.test(
+      message,
+    )
+  )
+}
+
 function toRenderError(error: unknown, fallback: string): Error {
   const message = error instanceof Error ? error.message : fallback
   if (/input props|composition|validation|cannot be rendered/i.test(message)) {
     return new BadRequest(`This composition cannot be rendered: ${message}`)
+  }
+  if (isRenderRateLimit(error)) {
+    return new RenderRateLimitError(
+      "The export service is at capacity. Please try again in a moment.",
+      retryAfterMsFrom(error),
+    )
   }
   return new InternalServerError(fallback)
 }

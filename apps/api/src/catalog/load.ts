@@ -175,7 +175,8 @@ const parseParameter = (value: unknown): CatalogParameter => {
     key: asString(record.key),
     label: asString(record.label),
     type: asString(record.type),
-    description: record.description == null ? null : asString(record.description),
+    description:
+      record.description == null ? null : asString(record.description),
     xUiComponent:
       record.xUiComponent == null ? null : asString(record.xUiComponent),
     fileType: asFileType(record.fileType) ?? null,
@@ -200,10 +201,13 @@ const parseModel = (value: unknown, sourceFile: string): CatalogModel => {
     id: asString(record.id),
     name: asString(record.name),
     provider: asString(record.provider),
-    description: record.description == null ? null : asString(record.description),
+    description:
+      record.description == null ? null : asString(record.description),
     contextWindow: parseContextWindow(record.contextWindow),
     pricing: parsePricing(record.pricing),
-    categories: asArray(record.categories).map((category) => asString(category)),
+    categories: asArray(record.categories).map((category) =>
+      asString(category),
+    ),
     parameters: asArray(record.parameters).map((parameter) => {
       const parameterRecord = asRecord(parameter) ?? {}
       const constraints = asRecord(parameterRecord.constraints)
@@ -217,9 +221,13 @@ const parseModel = (value: unknown, sourceFile: string): CatalogModel => {
         constraints: constraints
           ? {
               min:
-                typeof constraints.min === "number" ? constraints.min : undefined,
+                typeof constraints.min === "number"
+                  ? constraints.min
+                  : undefined,
               max:
-                typeof constraints.max === "number" ? constraints.max : undefined,
+                typeof constraints.max === "number"
+                  ? constraints.max
+                  : undefined,
               step:
                 typeof constraints.step === "number"
                   ? constraints.step
@@ -292,8 +300,7 @@ const parseVendor = (value: unknown, sourceFile: string): CatalogVendor => {
     rateLimit: rateLimit
       ? {
           rpm: Number(rateLimit.rpm),
-          burst:
-            rateLimit.burst == null ? undefined : Number(rateLimit.burst),
+          burst: rateLimit.burst == null ? undefined : Number(rateLimit.burst),
           maxConcurrency: Number(rateLimit.maxConcurrency),
         }
       : null,

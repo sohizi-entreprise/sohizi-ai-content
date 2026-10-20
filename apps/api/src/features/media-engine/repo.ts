@@ -369,13 +369,23 @@ export const createAssetRequest = async (
   userId: string,
   requestPayload: Record<string, unknown>,
   analyticsConsentId?: string | null,
+  id?: string,
+  userLease?: {
+    poolId: string
+    holderId: string
+    leaseId: string
+    epoch: number
+    expiresAtMs: number
+  } | null,
 ) => {
   const result = await createGenerationRequest({
+    id,
     projectId,
     userId,
     analyticsConsentId,
     type: "media-generation",
     request: requestPayload,
+    userLease,
   })
 
   return { ...result, assets: result.assets ?? [] }
@@ -403,7 +413,105 @@ export const patchRequestRouting = async (
     .update(generationRequests)
     .set({
       request: sql`coalesce(${generationRequests.request}, '{}'::jsonb) || ${JSON.stringify({ routing })}::jsonb`,
+      providerRequestId: routing.providerRequestId,
+      submitState: "submitted",
     })
+    .where(eq(generationRequests.id, requestId))
+}
+
+type CapacityLeaseRecord = {
+  poolId: string
+  holderId: string
+  leaseId: string
+  epoch: number
+  expiresAtMs: number
+}
+
+export const saveMediaSelection = async (
+  requestId: string,
+  selection: {
+    accountId: string
+    lease: CapacityLeaseRecord
+    apiName: string
+  },
+) => {
+  const updated = await db
+    .update(generationRequests)
+    .set({
+      capacityAccountId: selection.accountId,
+      capacityLease: selection.lease,
+      submitState: "selected",
+      request: sql`coalesce(${generationRequests.request}, '{}'::jsonb) || ${JSON.stringify({ routing: { apiName: selection.apiName, accountId: selection.accountId } })}::jsonb`,
+    })
+    .where(
+      and(
+        eq(generationRequests.id, requestId),
+        isNull(generationRequests.providerRequestId),
+      ),
+    )
+    .returning()
+  return updated[0] ?? null
+}
+
+export const claimMediaSubmit = async (requestId: string) => {
+  const updated = await db
+    .update(generationRequests)
+    .set({ submitState: "submitting" })
+    .where(
+      and(
+        eq(generationRequests.id, requestId),
+        eq(generationRequests.submitState, "selected"),
+        isNull(generationRequests.providerRequestId),
+      ),
+    )
+    .returning()
+  return updated[0] ?? null
+}
+
+export const clearMediaSelection = async (requestId: string) => {
+  await db
+    .update(generationRequests)
+    .set({
+      capacityAccountId: null,
+      capacityLease: null,
+      submitState: null,
+    })
+    .where(
+      and(
+        eq(generationRequests.id, requestId),
+        isNull(generationRequests.providerRequestId),
+      ),
+    )
+}
+
+export const markMediaSubmissionUnknown = async (requestId: string) => {
+  await db
+    .update(generationRequests)
+    .set({ submitState: "submission_unknown" })
+    .where(eq(generationRequests.id, requestId))
+}
+
+export const markGenerationEnqueued = async (requestId: string) => {
+  await db
+    .update(generationRequests)
+    .set({ enqueuedAt: new Date(), status: "processing" })
+    .where(eq(generationRequests.id, requestId))
+}
+
+export const setMediaBillingReservation = async (
+  requestId: string,
+  billingReservationId: string,
+) => {
+  await db
+    .update(generationRequests)
+    .set({ billingReservationId })
+    .where(eq(generationRequests.id, requestId))
+}
+
+export const requestMediaCancellation = async (requestId: string) => {
+  await db
+    .update(generationRequests)
+    .set({ cancelRequestedAt: new Date() })
     .where(eq(generationRequests.id, requestId))
 }
 

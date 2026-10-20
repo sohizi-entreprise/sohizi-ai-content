@@ -13,6 +13,7 @@ import { Textarea } from "@sohizi/ui/textarea"
 import { Label } from "@sohizi/ui/label"
 import { Plus, Trash2 } from "lucide-react"
 import type { ShotData, ShotDialogueLine } from "../../extensions/storyboard"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 export type ShotFormValues = {
   image: string
@@ -119,7 +120,7 @@ export function StoryboardShotSheet({
           {values.image ? (
             <div className="overflow-hidden rounded-lg border bg-muted">
               <img
-                src={values.image}
+                src={thumbnailImageUrl(values.image)}
                 alt="Shot preview"
                 className="aspect-video w-full object-cover"
               />

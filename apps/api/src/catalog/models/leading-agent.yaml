@@ -10,12 +10,27 @@ models:
       Does not support reasoning_effort none; start at low. Prompts above 272k tokens
       use the long-context rate.
     contextWindow: 1_050_000
-    pricing: { unit: per_1m_tokens, input: 10.00, output: 50.00, cached_input: 1.00 }
+    pricing:
+      { unit: per_1m_tokens, input: 10.00, output: 50.00, cached_input: 1.00 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 2, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: medium, allowedValues: [low, medium, high, xhigh, max] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 2, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: medium,
+          allowedValues: [low, medium, high, xhigh, max],
+        }
 
   - id: openai/gpt-6-sol
     name: GPT-6 Sol
@@ -25,12 +40,27 @@ models:
       for complex professional work at a much lower token price. Supports reasoning_effort none.
       Prompts above 272k tokens use the long-context rate.
     contextWindow: 1_050_000
-    pricing: { unit: per_1m_tokens, input: 2.00, output: 10.00, cached_input: 0.20 }
+    pricing:
+      { unit: per_1m_tokens, input: 2.00, output: 10.00, cached_input: 0.20 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 2, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: medium, allowedValues: [none, low, medium, high, xhigh] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 2, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: medium,
+          allowedValues: [none, low, medium, high, xhigh],
+        }
 
   - id: openai/gpt-5.6-sol
     name: GPT-5.6 Sol
@@ -40,12 +70,27 @@ models:
       when comparing against GPT-6 Sol. Prompts above 272k tokens use 2x input and
       1.5x output for the full session.
     contextWindow: 1_050_000
-    pricing: { unit: per_1m_tokens, input: 4.00, output: 20.00, cached_input: 0.40 }
+    pricing:
+      { unit: per_1m_tokens, input: 4.00, output: 20.00, cached_input: 0.40 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 2, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: medium, allowedValues: [none, low, medium, high, xhigh, max] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 2, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: medium,
+          allowedValues: [none, low, medium, high, xhigh, max],
+        }
 
   - id: openai/gpt-5.5
     name: GPT-5.5
@@ -55,12 +100,27 @@ models:
       Default reasoning_effort is medium. Prompts above 272k tokens use 2x input
       and 1.5x output for the full session.
     contextWindow: 1_050_000
-    pricing: { unit: per_1m_tokens, input: 5.00, output: 30.00, cached_input: 0.50 }
+    pricing:
+      { unit: per_1m_tokens, input: 5.00, output: 30.00, cached_input: 0.50 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 2, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: medium, allowedValues: [none, low, medium, high, xhigh] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 2, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: medium,
+          allowedValues: [none, low, medium, high, xhigh],
+        }
 
   - id: openai/gpt-5.4
     name: GPT-5.4
@@ -70,12 +130,27 @@ models:
       is structured and you want none as the default reasoning effort. Prompts above
       272k tokens use 2x input and 1.5x output for the full session.
     contextWindow: 1_050_000
-    pricing: { unit: per_1m_tokens, input: 2.50, output: 15.00, cached_input: 0.25 }
+    pricing:
+      { unit: per_1m_tokens, input: 2.50, output: 15.00, cached_input: 0.25 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 2, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: none, allowedValues: [none, low, medium, high, xhigh] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 2, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: none,
+          allowedValues: [none, low, medium, high, xhigh],
+        }
 
   - id: google/gemini-3.1-pro-preview
     name: Gemini 3.1 Pro
@@ -85,12 +160,27 @@ models:
       (images, video, YouTube URLs) or needs a 1M-token workspace. Prompts above
       200k tokens bill at $4 / $18 per 1M. Not a Flash model.
     contextWindow: 1_048_576
-    pricing: { unit: per_1m_tokens, input: 2.00, output: 12.00, cached_input: 0.20 }
+    pricing:
+      { unit: per_1m_tokens, input: 2.00, output: 12.00, cached_input: 0.20 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 2, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 65536 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: high, allowedValues: [low, medium, high] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 2, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 65536 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: high,
+          allowedValues: [low, medium, high],
+        }
 
   - id: anthropic/claude-fable-5-1
     name: Claude Fable 5.1
@@ -100,12 +190,27 @@ models:
       quality matters more than latency or cost. Adaptive thinking is always on;
       default effort is high. Slower than Opus.
     contextWindow: 1_000_000
-    pricing: { unit: per_1m_tokens, input: 10.00, output: 50.00, cached_input: 0.25 }
+    pricing:
+      { unit: per_1m_tokens, input: 10.00, output: 50.00, cached_input: 0.25 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 1, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: high, allowedValues: [high] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 1, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: high,
+          allowedValues: [high],
+        }
 
   - id: anthropic/claude-fable-5
     name: Claude Fable 5
@@ -114,12 +219,27 @@ models:
       Previous Fable generation. Use only when a pinned Fable 5 behavior is required.
       Cache reads are 4x Fable 5.1, so prefer 5.1 for new work.
     contextWindow: 1_000_000
-    pricing: { unit: per_1m_tokens, input: 10.00, output: 50.00, cached_input: 1.00 }
+    pricing:
+      { unit: per_1m_tokens, input: 10.00, output: 50.00, cached_input: 1.00 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 1, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: high, allowedValues: [high] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 1, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: high,
+          allowedValues: [high],
+        }
 
   - id: anthropic/claude-opus-5-5
     name: Claude Opus 5.5
@@ -128,12 +248,27 @@ models:
       Default Anthropic lead for long-running agentic coding and knowledge work.
       Better price/quality than Fable for most sessions. Adaptive thinking is always on.
     contextWindow: 1_000_000
-    pricing: { unit: per_1m_tokens, input: 4.00, output: 20.00, cached_input: 0.20 }
+    pricing:
+      { unit: per_1m_tokens, input: 4.00, output: 20.00, cached_input: 0.20 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 1, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: medium, allowedValues: [medium, high] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 1, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: medium,
+          allowedValues: [medium, high],
+        }
 
   - id: anthropic/claude-opus-5
     name: Claude Opus 5
@@ -142,12 +277,27 @@ models:
       Previous Opus generation. Use when a pinned Opus 5 snapshot is required.
       Prefer Opus 5.5 for new lead-agent work.
     contextWindow: 1_000_000
-    pricing: { unit: per_1m_tokens, input: 5.00, output: 25.00, cached_input: 0.50 }
+    pricing:
+      { unit: per_1m_tokens, input: 5.00, output: 25.00, cached_input: 0.50 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 1, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: high, allowedValues: [low, medium, high] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 1, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: high,
+          allowedValues: [low, medium, high],
+        }
 
   - id: anthropic/claude-opus-4-8
     name: Claude Opus 4.8
@@ -156,12 +306,27 @@ models:
       Late Opus 4.x lead. Keep for regressions against Opus 5.x or when a caller
       already depends on 4.8 tool-calling behavior.
     contextWindow: 1_000_000
-    pricing: { unit: per_1m_tokens, input: 5.00, output: 25.00, cached_input: 0.50 }
+    pricing:
+      { unit: per_1m_tokens, input: 5.00, output: 25.00, cached_input: 0.50 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 1, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: high, allowedValues: [low, medium, high] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 1, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: high,
+          allowedValues: [low, medium, high],
+        }
 
   - id: anthropic/claude-opus-4-7
     name: Claude Opus 4.7
@@ -170,12 +335,27 @@ models:
       Opus 4.7 snapshot. Same list price as 4.8. Prefer a newer Opus unless this
       exact generation is required.
     contextWindow: 1_000_000
-    pricing: { unit: per_1m_tokens, input: 5.00, output: 25.00, cached_input: 0.50 }
+    pricing:
+      { unit: per_1m_tokens, input: 5.00, output: 25.00, cached_input: 0.50 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 1, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: high, allowedValues: [low, medium, high] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 1, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: high,
+          allowedValues: [low, medium, high],
+        }
 
   - id: anthropic/claude-opus-4-6
     name: Claude Opus 4.6
@@ -184,12 +364,27 @@ models:
       Opus 4.6 snapshot. Same list price as later 4.x Opus models. Use only for
       pinned behavior.
     contextWindow: 1_000_000
-    pricing: { unit: per_1m_tokens, input: 5.00, output: 25.00, cached_input: 0.50 }
+    pricing:
+      { unit: per_1m_tokens, input: 5.00, output: 25.00, cached_input: 0.50 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 1, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: high, allowedValues: [low, medium, high] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 1, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: high,
+          allowedValues: [low, medium, high],
+        }
 
   - id: anthropic/claude-opus-4-5
     name: Claude Opus 4.5
@@ -199,12 +394,27 @@ models:
       same $5 / $25 list price as later 4.x. Prefer Opus 5.5 unless this snapshot
       is required.
     contextWindow: 200_000
-    pricing: { unit: per_1m_tokens, input: 5.00, output: 25.00, cached_input: 0.50 }
+    pricing:
+      { unit: per_1m_tokens, input: 5.00, output: 25.00, cached_input: 0.50 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 1, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 64000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: high, allowedValues: [low, medium, high] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 1, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 64000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: high,
+          allowedValues: [low, medium, high],
+        }
 
   - id: xai/grok-4.6
     name: Grok 4.6
@@ -214,9 +424,24 @@ models:
       session benefits from Grok's search/tool stack. Prompts at or above 200k tokens
       bill the whole request at $4 / $12 per 1M.
     contextWindow: 500_000
-    pricing: { unit: per_1m_tokens, input: 2.00, output: 6.00, cached_input: 0.50 }
+    pricing:
+      { unit: per_1m_tokens, input: 2.00, output: 6.00, cached_input: 0.50 }
     categories: [leading-agent]
     parameters:
-      - { id: parameter_temperature, required: false, defaultValue: 1, constraints: { min: 0, max: 2, step: 0.1 } }
-      - { id: parameter_max_output_tokens, required: false, constraints: { min: 1, max: 128000 } }
-      - { id: parameter_reasoning_effort, required: false, defaultValue: high, allowedValues: [low, medium, high, xhigh] }
+      - {
+          id: parameter_temperature,
+          required: false,
+          defaultValue: 1,
+          constraints: { min: 0, max: 2, step: 0.1 },
+        }
+      - {
+          id: parameter_max_output_tokens,
+          required: false,
+          constraints: { min: 1, max: 128000 },
+        }
+      - {
+          id: parameter_reasoning_effort,
+          required: false,
+          defaultValue: high,
+          allowedValues: [low, medium, high, xhigh],
+        }

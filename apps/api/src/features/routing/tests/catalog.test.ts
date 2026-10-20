@@ -17,6 +17,10 @@ import {
 } from "@/features/media-engine/providers/factory"
 import { listMediaRoutes } from "../catalog"
 import { createFakeProviderClass } from "./fake-provider"
+import {
+  registerProvider,
+  unregisterProvider,
+} from "@/features/capacity/registry"
 
 const PREFIX = `rtcat-${randomUUID().slice(0, 8)}`
 const FAKE_A = `${PREFIX}-fake-a`
@@ -38,6 +42,28 @@ beforeAll(async () => {
 
   registerMediaAdapter(FAKE_A, createFakeProviderClass(FAKE_A))
   registerMediaAdapter(FAKE_B, createFakeProviderClass(FAKE_B))
+  for (const name of [FAKE_A, FAKE_B]) {
+    const envName = `${name.toUpperCase().replace(/-/g, "_")}_API_KEY`
+    registerProvider({
+      name,
+      adapter: name,
+      tasks: ["media"],
+      strategy: "priority",
+      accounts: [
+        {
+          id: `${name}:test`,
+          limits: {
+            rpm: 60,
+            burst: 60,
+            maxConcurrency: 2,
+            probeTtlMs: 30_000,
+            cooldownMs: 15_000,
+          },
+          credentialEnv: envName,
+        },
+      ],
+    })
+  }
 
   await db.insert(llmModels).values({
     id: MODEL,
@@ -136,6 +162,8 @@ afterAll(async () => {
   await db.delete(llmModels).where(eq(llmModels.id, MODEL))
   unregisterMediaAdapter(FAKE_A)
   unregisterMediaAdapter(FAKE_B)
+  unregisterProvider(FAKE_A)
+  unregisterProvider(FAKE_B)
 })
 
 describe("listMediaRoutes", () => {

@@ -10,10 +10,7 @@ import type { LibraryAssetDragItem } from "../../../utils/library-dnd"
 import { ARBORIST_NODE_DRAG_TYPE } from "@/features/editor/utils/arborist-dnd"
 import { listProjectAssetsQueryOptions } from "@/features/projects/query-mutation"
 import { cn } from "@/lib/utils"
-import {
-  buildOptimizeddImageUrl,
-  imageUrlTransforms,
-} from "@/utils/transform-url"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 type MediaFormat = "image" | "video" | "audio"
 
@@ -163,9 +160,7 @@ function MediaAssetTile({
 }) {
   const [{ isDragging }, drag] = useAssetDrag(node, format)
   const thumbnailUrl =
-    format === "image" && node.url
-      ? buildOptimizeddImageUrl(node.url, imageUrlTransforms.thumbnails.small)
-      : null
+    format === "image" && node.url ? thumbnailImageUrl(node.url) : null
 
   return (
     <button

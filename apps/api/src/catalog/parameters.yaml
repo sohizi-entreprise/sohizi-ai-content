@@ -118,7 +118,11 @@ parameters:
     options:
       - { id: option_background_auto, value: auto, label: Auto }
       - { id: option_background_opaque, value: opaque, label: Opaque }
-      - { id: option_background_transparent, value: transparent, label: Transparent }
+      - {
+          id: option_background_transparent,
+          value: transparent,
+          label: Transparent,
+        }
 
   - id: parameter_image
     key: image
@@ -191,51 +195,276 @@ parameters:
     description: Preset voice name or provider voice id.
     xUiComponent: select
     options:
-      - { id: option_voice_achernar, value: Achernar, label: Achernar, description: "Soft, Higher pitch" }
-      - { id: option_voice_achird, value: Achird, label: Achird, description: "Friendly, Lower middle pitch" }
-      - { id: option_voice_algenib, value: Algenib, label: Algenib, description: "Gravelly, Lower pitch" }
-      - { id: option_voice_algieba, value: Algieba, label: Algieba, description: "Smooth, Lower pitch" }
-      - { id: option_voice_alnilam, value: Alnilam, label: Alnilam, description: "Firm, Lower middle pitch" }
-      - { id: option_voice_aoede, value: Aoede, label: Aoede, description: "Breezy, Middle pitch" }
-      - { id: option_voice_autonoe, value: Autonoe, label: Autonoe, description: "Bright, Middle pitch" }
-      - { id: option_voice_callirrhoe, value: Callirrhoe, label: Callirrhoe, description: "Easy-going, Middle pitch" }
-      - { id: option_voice_charon, value: Charon, label: Charon, description: "Informative, Lower pitch" }
-      - { id: option_voice_despina, value: Despina, label: Despina, description: "Smooth, Middle pitch" }
-      - { id: option_voice_enceladus, value: Enceladus, label: Enceladus, description: "Breathy, Lower pitch" }
-      - { id: option_voice_erinome, value: Erinome, label: Erinome, description: "Clear, Middle pitch" }
-      - { id: option_voice_fenrir, value: Fenrir, label: Fenrir, description: "Excitable, Lower middle pitch" }
-      - { id: option_voice_gacrux, value: Gacrux, label: Gacrux, description: "Mature, Middle pitch" }
-      - { id: option_voice_iapetus, value: Iapetus, label: Iapetus, description: "Clear, Lower middle pitch" }
-      - { id: option_voice_kore, value: Kore, label: Kore, description: "Firm, Middle pitch" }
-      - { id: option_voice_laomedeia, value: Laomedeia, label: Laomedeia, description: "Upbeat, Higher pitch" }
-      - { id: option_voice_leda, value: Leda, label: Leda, description: "Youthful, Higher pitch" }
-      - { id: option_voice_orus, value: Orus, label: Orus, description: "Firm, Lower middle pitch" }
-      - { id: option_voice_puck, value: Puck, label: Puck, description: "Upbeat, Middle pitch" }
-      - { id: option_voice_pulcherrima, value: Pulcherrima, label: Pulcherrima, description: "Forward, Middle pitch" }
-      - { id: option_voice_rasalgethi, value: Rasalgethi, label: Rasalgethi, description: "Informative, Middle pitch" }
-      - { id: option_voice_sadachbia, value: Sadachbia, label: Sadachbia, description: "Lively, Lower pitch" }
-      - { id: option_voice_sadaltager, value: Sadaltager, label: Sadaltager, description: "Knowledgeable, Middle pitch" }
-      - { id: option_voice_schedar, value: Schedar, label: Schedar, description: "Even, Lower middle pitch" }
-      - { id: option_voice_sulafat, value: Sulafat, label: Sulafat, description: "Warm, Middle pitch" }
-      - { id: option_voice_umbriel, value: Umbriel, label: Umbriel, description: "Easy-going, Lower middle pitch" }
-      - { id: option_voice_vindemiatrix, value: Vindemiatrix, label: Vindemiatrix, description: "Gentle, Middle pitch" }
-      - { id: option_voice_zephyr, value: Zephyr, label: Zephyr, description: "Bright, Higher pitch" }
-      - { id: option_voice_zubenelgenubi, value: Zubenelgenubi, label: Zubenelgenubi, description: "Casual, Lower middle pitch" }
-      - { id: option_voice_alicia, value: Alicia, label: Alicia, description: Polished Global Anchor }
-      - { id: option_voice_alice, value: Alice, label: Alice, description: "Clear British woman, e-learning" }
-      - { id: option_voice_sarah, value: Sarah, label: Sarah, description: "Confident, warm, professional" }
-      - { id: option_voice_jessica, value: Jessica, label: Jessica, description: "Playful American, trendy content" }
-      - { id: option_voice_lily, value: Lily, label: Lily, description: "Velvety British, news and narration" }
-      - { id: option_voice_matilda, value: Matilda, label: Matilda, description: "Professional alto, many use cases" }
-      - { id: option_voice_bella, value: Bella, label: Bella, description: "Warm, bright, professional American" }
-      - { id: option_voice_adam, value: Adam, label: Adam, description: "Bright tenor, brash and confident" }
-      - { id: option_voice_brian, value: Brian, label: Brian, description: "Resonant, comforting, narrations" }
-      - { id: option_voice_daniel, value: Daniel, label: Daniel, description: Strong broadcast and news }
-      - { id: option_voice_chris, value: Chris, label: Chris, description: "Natural, down-to-earth" }
-      - { id: option_voice_charlie, value: Charlie, label: Charlie, description: "Young Australian, confident" }
-      - { id: option_voice_george, value: George, label: George, description: Warm resonance }
-      - { id: option_voice_liam, value: Liam, label: Liam, description: "Energy and warmth, reels and shorts" }
-      - { id: option_voice_river, value: River, label: River, description: "Relaxed, neutral narration" }
+      - {
+          id: option_voice_achernar,
+          value: Achernar,
+          label: Achernar,
+          description: "Soft, Higher pitch",
+        }
+      - {
+          id: option_voice_achird,
+          value: Achird,
+          label: Achird,
+          description: "Friendly, Lower middle pitch",
+        }
+      - {
+          id: option_voice_algenib,
+          value: Algenib,
+          label: Algenib,
+          description: "Gravelly, Lower pitch",
+        }
+      - {
+          id: option_voice_algieba,
+          value: Algieba,
+          label: Algieba,
+          description: "Smooth, Lower pitch",
+        }
+      - {
+          id: option_voice_alnilam,
+          value: Alnilam,
+          label: Alnilam,
+          description: "Firm, Lower middle pitch",
+        }
+      - {
+          id: option_voice_aoede,
+          value: Aoede,
+          label: Aoede,
+          description: "Breezy, Middle pitch",
+        }
+      - {
+          id: option_voice_autonoe,
+          value: Autonoe,
+          label: Autonoe,
+          description: "Bright, Middle pitch",
+        }
+      - {
+          id: option_voice_callirrhoe,
+          value: Callirrhoe,
+          label: Callirrhoe,
+          description: "Easy-going, Middle pitch",
+        }
+      - {
+          id: option_voice_charon,
+          value: Charon,
+          label: Charon,
+          description: "Informative, Lower pitch",
+        }
+      - {
+          id: option_voice_despina,
+          value: Despina,
+          label: Despina,
+          description: "Smooth, Middle pitch",
+        }
+      - {
+          id: option_voice_enceladus,
+          value: Enceladus,
+          label: Enceladus,
+          description: "Breathy, Lower pitch",
+        }
+      - {
+          id: option_voice_erinome,
+          value: Erinome,
+          label: Erinome,
+          description: "Clear, Middle pitch",
+        }
+      - {
+          id: option_voice_fenrir,
+          value: Fenrir,
+          label: Fenrir,
+          description: "Excitable, Lower middle pitch",
+        }
+      - {
+          id: option_voice_gacrux,
+          value: Gacrux,
+          label: Gacrux,
+          description: "Mature, Middle pitch",
+        }
+      - {
+          id: option_voice_iapetus,
+          value: Iapetus,
+          label: Iapetus,
+          description: "Clear, Lower middle pitch",
+        }
+      - {
+          id: option_voice_kore,
+          value: Kore,
+          label: Kore,
+          description: "Firm, Middle pitch",
+        }
+      - {
+          id: option_voice_laomedeia,
+          value: Laomedeia,
+          label: Laomedeia,
+          description: "Upbeat, Higher pitch",
+        }
+      - {
+          id: option_voice_leda,
+          value: Leda,
+          label: Leda,
+          description: "Youthful, Higher pitch",
+        }
+      - {
+          id: option_voice_orus,
+          value: Orus,
+          label: Orus,
+          description: "Firm, Lower middle pitch",
+        }
+      - {
+          id: option_voice_puck,
+          value: Puck,
+          label: Puck,
+          description: "Upbeat, Middle pitch",
+        }
+      - {
+          id: option_voice_pulcherrima,
+          value: Pulcherrima,
+          label: Pulcherrima,
+          description: "Forward, Middle pitch",
+        }
+      - {
+          id: option_voice_rasalgethi,
+          value: Rasalgethi,
+          label: Rasalgethi,
+          description: "Informative, Middle pitch",
+        }
+      - {
+          id: option_voice_sadachbia,
+          value: Sadachbia,
+          label: Sadachbia,
+          description: "Lively, Lower pitch",
+        }
+      - {
+          id: option_voice_sadaltager,
+          value: Sadaltager,
+          label: Sadaltager,
+          description: "Knowledgeable, Middle pitch",
+        }
+      - {
+          id: option_voice_schedar,
+          value: Schedar,
+          label: Schedar,
+          description: "Even, Lower middle pitch",
+        }
+      - {
+          id: option_voice_sulafat,
+          value: Sulafat,
+          label: Sulafat,
+          description: "Warm, Middle pitch",
+        }
+      - {
+          id: option_voice_umbriel,
+          value: Umbriel,
+          label: Umbriel,
+          description: "Easy-going, Lower middle pitch",
+        }
+      - {
+          id: option_voice_vindemiatrix,
+          value: Vindemiatrix,
+          label: Vindemiatrix,
+          description: "Gentle, Middle pitch",
+        }
+      - {
+          id: option_voice_zephyr,
+          value: Zephyr,
+          label: Zephyr,
+          description: "Bright, Higher pitch",
+        }
+      - {
+          id: option_voice_zubenelgenubi,
+          value: Zubenelgenubi,
+          label: Zubenelgenubi,
+          description: "Casual, Lower middle pitch",
+        }
+      - {
+          id: option_voice_alicia,
+          value: Alicia,
+          label: Alicia,
+          description: Polished Global Anchor,
+        }
+      - {
+          id: option_voice_alice,
+          value: Alice,
+          label: Alice,
+          description: "Clear British woman, e-learning",
+        }
+      - {
+          id: option_voice_sarah,
+          value: Sarah,
+          label: Sarah,
+          description: "Confident, warm, professional",
+        }
+      - {
+          id: option_voice_jessica,
+          value: Jessica,
+          label: Jessica,
+          description: "Playful American, trendy content",
+        }
+      - {
+          id: option_voice_lily,
+          value: Lily,
+          label: Lily,
+          description: "Velvety British, news and narration",
+        }
+      - {
+          id: option_voice_matilda,
+          value: Matilda,
+          label: Matilda,
+          description: "Professional alto, many use cases",
+        }
+      - {
+          id: option_voice_bella,
+          value: Bella,
+          label: Bella,
+          description: "Warm, bright, professional American",
+        }
+      - {
+          id: option_voice_adam,
+          value: Adam,
+          label: Adam,
+          description: "Bright tenor, brash and confident",
+        }
+      - {
+          id: option_voice_brian,
+          value: Brian,
+          label: Brian,
+          description: "Resonant, comforting, narrations",
+        }
+      - {
+          id: option_voice_daniel,
+          value: Daniel,
+          label: Daniel,
+          description: Strong broadcast and news,
+        }
+      - {
+          id: option_voice_chris,
+          value: Chris,
+          label: Chris,
+          description: "Natural, down-to-earth",
+        }
+      - {
+          id: option_voice_charlie,
+          value: Charlie,
+          label: Charlie,
+          description: "Young Australian, confident",
+        }
+      - {
+          id: option_voice_george,
+          value: George,
+          label: George,
+          description: Warm resonance,
+        }
+      - {
+          id: option_voice_liam,
+          value: Liam,
+          label: Liam,
+          description: "Energy and warmth, reels and shorts",
+        }
+      - {
+          id: option_voice_river,
+          value: River,
+          label: River,
+          description: "Relaxed, neutral narration",
+        }
 
   - id: parameter_stability
     key: stability

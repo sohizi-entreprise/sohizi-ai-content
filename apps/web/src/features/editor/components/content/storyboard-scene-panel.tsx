@@ -8,6 +8,7 @@ import { Film } from "lucide-react"
 import { useRef, useState, type PointerEvent } from "react"
 import type { SceneSummary } from "../../extensions/storyboard"
 import { cn } from "@/lib/utils"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 interface StoryboardScenePanelProps {
   scenes: Array<SceneSummary>
@@ -143,7 +144,7 @@ function ScenePreview({
       <span className="storyboard-panel-thumb">
         {scene.firstImage ? (
           <img
-            src={scene.firstImage}
+            src={thumbnailImageUrl(scene.firstImage)}
             alt={scene.title || `Scene ${index + 1}`}
           />
         ) : (

@@ -2,6 +2,7 @@ import { nodeToShot } from "./storyboard-nodes"
 import type { ShotData, ShotDialogueLine } from "./storyboard-markdown"
 import type { Editor, JSONContent } from "@tiptap/core"
 import type { ImageClip, TextClip, Track } from "@sohizi/video-composition"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 export const SEQUENCE_FPS = 30
 export const SEQUENCE_SHOT_SECONDS = 3
@@ -126,7 +127,9 @@ export function buildStoryboardSequence(
       endFrame,
       sourceStartFrame: 0,
       sourceDurationInFrames: SEQUENCE_FRAMES_PER_SHOT,
-      url: shot.image || EMPTY_SHOT_IMAGE,
+      url: shot.image
+        ? thumbnailImageUrl(shot.image, "large")
+        : EMPTY_SHOT_IMAGE,
       fileName: `scene-${shot.sceneNumber}-shot-${shot.shotNumber}`,
       opacity: 1,
       borderRadius: 0,

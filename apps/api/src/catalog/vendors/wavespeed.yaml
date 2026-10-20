@@ -6,61 +6,261 @@ kind: media
 rateLimit: { rpm: 60, burst: 60, maxConcurrency: 10 }
 circuitConfig: { cooldownMs: 15000, probeTtlMs: 30000 }
 models:
-  - { id: openai/gpt-image-2.5-sunburst/text-to-image, apiName: openai/gpt-image-2.5-sunburst/text-to-image, priority: 100 }
-  - { id: openai/gpt-image-2.5-flare/text-to-image, apiName: openai/gpt-image-2.5-flare/text-to-image, priority: 90 }
-  - { id: openai/gpt-image-2/text-to-image, apiName: openai/gpt-image-2/text-to-image, priority: 80 }
-  - { id: openai/gpt-image-2.5-sunburst/edit, apiName: openai/gpt-image-2.5-sunburst/edit, priority: 100 }
-  - { id: openai/gpt-image-2.5-flare/edit, apiName: openai/gpt-image-2.5-flare/edit, priority: 90 }
-  - { id: openai/gpt-image-2/edit, apiName: openai/gpt-image-2/edit, priority: 80 }
-  - { id: google/nano-banana-pro/text-to-image, apiName: google/nano-banana-pro/text-to-image, priority: 100 }
-  - { id: google/nano-banana-2/text-to-image, apiName: google/nano-banana-2/text-to-image, priority: 80 }
-  - { id: google/nano-banana-2/text-to-image-fast, apiName: google/nano-banana-2/text-to-image-fast, priority: 70 }
-  - { id: google/nano-banana-pro/edit, apiName: google/nano-banana-pro/edit, priority: 100 }
-  - { id: google/nano-banana-2/edit, apiName: google/nano-banana-2/edit, priority: 80 }
-  - { id: google/nano-banana-2/edit-fast, apiName: google/nano-banana-2/edit-fast, priority: 70 }
-  - { id: microsoft/mai-image-2.5-pro/text-to-image, apiName: microsoft/mai-image-2.5-pro/text-to-image, priority: 90 }
-  - { id: microsoft/mai-image-2.5/text-to-image, apiName: microsoft/mai-image-2.5/text-to-image, priority: 70 }
-  - { id: microsoft/mai-image-2.5-pro/edit, apiName: microsoft/mai-image-2.5-pro/edit, priority: 90 }
-  - { id: microsoft/mai-image-2.5/edit, apiName: microsoft/mai-image-2.5/edit, priority: 70 }
-  - { id: bytedance/seedance-2.5/text-to-video, apiName: bytedance/seedance-2.5/text-to-video, priority: 100 }
-  - { id: bytedance/seedance-2.0/text-to-video, apiName: bytedance/seedance-2.0/text-to-video, priority: 80 }
-  - { id: bytedance/seedance-2.0-fast/text-to-video, apiName: bytedance/seedance-2.0-fast/text-to-video, priority: 70 }
-  - { id: bytedance/seedance-2.5/image-to-video, apiName: bytedance/seedance-2.5/image-to-video, priority: 100 }
-  - { id: bytedance/seedance-2.0/image-to-video, apiName: bytedance/seedance-2.0/image-to-video, priority: 80 }
-  - { id: bytedance/seedance-2.0-fast/image-to-video, apiName: bytedance/seedance-2.0-fast/image-to-video, priority: 70 }
-  - { id: bytedance/seedance-2.5/video-edit, apiName: bytedance/seedance-2.5/video-edit, priority: 100 }
-  - { id: bytedance/seedance-2.0/video-edit, apiName: bytedance/seedance-2.0/video-edit, priority: 80 }
-  - { id: kwaivgi/kling-video-o3-pro/text-to-video, apiName: kwaivgi/kling-video-o3-pro/text-to-video, priority: 90 }
-  - { id: kwaivgi/kling-video-o3-std/text-to-video, apiName: kwaivgi/kling-video-o3-std/text-to-video, priority: 70 }
-  - { id: kwaivgi/kling-v3.0-pro/text-to-video, apiName: kwaivgi/kling-v3.0-pro/text-to-video, priority: 80 }
-  - { id: kwaivgi/kling-v3.0-std/text-to-video, apiName: kwaivgi/kling-v3.0-std/text-to-video, priority: 60 }
-  - { id: kwaivgi/kling-video-o3-pro/image-to-video, apiName: kwaivgi/kling-video-o3-pro/image-to-video, priority: 90 }
-  - { id: kwaivgi/kling-video-o3-std/image-to-video, apiName: kwaivgi/kling-video-o3-std/image-to-video, priority: 70 }
-  - { id: kwaivgi/kling-v3.0-pro/image-to-video, apiName: kwaivgi/kling-v3.0-pro/image-to-video, priority: 80 }
-  - { id: kwaivgi/kling-v3.0-std/image-to-video, apiName: kwaivgi/kling-v3.0-std/image-to-video, priority: 60 }
-  - { id: kwaivgi/kling-video-o3-pro/video-edit, apiName: kwaivgi/kling-video-o3-pro/video-edit, priority: 90 }
-  - { id: kwaivgi/kling-video-o3-std/video-edit, apiName: kwaivgi/kling-video-o3-std/video-edit, priority: 70 }
-  - { id: google/gemini-omni-1.1-flash/text-to-video, apiName: google/gemini-omni-1.1-flash/text-to-video, priority: 90 }
-  - { id: google/gemini-omni-flash/text-to-video, apiName: google/gemini-omni-flash/text-to-video, priority: 70 }
-  - { id: google/gemini-omni-1.1-flash/image-to-video, apiName: google/gemini-omni-1.1-flash/image-to-video, priority: 90 }
-  - { id: google/gemini-omni-flash/image-to-video, apiName: google/gemini-omni-flash/image-to-video, priority: 70 }
-  - { id: google/gemini-omni-1.1-flash/video-edit, apiName: google/gemini-omni-1.1-flash/video-edit, priority: 90 }
-  - { id: google/gemini-omni-flash/video-edit, apiName: google/gemini-omni-flash/video-edit, priority: 70 }
-  - { id: kwaivgi/kling-v3.0-pro/motion-control, apiName: kwaivgi/kling-v3.0-pro/motion-control, priority: 100 }
+  - {
+      id: openai/gpt-image-2.5-sunburst/text-to-image,
+      apiName: openai/gpt-image-2.5-sunburst/text-to-image,
+      priority: 100,
+    }
+  - {
+      id: openai/gpt-image-2.5-flare/text-to-image,
+      apiName: openai/gpt-image-2.5-flare/text-to-image,
+      priority: 90,
+    }
+  - {
+      id: openai/gpt-image-2/text-to-image,
+      apiName: openai/gpt-image-2/text-to-image,
+      priority: 80,
+    }
+  - {
+      id: openai/gpt-image-2.5-sunburst/edit,
+      apiName: openai/gpt-image-2.5-sunburst/edit,
+      priority: 100,
+    }
+  - {
+      id: openai/gpt-image-2.5-flare/edit,
+      apiName: openai/gpt-image-2.5-flare/edit,
+      priority: 90,
+    }
+  - {
+      id: openai/gpt-image-2/edit,
+      apiName: openai/gpt-image-2/edit,
+      priority: 80,
+    }
+  - {
+      id: google/nano-banana-pro/text-to-image,
+      apiName: google/nano-banana-pro/text-to-image,
+      priority: 100,
+    }
+  - {
+      id: google/nano-banana-2/text-to-image,
+      apiName: google/nano-banana-2/text-to-image,
+      priority: 80,
+    }
+  - {
+      id: google/nano-banana-2/text-to-image-fast,
+      apiName: google/nano-banana-2/text-to-image-fast,
+      priority: 70,
+    }
+  - {
+      id: google/nano-banana-pro/edit,
+      apiName: google/nano-banana-pro/edit,
+      priority: 100,
+    }
+  - {
+      id: google/nano-banana-2/edit,
+      apiName: google/nano-banana-2/edit,
+      priority: 80,
+    }
+  - {
+      id: google/nano-banana-2/edit-fast,
+      apiName: google/nano-banana-2/edit-fast,
+      priority: 70,
+    }
+  - {
+      id: microsoft/mai-image-2.5-pro/text-to-image,
+      apiName: microsoft/mai-image-2.5-pro/text-to-image,
+      priority: 90,
+    }
+  - {
+      id: microsoft/mai-image-2.5/text-to-image,
+      apiName: microsoft/mai-image-2.5/text-to-image,
+      priority: 70,
+    }
+  - {
+      id: microsoft/mai-image-2.5-pro/edit,
+      apiName: microsoft/mai-image-2.5-pro/edit,
+      priority: 90,
+    }
+  - {
+      id: microsoft/mai-image-2.5/edit,
+      apiName: microsoft/mai-image-2.5/edit,
+      priority: 70,
+    }
+  - {
+      id: bytedance/seedance-2.5/text-to-video,
+      apiName: bytedance/seedance-2.5/text-to-video,
+      priority: 100,
+    }
+  - {
+      id: bytedance/seedance-2.0/text-to-video,
+      apiName: bytedance/seedance-2.0/text-to-video,
+      priority: 80,
+    }
+  - {
+      id: bytedance/seedance-2.0-fast/text-to-video,
+      apiName: bytedance/seedance-2.0-fast/text-to-video,
+      priority: 70,
+    }
+  - {
+      id: bytedance/seedance-2.5/image-to-video,
+      apiName: bytedance/seedance-2.5/image-to-video,
+      priority: 100,
+    }
+  - {
+      id: bytedance/seedance-2.0/image-to-video,
+      apiName: bytedance/seedance-2.0/image-to-video,
+      priority: 80,
+    }
+  - {
+      id: bytedance/seedance-2.0-fast/image-to-video,
+      apiName: bytedance/seedance-2.0-fast/image-to-video,
+      priority: 70,
+    }
+  - {
+      id: bytedance/seedance-2.5/video-edit,
+      apiName: bytedance/seedance-2.5/video-edit,
+      priority: 100,
+    }
+  - {
+      id: bytedance/seedance-2.0/video-edit,
+      apiName: bytedance/seedance-2.0/video-edit,
+      priority: 80,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-pro/text-to-video,
+      apiName: kwaivgi/kling-video-o3-pro/text-to-video,
+      priority: 90,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-std/text-to-video,
+      apiName: kwaivgi/kling-video-o3-std/text-to-video,
+      priority: 70,
+    }
+  - {
+      id: kwaivgi/kling-v3.0-pro/text-to-video,
+      apiName: kwaivgi/kling-v3.0-pro/text-to-video,
+      priority: 80,
+    }
+  - {
+      id: kwaivgi/kling-v3.0-std/text-to-video,
+      apiName: kwaivgi/kling-v3.0-std/text-to-video,
+      priority: 60,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-pro/image-to-video,
+      apiName: kwaivgi/kling-video-o3-pro/image-to-video,
+      priority: 90,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-std/image-to-video,
+      apiName: kwaivgi/kling-video-o3-std/image-to-video,
+      priority: 70,
+    }
+  - {
+      id: kwaivgi/kling-v3.0-pro/image-to-video,
+      apiName: kwaivgi/kling-v3.0-pro/image-to-video,
+      priority: 80,
+    }
+  - {
+      id: kwaivgi/kling-v3.0-std/image-to-video,
+      apiName: kwaivgi/kling-v3.0-std/image-to-video,
+      priority: 60,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-pro/video-edit,
+      apiName: kwaivgi/kling-video-o3-pro/video-edit,
+      priority: 90,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-std/video-edit,
+      apiName: kwaivgi/kling-video-o3-std/video-edit,
+      priority: 70,
+    }
+  - {
+      id: google/gemini-omni-1.1-flash/text-to-video,
+      apiName: google/gemini-omni-1.1-flash/text-to-video,
+      priority: 90,
+    }
+  - {
+      id: google/gemini-omni-flash/text-to-video,
+      apiName: google/gemini-omni-flash/text-to-video,
+      priority: 70,
+    }
+  - {
+      id: google/gemini-omni-1.1-flash/image-to-video,
+      apiName: google/gemini-omni-1.1-flash/image-to-video,
+      priority: 90,
+    }
+  - {
+      id: google/gemini-omni-flash/image-to-video,
+      apiName: google/gemini-omni-flash/image-to-video,
+      priority: 70,
+    }
+  - {
+      id: google/gemini-omni-1.1-flash/video-edit,
+      apiName: google/gemini-omni-1.1-flash/video-edit,
+      priority: 90,
+    }
+  - {
+      id: google/gemini-omni-flash/video-edit,
+      apiName: google/gemini-omni-flash/video-edit,
+      priority: 70,
+    }
+  - {
+      id: kwaivgi/kling-v3.0-pro/motion-control,
+      apiName: kwaivgi/kling-v3.0-pro/motion-control,
+      priority: 100,
+    }
   - { id: elevenlabs/eleven-v4, apiName: elevenlabs/eleven-v4, priority: 100 }
-  - { id: google/gemini-3.8-flash/text-to-speech, apiName: google/gemini-3.8-flash/text-to-speech, priority: 100 }
-  - { id: google/lyria-3.5/music, apiName: google/lyria-3.5/music, priority: 100 }
+  - {
+      id: google/gemini-3.8-flash/text-to-speech,
+      apiName: google/gemini-3.8-flash/text-to-speech,
+      priority: 100,
+    }
+  - {
+      id: google/lyria-3.5/music,
+      apiName: google/lyria-3.5/music,
+      priority: 100,
+    }
   - { id: minimax/music-3.0, apiName: minimax/music-3.0, priority: 90 }
-  - { id: mureka-ai/mureka-o2/generate-song, apiName: mureka-ai/mureka-o2/generate-song, priority: 80 }
-  - { id: mureka-ai/mureka-v8/generate-bgm, apiName: mureka-ai/mureka-v8/generate-bgm, priority: 70 }
+  - {
+      id: mureka-ai/mureka-o2/generate-song,
+      apiName: mureka-ai/mureka-o2/generate-song,
+      priority: 80,
+    }
+  - {
+      id: mureka-ai/mureka-v8/generate-bgm,
+      apiName: mureka-ai/mureka-v8/generate-bgm,
+      priority: 70,
+    }
   - { id: minimax/music-cover, apiName: minimax/music-cover, priority: 60 }
-  - { id: kwaivgi/kling-text-to-audio, apiName: kwaivgi/kling-text-to-audio, priority: 50 }
+  - {
+      id: kwaivgi/kling-text-to-audio,
+      apiName: kwaivgi/kling-text-to-audio,
+      priority: 50,
+    }
   - { id: sonilo/v1/text-to-sfx, apiName: sonilo/v1/text-to-sfx, priority: 40 }
-  - { id: elevenlabs/voice-changer, apiName: elevenlabs/voice-changer, priority: 100 }
+  - {
+      id: elevenlabs/voice-changer,
+      apiName: elevenlabs/voice-changer,
+      priority: 100,
+    }
   - { id: sync/lipsync-3, apiName: sync/lipsync-3, priority: 100 }
-  - { id: clarity-ai/pro-upscaler, apiName: clarity-ai/pro-upscaler, priority: 100 }
-  - { id: wavespeed-ai/video-upscaler-pro, apiName: wavespeed-ai/video-upscaler-pro, priority: 100 }
-  - { id: bytedance/video-upscaler, apiName: bytedance/video-upscaler, priority: 80 }
+  - {
+      id: clarity-ai/pro-upscaler,
+      apiName: clarity-ai/pro-upscaler,
+      priority: 100,
+    }
+  - {
+      id: wavespeed-ai/video-upscaler-pro,
+      apiName: wavespeed-ai/video-upscaler-pro,
+      priority: 100,
+    }
+  - {
+      id: bytedance/video-upscaler,
+      apiName: bytedance/video-upscaler,
+      priority: 80,
+    }
 parametersMapping:
   parameter_prompt: { vendorParamName: prompt }
   parameter_negative_prompt: { vendorParamName: negative_prompt }
@@ -119,7 +319,8 @@ parametersMapping:
     optionMapping:
       option_background_auto: { value: auto, mappedValue: auto }
       option_background_opaque: { value: opaque, mappedValue: opaque }
-      option_background_transparent: { value: transparent, mappedValue: transparent }
+      option_background_transparent:
+        { value: transparent, mappedValue: transparent }
   parameter_image: { vendorParamName: image }
   parameter_images: { vendorParamName: images }
   parameter_last_image: { vendorParamName: last_image }

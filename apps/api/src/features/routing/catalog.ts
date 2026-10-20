@@ -1,64 +1,18 @@
-import { db } from "@/db"
-import { llmModels, llmVendors, llmVendorsAndModels } from "@/db/schema"
-import { and, asc, eq } from "drizzle-orm"
-import {
-  DEFAULT_VENDOR_CIRCUIT_CONFIG,
-  DEFAULT_VENDOR_RATE_LIMIT,
-} from "@/type"
-import {
-  hasProviderApiKey,
-  isRegisteredMediaAdapter,
-} from "@/features/media-engine/providers/factory"
+import { listMediaBindings } from "@/features/capacity/bindings"
 import type { MediaRoute } from "./types"
 
-function burstOf(rpm: number, burst?: number): number {
-  return burst && burst > 0 ? burst : rpm
-}
-
 export async function listMediaRoutes(modelId: string): Promise<MediaRoute[]> {
-  const rows = await db
-    .select({
-      modelId: llmModels.id,
-      vendorName: llmVendors.name,
-      adapter: llmVendors.adapter,
-      apiName: llmVendorsAndModels.apiName,
-      priority: llmVendorsAndModels.priority,
-      rateLimit: llmVendors.rateLimit,
-      circuitConfig: llmVendors.circuitConfig,
-    })
-    .from(llmVendorsAndModels)
-    .innerJoin(llmModels, eq(llmModels.id, llmVendorsAndModels.modelId))
-    .innerJoin(llmVendors, eq(llmVendors.id, llmVendorsAndModels.vendorId))
-    .where(
-      and(
-        eq(llmVendorsAndModels.modelId, modelId),
-        eq(llmModels.enabled, true),
-        eq(llmVendors.enabled, true),
-        eq(llmVendorsAndModels.enabled, true),
-        eq(llmVendors.kind, "media"),
-      ),
-    )
-    .orderBy(asc(llmVendorsAndModels.priority), asc(llmVendors.name))
-
-  const routes: MediaRoute[] = []
-  for (const row of rows) {
-    if (!isRegisteredMediaAdapter(row.adapter)) continue
-    if (!hasProviderApiKey(row.vendorName)) continue
-
-    const rateLimit = row.rateLimit ?? DEFAULT_VENDOR_RATE_LIMIT
-    const circuit = row.circuitConfig ?? DEFAULT_VENDOR_CIRCUIT_CONFIG
-    routes.push({
-      modelId: row.modelId,
-      vendorName: row.vendorName,
-      adapter: row.adapter,
-      apiName: row.apiName,
-      priority: row.priority,
-      rpm: rateLimit.rpm,
-      burst: burstOf(rateLimit.rpm, rateLimit.burst),
-      maxConcurrency: rateLimit.maxConcurrency,
-      cooldownMs: circuit.cooldownMs,
-      probeTtlMs: circuit.probeTtlMs,
-    })
-  }
-  return routes
+  const bindings = await listMediaBindings(modelId)
+  return bindings.map((binding) => ({
+    modelId,
+    vendorName: binding.providerName,
+    adapter: binding.adapter,
+    apiName: binding.apiName,
+    priority: binding.priority,
+    rpm: 0,
+    burst: 0,
+    maxConcurrency: 0,
+    cooldownMs: 15_000,
+    probeTtlMs: 30_000,
+  }))
 }

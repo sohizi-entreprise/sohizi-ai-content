@@ -5,6 +5,7 @@ export {
   MediaProviderError,
   MediaRateLimitError,
   MediaServiceUnavailableError,
+  MediaSubmissionUnknownError,
   MediaValidationError,
   isMediaError,
 } from "./providers/type"

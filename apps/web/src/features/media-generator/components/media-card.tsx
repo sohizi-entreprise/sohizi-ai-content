@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 import {
   buildOptimizeddImageUrl,
   imageUrlTransforms,
+  thumbnailImageUrl,
 } from "@/utils/transform-url"
 
 type MediaCardProps = {
@@ -168,10 +169,7 @@ function RenderImage({
   item: MediaAsset
   onOpen?: () => void
 }) {
-  const thumbnailUrl = buildOptimizeddImageUrl(
-    item.url,
-    imageUrlTransforms.thumbnails.large,
-  )
+  const thumbnailUrl = thumbnailImageUrl(item.url, "large")
   const blurryPlaceholderUrl = buildOptimizeddImageUrl(
     item.url,
     imageUrlTransforms.blurryPlaceholder,

@@ -37,10 +37,7 @@ import {
   isPointerOverTimelineDropArea,
 } from "@/features/video-editor/utils/library-dnd"
 import { useEmptyDragPreview } from "@/features/video-editor/hooks/use-empty-drag-preview"
-import {
-  buildOptimizeddImageUrl,
-  imageUrlTransforms,
-} from "@/utils/transform-url"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 import { cn } from "@/lib/utils"
 
 export type FileGridHandle = {
@@ -570,10 +567,7 @@ function GridPreview({ node }: { node: DirectoryChild }) {
       <img
         src={
           imageAttempt === "optimized"
-            ? buildOptimizeddImageUrl(
-                resolvedUrl,
-                imageUrlTransforms.thumbnails.small,
-              )
+            ? thumbnailImageUrl(resolvedUrl)
             : resolvedUrl
         }
         alt=""

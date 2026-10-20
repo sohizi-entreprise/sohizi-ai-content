@@ -5,7 +5,19 @@ import {
   videoClips,
   videoRenderJobs,
 } from "@/db/schema"
-import { eq, and, lte, gt, asc, desc, sql, inArray, gte } from "drizzle-orm"
+import {
+  eq,
+  and,
+  lte,
+  gt,
+  asc,
+  desc,
+  sql,
+  inArray,
+  gte,
+  isNull,
+  lt,
+} from "drizzle-orm"
 import type { VideoTrackType, VideoClipProperties, AspectRatio } from "@/type"
 import type { VideoRenderJobStatus } from "@/db/schema"
 
@@ -332,6 +344,22 @@ export type CreateRenderJobData = {
   billingReservationId?: string | null
   outputBucket?: string | null
   functionName?: string | null
+  capacityAccountId?: string | null
+  capacityLease?: {
+    poolId: string
+    holderId: string
+    leaseId: string
+    epoch: number
+    expiresAtMs: number
+  } | null
+  userLease?: {
+    poolId: string
+    holderId: string
+    leaseId: string
+    epoch: number
+    expiresAtMs: number
+  } | null
+  submitState?: string | null
 }
 
 export const createRenderJob = async (data: CreateRenderJobData) => {
@@ -389,6 +417,12 @@ export type UpdateRenderJobData = {
   failureMessage?: string | null
   startedAt?: Date | null
   finishedAt?: Date | null
+  capacityAccountId?: string | null
+  capacityLease?: CreateRenderJobData["capacityLease"]
+  userLease?: CreateRenderJobData["userLease"]
+  submitState?: string | null
+  cancelRequestedAt?: Date | null
+  pollerEnqueuedAt?: Date | null
 }
 
 export const updateRenderJob = async (
@@ -401,6 +435,20 @@ export const updateRenderJob = async (
     .where(eq(videoRenderJobs.id, id))
     .returning()
   return result[0] ?? null
+}
+
+export const listRendersMissingPoller = async (olderThan: Date, limit = 20) => {
+  return db
+    .select()
+    .from(videoRenderJobs)
+    .where(
+      and(
+        inArray(videoRenderJobs.status, [...ACTIVE_RENDER_STATUSES]),
+        isNull(videoRenderJobs.pollerEnqueuedAt),
+        lt(videoRenderJobs.createdAt, olderThan),
+      ),
+    )
+    .limit(limit)
 }
 
 // ============================================================================

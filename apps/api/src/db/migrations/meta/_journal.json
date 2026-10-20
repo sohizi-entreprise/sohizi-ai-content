@@ -337,6 +337,13 @@
       "when": 1792341550315,
       "tag": "0047_timestamptz_timestamps",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1792500000000,
+      "tag": "0048_capacity_execution_state",
+      "breakpoints": true
     }
   ]
 }

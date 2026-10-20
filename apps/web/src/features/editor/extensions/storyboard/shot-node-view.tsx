@@ -21,6 +21,7 @@ import {
 } from "../../utils/arborist-dnd"
 import { useFileTreeStore } from "../../stores/file-tree-store"
 import { cn } from "@/lib/utils"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 export function ShotNodeView({ node, editor, deleteNode }: ReactNodeViewProps) {
   const shotId: string = node.attrs.shotId
@@ -137,7 +138,7 @@ export function ShotNodeView({ node, editor, deleteNode }: ReactNodeViewProps) {
 
       <div className="storyboard-shot-image">
         {image ? (
-          <img src={image} alt={action || "Shot"} />
+          <img src={thumbnailImageUrl(image)} alt={action || "Shot"} />
         ) : (
           <div className="storyboard-shot-image-empty">
             <ImageIcon className="size-7" />

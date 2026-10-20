@@ -319,14 +319,11 @@ export function createBillableLlmClient(
       return BigInt(credits_to_charge(loadedCostUsd))
     }
 
-    const actualCredits = calculateTextCredits(
-      model,
-      {
-        inputTokens: usage.input,
-        outputTokens: usage.output,
-        cachedInputTokens: usage.cached,
-      },
-    )
+    const actualCredits = calculateTextCredits(model, {
+      inputTokens: usage.input,
+      outputTokens: usage.output,
+      cachedInputTokens: usage.cached,
+    })
     return BigInt(actualCredits)
   }
 

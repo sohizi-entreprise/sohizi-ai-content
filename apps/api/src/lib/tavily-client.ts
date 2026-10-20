@@ -1,3 +1,5 @@
+import { parseRetryAfterHeader } from "@/features/capacity/retry-after"
+
 const TAVILY_URL = "https://api.tavily.com"
 const EXTRACT_CONTENT_LIMIT = 8_000
 
@@ -41,6 +43,26 @@ export type TavilyExtractInput = {
   query?: string
 }
 
+export class TavilyRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message)
+    this.name = "TavilyRequestError"
+  }
+}
+
+export class TavilyHttpError extends TavilyRequestError {
+  readonly retryAfterMs?: number
+
+  constructor(status: number, message: string, retryAfterMs?: number) {
+    super(message, status)
+    this.name = "TavilyHttpError"
+    this.retryAfterMs = retryAfterMs
+  }
+}
+
 function imageUrl(image: SearchImage): string | undefined {
   if (typeof image === "string") return image
   return image.url
@@ -56,29 +78,39 @@ function formatImages(images: SearchImage[] | undefined): string[] {
 }
 
 async function tavilyPost<T>(
+  apiKey: string,
   path: string,
   body: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<T> {
-  const apiKey = process.env.TRAVELY_API_KEY
   if (!apiKey) {
-    throw new Error("TRAVELY_API_KEY is not set")
+    throw new TavilyRequestError("Tavily API key is not set")
   }
 
-  const response = await fetch(`${TAVILY_URL}${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal,
-  })
+  let response: Response
+  try {
+    response = await fetch(`${TAVILY_URL}${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal,
+    })
+  } catch (error) {
+    if (signal?.aborted) throw error
+    throw new TavilyRequestError(
+      error instanceof Error ? error.message : "Tavily request failed",
+    )
+  }
 
   if (!response.ok) {
     const text = await response.text()
-    throw new Error(
+    throw new TavilyHttpError(
+      response.status,
       `Tavily ${path} failed (${response.status}): ${text.slice(0, 300)}`,
+      parseRetryAfterHeader(response.headers.get("retry-after") ?? ""),
     )
   }
 
@@ -86,11 +118,13 @@ async function tavilyPost<T>(
 }
 
 export async function tavilySearch(
+  apiKey: string,
   input: TavilySearchInput,
   signal?: AbortSignal,
 ): Promise<string> {
   const includeImages = input.include_images === true
   const data = await tavilyPost<SearchResponse>(
+    apiKey,
     "/search",
     {
       query: input.query,
@@ -140,6 +174,7 @@ function capContent(content: string): string {
 }
 
 export async function tavilyExtract(
+  apiKey: string,
   input: TavilyExtractInput,
   signal?: AbortSignal,
 ): Promise<string> {
@@ -153,7 +188,12 @@ export async function tavilyExtract(
     body.chunks_per_source = 3
   }
 
-  const data = await tavilyPost<ExtractResponse>("/extract", body, signal)
+  const data = await tavilyPost<ExtractResponse>(
+    apiKey,
+    "/extract",
+    body,
+    signal,
+  )
   const sections: string[] = []
 
   for (const result of data.results ?? []) {

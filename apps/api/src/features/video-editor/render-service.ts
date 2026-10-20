@@ -23,8 +23,30 @@ import {
   InsufficientCreditsError,
   safeRefund,
 } from "@/features/billing"
-import { BadRequest, Conflict, InternalServerError, NotFound } from "../error"
+import {
+  BadRequest,
+  Conflict,
+  InternalServerError,
+  NotFound,
+  TooManyRequests,
+} from "../error"
 import type { VideoRenderJob } from "@/db/schema"
+import {
+  abortableSleep,
+  releaseCapacityLease,
+  renewCapacityLease,
+  tryAcquireCapacity,
+} from "@/features/capacity/router"
+import { resolveAccount } from "@/features/capacity/registry"
+import {
+  acquireUserSlot,
+  releaseUserSlot,
+  renewUserSlot,
+  userLimitToHttp,
+  UserConcurrencyLimitError,
+} from "@/features/capacity/user-gate"
+import { classifyRenderError } from "@/features/capacity/classify"
+import { rateLimitRetryAfterMs } from "@/features/capacity/retry-after"
 
 /**
  * Render jobs are owned by the API: the editor never talks to Remotion Lambda
@@ -67,7 +89,34 @@ export const createRender = async (
   }
 
   const jobId = uuidv4()
-  const estimate = await estimateRenderCost(input.composition)
+  let userLease: Awaited<ReturnType<typeof acquireUserSlot>> = null
+  try {
+    userLease = await acquireUserSlot({
+      userId,
+      holderId: jobId,
+      task: "video.export",
+      leaseTtlMs: RENDER_RESERVATION_TTL_MS,
+    })
+  } catch (error) {
+    if (error instanceof UserConcurrencyLimitError) throw userLimitToHttp(error)
+    throw error
+  }
+
+  let selection: Awaited<ReturnType<typeof acquireRenderAccount>>
+  try {
+    selection = await acquireRenderAccount(jobId)
+  } catch (error) {
+    await releaseUserSlot(userLease)
+    throw error
+  }
+  const remotion = selection.account.remotion
+  if (!remotion) {
+    await releaseCapacityLease(selection.lease, "not_sent")
+    await releaseUserSlot(userLease)
+    throw new InternalServerError("Rendering is not configured")
+  }
+
+  const estimate = await estimateRenderCost(input.composition, remotion)
   const estimatedCredits = lambdaUsdToCredits(estimate.costUsd, {
     overbook: true,
   })
@@ -90,6 +139,11 @@ export const createRender = async (
     })
     reservationId = reservation.id
   } catch (error) {
+    await releaseCapacityLease(selection.lease, "not_sent", {
+      burst: selection.account.limits.burst ?? 0,
+      cooldownMs: selection.account.limits.cooldownMs,
+    })
+    await releaseUserSlot(userLease)
     if (error instanceof InsufficientCreditsError) {
       throw new BadRequest(
         "You don't have enough credits to export this video.",
@@ -98,22 +152,37 @@ export const createRender = async (
     throw error
   }
 
-  const job = await repo.createRenderJob({
-    id: jobId,
-    projectId,
-    compositionId,
-    userId,
-    analyticsConsentId,
-    compositionVersion: composition.version,
-    fps: input.composition.fps,
-    width: input.composition.width,
-    height: input.composition.height,
-    durationInFrames: input.composition.durationInFrames,
-    fileName: input.fileName,
-    remoteJobId: jobId,
-    billingReservationId: reservationId,
-    functionName: process.env.REMOTION_FUNCTION_NAME ?? null,
-  })
+  let job: VideoRenderJob
+  try {
+    job = await repo.createRenderJob({
+      id: jobId,
+      projectId,
+      compositionId,
+      userId,
+      analyticsConsentId,
+      compositionVersion: composition.version,
+      fps: input.composition.fps,
+      width: input.composition.width,
+      height: input.composition.height,
+      durationInFrames: input.composition.durationInFrames,
+      fileName: input.fileName,
+      remoteJobId: jobId,
+      billingReservationId: reservationId,
+      functionName: remotion.functionName,
+      capacityAccountId: selection.account.id,
+      capacityLease: selection.lease,
+      userLease,
+      submitState: "selected",
+    })
+  } catch (error) {
+    await safeRefund(billingService, reservationId, "render-job-create-failed")
+    await releaseCapacityLease(selection.lease, "not_sent", {
+      burst: selection.account.limits.burst ?? 0,
+      cooldownMs: selection.account.limits.cooldownMs,
+    })
+    await releaseUserSlot(userLease)
+    throw error
+  }
 
   await captureConsentedEvent(
     analyticsConsentId,
@@ -124,6 +193,7 @@ export const createRender = async (
 
   let remote: RemoteRenderJob
   try {
+    await repo.updateRenderJob(jobId, { submitState: "submitting" })
     remote = await createRemoteRender({
       jobId,
       projectId,
@@ -131,8 +201,26 @@ export const createRender = async (
       fileName: input.fileName,
       composition: input.composition,
       concurrency: estimate.concurrency,
+      account: remotion,
     })
   } catch (error) {
+    const action = classifyRenderError(error)
+    const unknown = action === "submission_unknown"
+    if (!unknown) {
+      await releaseCapacityLease(
+        selection.lease,
+        action === "account_failure" ? "rate_limited" : "not_sent",
+        {
+          retryAfterMs:
+            action === "account_failure"
+              ? rateLimitRetryAfterMs(error)
+              : undefined,
+          cooldownMs: selection.account.limits.cooldownMs,
+          burst: selection.account.limits.burst ?? 0,
+        },
+      )
+    }
+    await releaseUserSlot(userLease)
     await safeRefund(billingService, reservationId, "render-submit-failed")
     await captureConsentedEvent(
       analyticsConsentId,
@@ -146,7 +234,8 @@ export const createRender = async (
     )
     await repo.updateRenderJob(jobId, {
       status: "failed",
-      failureCode: "submit_failed",
+      submitState: unknown ? "submission_unknown" : "terminal",
+      failureCode: unknown ? "submission_unknown" : "submit_failed",
       failureMessage:
         error instanceof Error ? error.message : "Could not start the render",
       finishedAt: new Date(),
@@ -157,7 +246,8 @@ export const createRender = async (
   const submitted = await repo.updateRenderJob(jobId, {
     remoteJobId: remote.jobId,
     outputBucket: remote.outputBucket ?? null,
-    functionName: remote.functionName ?? process.env.REMOTION_FUNCTION_NAME,
+    functionName: remote.functionName ?? remotion.functionName,
+    submitState: "submitted",
   })
 
   await enqueueRenderPoll(jobId, projectId)
@@ -192,10 +282,14 @@ export const cancelRender = async (
   }
   if (!isActive(job)) return toView(job)
 
-  await cancelRemoteRender(job.remoteJobId, {
-    bucketName: job.outputBucket,
-    functionName: job.functionName,
-  })
+  await cancelRemoteRender(
+    job.remoteJobId,
+    {
+      bucketName: job.outputBucket,
+      functionName: job.functionName,
+    },
+    renderAccount(job),
+  )
   await refundRender(job, "render-cancelled")
   const cancelled = await repo.updateRenderJob(job.id, {
     status: "cancelled",
@@ -218,6 +312,7 @@ export const getRenderDownload = async (
     bucketName: job.outputBucket,
     objectKey: job.outputKey,
     fileName: job.fileName,
+    account: renderAccount(job),
   })
   await captureConsentedEvent(
     job.analyticsConsentId,
@@ -242,10 +337,14 @@ export async function reconcileRenderJob(
 ): Promise<VideoRenderJob> {
   if (!isActive(job)) return job
 
-  const remote = await getRemoteRender(job.remoteJobId, {
-    bucketName: job.outputBucket,
-    functionName: job.functionName,
-  })
+  const remote = await getRemoteRender(
+    job.remoteJobId,
+    {
+      bucketName: job.outputBucket,
+      functionName: job.functionName,
+    },
+    renderAccount(job),
+  )
   if (!remote) {
     const lost = await update(job, {
       status: "failed",
@@ -369,6 +468,65 @@ function toPercent(progress: number): number {
   return Math.min(100, Math.max(0, Math.round(progress * 100)))
 }
 
+function renderAccount(job: VideoRenderJob) {
+  if (!job.capacityAccountId) return undefined
+  return resolveAccount(job.capacityAccountId)?.remotion
+}
+
+async function acquireRenderAccount(jobId: string) {
+  const deadline = Date.now() + 5_000
+  while (true) {
+    const acquired = await tryAcquireCapacity({
+      task: "video.export",
+      holderId: jobId,
+      leaseTtlMs: RENDER_RESERVATION_TTL_MS,
+    })
+    if (acquired.ok) return acquired.selection
+    if (acquired.reason === "no_route") {
+      throw new InternalServerError("Rendering is not configured")
+    }
+    if (Date.now() >= deadline) {
+      throw new TooManyRequests("Export capacity is busy. Try again shortly.")
+    }
+    await abortableSleep(
+      Math.min(acquired.retryAfterMs, Math.max(deadline - Date.now(), 1)),
+    )
+  }
+}
+
+export async function releaseRenderCapacity(renderJobId: string) {
+  const job = await repo.getRenderJobById(renderJobId)
+  if (!job) return
+  await releaseUserSlot(job.userLease)
+  if (job.capacityLease && job.submitState !== "submission_unknown") {
+    const account = job.capacityAccountId
+      ? resolveAccount(job.capacityAccountId)
+      : undefined
+    await releaseCapacityLease(job.capacityLease, "completed", {
+      cooldownMs: account?.limits.cooldownMs,
+      burst: account?.limits.burst ?? 0,
+    })
+  }
+}
+
+export async function renewRenderCapacity(job: VideoRenderJob) {
+  if (job.userLease)
+    await renewUserSlot(job.userLease, RENDER_RESERVATION_TTL_MS)
+  if (job.capacityLease && job.submitState !== "submission_unknown") {
+    const account = job.capacityAccountId
+      ? resolveAccount(job.capacityAccountId)
+      : undefined
+    const renewed = await renewCapacityLease(
+      job.capacityLease,
+      RENDER_RESERVATION_TTL_MS,
+      account?.limits.probeTtlMs,
+    )
+    if (!renewed.ok && renewed.reason === "unavailable") {
+      throw new Error("Render capacity renew failed")
+    }
+  }
+}
+
 async function settleRender(
   job: VideoRenderJob,
   accruedCostUsd: number | undefined,
@@ -414,8 +572,10 @@ async function enqueueRenderPoll(
       name: "video-editor/render.poll",
       data: { renderJobId, projectId },
     })
+    await repo.updateRenderJob(renderJobId, { pollerEnqueuedAt: new Date() })
   } catch (error) {
     console.error("[render] failed to enqueue poller", renderJobId, error)
+    await repo.updateRenderJob(renderJobId, { pollerEnqueuedAt: null })
   }
 }
 

@@ -1,7 +1,11 @@
 import { inngest } from "@/lib/inngest/client"
 import { billingService, safeRefund } from "@/features/billing"
 import * as repo from "./repo"
-import { reconcileRenderJob } from "./render-service"
+import {
+  reconcileRenderJob,
+  releaseRenderCapacity,
+  renewRenderCapacity,
+} from "./render-service"
 import { RENDER_RESERVATION_TTL_MS } from "./render-pricing"
 import { captureUnexpectedError } from "@/sentry"
 
@@ -36,6 +40,13 @@ export const handleVideoExportPoll = inngest.createFunction(
         job.billingReservationId,
         "render-poller-failed",
       )
+      await releaseRenderCapacity(data.renderJobId).catch((error) => {
+        console.error(
+          "[render] failure release failed",
+          data.renderJobId,
+          error,
+        )
+      })
     },
   },
   async ({ event, step }) => {
@@ -58,6 +69,7 @@ export const handleVideoExportPoll = inngest.createFunction(
             RENDER_RESERVATION_TTL_MS,
           )
         }
+        await renewRenderCapacity(job)
         const reconciled = await reconcileRenderJob(job)
         return {
           done: !isActiveStatus(reconciled.status),
@@ -65,7 +77,12 @@ export const handleVideoExportPoll = inngest.createFunction(
         }
       })
 
-      if (result.done) return result
+      if (result.done) {
+        await step.run("release-render-capacity", () =>
+          releaseRenderCapacity(renderJobId),
+        )
+        return result
+      }
     }
 
     await step.run("fail-on-poll-timeout", async () => {
@@ -82,6 +99,7 @@ export const handleVideoExportPoll = inngest.createFunction(
         job.billingReservationId,
         "render-timeout",
       )
+      await releaseRenderCapacity(job.id)
     })
 
     return { done: true as const, status: "failed" }

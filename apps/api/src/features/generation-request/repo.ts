@@ -5,14 +5,22 @@ import type {
   GenerationRequestType,
   GenerationRequestAsset,
 } from "@/type"
-import { and, eq, inArray, desc, sql } from "drizzle-orm"
+import { and, eq, inArray, desc, sql, isNull, lt } from "drizzle-orm"
 
 type CreateGenerationRequestPayload = {
+  id?: string
   projectId: string
   userId: string
   analyticsConsentId?: string | null
   type: GenerationRequestType
   request: Record<string, unknown>
+  userLease?: {
+    poolId: string
+    holderId: string
+    leaseId: string
+    epoch: number
+    expiresAtMs: number
+  } | null
 }
 
 export const createGenerationRequest = async (
@@ -63,6 +71,14 @@ export const appendRequestHistory = async (
     .where(eq(generationRequests.id, requestId))
 }
 
+export const getGenerationRequest = async (requestId: string) => {
+  const result = await db
+    .select()
+    .from(generationRequests)
+    .where(eq(generationRequests.id, requestId))
+  return result[0] ?? null
+}
+
 export const getGenerationRequestById = async (
   projectId: string,
   requestId: string,
@@ -98,6 +114,29 @@ export const getPendingRequests = async (projectId: string, userId: string) => {
       ),
     )
     .orderBy(desc(generationRequests.createdAt))
+}
+
+export const listMediaJobsMissingPoller = async (
+  olderThan: Date,
+  limit = 20,
+) => {
+  return db
+    .select({
+      id: generationRequests.id,
+      projectId: generationRequests.projectId,
+      userId: generationRequests.userId,
+      request: generationRequests.request,
+    })
+    .from(generationRequests)
+    .where(
+      and(
+        eq(generationRequests.type, "media-generation"),
+        inArray(generationRequests.status, ["pending", "processing"]),
+        isNull(generationRequests.enqueuedAt),
+        lt(generationRequests.createdAt, olderThan),
+      ),
+    )
+    .limit(limit)
 }
 
 export const deleteGenerationRequest = async (

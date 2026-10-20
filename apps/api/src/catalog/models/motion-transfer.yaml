@@ -15,5 +15,14 @@ models:
       - { id: parameter_video, required: true }
       - { id: parameter_prompt, required: false }
       - { id: parameter_negative_prompt, required: false }
-      - { id: parameter_character_orientation, required: false, defaultValue: video, allowedValues: [image, video] }
-      - { id: parameter_keep_original_sound, required: false, defaultValue: true }
+      - {
+          id: parameter_character_orientation,
+          required: false,
+          defaultValue: video,
+          allowedValues: [image, video],
+        }
+      - {
+          id: parameter_keep_original_sound,
+          required: false,
+          defaultValue: true,
+        }

@@ -132,6 +132,26 @@ export const generationRequests = pgTable(
     history: jsonb("history").$type<Record<string, unknown>[]>(),
     assets: jsonb("assets").$type<GenerationRequestAsset[]>(),
     error: text("error"),
+    capacityAccountId: text("capacity_account_id"),
+    capacityLease: jsonb("capacity_lease").$type<{
+      poolId: string
+      holderId: string
+      leaseId: string
+      epoch: number
+      expiresAtMs: number
+    }>(),
+    userLease: jsonb("user_lease").$type<{
+      poolId: string
+      holderId: string
+      leaseId: string
+      epoch: number
+      expiresAtMs: number
+    }>(),
+    submitState: varchar("submit_state", { length: 40 }),
+    providerRequestId: text("provider_request_id"),
+    billingReservationId: uuid("billing_reservation_id"),
+    cancelRequestedAt: timestamp("cancel_requested_at", { withTimezone: true }),
+    enqueuedAt: timestamp("enqueued_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [
@@ -932,6 +952,24 @@ export const videoRenderJobs = pgTable(
     ),
     outputBucket: text("output_bucket"),
     functionName: varchar("function_name", { length: 200 }),
+    capacityAccountId: text("capacity_account_id"),
+    capacityLease: jsonb("capacity_lease").$type<{
+      poolId: string
+      holderId: string
+      leaseId: string
+      epoch: number
+      expiresAtMs: number
+    }>(),
+    userLease: jsonb("user_lease").$type<{
+      poolId: string
+      holderId: string
+      leaseId: string
+      epoch: number
+      expiresAtMs: number
+    }>(),
+    submitState: varchar("submit_state", { length: 40 }),
+    cancelRequestedAt: timestamp("cancel_requested_at", { withTimezone: true }),
+    pollerEnqueuedAt: timestamp("poller_enqueued_at", { withTimezone: true }),
     outputKey: text("output_key"),
     outputSizeInBytes: bigint("output_size_in_bytes", { mode: "number" }),
     progress: integer("progress").default(0).notNull(),

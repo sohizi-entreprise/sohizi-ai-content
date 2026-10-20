@@ -12,4 +12,26 @@ models:
     categories: [voice-control]
     parameters:
       - { id: parameter_audio, required: true }
-      - { id: parameter_voice, required: false, defaultValue: Alicia, allowedValues: [Alicia, Alice, Sarah, Jessica, Lily, Matilda, Bella, Adam, Brian, Daniel, Chris, Charlie, George, Liam, River] }
+      - {
+          id: parameter_voice,
+          required: false,
+          defaultValue: Alicia,
+          allowedValues:
+            [
+              Alicia,
+              Alice,
+              Sarah,
+              Jessica,
+              Lily,
+              Matilda,
+              Bella,
+              Adam,
+              Brian,
+              Daniel,
+              Chris,
+              Charlie,
+              George,
+              Liam,
+              River,
+            ],
+        }

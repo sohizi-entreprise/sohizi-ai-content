@@ -11,26 +11,17 @@ const ADAPTERS = {
   [VERCEL_GATEWAY_ADAPTER]: VercelGatewayAdapter,
 } as const
 
-export function llmApiKeyEnvName(vendorName: string): string {
-  return `${vendorName.toUpperCase().replace(/-/g, "_")}_API_KEY`
-}
-
-export function hasLlmApiKey(vendorName: string): boolean {
-  return Boolean(process.env[llmApiKeyEnvName(vendorName)])
-}
-
 export function isRegisteredLlmAdapter(name: string): boolean {
   return name in ADAPTERS
 }
 
 export function createLlmAdapter(
   adapter: string,
-  vendorName: string,
+  _vendorName: string,
+  apiKey: string,
 ): LlmAdapter {
-  const envName = llmApiKeyEnvName(vendorName)
-  const apiKey = process.env[envName]
   if (!apiKey) {
-    throw new LlmConfigurationError(`${envName} is not set`)
+    throw new LlmConfigurationError("LLM API key is not set")
   }
   switch (adapter) {
     case OPENROUTER_ADAPTER:

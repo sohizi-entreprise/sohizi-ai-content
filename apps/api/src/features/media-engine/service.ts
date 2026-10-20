@@ -26,6 +26,17 @@ import { ZipArchive } from "archiver"
 import { PassThrough, Readable } from "node:stream"
 import { inngest } from "@/lib/inngest/client"
 import { estimateCatalogMediaCredits } from "./catalog-cost"
+import {
+  acquireUserSlot,
+  releaseUserSlot,
+  userLimitToHttp,
+  UserConcurrencyLimitError,
+} from "@/features/capacity/user-gate"
+import { releaseCapacityLease } from "@/features/capacity/router"
+import { resolveAccount } from "@/features/capacity/registry"
+import { createProvider } from "./providers/factory"
+import { getGenerationRequest } from "../generation-request/repo"
+import { billingService, safeRefund } from "@/features/billing"
 
 export async function getUploadUrl(projectId: string, data: GetUploadUrlInput) {
   const project = await getProjectById(projectId)
@@ -179,24 +190,129 @@ export const generateAsset = async (payload: RunAgentPayload) => {
     settings: payload.settings,
     context: payload.context,
   }
-  const run = await repo.createAssetRequest(
-    payload.projectId,
-    payload.userId,
-    requestPayload,
-    payload.analyticsConsentId,
-  )
-  await markStreamActive(run.id)
-  await incrementKey(run.id)
+  const requestId = uuidv4()
+  const mediaType = toProviderMediaType(payload.context)
+  const leaseTtlMs = mediaType === "video" ? 60 * 60 * 1000 : 30 * 60 * 1000
+  let userLease = null as Awaited<ReturnType<typeof acquireUserSlot>>
+  try {
+    userLease = await acquireUserSlot({
+      userId: payload.userId,
+      holderId: requestId,
+      task: "media",
+      leaseTtlMs,
+    })
+  } catch (error) {
+    if (error instanceof UserConcurrencyLimitError) throw userLimitToHttp(error)
+    throw error
+  }
 
-  runAiGeneration({ ...payload, runId: run.id })
-  return run
+  let created = false
+  try {
+    const run = await repo.createAssetRequest(
+      payload.projectId,
+      payload.userId,
+      requestPayload,
+      payload.analyticsConsentId,
+      requestId,
+      userLease,
+    )
+    created = true
+    await markStreamActive(run.id)
+    await incrementKey(run.id)
+    await inngest.send({
+      name: "media/generate",
+      data: {
+        requestId: run.id,
+        projectId: payload.projectId,
+        organizationId: payload.organizationId,
+        userId: payload.userId,
+        model: payload.model,
+        payload: payload.settings,
+        referenceFiles: payload.context.referenceFiles || [],
+        mediaType,
+        _reservationId: uuidv4(),
+        analyticsConsentId: payload.analyticsConsentId,
+      },
+    })
+    await repo.markGenerationEnqueued(run.id)
+    await captureConsentedEvent(
+      payload.analyticsConsentId,
+      payload.userId,
+      "generation_started",
+      {
+        project_id: payload.projectId,
+        request_id: run.id,
+        media_type: mediaType,
+      },
+    )
+    return run
+  } catch (error) {
+    await releaseUserSlot(userLease).catch((releaseError) => {
+      console.error("[media] failed to release user slot", releaseError)
+    })
+    if (created) {
+      await repo.updateAssetRequest(requestId, {
+        status: "failed",
+        error: getErrorMessage(error, "Completion failed"),
+      })
+      const remaining = await decrementKey(requestId)
+      if (remaining === 0) await removeStreamActive(requestId)
+    }
+    throw error
+  }
 }
 
-export const cancelGeneration = async (requestId: string) => {
+export const cancelGeneration = async (
+  projectId: string,
+  requestId: string,
+  actorUserId: string,
+) => {
+  const request = await getGenerationRequest(requestId)
+  if (!request || request.projectId !== projectId) {
+    throw new NotFound("Generation request not found")
+  }
+  if (request.userId !== actorUserId) {
+    throw new Forbidden("You cannot cancel this generation")
+  }
   await broadcastCancellation(requestId)
+  await repo.requestMediaCancellation(requestId)
   await repo.updateAssetRequest(requestId, { status: "aborted" })
   await removeStreamActive(requestId)
-  // Cancel any running inngest job
+
+  let providerStopped = !request.providerRequestId
+  if (
+    request.providerRequestId &&
+    request.capacityAccountId &&
+    request.submitState !== "submission_unknown"
+  ) {
+    const account = resolveAccount(request.capacityAccountId)
+    if (account) {
+      try {
+        const provider = createProvider(account.adapter, account.credential)
+        const cancelled = await provider.cancelRequest(
+          request.providerRequestId,
+        )
+        providerStopped = cancelled.ok
+      } catch (error) {
+        console.error("[media] provider cancel failed", requestId, error)
+        providerStopped = false
+      }
+    }
+  }
+
+  await releaseUserSlot(request.userLease)
+  if (request.capacityLease && providerStopped) {
+    await releaseCapacityLease(request.capacityLease, "completed", {
+      burst: 0,
+    })
+  }
+  if (request.billingReservationId) {
+    await safeRefund(
+      billingService,
+      request.billingReservationId,
+      "media-cancelled",
+    )
+  }
   return { ok: true, error: null }
 }
 
@@ -209,56 +325,6 @@ export const deleteGenerationRequest = async (
     throw new NotFound("Generation request not found")
   }
   return { ok: true }
-}
-
-async function runAiGeneration(payload: RunAgentPayload & { runId: string }) {
-  const { runId, organizationId, projectId, userId } = payload
-  const request = {
-    model: payload.model,
-    settings: payload.settings,
-    context: payload.context,
-  }
-  try {
-    await repo.updateAssetRequest(runId, { status: "processing", request })
-
-    const jobPayload = request.settings
-
-    await inngest.send({
-      name: "media/generate",
-      data: {
-        requestId: runId,
-        projectId: projectId,
-        organizationId: organizationId,
-        userId: userId,
-        model: payload.model,
-        payload: jobPayload,
-        referenceFiles: payload.context.referenceFiles || [],
-        mediaType: toProviderMediaType(payload.context),
-        _reservationId: uuidv4(),
-        analyticsConsentId: payload.analyticsConsentId,
-      },
-    })
-    await captureConsentedEvent(
-      payload.analyticsConsentId,
-      userId,
-      "generation_started",
-      {
-        project_id: projectId,
-        request_id: runId,
-        media_type: toProviderMediaType(payload.context),
-      },
-    )
-  } catch (error) {
-    console.error(error)
-    await repo.updateAssetRequest(runId, {
-      status: "failed",
-      error: getErrorMessage(error, "Completion failed"),
-    })
-    const remaining = await decrementKey(runId)
-    if (remaining === 0) {
-      await removeStreamActive(runId)
-    }
-  }
 }
 
 export const listAssets = async (

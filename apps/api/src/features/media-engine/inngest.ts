@@ -15,7 +15,6 @@ import {
 import { appendRequestAssets } from "../generation-request/repo"
 import type { GenerationRequestAsset } from "@/type"
 import { estimateCatalogMediaCostUsd, mediaOverheadRate } from "./catalog-cost"
-import { createProvider } from "./providers/factory"
 import { extractOutputUrls } from "./providers/utils"
 import type { SubmitPayload } from "./providers/type"
 import {
@@ -24,17 +23,15 @@ import {
 } from "./generators/cost-utils"
 import { getErrorMessage } from "@/utils/get-error-message"
 import {
-  limiter,
-  pollWithSticky,
-  resolveAndAcquire,
-  submitWithFailover,
-  type StickyDecision,
-} from "@/features/routing"
-import {
-  MediaAccountError,
-  MediaRateLimitError,
-  MediaServiceUnavailableError,
-} from "./errors"
+  pollMediaRequest,
+  releaseMediaLeases,
+  renewMediaLeases,
+  submitMediaWithCapacity,
+  type MediaSticky,
+} from "./submit-media"
+import { tryAcquireCapacity } from "@/features/capacity/router"
+import { renewUserSlot } from "@/features/capacity/user-gate"
+import { getGenerationRequest } from "@/features/generation-request/repo"
 import { MAX_MEDIA_POLL_ATTEMPTS, VIDEO_POLL_INTERVAL } from "./constants"
 
 const MEDIA_POLL_INTERVAL = "5s"
@@ -133,7 +130,9 @@ export const handleMediaGeneration = inngest.createFunction(
         "media-generation-failed",
       )
       if (data.requestId) {
-        await limiter.releaseByRequestId(data.requestId, { outcome: "none" })
+        await releaseMediaLeases(data.requestId).catch((error) => {
+          console.error("[media] failure release failed", data.requestId, error)
+        })
         await finalizeGenerationRequest(data.requestId, "failed")
         await captureConsentedEvent(
           data.analyticsConsentId,
@@ -166,26 +165,40 @@ export const handleMediaGeneration = inngest.createFunction(
 
     const requestPayload = payload
 
-    const decision = await step.run("resolve-route", async () => {
-      try {
-        const { modelId, ...payload } = requestPayload
-        return await resolveAndAcquire({
-          modelId: (modelId as string) || model,
-          requestId,
-          payload,
+    let sticky: MediaSticky | undefined
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const acquired = await step.run(`acquire-${attempt}`, async () => {
+        const row = await getGenerationRequest(requestId)
+        if (
+          row?.providerRequestId &&
+          row.capacityLease &&
+          row.capacityAccountId
+        ) {
+          return { ready: true as const }
+        }
+        if (row?.userLease) await renewUserSlot(row.userLease, reservationTtlMs)
+        return tryAcquireCapacity({
+          task: `media:${model}`,
+          holderId: requestId,
           leaseTtlMs: reservationTtlMs,
         })
-      } catch (error) {
-        wrapNonRetryable(error)
+      })
+      if ("ready" in acquired || acquired.ok) break
+      if (acquired.reason === "no_route") {
+        throw new NonRetriableError(`No media route for ${model}`)
       }
-    })
+      if (attempt === 11) {
+        throw new NonRetriableError("Media capacity wait timed out")
+      }
+      const seconds = Math.max(1, Math.ceil(acquired.retryAfterMs / 1000))
+      await step.sleep(`wait-capacity-${attempt}`, `${seconds}s`)
+    }
 
-    let sticky: StickyDecision | undefined
     try {
       const reservation = await step.run("reserve-credits", async () => {
         try {
           const priceUSD = await estimateCatalogMediaCostUsd(
-            decision.modelId,
+            model,
             requestPayload,
           )
           const estimatedCredits = providerCostToCredits(priceUSD, {
@@ -198,15 +211,15 @@ export const handleMediaGeneration = inngest.createFunction(
             estimatedCredits,
             ttlMs: reservationTtlMs,
             id: data._reservationId,
-            idempotencyKey: `media:${requestId}:${model}:${decision.vendorName}`,
+            idempotencyKey: `media:${requestId}:${model}`,
             metadata: {
               requestId,
               projectId,
               kind: mediaType,
               model,
-              vendor: decision.vendorName,
             },
           })
+          await repo.setMediaBillingReservation(requestId, res.id)
           return {
             id: res.id,
             estimatedCredits: estimatedCredits.toString(),
@@ -219,63 +232,13 @@ export const handleMediaGeneration = inngest.createFunction(
 
       try {
         sticky = await step.run("submit-job", async () => {
-          try {
-            const provider = createProvider(
-              decision.adapter,
-              decision.vendorName,
-            )
-            const submitted = await provider.submitRequest(
-              decision.apiName,
-              decision.mappedPayload,
-            )
-            await limiter.release(decision.vendorName, requestId, {
-              outcome: "submit_ok",
-              cooldownMs: decision.cooldownMs,
-            })
-            const result: StickyDecision = {
-              ...decision,
-              providerRequestId: submitted.requestId,
-            }
-            await repo.patchRequestRouting(requestId, {
-              vendorName: result.vendorName,
-              apiName: result.apiName,
-              providerRequestId: result.providerRequestId,
-            })
-            return result
-          } catch (error) {
-            if (
-              error instanceof MediaRateLimitError ||
-              error instanceof MediaServiceUnavailableError ||
-              error instanceof MediaAccountError
-            ) {
-              await limiter.release(decision.vendorName, requestId, {
-                outcome: "failure",
-                retryAfterMs:
-                  error instanceof MediaRateLimitError
-                    ? error.retryAfterMs
-                    : undefined,
-                cooldownMs: decision.cooldownMs,
-              })
-              const result = await submitWithFailover({
-                modelId: model,
-                requestId,
-                payload: requestPayload,
-                leaseTtlMs: reservationTtlMs,
-                exclude: [decision.vendorName],
-              })
-              await repo.patchRequestRouting(requestId, {
-                vendorName: result.vendorName,
-                apiName: result.apiName,
-                providerRequestId: result.providerRequestId,
-              })
-              return result
-            }
-            await limiter.release(decision.vendorName, requestId, {
-              outcome: "none",
-              cooldownMs: decision.cooldownMs,
-            })
-            wrapNonRetryable(error)
-          }
+          const { modelId, ...payload } = requestPayload
+          return submitMediaWithCapacity({
+            requestId,
+            modelId: (modelId as string) || model,
+            payload,
+            leaseTtlMs: reservationTtlMs,
+          })
         })
       } catch (error) {
         wrapNonRetryable(error)
@@ -291,11 +254,16 @@ export const handleMediaGeneration = inngest.createFunction(
             reservation.id,
             reservationTtlMs,
           )
+          await renewMediaLeases(requestId, reservationTtlMs)
         })
 
         const pollResult = await step.run(`poll-media-${attempt}`, async () => {
           try {
-            return await pollWithSticky(sticky!)
+            const row = await getGenerationRequest(requestId)
+            if (row?.cancelRequestedAt) {
+              return { status: "cancelled" as const }
+            }
+            return await pollMediaRequest(requestId)
           } catch (error) {
             wrapNonRetryable(error)
           }
@@ -304,6 +272,10 @@ export const handleMediaGeneration = inngest.createFunction(
         if (pollResult.status === "completed") {
           resultData = "data" in pollResult ? pollResult.data : null
           break
+        }
+
+        if (pollResult.status === "cancelled") {
+          return { requestId, status: "cancelled" as const }
         }
 
         if (isTerminalFailureStatus(String(pollResult.status))) {
@@ -425,13 +397,7 @@ export const handleMediaGeneration = inngest.createFunction(
       return { requestId, assets, reservationId: reservation.id }
     } finally {
       await step.run("release-slot", async () => {
-        if (sticky) {
-          await limiter.release(sticky.vendorName, requestId, {
-            outcome: "none",
-          })
-          return
-        }
-        await limiter.releaseByRequestId(requestId, { outcome: "none" })
+        await releaseMediaLeases(requestId)
       })
     }
   },

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { sceneToNode } from "./storyboard-nodes"
 import {
   SEQUENCE_FPS,
@@ -12,6 +12,24 @@ import {
   shotIndexFromFrame,
 } from "./storyboard-sequence"
 import type { JSONContent } from "@tiptap/core"
+import { setPublicEnv } from "@/lib/public-env"
+import { thumbnailImageUrl } from "@/utils/transform-url"
+
+beforeAll(() => {
+  setPublicEnv({
+    sentry: {
+      dsn: "",
+      environment: "local",
+      enabled: false,
+      tracesSampleRate: 0,
+    },
+    posthogProject: "",
+    posthogApiHost: "",
+    posthogApiVersion: "",
+    siteUrl: "http://localhost:3000",
+    mediaCdnUrl: "https://media.sohizi.com/cdn-cgi/image",
+  })
+})
 
 const SAMPLE_DOC: JSONContent = {
   type: "doc",
@@ -134,6 +152,9 @@ describe("buildStoryboardSequence", () => {
     expect(composition.durationInFrames).toBe(4 * SEQUENCE_FRAMES_PER_SHOT)
     expect(imageTrack?.clips).toHaveLength(4)
     expect(textTrack?.clips).toHaveLength(4)
+    expect(imageTrack?.clips[0]).toMatchObject({
+      url: thumbnailImageUrl("/images/shot-1.jpg", "large"),
+    })
     expect(imageTrack?.clips[1]).toMatchObject({
       startFrame: SEQUENCE_FRAMES_PER_SHOT,
       endFrame: SEQUENCE_FRAMES_PER_SHOT * 2,

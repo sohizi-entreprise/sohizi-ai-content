@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { randomUUID } from "node:crypto"
-import { BadRequest, Conflict, NotFound } from "../../error"
+import { BadRequest, Conflict, InternalServerError, NotFound } from "../../error"
 import { InsufficientCreditsError } from "../../billing/errors"
 import type { VideoRenderJob } from "@/db/schema"
 import type { RemoteRenderJob } from "../render-client"
@@ -18,6 +18,16 @@ const OTHER_PROJECT_ID = randomUUID()
 const COMPOSITION_ID = randomUUID()
 const USER_ID = "user_1"
 const ORGANIZATION_ID = "org_1"
+
+class RenderRateLimitError extends Error {
+  readonly retryAfterMs?: number
+
+  constructor(message: string, retryAfterMs?: number) {
+    super(message)
+    this.name = "RenderRateLimitError"
+    this.retryAfterMs = retryAfterMs
+  }
+}
 
 process.env.RENDER_ALLOWED_MEDIA_HOSTS = "cdn.sohizi.test"
 
@@ -64,6 +74,12 @@ function buildJob(overrides: Partial<VideoRenderJob> = {}): VideoRenderJob {
     failureMessage: null,
     startedAt: null,
     finishedAt: null,
+    capacityAccountId: null,
+    capacityLease: null,
+    userLease: null,
+    submitState: null,
+    cancelRequestedAt: null,
+    pollerEnqueuedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -110,6 +126,7 @@ mock.module("../repo", () => ({
 }))
 
 mock.module("../render-client", () => ({
+  RenderRateLimitError,
   parseAllowedMediaHosts: () => ["cdn.sohizi.test"],
   estimateRenderCost: async () => ({
     costUsd: 0.05,
@@ -185,6 +202,60 @@ mock.module("@/lib/inngest/client", () => ({
   inngest: { send: async () => undefined },
 }))
 
+const capacityReleases: Array<{ outcome: string; retryAfterMs?: number }> = []
+
+mock.module("@/features/capacity/router", () => ({
+  tryAcquireCapacity: async () => ({
+    ok: true,
+    selection: {
+      account: {
+        id: "remotion:primary",
+        providerName: "remotion",
+        adapter: "remotion",
+        credential: "",
+        strategy: "spread",
+        limits: { maxConcurrency: 2, probeTtlMs: 30_000, cooldownMs: 15_000 },
+        remotion: {
+          region: "us-east-1",
+          functionName: "remotion-render-test",
+          serveUrl: "https://serve.test",
+        },
+      },
+      binding: {
+        providerName: "remotion",
+        adapter: "remotion",
+        apiName: "video.export",
+        priority: 0,
+      },
+      lease: {
+        poolId: "account:remotion:primary",
+        holderId: "job",
+        leaseId: "lease",
+        epoch: 1,
+        expiresAtMs: Date.now() + 60_000,
+      },
+    },
+  }),
+  releaseCapacityLease: async (
+    _lease: unknown,
+    outcome: string,
+    options?: { retryAfterMs?: number },
+  ) => {
+    capacityReleases.push({ outcome, retryAfterMs: options?.retryAfterMs })
+    return { ok: true }
+  },
+  renewCapacityLease: async () => ({ ok: true }),
+  abortableSleep: async () => undefined,
+}))
+
+mock.module("@/features/capacity/user-gate", () => ({
+  acquireUserSlot: async () => null,
+  releaseUserSlot: async () => ({ ok: true }),
+  renewUserSlot: async () => ({ ok: true }),
+  UserConcurrencyLimitError: class UserConcurrencyLimitError extends Error {},
+  userLimitToHttp: (error: Error) => error,
+}))
+
 const renderService = await import("../render-service")
 
 // ----------------------------------------------------------------------------
@@ -246,6 +317,7 @@ beforeEach(() => {
   reservedKeys.length = 0
   settledReservations.length = 0
   refundedReservations.length = 0
+  capacityReleases.length = 0
   composition = { id: COMPOSITION_ID, projectId: PROJECT_ID, version: 7 }
 })
 
@@ -359,6 +431,23 @@ describe("createRender", () => {
     expect(stored[0].status).toBe("failed")
     expect(stored[0].failureCode).toBe("submit_failed")
     expect(refundedReservations).toHaveLength(1)
+  })
+
+  test("a render 429 passes its retry hint and a server error does not", async () => {
+    createRemoteRenderError = new RenderRateLimitError("limited", 2_500)
+    await expect(create()).rejects.toBeInstanceOf(RenderRateLimitError)
+    expect(capacityReleases.at(-1)).toEqual({
+      outcome: "rate_limited",
+      retryAfterMs: 2_500,
+    })
+
+    capacityReleases.length = 0
+    createRemoteRenderError = new InternalServerError("Could not start the render")
+    await expect(create()).rejects.toBeInstanceOf(InternalServerError)
+    expect(capacityReleases.at(-1)).toEqual({
+      outcome: "rate_limited",
+      retryAfterMs: undefined,
+    })
   })
 })
 

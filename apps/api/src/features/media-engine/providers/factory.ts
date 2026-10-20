@@ -37,26 +37,21 @@ export function unregisterMediaAdapter(name: string): void {
   delete PROVIDER_CLASSES[name]
 }
 
-function getProviderApiKey(vendorName: string): string {
-  const apiKey = process.env[apiKeyEnvName(vendorName)]
-  if (!apiKey) {
-    throw new MediaConfigurationError(`${apiKeyEnvName(vendorName)} is not set`)
-  }
-  return apiKey
-}
-
 export type MediaProviderFactory = (
   adapter: string,
-  vendorName: string,
+  apiKey: string,
 ) => MediaEngineProvider
 
 export function createProvider(
   adapter: string,
-  vendorName: string,
+  apiKey: string,
 ): MediaEngineProvider {
   const ProviderClass = PROVIDER_CLASSES[adapter]
   if (!ProviderClass) {
     throw new MediaConfigurationError(`Unknown media adapter: ${adapter}`)
   }
-  return new ProviderClass(getProviderApiKey(vendorName))
+  if (!apiKey) {
+    throw new MediaConfigurationError("Media API key is not set")
+  }
+  return new ProviderClass(apiKey)
 }

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest"
 import { setPublicEnv } from "../lib/public-env"
-import { buildOptimizeddImageUrl } from "./transform-url"
+import { buildOptimizeddImageUrl, thumbnailImageUrl } from "./transform-url"
 
 beforeAll(() => {
   setPublicEnv({
@@ -29,6 +29,17 @@ describe("buildOptimizeddImageUrl", () => {
     )
     expect(buildOptimizeddImageUrl("images/a.png", options)).toBe(
       "https://media.sohizi.com/cdn-cgi/image/width=500/images/a.png",
+    )
+  })
+
+  it("uses the thumbnail preset for CDN images and leaves external URLs raw", () => {
+    expect(
+      thumbnailImageUrl("https://media.sohizi.com/images/a.png", "small"),
+    ).toBe(
+      "https://media.sohizi.com/cdn-cgi/image/width=500,format=webp,quality=80/https://media.sohizi.com/images/a.png",
+    )
+    expect(thumbnailImageUrl("https://other.example.com/reference.png")).toBe(
+      "https://other.example.com/reference.png",
     )
   })
 
