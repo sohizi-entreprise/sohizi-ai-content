@@ -3,12 +3,10 @@ import { isAxiosError } from "axios"
 import type { FileNode } from "@/features/projects/type"
 import type { AssetContent } from "@/features/editor/types"
 import api from "@/lib/axios"
-import { formatBytes } from "@/lib/format-bytes"
 
 type UploadUrlResponse = {
   url: string
   storageKey: string
-  maxSizeInBytes: number
 }
 
 type UploadSuccessResponse = {
@@ -47,18 +45,13 @@ export async function saveFileToBucket(
       params: {
         fileName: file.name,
         contentType,
+        contentLength: file.size,
       },
       signal: options.signal,
     },
   )
 
-  const { url, storageKey, maxSizeInBytes } = uploadUrlResponse.data
-
-  if (file.size > maxSizeInBytes) {
-    throw new Error(
-      `File exceeds the maximum upload size of ${formatBytes(maxSizeInBytes)}.`,
-    )
-  }
+  const { url, storageKey } = uploadUrlResponse.data
 
   const uploadResponse = await fetch(url, {
     method: "PUT",

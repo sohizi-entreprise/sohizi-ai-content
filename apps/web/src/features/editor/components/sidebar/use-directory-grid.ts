@@ -311,7 +311,6 @@ export function useDirectoryGrid(
   const [_uploadState, { openFileDialog, getInputProps }] = useFileUpload({
     multiple: false,
     accept: "image/*,video/*,audio/*,text/plain,.docx",
-    maxSize: 20 * 1024 * 1024,
     onFilesAdded: (added) => {
       const targetId = uploadFolderId.current
       if (targetId === folderId && loadedCount >= MAX_CHILDREN_PER_DIRECTORY) {

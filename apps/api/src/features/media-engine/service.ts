@@ -44,9 +44,16 @@ export async function getUploadUrl(projectId: string, data: GetUploadUrlInput) {
     throw new NotFound("Project not found")
   }
 
+  if (data.contentLength > storage.getMaxUploadSizeInBytes(data.contentType)) {
+    throw new BadRequest("File exceeds the maximum allowed size")
+  }
+
   try {
-    const { url, storageKey, maxSizeInBytes } =
-      await storage.generateSignedUploadUrl(data.fileName, data.contentType)
+    const { url, storageKey } = await storage.generateSignedUploadUrl(
+      data.fileName,
+      data.contentType,
+      data.contentLength,
+    )
 
     // Check if the file already exists
     const fileExists = await storage.fileExists(storageKey)
@@ -54,8 +61,9 @@ export async function getUploadUrl(projectId: string, data: GetUploadUrlInput) {
       throw new BadRequest("File already exists")
     }
 
-    return { url, storageKey, maxSizeInBytes }
+    return { url, storageKey }
   } catch (error) {
+    if (error instanceof BadRequest || error instanceof NotFound) throw error
     console.error(error)
     throw new BadRequest("Failed to generate signed upload url")
   }

@@ -90,7 +90,7 @@ export function ChatInput({
         <PromptInput
           onSubmit={handleSubmit}
           className={cn(
-            "[&>div]:rounded-2xl [&>div]:bg-background! focus-within:[&>div]:border-white/20",
+            "[&>div]:rounded-2xl [&>div]:bg-surface! focus-within:[&>div]:border-white/20",
             className,
           )}
         >
@@ -160,7 +160,6 @@ function useHandleUploadedFiles({ projectId }: { projectId: string }) {
     {
       multiple: true,
       accept: "image/*,video/*,audio/*,application/pdf,text/plain",
-      maxSize: 5 * 1024 * 1024, // 5MB
       maxFiles: 5,
       onFilesAdded: (data) => {
         for (const file of data) {

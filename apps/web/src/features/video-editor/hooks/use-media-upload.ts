@@ -2,9 +2,9 @@ import { useCallback, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { useVideoEditorStore } from "../store/editor-store"
-import { uploadMediaAsset } from "../requests"
 import { secondsToFrames } from "../utils/time"
 import { probeImageDimensions, probeMediaDuration } from "../utils/media-probe"
+import { saveFileToBucket } from "@/hooks/use-save-file-bucket"
 import { useFileTreeStore } from "@/features/editor/stores/file-tree-store"
 import { projectAssetsKey } from "@/features/projects/query-mutation"
 
@@ -44,7 +44,11 @@ export function useMediaUpload(projectId: string) {
 
           if (file.type.startsWith("video/")) {
             const seconds = await probeMediaDuration(localUrl, "video")
-            const asset = await uploadMediaAsset(projectId, rootFolderId, file)
+            const asset = await uploadProjectMedia(
+              projectId,
+              rootFolderId,
+              file,
+            )
             addVideoClip({
               url: asset.url,
               fileName: asset.name,
@@ -53,7 +57,11 @@ export function useMediaUpload(projectId: string) {
             uploadedAny = true
           } else if (file.type.startsWith("audio/")) {
             const seconds = await probeMediaDuration(localUrl, "audio")
-            const asset = await uploadMediaAsset(projectId, rootFolderId, file)
+            const asset = await uploadProjectMedia(
+              projectId,
+              rootFolderId,
+              file,
+            )
             addAudioClip({
               url: asset.url,
               fileName: asset.name,
@@ -62,7 +70,11 @@ export function useMediaUpload(projectId: string) {
             uploadedAny = true
           } else if (file.type.startsWith("image/")) {
             const dims = await probeImageDimensions(localUrl)
-            const asset = await uploadMediaAsset(projectId, rootFolderId, file)
+            const asset = await uploadProjectMedia(
+              projectId,
+              rootFolderId,
+              file,
+            )
             addImageClip({
               url: asset.url,
               fileName: asset.name,
@@ -103,4 +115,16 @@ export function useMediaUpload(projectId: string) {
     uploadFiles,
     isUploading: uploadingCount > 0,
   }
+}
+
+async function uploadProjectMedia(
+  projectId: string,
+  folderId: string,
+  file: File,
+) {
+  const result = await saveFileToBucket({ projectId, folderId, file })
+  if (!result.fileNode) {
+    throw new Error("Upload did not create a file.")
+  }
+  return result.asset
 }

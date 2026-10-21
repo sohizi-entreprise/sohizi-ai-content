@@ -158,10 +158,12 @@ function fileNameFromSource(sourceUrl: string, folder: AssetFolder): string {
   return `${FOLDER_TO_ASSET_TYPE[folder]}-${uuidv4().slice(0, 8)}.${FOLDER_DEFAULT_EXT[folder]}`
 }
 
+export const VIDEO_MAX_UPLOAD_BYTES = 250 * 1024 * 1024
+export const DEFAULT_MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+
 export function getMaxUploadSizeInBytes(contentType: string): number {
-  if (contentType.startsWith("video/")) return 15 * 1024 * 1024
-  if (contentType.startsWith("audio/")) return 15 * 1024 * 1024
-  return 5 * 1024 * 1024
+  if (contentType.startsWith("video/")) return VIDEO_MAX_UPLOAD_BYTES
+  return DEFAULT_MAX_UPLOAD_BYTES
 }
 
 export function sanitizeFileName(fileName: string): string {
@@ -202,13 +204,33 @@ export function buildPublicUrl(storageKey: string): string {
   return `${baseUrl.replace(/\/$/, "")}/${storageKey}`
 }
 
+export function buildCanonicalSignedHeaders(
+  host: string,
+  headers: Record<string, string> = {},
+): { signedHeaders: string; canonicalHeaders: string } {
+  const entries = Object.entries(headers).map(
+    ([name, value]) => [name.toLowerCase().trim(), value.trim()] as const,
+  )
+  entries.push(["host", host.trim()])
+  entries.sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+
+  return {
+    signedHeaders: entries.map(([name]) => name).join(";"),
+    canonicalHeaders: entries
+      .map(([name, value]) => `${name}:${value}\n`)
+      .join(""),
+  }
+}
+
 function createSignedObjectUrl(
   config: S3Config,
   storageKey: string,
   method: SignedUrlMethod,
   queryParams: Record<string, string> = {},
+  headers: Record<string, string> = {},
+  now = new Date(),
+  expiresSeconds = S3_SIGNED_URL_EXPIRY_SECONDS,
 ): string {
-  const now = new Date()
   const dateStamp = getDateStamp(now)
   const amzDate = formatAmzDate(now)
   const { url, canonicalUri } = buildObjectUploadUrl(
@@ -223,19 +245,21 @@ function createSignedObjectUrl(
     S3_SIGNING_SERVICE,
     S3_SIGNING_TERMINATOR,
   ].join("/")
-  const signedHeaders = "host"
+  const { signedHeaders, canonicalHeaders } = buildCanonicalSignedHeaders(
+    url.host,
+    headers,
+  )
 
   const signingQueryParams: Record<string, string> = {
     ...queryParams,
     "X-Amz-Algorithm": S3_SIGNING_ALGORITHM,
     "X-Amz-Credential": credential,
     "X-Amz-Date": amzDate,
-    "X-Amz-Expires": String(S3_SIGNED_URL_EXPIRY_SECONDS),
+    "X-Amz-Expires": String(expiresSeconds),
     "X-Amz-SignedHeaders": signedHeaders,
   }
 
   const canonicalQueryString = buildCanonicalQueryString(signingQueryParams)
-  const canonicalHeaders = `host:${url.host}\n`
   const canonicalRequest = [
     method,
     canonicalUri,
@@ -269,8 +293,49 @@ function createSignedObjectUrl(
   return url.toString()
 }
 
-function createSignedPutUrl(config: S3Config, storageKey: string): string {
-  return createSignedObjectUrl(config, storageKey, "PUT")
+function createSignedPutUrl(
+  config: S3Config,
+  storageKey: string,
+  contentType: string,
+  contentLength: number,
+  now = new Date(),
+): string {
+  return createSignedObjectUrl(
+    config,
+    storageKey,
+    "PUT",
+    {},
+    {
+      "content-length": String(contentLength),
+      "content-type": contentType,
+    },
+    now,
+  )
+}
+
+export function signPutObjectUrl(input: {
+  endpoint: string
+  bucket: string
+  accessKeyId: string
+  secretAccessKey: string
+  storageKey: string
+  contentType: string
+  contentLength: number
+  now: Date
+}): string {
+  return createSignedPutUrl(
+    {
+      endpoint: input.endpoint,
+      accessKeyId: input.accessKeyId,
+      secretAccessKey: input.secretAccessKey,
+      bucket: input.bucket,
+      region: "auto",
+    },
+    input.storageKey,
+    input.contentType,
+    input.contentLength,
+    input.now,
+  )
 }
 
 function createSignedGetUrl(
@@ -348,16 +413,22 @@ function buildAttachmentDisposition(fileName: string): string {
 export async function generateSignedUploadUrl(
   fileName: string,
   contentType: string,
-): Promise<{ url: string; storageKey: string; maxSizeInBytes: number }> {
+  contentLength: number,
+): Promise<{ url: string; storageKey: string }> {
+  if (!Number.isSafeInteger(contentLength) || contentLength < 0) {
+    throw new Error("Invalid upload size")
+  }
+  if (contentLength > getMaxUploadSizeInBytes(contentType)) {
+    throw new Error("File exceeds the maximum allowed size")
+  }
+
   const assetFolder = getAssetFolder(contentType)
   const storageKey = buildStoragePath(assetFolder, fileName)
-  const maxSizeInBytes = getMaxUploadSizeInBytes(contentType)
   const config = getS3Config()
 
   return {
-    url: createSignedPutUrl(config, storageKey),
+    url: createSignedPutUrl(config, storageKey, contentType, contentLength),
     storageKey,
-    maxSizeInBytes,
   }
 }
 

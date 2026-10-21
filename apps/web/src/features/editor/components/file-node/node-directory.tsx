@@ -161,7 +161,6 @@ function useHandleUploadFile(
   const [_state, { openFileDialog, getInputProps }] = useFileUpload({
     multiple: false,
     accept: "image/*,video/*,audio/*,text/plain,.docx",
-    maxSize: 20 * 1024 * 1024, // 5MB
     onFilesAdded: (data) => {
       const totalChildren = node.children?.length ?? 0
       if (totalChildren === MAX_CHILDREN_PER_DIRECTORY) {
