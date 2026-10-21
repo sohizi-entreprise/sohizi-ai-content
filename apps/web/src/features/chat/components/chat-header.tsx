@@ -2,7 +2,6 @@ import { IconPlus } from "@tabler/icons-react"
 import { useShallow } from "zustand/react/shallow"
 import { useEffect } from "react"
 import { Button } from "@sohizi/ui/button"
-import { SphereLoader } from "@sohizi/ui/loaders"
 import { useChatStore } from "../store/chat-store"
 import { ChatHistory } from "./chat-history"
 import { cn } from "@/lib/utils"
@@ -38,14 +37,7 @@ export function ChatHeader({ projectId, className }: ChatHeaderProps) {
         className,
       )}
     >
-      <div className="flex items-center gap-2 min-w-0">
-        <SphereLoader
-          isLoading={!!conversation?.isStreaming}
-          size={28}
-          showRings={false}
-        />
-        <h2 className="text-xs truncate min-w-0 flex-1">{title}</h2>
-      </div>
+      <h2 className="text-xs truncate min-w-0 flex-1 ml-2">{title}</h2>
 
       <div className="flex items-center gap-1">
         <Button

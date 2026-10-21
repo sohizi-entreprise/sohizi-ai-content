@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef } from "react"
-import { IconLoader2, IconSparkles } from "@tabler/icons-react"
+import { IconLoader2 } from "@tabler/icons-react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useShallow } from "zustand/shallow"
+import { ColibriMascot } from "@sohizi/ui/colibri-mascot"
 import { useChatStore } from "../store/chat-store"
 import { listAgentRunsInfiniteQueryOptions } from "../query-mutation"
 import { ChatRunBlock } from "./chat-run-block"
@@ -115,11 +116,7 @@ function RenderEmpty() {
   return (
     <div className="flex flex-1 items-center justify-center p-8">
       <ConversationEmptyState
-        icon={
-          <div className="mb-2 flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-            <IconSparkles className="size-6 text-primary" />
-          </div>
-        }
+        icon={<ColibriMascot state="loading" size={60} />}
         title="Start a conversation"
         description="Ask anything about your project, reference files with @, and let the agent help you create."
       />

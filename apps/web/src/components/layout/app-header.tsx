@@ -2,12 +2,7 @@ import { ChevronDown } from "lucide-react"
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { Suspense, useMemo, useState } from "react"
 import { Link, useParams, useRouterState } from "@tanstack/react-router"
-import {
-  IconBrain,
-  IconCheck,
-  IconFocus2,
-  IconLayoutSidebar,
-} from "@tabler/icons-react"
+import { IconCheck, IconFocus2, IconLayoutSidebar } from "@tabler/icons-react"
 import { Button } from "@sohizi/ui/button"
 import {
   Dialog,
@@ -18,6 +13,7 @@ import {
   DialogTrigger,
 } from "@sohizi/ui/dialog"
 import { Skeleton } from "@sohizi/ui/skeleton"
+import { ColibriMascot } from "@sohizi/ui/colibri-mascot"
 import type { ProjectListItem } from "@/features/projects/type"
 import { getListProjectsQueryOptions } from "@/features/projects/query-mutation"
 import { useSession } from "@/lib/auth-client"
@@ -44,7 +40,7 @@ export function AppHeader() {
           <img
             src="/logo-monochrome-white.svg"
             alt="sohizi lab monochrome white"
-            className="size-8 shrink-0 object-contain relative -top-1 opacity-90"
+            className="size-8 shrink-0 object-contain relative -top-1 opacity-75"
           />
 
           <div className="flex items-center gap-2">
@@ -95,7 +91,7 @@ export function AppHeader() {
           onClick={() => toggleChatPanel(chatContext)}
           className="cursor-pointer"
         >
-          {<IconBrain className="size-5 text-primary" />}
+          <ColibriMascot state="idle" size={24} />
         </button>
       </div>
     </header>
