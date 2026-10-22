@@ -3,10 +3,10 @@ import {
   ArrowUp,
   FilePlus,
   FolderPlus,
+  ImagePlus,
   MoreHorizontal,
   Pencil,
   Trash,
-  Upload,
 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -194,7 +194,7 @@ export function DirectoryActionsMenu({
   overlay = false,
   onNewFolder,
   onNewFile,
-  onUpload,
+  onNewAsset,
   onRename,
   onDelete,
 }: {
@@ -204,7 +204,7 @@ export function DirectoryActionsMenu({
   overlay?: boolean
   onNewFolder: () => void | Promise<void>
   onNewFile: (type: FileNodeType) => void | Promise<void>
-  onUpload: () => void
+  onNewAsset: () => void
   onRename: () => void
   onDelete: () => void
 }) {
@@ -223,9 +223,9 @@ export function DirectoryActionsMenu({
       icon: <FolderPlus className="size-4" />,
     },
     {
-      label: "Upload file",
-      value: "upload-file",
-      icon: <Upload className="size-4" />,
+      label: "New asset",
+      value: "new-asset",
+      icon: <ImagePlus className="size-4" />,
     },
     ...(editable
       ? [
@@ -320,7 +320,7 @@ export function DirectoryActionsMenu({
               <MenubarItem
                 key={option.value}
                 onClick={() => {
-                  if (option.value === "upload-file") onUpload()
+                  if (option.value === "new-asset") onNewAsset()
                   if (option.value === "rename") onRename()
                   if (option.value === "delete") onDelete()
                 }}

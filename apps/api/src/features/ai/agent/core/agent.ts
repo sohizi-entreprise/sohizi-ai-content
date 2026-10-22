@@ -6,6 +6,10 @@ import {
   UserModelMessage,
 } from "ai"
 import {
+  restoreSessionMessages,
+  withoutSohiziProviderOptions,
+} from "./system-persist"
+import {
   createBillableLlmClient,
   type BillableLlmClient,
   type BillableLlmInput,
@@ -184,7 +188,7 @@ export class Agent {
       abortSignal,
       this.ensureRunId(),
     )
-    const stateMessages = this.stateManager.getState().messages
+    const stateMessages = this.modelMessages()
 
     const billableInput: BillableLlmInput = {
       messages: stateMessages,
@@ -351,15 +355,12 @@ export class Agent {
       latestRunUsage: null,
     }
     if (existingState) {
-      const messages = existingState.messages.filter(
-        (message) => message.role !== "system",
-      )
       state = {
         ...existingState,
         status: "idle",
         jobs: existingState.jobs ?? [],
         latestRunUsage: existingState.latestRunUsage ?? null,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        messages: restoreSessionMessages(systemPrompt, existingState.messages),
       }
     }
 
@@ -558,6 +559,10 @@ export class Agent {
       role: "user",
       content: text,
     })
+  }
+
+  private modelMessages(): ModelMessage[] {
+    return withoutSohiziProviderOptions(this.stateManager.getState().messages)
   }
 
   private registerMessage(

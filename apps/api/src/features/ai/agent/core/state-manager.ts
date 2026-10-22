@@ -1,3 +1,4 @@
+import type { ModelMessage } from "ai"
 import {
   CompleteReason,
   AgentState,
@@ -6,6 +7,24 @@ import {
   TokenUsage,
   AgentJob,
 } from "@/type"
+
+function isSupportedUserFile(mediaType: string): boolean {
+  const base = mediaType.split(";")[0]?.trim().toLowerCase() ?? ""
+  return base === "application/pdf" || base === "text/plain"
+}
+
+function withoutUnsupportedUserFiles(message: ModelMessage): ModelMessage {
+  if (message.role !== "user" || typeof message.content === "string") {
+    return message
+  }
+  const content = message.content.filter((part) => {
+    if (part.type === "text" || part.type === "image") return true
+    if (part.type === "file") return isSupportedUserFile(part.mediaType)
+    return true
+  })
+  if (content.length === message.content.length) return message
+  return { ...message, content }
+}
 
 function addUsage(current: TokenUsage | null, usage: TokenUsage): TokenUsage {
   if (!current) return usage
@@ -90,7 +109,7 @@ export class AgentStateManager {
   }
 
   appendMessages(messages: AgentState["messages"]): void {
-    this.state.messages.push(...messages)
+    this.state.messages.push(...messages.map(withoutUnsupportedUserFiles))
   }
 
   replaceMessages(messages: AgentState["messages"]): void {

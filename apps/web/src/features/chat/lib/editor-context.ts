@@ -1,3 +1,5 @@
+import { useChatStore } from "../store/chat-store"
+import { partitionAttachedFiles } from "./attached-files"
 import type { Editor } from "@tiptap/core"
 import type { EditorTab } from "@/features/editor/types"
 import type { AttachedSelection, EditorContext } from "../types"
@@ -153,6 +155,21 @@ function collectSelectionsFromChatEditor(
   return selections
 }
 
+export function captureLocalTime(date = new Date()): {
+  localTime: string
+  timeZone: string
+} {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const pad = (value: number, length = 2) => String(value).padStart(length, "0")
+  const offsetMinutes = -date.getTimezoneOffset()
+  const sign = offsetMinutes >= 0 ? "+" : "-"
+  const absolute = Math.abs(offsetMinutes)
+  const offset = `${sign}${pad(Math.floor(absolute / 60))}:${pad(absolute % 60)}`
+  const localTime = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}${offset}`
+
+  return { localTime, timeZone }
+}
+
 export function buildEditorContext(chatEditor: Editor | null): EditorContext {
   const { openTabs, activeTabId } = useEditorStore.getState()
   const focused = openTabs.find((tab) => tab.id === activeTabId)
@@ -161,10 +178,18 @@ export function buildEditorContext(chatEditor: Editor | null): EditorContext {
     .filter((tab) => tab.id !== activeTabId)
     .map(tabToFileTag)
     .filter((tag): tag is string => tag !== null)
+  const { loadedFiles, availableFiles } = partitionAttachedFiles(
+    useChatStore.getState().attachedFiles,
+  )
+  const { localTime, timeZone } = captureLocalTime()
 
   return {
     focusedTab,
     openTabs: backgroundTabs,
     selections: collectSelectionsFromChatEditor(chatEditor),
+    localTime,
+    timeZone,
+    loadedFiles,
+    availableFiles,
   }
 }

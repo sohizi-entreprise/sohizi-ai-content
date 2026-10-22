@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   useInfiniteQuery,
   useMutation,
@@ -23,16 +23,11 @@ import {
   deleteFileNodeMutationOptions,
   directoryChildrenKey,
   fileTreeKey,
-  getlistFileTreePerDirectoryOptions,
   listDirectoryChildrenQueryOptions,
   moveFileNodeMutationOptions,
   renameFileNodeMutationOptions,
 } from "@/features/projects/query-mutation"
 import { listFileTreePerDirectory } from "@/features/projects/request"
-import { useFileUpload } from "@/hooks/use-file-upload"
-import { useSaveFileBucket } from "@/hooks/use-save-file-bucket"
-
-const MAX_CHILDREN_PER_DIRECTORY = 100
 
 export type StartDraftInput = {
   parentId: string
@@ -54,13 +49,11 @@ export function useDirectoryGrid(
   const [draft, setDraft] = useState<GridDraft | null>(null)
   const [pinned, setPinned] = useState<Array<DirectoryChild>>([])
   const [editingId, setEditingId] = useState<string | null>(null)
-  const uploadFolderId = useRef(folderId)
   const createMutation = useMutation(createFileNodeMutationOptions(projectId))
   const renameMutation = useMutation(renameFileNodeMutationOptions(projectId))
   const moveMutation = useMutation(moveFileNodeMutationOptions(projectId))
   const deleteMutation = useMutation(deleteFileNodeMutationOptions(projectId))
   const openFile = useEditorStore((state) => state.openFile)
-  const { saveFile } = useSaveFileBucket()
 
   const visibleDraft = draft?.node.parentId === folderId ? draft : null
   const visiblePinned = pinned.filter((node) => node.parentId === folderId)
@@ -77,29 +70,27 @@ export function useDirectoryGrid(
   }, [serverKey])
 
   const items = buildGridItems(serverItems, visibleDraft, visiblePinned)
-  const loadedCount =
-    serverItems.length +
-    visiblePinned.filter(
-      (node) => !serverItems.some((item) => item.id === node.id),
-    ).length
 
-  const rememberChild = (parentId: string, node: DirectoryChild) => {
-    if (parentId === folderId) {
-      setPinned((current) =>
-        current.some((item) => item.id === node.id)
-          ? current
-          : [...current, node],
-      )
-    }
-    appendDirectoryChild(queryClient, projectId, parentId, node)
-    void queryClient.invalidateQueries({
-      queryKey: directoryChildrenKey(projectId, parentId),
-    })
-    void queryClient.invalidateQueries({
-      queryKey: fileTreeKey(projectId, parentId),
-      refetchType: "all",
-    })
-  }
+  const rememberChild = useCallback(
+    (parentId: string, node: DirectoryChild) => {
+      if (parentId === folderId) {
+        setPinned((current) =>
+          current.some((item) => item.id === node.id)
+            ? current
+            : [...current, node],
+        )
+      }
+      appendDirectoryChild(queryClient, projectId, parentId, node)
+      void queryClient.invalidateQueries({
+        queryKey: directoryChildrenKey(projectId, parentId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: fileTreeKey(projectId, parentId),
+        refetchType: "all",
+      })
+    },
+    [folderId, projectId, queryClient],
+  )
 
   const startDraft = (input: StartDraftInput) => {
     const node = createTempDirectoryChild(projectId, input)
@@ -308,61 +299,6 @@ export function useDirectoryGrid(
     }
   }
 
-  const [_uploadState, { openFileDialog, getInputProps }] = useFileUpload({
-    multiple: false,
-    accept: "image/*,video/*,audio/*,text/plain,.docx",
-    onFilesAdded: (added) => {
-      const targetId = uploadFolderId.current
-      if (targetId === folderId && loadedCount >= MAX_CHILDREN_PER_DIRECTORY) {
-        toast.error("Maximum number of children reached")
-        return
-      }
-
-      for (const file of added) {
-        saveFile(
-          { projectId, folderId: targetId, file: file.file as File },
-          {
-            onSuccess: (result) => {
-              if (!result.fileNode) return
-              const previewUrl =
-                result.fileNode.type === "image" ||
-                result.fileNode.type === "video"
-                  ? result.asset.url
-                  : null
-              rememberChild(
-                targetId,
-                toDirectoryChild(result.fileNode, previewUrl),
-              )
-            },
-            onError: (error) => {
-              toast.error(error.message)
-            },
-          },
-        )
-      }
-    },
-    onError: (error) => {
-      toast.error(error)
-    },
-  })
-
-  const openUpload = async (targetFolderId: string) => {
-    try {
-      const children = await queryClient.ensureQueryData(
-        getlistFileTreePerDirectoryOptions(projectId, targetFolderId),
-      )
-      if (children.length >= MAX_CHILDREN_PER_DIRECTORY) {
-        toast.error("Maximum number of children reached")
-        return
-      }
-      uploadFolderId.current = targetFolderId
-      openFileDialog()
-    } catch (error) {
-      console.error("Failed to check folder before upload:", error)
-      toast.error("Couldn't open the upload")
-    }
-  }
-
   return {
     items,
     isLoading: query.isLoading,
@@ -379,8 +315,7 @@ export function useDirectoryGrid(
     beginRename: (id: string) => setEditingId(id),
     deleteNode,
     reorderNode,
-    openUpload,
-    getInputProps,
+    rememberChild,
     createInCurrentFolder: (isDir: boolean) => {
       startDraft({
         parentId: folderId,

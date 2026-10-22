@@ -19,6 +19,7 @@ import {
   DirectoryActionsMenu,
   FileActionsMenu,
 } from "../file-node/file-node-actions"
+import { useNewAssetDialog } from "../file-node/new-asset-dialog"
 import {
   GRID_PREVIEW_SIZE,
   GRID_ROW_HEIGHT,
@@ -62,6 +63,7 @@ export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
     ])
     const current = stack[stack.length - 1]
     const model = useDirectoryGrid(projectId, current.id, current.type)
+    const { openNewAsset, registerOnAssetCreated } = useNewAssetDialog()
     const scrollRef = useRef<HTMLDivElement>(null)
     const [width, setWidth] = useState(0)
     const [dragOrder, setDragOrder] = useState<Array<string> | null>(null)
@@ -87,6 +89,10 @@ export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
     useEffect(() => {
       setStack([{ id: rootFolderId, name: "", type: null }])
     }, [rootFolderId])
+
+    useEffect(() => {
+      return registerOnAssetCreated(model.rememberChild)
+    }, [model.rememberChild, registerOnAssetCreated])
 
     useImperativeHandle(
       ref,
@@ -308,7 +314,7 @@ export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
                           }
                           onRename={() => model.beginRename(node.id)}
                           onDelete={() => void model.deleteNode(node)}
-                          onUpload={() => void model.openUpload(node.id)}
+                          onNewAsset={() => void openNewAsset(node.id)}
                           onDragOrder={setDragOrder}
                           onDragEnd={() => setDragOrder(null)}
                         />
@@ -325,7 +331,6 @@ export const FileGrid = forwardRef<FileGridHandle, FileGridProps>(
             </div>
           ) : null}
         </div>
-        <input {...model.getInputProps()} className="sr-only" />
         <FileGridDragOverlay />
       </div>
     )
@@ -347,7 +352,7 @@ function GridTile({
   onInsert,
   onRename,
   onDelete,
-  onUpload,
+  onNewAsset,
   onDragOrder,
   onDragEnd,
 }: {
@@ -365,7 +370,7 @@ function GridTile({
   onInsert: (placement: "above" | "below", type: FileNodeType) => void
   onRename: () => void
   onDelete: () => void
-  onUpload: () => void
+  onNewAsset: () => void
   onDragOrder: (order: Array<string>) => void
   onDragEnd: () => void
 }) {
@@ -458,7 +463,7 @@ function GridTile({
           triggerClassName={gridMenuTriggerClassName}
           onNewFolder={onNewFolder}
           onNewFile={onNewFile}
-          onUpload={onUpload}
+          onNewAsset={onNewAsset}
           onRename={onRename}
           onDelete={onDelete}
         />

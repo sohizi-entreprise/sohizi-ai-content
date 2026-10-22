@@ -7,11 +7,10 @@ import {
   cancelChatRunMutationOptions,
   submitChatCompletionMutationOptions,
 } from "../query-mutation"
+import { buildUserFileParts } from "../lib/attached-files"
 import { buildEditorContext } from "../lib/editor-context"
-import type { ChatCompletionRequest, FilePart, ImagePart } from "../types"
-import type { AttachedFile } from "@/components/widgets/file-attachments"
+import type { ChatCompletionRequest } from "../types"
 import type { ChatStatus } from "ai"
-import { cleanMediaType } from "@/utils/clean-mediaType"
 import { useEditorInputBridge } from "@/features/editor/bridge/use-editor-input-bridge"
 import { getErrorMessage } from "@/lib/errors"
 
@@ -61,7 +60,7 @@ export const useSendMessage = (projectId: string) => {
         role: "user",
         content: [
           { type: "text", text: userPrompt },
-          ...buildFilesPayload(attachedFiles),
+          ...buildUserFileParts(attachedFiles),
         ],
       },
       conversationId,
@@ -117,24 +116,3 @@ export const useSendMessage = (projectId: string) => {
   }
 }
 
-function buildFilesPayload(
-  attachedFiles: Array<AttachedFile>,
-): Array<ImagePart | FilePart> {
-  const filtered = attachedFiles.filter((file) => file.status === "uploaded")
-  const result: Array<ImagePart | FilePart> = []
-  for (const file of filtered) {
-    if (file.type.startsWith("image/") || file.type === "image") {
-      result.push({
-        type: "image",
-        image: new URL(file.url),
-      })
-    } else {
-      result.push({
-        type: "file",
-        data: new URL(file.url),
-        mediaType: cleanMediaType(file.type, file.url),
-      })
-    }
-  }
-  return result
-}

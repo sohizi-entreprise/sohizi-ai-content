@@ -323,10 +323,32 @@ export type AttachedSelection = {
   isEntireFile: boolean
 }
 
+export type ChatAttachmentKind =
+  "image" | "pdf" | "text" | "video" | "audio" | "file"
+
+export type LoadedChatFile = {
+  messagePartIndex: number
+  userIndex: number
+  type: ChatAttachmentKind
+  mediaType: string
+  url: string
+}
+
+export type AvailableChatFile = {
+  userIndex: number
+  type: ChatAttachmentKind
+  mediaType: string
+  url: string
+}
+
 export type EditorContext = {
   focusedTab: string | null
   openTabs: Array<string>
   selections: Array<AttachedSelection>
+  localTime: string
+  timeZone: string
+  loadedFiles: Array<LoadedChatFile>
+  availableFiles: Array<AvailableChatFile>
 }
 
 export type ChatCompletionRequest = {

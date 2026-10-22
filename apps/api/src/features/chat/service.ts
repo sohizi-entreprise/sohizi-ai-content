@@ -46,6 +46,7 @@ import {
   editorContextSchema,
   type EditorContext,
 } from "./editor-context"
+import { durableSystemMessage } from "../ai/agent/core/system-persist"
 import { extractTextFromUserMessage } from "../ai/agent/utils/message-content"
 import { textFromAgentChunk, withAgentTrace } from "../ai/agent/utils/tracing"
 
@@ -286,10 +287,7 @@ async function runAgent(payload: RunAgentPayload) {
       async (updateOutput) => {
         const editorContextPrompt = buildEditorContextPrompt(editorContext)
         const messages = editorContextPrompt
-          ? [
-              { role: "system" as const, content: editorContextPrompt },
-              userPrompt,
-            ]
+          ? [durableSystemMessage(editorContextPrompt), userPrompt]
           : [userPrompt]
         const chunks = agent.runLoop(messages, controller.signal, 250)
         let outputText = ""

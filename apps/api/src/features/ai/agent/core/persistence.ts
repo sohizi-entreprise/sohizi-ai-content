@@ -2,6 +2,7 @@ import { Checkpoint } from "@/db/schema"
 import { AgentRunMetadata, AgentState, TokenUsage } from "@/type"
 import * as repo from "@/features/chat/repo"
 import { ModelMessage } from "ai"
+import { messagesForCheckpoint } from "./system-persist"
 import { v4 as uuidv4 } from "uuid"
 
 export function agentRunMetadata(
@@ -77,7 +78,7 @@ export class CheckpointPersistence extends Persistence {
     const projectId = this.checkpoint.projectId
     const payload = {
       ...state,
-      messages: state.messages.filter((message) => message.role !== "system"),
+      messages: messagesForCheckpoint(state.messages),
     }
     return await repo.insertCheckpoint(projectId, conversationId, payload)
   }

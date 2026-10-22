@@ -187,6 +187,70 @@ describe("AgentStateManager usage", () => {
   })
 })
 
+describe("AgentStateManager appendMessages", () => {
+  it("drops unsupported user file parts without mutating the input", () => {
+    const state = new AgentStateManager()
+    const user = {
+      role: "user" as const,
+      content: [
+        { type: "text" as const, text: "look" },
+        {
+          type: "image" as const,
+          image: new URL("https://cdn.example/shot.png"),
+        },
+        {
+          type: "file" as const,
+          data: new URL("https://cdn.example/clip.mp4"),
+          mediaType: "video/mp4",
+        },
+        {
+          type: "file" as const,
+          data: new URL("https://cdn.example/notes.pdf"),
+          mediaType: "application/pdf",
+        },
+        {
+          type: "file" as const,
+          data: new URL("https://cdn.example/notes.txt"),
+          mediaType: "text/plain",
+        },
+        {
+          type: "file" as const,
+          data: new URL("https://cdn.example/voice.mp3"),
+          mediaType: "audio/mpeg",
+        },
+      ],
+    }
+
+    state.appendMessages([user])
+
+    const stored = state.getState().messages[0]
+    expect(stored).not.toBe(user)
+    if (!stored || stored.role !== "user" || typeof stored.content === "string") {
+      throw new Error("expected user message parts")
+    }
+    expect(
+      stored.content.map((part) =>
+        part.type === "file" ? part.mediaType : part.type,
+      ),
+    ).toEqual(["text", "image", "application/pdf", "text/plain"])
+    expect(user.content).toHaveLength(6)
+  })
+
+  it("keeps messages that need no filtering as the same objects", () => {
+    const state = new AgentStateManager()
+    const user = {
+      role: "user" as const,
+      content: [{ type: "text" as const, text: "hi" }],
+    }
+    const assistant = { role: "assistant" as const, content: "ok" }
+
+    state.appendMessages([user, assistant])
+
+    expect(state.getState().messages[0]).toBe(user)
+    expect(state.getState().messages[1]).toBe(assistant)
+  })
+})
+
 describe("AgentStateManager fulfilled vendor", () => {
   it("keeps each vendor that served a model call, in order", () => {
     const state = new AgentStateManager()

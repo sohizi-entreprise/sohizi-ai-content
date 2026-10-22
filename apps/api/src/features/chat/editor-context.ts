@@ -10,10 +10,38 @@ export const attachedSelectionSchema = z.object({
   isEntireFile: z.boolean(),
 })
 
+export const chatAttachmentKindSchema = z.enum([
+  "image",
+  "pdf",
+  "text",
+  "video",
+  "audio",
+  "file",
+])
+
+export const loadedChatFileSchema = z.object({
+  messagePartIndex: z.number().int().positive(),
+  userIndex: z.number().int().positive(),
+  type: chatAttachmentKindSchema,
+  mediaType: z.string().min(1),
+  url: z.string().min(1),
+})
+
+export const availableChatFileSchema = z.object({
+  userIndex: z.number().int().positive(),
+  type: chatAttachmentKindSchema,
+  mediaType: z.string().min(1),
+  url: z.string().min(1),
+})
+
 export const editorContextSchema = z.object({
   focusedTab: z.string().nullable(),
   openTabs: z.array(z.string()),
   selections: z.array(attachedSelectionSchema),
+  localTime: z.string().default(""),
+  timeZone: z.string().default(""),
+  loadedFiles: z.array(loadedChatFileSchema).default([]),
+  availableFiles: z.array(availableChatFileSchema).default([]),
 })
 
 export type AttachedSelection = z.infer<typeof attachedSelectionSchema>
@@ -54,6 +82,38 @@ function renderSelection(selection: AttachedSelection): string {
   return parts.join("\n")
 }
 
+function renderLocalTime(localTime: string, timeZone: string): string | null {
+  if (!localTime) return null
+  const timezone = timeZone ? ` timezone="${escapeXmlAttr(timeZone)}"` : ""
+  return `<user_local_time${timezone}>${escapeXmlText(localTime)}</user_local_time>`
+}
+
+function renderAttachedFiles(
+  loadedFiles: EditorContext["loadedFiles"],
+  availableFiles: EditorContext["availableFiles"],
+): string | null {
+  if (loadedFiles.length === 0 && availableFiles.length === 0) return null
+
+  const lines = [
+    "<attached_files>",
+    "loaded_file parts are included in the user message content. message_part_index is the 0-based index of the part within that content. Index 0 refers to the text part.",
+    "user_index is the 1-based position of an uploaded attachment in the order shown to the user. Use user_index when the user refers to an attachment by its position, such as the first file or file 2",
+    "available_file parts are not included in the user message content, but they still have a user_index indicating their position among the user's attachments.",
+  ]
+  for (const file of loadedFiles) {
+    lines.push(
+      `  <loaded_file message_part_index="${file.messagePartIndex}" user_index="${file.userIndex}" type="${escapeXmlAttr(file.type)}" media_type="${escapeXmlAttr(file.mediaType)}" url="${escapeXmlAttr(file.url)}" />`,
+    )
+  }
+  for (const file of availableFiles) {
+    lines.push(
+      `  <available_file user_index="${file.userIndex}" type="${escapeXmlAttr(file.type)}" media_type="${escapeXmlAttr(file.mediaType)}" url="${escapeXmlAttr(file.url)}" />`,
+    )
+  }
+  lines.push("</attached_files>")
+  return lines.join("\n")
+}
+
 export function buildEditorContextPrompt(
   editorContext?: EditorContext,
 ): string {
@@ -62,9 +122,27 @@ export function buildEditorContextPrompt(
   const hasFocusedTab = Boolean(editorContext.focusedTab)
   const hasOpenTabs = editorContext.openTabs.length > 0
   const hasSelections = editorContext.selections.length > 0
-  if (!hasFocusedTab && !hasOpenTabs && !hasSelections) return ""
+  const localTime = renderLocalTime(
+    editorContext.localTime ?? "",
+    editorContext.timeZone ?? "",
+  )
+  const attachedFiles = renderAttachedFiles(
+    editorContext.loadedFiles ?? [],
+    editorContext.availableFiles ?? [],
+  )
+  if (
+    !hasFocusedTab &&
+    !hasOpenTabs &&
+    !hasSelections &&
+    !localTime &&
+    !attachedFiles
+  ) {
+    return ""
+  }
 
   const blocks: string[] = []
+
+  if (localTime) blocks.push(localTime)
 
   if (hasFocusedTab || hasOpenTabs) {
     const lines = [
@@ -97,6 +175,8 @@ export function buildEditorContextPrompt(
     ]
     blocks.push(lines.join("\n"))
   }
+
+  if (attachedFiles) blocks.push(attachedFiles)
 
   return blocks.join("\n\n")
 }
