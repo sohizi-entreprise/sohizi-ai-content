@@ -66,3 +66,4 @@
 [ ] Instruct the agent to work step by step (so it doesn't directly generate all the medias at once)
 [ ] Add an error when the streaming fails, and when a run fails too (currently we display a raw message - replace it with a generic one)
 [ ] Some types of files do not require user approval, like context file
+[ ] Test ai context summarization
