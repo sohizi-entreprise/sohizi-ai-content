@@ -6,6 +6,7 @@ import {
   UserModelMessage,
 } from "ai"
 import {
+  contextNote,
   restoreSessionMessages,
   withoutSohiziProviderOptions,
 } from "./system-persist"
@@ -555,10 +556,7 @@ export class Agent {
   }
 
   private injectJobNote(text: string) {
-    this.registerMessage({
-      role: "user",
-      content: text,
-    })
+    this.registerMessage(contextNote(text))
   }
 
   private modelMessages(): ModelMessage[] {

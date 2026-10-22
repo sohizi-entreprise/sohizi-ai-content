@@ -75,13 +75,14 @@ registerAgent({
       allTools.provideStatusUpdateTool,
       allTools.webSearchTool,
       allTools.webPageExtractTool,
+      allTools.getArtifactTool,
     ]),
     reasoningEffort: "medium",
     reasoningSummary: "auto",
     maxOutputTokens: 30000,
   },
   modelId: "", // This will be overridden by the model passed to the agent
-  contextThreshold: 0.8,
+  contextThreshold: 0.75,
   summaryModelId: "google/gemini-2.5-flash-lite",
   subAgents: ["explorer"],
 })
@@ -95,6 +96,7 @@ registerAgent({
     tools: getSchemas([
       allTools.exploreFileTool,
       allTools.provideStatusUpdateTool,
+      allTools.getArtifactTool,
     ]),
     reasoningEffort: "low",
     reasoningSummary: "auto",
@@ -112,7 +114,11 @@ registerAgent({
     "Search the live web and fetch public pages for current, cited information.",
   baseSystemPrompt: webSearcherPrompt,
   modelConfig: {
-    tools: getSchemas([allTools.webSearchTool, allTools.webPageExtractTool]),
+    tools: getSchemas([
+      allTools.webSearchTool,
+      allTools.webPageExtractTool,
+      allTools.getArtifactTool,
+    ]),
     reasoningEffort: "medium",
     reasoningSummary: "auto",
     maxOutputTokens: 4000,

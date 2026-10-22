@@ -84,7 +84,15 @@ describe("ContextManager compression threshold", () => {
       async () => "Earlier work",
       false,
     )
-    expect(result).toHaveLength(16)
+    expect(result).toHaveLength(6)
+    expect(JSON.stringify(result[0])).toContain("Earlier work")
+    expect(result.slice(1).map((message) => message.content)).toEqual([
+      "Message 12",
+      "Message 13",
+      "Message 14",
+      "Message 15",
+      "Message 16",
+    ])
     expect(JSON.stringify(result)).not.toContain(
       "Please continue with the task",
     )

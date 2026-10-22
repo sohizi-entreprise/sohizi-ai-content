@@ -36,6 +36,7 @@ import {
   serializeSkillDocument,
 } from "./skill-document"
 import { joinLtree, toApiPath, ltreeDepth } from "./utils"
+import { expireAssetsForFileNode } from "../media-engine/asset-retention"
 
 export const ORDER_GAP = 1000
 
@@ -348,6 +349,7 @@ export const listFileNodesUnderFolder = async (
         LEFT JOIN assets a
           ON a.file_node_id = fn.id
          AND a.project_id = ${projectId}
+         AND a.expire_at IS NULL
         WHERE fn.project_id = ${projectId}
           AND fn.path <@ ${folder.path}::ltree
           AND fn.path <> ${folder.path}::ltree
@@ -391,7 +393,11 @@ export const listFolderMedia = async (
     .from(fileNodes)
     .innerJoin(
       assets,
-      and(eq(assets.fileNodeId, fileNodes.id), eq(assets.projectId, projectId)),
+      and(
+        eq(assets.fileNodeId, fileNodes.id),
+        eq(assets.projectId, projectId),
+        isNull(assets.expireAt),
+      ),
     )
     .where(
       and(
@@ -487,6 +493,7 @@ export const createFileNode = async (data: FileCreationRequest) => {
 }
 
 export const deleteFileNode = async (projectId: string, id: string) => {
+  await expireAssetsForFileNode(projectId, id)
   const result = await db
     .delete(fileNodes)
     .where(and(eq(fileNodes.id, id), eq(fileNodes.projectId, projectId)))

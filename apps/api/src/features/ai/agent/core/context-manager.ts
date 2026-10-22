@@ -1,4 +1,5 @@
 import { ModelMessage } from "ai"
+import type { ContextArtifactMetadata } from "@/db/schema"
 import { billingService, withBillingStream } from "@/features/billing"
 import { BillableLlmInput, createBillableLlmClient } from "../utils/llm-client"
 import { LlmChunk, streamEvents } from "../utils/llm-response"
@@ -7,6 +8,15 @@ import { TokenUsage } from "@/type"
 import { Session } from "./session"
 import { AgentStateManager } from "./state-manager"
 import { extractTextFromContent } from "../utils/message-content"
+import { contextSummaryMessage } from "./system-persist"
+import { selectCompressionWindow, splitRetainedRuns } from "./context-window"
+import { truncatedToolResult } from "./context-artifact-format"
+
+export type ContextArtifactStore = {
+  save(
+    rows: Array<{ metadata: ContextArtifactMetadata; data: unknown }>,
+  ): Promise<string[]>
+}
 
 export type ContextManagerConfig = {
   maxContextTokens: number
@@ -14,8 +24,7 @@ export type ContextManagerConfig = {
   summaryModelId: string
   threshold?: number
   pruneMaxLength?: number
-  keepFirst?: number
-  keepLast?: number
+  artifactStore?: ContextArtifactStore
 }
 
 export type ConsumptionInfo = {
@@ -38,20 +47,19 @@ type BilledLlmStream = ReturnType<
 
 const DEFAULT_THRESHOLD = 0.8
 const DEFAULT_PRUNE_MAX_LENGTH = 200
-const DEFAULT_KEEP_FIRST = 5
-const DEFAULT_KEEP_LAST = 10
 const DEFAULT_SUMMARY_OUTPUT_TOKENS = 2048
 
 const TRUNCATION_MARKER = "...[CONCANATED]"
 
 const SUMMARY_SYSTEM_PROMPT = `You are a conversation summarizer for an autonomous AI agent operating in a tool-calling loop.
 
-You are given a transcript of the middle portion of a conversation (the earliest and most recent messages are kept verbatim elsewhere). Produce a single, clear summary that lets the agent continue its work without losing context or the original goal.
+You are given the older portion of a conversation. The recent turns are kept separately and are not in this transcript. Produce a single, clear summary that lets the agent continue its work without losing the original goal.
 
 ## Requirements
 - Preserve the original user goal and how the task evolved (decisions made, what was tried, what worked or failed).
 - Keep ALL concrete facts EXACTLY as written: file ids, file paths, URLs, asset ids, todo ids, tool names, and any other identifiers. Never paraphrase or invent identifiers.
 - Be concise but complete: capture the important state, not every keystroke.
+- This older history is not stored anywhere else. Do not refer to artifacts or claim that omitted details can be retrieved.
 - Do not add commentary about the summarization itself.
 
 Return only the summary text.`
@@ -60,10 +68,9 @@ export class ContextManager {
   private readonly maxContextTokens: number
   private readonly threshold: number
   private readonly pruneMaxLength: number
-  private readonly keepFirst: number
-  private readonly keepLast: number
   private readonly session: Session
   private readonly summaryModelId: string
+  private readonly artifactStore: ContextArtifactStore | undefined
   private summaryStream: BilledLlmStream | null | undefined
 
   constructor(config: ContextManagerConfig) {
@@ -72,8 +79,7 @@ export class ContextManager {
     this.summaryModelId = config.summaryModelId
     this.threshold = config.threshold ?? DEFAULT_THRESHOLD
     this.pruneMaxLength = config.pruneMaxLength ?? DEFAULT_PRUNE_MAX_LENGTH
-    this.keepFirst = config.keepFirst ?? DEFAULT_KEEP_FIRST
-    this.keepLast = config.keepLast ?? DEFAULT_KEEP_LAST
+    this.artifactStore = config.artifactStore
     this.summaryStream = undefined
   }
 
@@ -102,18 +108,24 @@ export class ContextManager {
     const summaryStream = await this.getSummaryStream()
 
     // Fall back to pruning-only when a dedicated summary model is unavailable.
-    const compressed = summaryStream
-      ? await this.compress(
-          messages,
-          this.buildSummarizeFn(
-            stateManager,
-            summaryStream,
-            abortSignal,
-            runId,
-          ),
-          stateManager.isRunning,
-        )
-      : this.pruneMessages(messages)
+    let compressed: ModelMessage[]
+    try {
+      compressed = summaryStream
+        ? await this.compress(
+            messages,
+            this.buildSummarizeFn(
+              stateManager,
+              summaryStream,
+              abortSignal,
+              runId,
+            ),
+            stateManager.isRunning,
+          )
+        : this.pruneMessages(messages)
+    } catch (error) {
+      console.error("Failed to compress context", error)
+      return
+    }
 
     if (compressed !== messages) {
       stateManager.replaceMessages(compressed)
@@ -175,79 +187,47 @@ export class ContextManager {
   }
 
   /**
-   * Strategy 2 — Message summarization.
-   * Keep the leading system message plus the first `keepFirst` and last
-   * `keepLast` non-system messages, condensing everything in between into a
-   * single summary produced by `summarizeFn`. Slice boundaries are adjusted
-   * so a tool-call is never separated from its tool results.
-   */
-  async summarizeMessages(
-    messages: ModelMessage[],
-    summarizeFn: SummarizeFn,
-  ): Promise<ModelMessage[]> {
-    const systemMessages = messages.filter(
-      (message) => message.role === "system",
-    )
-    const conversation = messages.filter((message) => message.role !== "system")
-
-    // Not enough to summarize — nothing in the middle to condense.
-    if (conversation.length <= this.keepFirst + this.keepLast) {
-      return messages
-    }
-
-    const firstEnd = this.adjustFirstBoundary(conversation, this.keepFirst)
-    const lastStart = this.adjustLastBoundary(
-      conversation,
-      conversation.length - this.keepLast,
-    )
-
-    // Boundaries overlapped after adjustment — nothing safe to summarize.
-    if (lastStart <= firstEnd) {
-      return messages
-    }
-
-    const firstMessages = conversation.slice(0, firstEnd)
-    const middleMessages = conversation.slice(firstEnd, lastStart)
-    const lastMessages = conversation.slice(lastStart)
-
-    const transcript = this.buildTranscript(middleMessages)
-    const summary = await summarizeFn({
-      systemPrompt: SUMMARY_SYSTEM_PROMPT,
-      transcript,
-    })
-    if (!summary.trim()) return messages
-
-    const summaryMessage: ModelMessage = {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: `Summary of the earlier conversation (older messages were condensed to save context):\n\n${summary}`,
-        },
-      ],
-    }
-
-    return [
-      ...systemMessages,
-      ...firstMessages,
-      summaryMessage,
-      ...lastMessages,
-    ]
-  }
-
-  /**
-   * Run pruning then summarization, then append the synthetic
-   * explain / acknowledge / continue trio so the loop resumes cleanly.
+   * Keep the main system prompt and the latest five real user turns.
+   * Older history is summarized. Tool results in the four older retained
+   * turns are replaced with previews that point at stored artifacts.
    */
   async compress(
     messages: ModelMessage[],
     summarizeFn: SummarizeFn,
     resume = true,
   ): Promise<ModelMessage[]> {
-    const pruned = this.pruneMessages(messages)
-    const summarized = await this.summarizeMessages(pruned, summarizeFn)
-    if (summarized === pruned) return pruned
-    if (!resume) return summarized
+    const { mainSystem, older, retained } = selectCompressionWindow(messages)
+    const { earlier, latest } = splitRetainedRuns(retained)
+    let summaryMessage: ModelMessage | null = null
+    if (older.length > 0) {
+      const summary = await summarizeFn({
+        systemPrompt: SUMMARY_SYSTEM_PROMPT,
+        transcript: this.buildTranscript(older),
+      })
+      if (!summary.trim()) return messages
+      summaryMessage = contextSummaryMessage(summary)
+    }
+
+    const jobs = collectToolResultJobs(earlier)
+    const artifactized =
+      jobs.length > 0 ? await this.artifactize(earlier, jobs) : earlier
+
+    const assembled = [
+      ...mainSystem,
+      ...(summaryMessage ? [summaryMessage] : []),
+      ...artifactized,
+      ...latest,
+    ]
+    if (
+      !summaryMessage &&
+      artifactized === earlier &&
+      sameMessages(assembled, messages)
+    ) {
+      return messages
+    }
+    if (!resume || (!summaryMessage && artifactized === earlier)) {
+      return assembled
+    }
 
     const explain: ModelMessage = {
       role: "user",
@@ -257,6 +237,7 @@ export class ContextManager {
           text: "The earlier messages in this conversation have been summarized to save context.",
         },
       ],
+      providerOptions: { sohizi: { kind: "context-note" } },
     }
     const acknowledge: ModelMessage = {
       role: "assistant",
@@ -270,39 +251,39 @@ export class ContextManager {
     const cont: ModelMessage = {
       role: "user",
       content: [{ type: "text", text: "Please continue with the task." }],
+      providerOptions: { sohizi: { kind: "context-continuation" } },
     }
-
-    return [...summarized, explain, acknowledge, cont]
+    return [...assembled, explain, acknowledge, cont]
   }
 
-  /**
-   * Extend the first-N boundary forward so it never ends right after an
-   * assistant tool-call, splitting it from its tool results.
-   */
-  private adjustFirstBoundary(
-    conversation: ModelMessage[],
-    boundary: number,
-  ): number {
-    let end = Math.min(boundary, conversation.length)
-    while (end < conversation.length && conversation[end].role === "tool") {
-      end++
+  private async artifactize(
+    messages: ModelMessage[],
+    jobs: ToolResultJob[],
+  ): Promise<ModelMessage[]> {
+    const ids = await this.saveArtifacts(
+      jobs.map((job) => ({
+        metadata: {
+          projectId: this.session.projectId,
+          conversationId: this.session.conversationId ?? null,
+          sessionId: this.session.id,
+          toolName: job.toolName,
+          toolCallId: job.toolCallId,
+        },
+        data: { output: job.output },
+      })),
+    )
+    if (ids.length !== jobs.length) {
+      throw new Error("Artifact storage did not return an id for every tool result")
     }
-    return end
+    return applyToolResultArtifacts(messages, jobs, ids)
   }
 
-  /**
-   * Move the last-M start backward so it never begins with an orphan tool
-   * result whose originating assistant tool-call was summarized away.
-   */
-  private adjustLastBoundary(
-    conversation: ModelMessage[],
-    boundary: number,
-  ): number {
-    let start = Math.max(boundary, 0)
-    while (start > 0 && conversation[start].role === "tool") {
-      start--
-    }
-    return start
+  private async saveArtifacts(
+    rows: Array<{ metadata: ContextArtifactMetadata; data: unknown }>,
+  ): Promise<string[]> {
+    if (this.artifactStore) return this.artifactStore.save(rows)
+    const { insertContextArtifacts } = await import("./context-artifacts")
+    return insertContextArtifacts(rows)
   }
 
   private buildTranscript(messages: ModelMessage[]): string {
@@ -430,6 +411,68 @@ export class ContextManager {
     this.summaryStream = withBillingStream(summaryClient, billingService)
     return this.summaryStream
   }
+}
+
+type ToolResultJob = {
+  messageIndex: number
+  partIndex: number
+  toolName: string
+  toolCallId: string
+  output: unknown
+}
+
+function collectToolResultJobs(messages: ModelMessage[]): ToolResultJob[] {
+  const jobs: ToolResultJob[] = []
+  messages.forEach((message, messageIndex) => {
+    if (message.role !== "tool" || !Array.isArray(message.content)) return
+    message.content.forEach((part, partIndex) => {
+      if (part.type !== "tool-result") return
+      jobs.push({
+        messageIndex,
+        partIndex,
+        toolName: part.toolName,
+        toolCallId: part.toolCallId,
+        output: part.output,
+      })
+    })
+  })
+  return jobs
+}
+
+function applyToolResultArtifacts(
+  messages: ModelMessage[],
+  jobs: ToolResultJob[],
+  ids: string[],
+): ModelMessage[] {
+  const replacements = new Map(
+    jobs.map((job, index) => [`${job.messageIndex}:${job.partIndex}`, ids[index]]),
+  )
+  return messages.map((message, messageIndex) => {
+    if (message.role !== "tool" || !Array.isArray(message.content)) {
+      return message
+    }
+    let changed = false
+    const content = message.content.map((part, partIndex) => {
+      const artifactId = replacements.get(`${messageIndex}:${partIndex}`)
+      if (!artifactId || part.type !== "tool-result") return part
+      changed = true
+      return {
+        ...part,
+        output: {
+          type: "text" as const,
+          value: truncatedToolResult(part.output, artifactId),
+        },
+      }
+    })
+    return changed ? { ...message, content } : message
+  })
+}
+
+function sameMessages(left: ModelMessage[], right: ModelMessage[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((message, index) => message === right[index])
+  )
 }
 
 async function drainStreamForComplete(

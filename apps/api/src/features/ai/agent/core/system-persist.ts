@@ -21,6 +21,10 @@ export function isDurableSystemMessage(
   )
 }
 
+export function isContextNote(message: ModelMessage): boolean {
+  return message.providerOptions?.sohizi?.kind === "context-note"
+}
+
 export function messagesForCheckpoint(
   messages: ModelMessage[],
 ): ModelMessage[] {
@@ -37,6 +41,31 @@ export function restoreSessionMessages(
     { role: "system", content: systemPrompt },
     ...messagesForCheckpoint(existing),
   ]
+}
+
+export function contextSummaryMessage(summary: string): ModelMessage {
+  return {
+    role: "user",
+    content: [
+      {
+        type: "text",
+        text: `Summary of the earlier conversation (older messages were condensed to save context):\n\n${summary}`,
+      },
+    ],
+    providerOptions: {
+      sohizi: { kind: "context-summary" },
+    },
+  }
+}
+
+export function contextNote(text: string): ModelMessage {
+  return {
+    role: "user",
+    content: text,
+    providerOptions: {
+      sohizi: { kind: "context-note" },
+    },
+  }
 }
 
 export function withoutSohiziProviderOptions(

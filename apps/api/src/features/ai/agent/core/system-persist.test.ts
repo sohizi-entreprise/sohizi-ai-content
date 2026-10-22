@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test"
 import type { ModelMessage } from "ai"
 import {
+  contextNote,
+  contextSummaryMessage,
   durableSystemMessage,
   messagesForCheckpoint,
   restoreSessionMessages,
@@ -57,6 +59,38 @@ describe("messagesForCheckpoint", () => {
       user("second"),
       assistant("another reply"),
     ])
+  })
+
+  it("keeps a compressed summary and artifact reference, but not the main prompt", () => {
+    const summary = contextSummaryMessage("Earlier work")
+    const toolResult: ModelMessage = {
+      role: "tool",
+      content: [
+        {
+          type: "tool-result",
+          toolCallId: "call-1",
+          toolName: "exploreFile",
+          output: {
+            type: "text",
+            value: "preview\nFull tool result saved as artifact art-1.",
+          },
+        },
+      ],
+    }
+    const checkpoint = messagesForCheckpoint([
+      { role: "system", content: "main prompt" },
+      summary,
+      toolResult,
+    ])
+
+    expect(checkpoint).toEqual([summary, toolResult])
+  })
+
+  it("keeps internal context notes for the active context", () => {
+    const note = contextNote("A background job completed.")
+    const retained = messagesForCheckpoint([note, user("real user message")])
+
+    expect(retained).toEqual([note, user("real user message")])
   })
 })
 

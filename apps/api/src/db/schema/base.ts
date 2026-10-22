@@ -381,6 +381,30 @@ export const conversations = pgTable(
   ],
 )
 
+export type ContextArtifactMetadata = {
+  projectId: string
+  conversationId: string | null
+  sessionId: string
+  toolName: string
+  toolCallId: string
+}
+
+export const artifacts = pgTable(
+  "artifacts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    metadata: jsonb("metadata").$type<ContextArtifactMetadata>().notNull(),
+    data: jsonb("data").notNull(),
+    expireAt: timestamp("expire_at", { withTimezone: true })
+      .default(sql`now() + interval '24 hours'`)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("artifacts_expire_at_idx").on(table.expireAt)],
+)
+
 export const checkpoints = pgTable(
   "checkpoints",
   {
@@ -1174,9 +1198,9 @@ export const assets = pgTable(
   "assets",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    projectId: uuid("project_id")
-      .references(() => projects.id, { onDelete: "cascade" })
-      .notNull(),
+    projectId: uuid("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
     name: varchar("name", { length: 255 }).notNull(),
     type: varchar("type", { length: 50 }).notNull().$type<AssetType>(),
     url: text("url").notNull(),
@@ -1187,9 +1211,10 @@ export const assets = pgTable(
       { onDelete: "set null" },
     ),
     fileNodeId: uuid("file_node_id").references(() => fileNodes.id, {
-      onDelete: "cascade",
+      onDelete: "set null",
     }),
     metadata: jsonb("metadata").$type<AssetMetadata>(),
+    expireAt: timestamp("expire_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [
@@ -1204,6 +1229,9 @@ export const assets = pgTable(
       table.createdAt,
     ),
     index("assets_generation_request_id_idx").on(table.generationRequestId),
+    index("assets_expire_at_idx")
+      .on(table.expireAt)
+      .where(sql`${table.expireAt} is not null`),
   ],
 )
 
@@ -1277,6 +1305,7 @@ export type LlmVendorAndModel = typeof llmVendorsAndModels.$inferSelect
 export type LlmVendorModelParameterOverride =
   typeof llmVendorModelParameterOverrides.$inferSelect
 export type Checkpoint = typeof checkpoints.$inferSelect
+export type ContextArtifact = typeof artifacts.$inferSelect
 export type Asset = typeof assets.$inferSelect
 export type AssetVariant = typeof assetVariants.$inferSelect
 export type OrganizationWallet = typeof organizationWallets.$inferSelect

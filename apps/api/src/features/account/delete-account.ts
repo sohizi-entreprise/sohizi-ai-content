@@ -1,16 +1,9 @@
 import { APIError } from "better-auth/api"
 import { inArray, eq } from "drizzle-orm"
 import { db } from "@/db"
-import {
-  assets,
-  member,
-  organization,
-  organizationWallets,
-  projects,
-  user,
-} from "@/db/schema"
+import { member, organization, organizationWallets, user } from "@/db/schema"
 import { polar } from "@/features/billing/polar-client"
-import { deleteFile } from "@/features/media-engine/storage"
+import { expireAssetsForOrganizations } from "@/features/media-engine/asset-retention"
 
 const RENEWABLE_STATUSES = new Set([
   "incomplete",
@@ -105,12 +98,10 @@ export async function prepareAccountDeletion(
   userId: string,
   options: {
     polar?: AccountDeletionPolar | null
-    deleteStorage?: (storageKey: string) => Promise<void>
   } = {},
 ) {
   const billing =
     options.polar === undefined ? polarAccountClient() : options.polar
-  const deleteStorage = options.deleteStorage ?? deleteFile
 
   const ownMemberships = await db
     .select({ organizationId: member.organizationId })
@@ -279,24 +270,9 @@ export async function prepareAccountDeletion(
 
   if (soleOrganizationIds.length === 0) return
 
-  const stored = await db
-    .select({ storageKey: assets.storageKey })
-    .from(assets)
-    .innerJoin(projects, eq(assets.projectId, projects.id))
-    .where(inArray(projects.organizationId, soleOrganizationIds))
+  await expireAssetsForOrganizations(soleOrganizationIds)
 
   await db
     .delete(organization)
     .where(inArray(organization.id, soleOrganizationIds))
-
-  for (const file of stored) {
-    try {
-      await deleteStorage(file.storageKey)
-    } catch (error) {
-      console.error(
-        `[account] Failed to delete storage object ${file.storageKey}:`,
-        error,
-      )
-    }
-  }
 }

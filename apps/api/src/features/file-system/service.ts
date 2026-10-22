@@ -22,8 +22,6 @@ import {
 import * as fileSystemRepo from "./repo"
 import * as mediaRepo from "../media-engine/repo"
 import { ingestFileContentChunks } from "./ingest-file-content-chunks"
-import { Asset } from "@/db/schema"
-import * as storage from "../media-engine/storage"
 import { CursorPaginationOptions } from "@/type"
 import * as videoEditorRepo from "../video-editor/repo"
 import { fromApiPath, serializeFileNode, toApiPath } from "./utils"
@@ -89,19 +87,9 @@ export const deleteFileNode = async (projectId: string, fileId: string) => {
     if (!fileNode.editable) {
       throw new BadRequest("Cannot delete a built-in file")
     }
-    const isAssetFile = isAssetFileKind(fileNode.type, fileNode.format)
-    let asset: Asset | null = null
-    if (isAssetFile) {
-      asset = await mediaRepo.getAssetByFileNodeId(projectId, fileId)
-    }
     const isDeleted = await fileSystemRepo.deleteFileNode(projectId, fileId)
     if (!isDeleted) {
       throw new InternalServerError("Failed to delete file. Try again later.")
-    }
-    if (asset) {
-      // The asset will be deleted by the cascade delete of the file node
-      // Delete the asset from the bucket - fire and forget
-      storage.deleteFile(asset.storageKey)
     }
     return { ok: true, data: fileId }
   } catch (error) {

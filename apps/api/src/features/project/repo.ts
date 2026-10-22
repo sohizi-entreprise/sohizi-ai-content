@@ -16,6 +16,7 @@ import { ORDER_GAP } from "../file-system/repo"
 import { fileType } from "../file-system/constants"
 import { joinLtree, serializeFileNode } from "../file-system/utils"
 import { RepositoryError } from "../error"
+import { expireAssetsForProject } from "../media-engine/asset-retention"
 import { DatabaseError } from "pg"
 // Create the projects, list the project with pagination, delete a project, get a project by id, update a project
 
@@ -379,6 +380,7 @@ export const listPublishedTemplates = async (
 }
 
 export const deleteProject = async (id: string) => {
+  await expireAssetsForProject(id)
   const resp = await db
     .delete(projects)
     .where(eq(projects.id, id))

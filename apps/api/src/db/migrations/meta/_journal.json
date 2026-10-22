@@ -344,6 +344,20 @@
       "when": 1792500000000,
       "tag": "0048_capacity_execution_state",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1792600000000,
+      "tag": "0049_context_artifacts",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792700000000,
+      "tag": "0050_asset_expire_at",
+      "breakpoints": true
     }
   ]
 }

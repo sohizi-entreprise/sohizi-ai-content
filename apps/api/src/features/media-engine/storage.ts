@@ -568,6 +568,43 @@ export async function readFileBuffer(storageKey: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer)
 }
 
+const DELETE_CONCURRENCY = 10
+
+function isMissingObject(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const record = error as {
+    code?: string
+    status?: number
+    statusCode?: number
+    message?: string
+  }
+  if (record.code === "NoSuchKey" || record.code === "NotFound") return true
+  const status = record.status ?? record.statusCode
+  if (status === 404) return true
+  return /NoSuchKey|Not Found/i.test(record.message ?? "")
+}
+
 export async function deleteFile(storageKey: string): Promise<void> {
-  await getS3Client().delete(storageKey)
+  try {
+    await getS3Client().delete(storageKey)
+  } catch (error) {
+    if (isMissingObject(error)) return
+    throw error
+  }
+}
+
+export async function deleteFiles(storageKeys: string[]): Promise<void> {
+  const keys = [...new Set(storageKeys)]
+  if (keys.length === 0) return
+
+  let cursor = 0
+  const run = async () => {
+    while (cursor < keys.length) {
+      const key = keys[cursor]
+      cursor += 1
+      if (key) await deleteFile(key)
+    }
+  }
+  const workers = Math.min(DELETE_CONCURRENCY, keys.length)
+  await Promise.all(Array.from({ length: workers }, () => run()))
 }

@@ -99,7 +99,6 @@ describe("prepareAccountDeletion", () => {
     })
 
     const calls: string[] = []
-    const deletedKeys: string[] = []
     await prepareAccountDeletion(userId, {
       polar: polar({
         cancelSubscription: async (id) => {
@@ -122,13 +121,26 @@ describe("prepareAccountDeletion", () => {
           calls.push("delete-customer")
         },
       }),
-      deleteStorage: async (key) => {
-        deletedKeys.push(key)
-      },
     })
 
     expect(calls).toEqual(["cancel", "delete-customer"])
-    expect(deletedKeys).toEqual([`assets/${project.id}`])
+    const [expired] = await db
+      .select({
+        id: assets.id,
+        projectId: assets.projectId,
+        expireAt: assets.expireAt,
+        storageKey: assets.storageKey,
+      })
+      .from(assets)
+      .where(eq(assets.storageKey, `assets/${project.id}`))
+    expect(expired?.storageKey).toBe(`assets/${project.id}`)
+    expect(expired?.projectId).toBeNull()
+    const remainingMs = (expired?.expireAt?.getTime() ?? 0) - Date.now()
+    expect(remainingMs).toBeGreaterThan(23 * 60 * 60 * 1000)
+    expect(remainingMs).toBeLessThan(25 * 60 * 60 * 1000)
+    if (expired) {
+      await db.delete(assets).where(eq(assets.id, expired.id))
+    }
     const [org] = await db
       .select({ id: organization.id })
       .from(organization)

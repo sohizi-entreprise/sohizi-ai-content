@@ -25,6 +25,7 @@ import type {
 } from "@/type"
 import { and, eq, desc, lt, isNull, max, inArray, or, sql } from "drizzle-orm"
 import { ORDER_GAP } from "../file-system/repo"
+import { expireAssets } from "./asset-retention"
 import { classifyFileKindFromAsset } from "../file-system/file-kind"
 import { joinLtree, normalizeFileName } from "../file-system/utils"
 import { mergeAssetFileNodeMetadata } from "./file-node-metadata"
@@ -72,6 +73,7 @@ export const listUploadedAssets = async (
   const conditions = [
     eq(assets.projectId, projectId),
     eq(assets.source, "user-uploaded"),
+    isNull(assets.expireAt),
   ]
   if (type) conditions.push(eq(assets.type, type))
   if (cursor) conditions.push(lt(assets.createdAt, new Date(cursor)))
@@ -172,6 +174,7 @@ export const createAssetWithFileNode = async (
           and(
             eq(assets.projectId, projectId),
             eq(assets.fileNodeId, fileNode.id),
+            isNull(assets.expireAt),
           ),
         )
         .returning()
@@ -247,7 +250,11 @@ export const getAssetByFileNodeId = async (
     .select()
     .from(assets)
     .where(
-      and(eq(assets.projectId, projectId), eq(assets.fileNodeId, fileNodeId)),
+      and(
+        eq(assets.projectId, projectId),
+        eq(assets.fileNodeId, fileNodeId),
+        isNull(assets.expireAt),
+      ),
     )
   return result[0]
 }
@@ -300,6 +307,7 @@ export const listAiGeneratedAssets = async (
   const joinConditions = [
     eq(assets.generationRequestId, generationRequests.id),
     isNull(assets.fileNodeId),
+    isNull(assets.expireAt),
   ]
   if (type) joinConditions.push(eq(assets.type, type))
 
@@ -608,7 +616,13 @@ export const getAssetById = async (projectId: string, assetId: string) => {
   const result = await db
     .select()
     .from(assets)
-    .where(and(eq(assets.projectId, projectId), eq(assets.id, assetId)))
+    .where(
+      and(
+        eq(assets.projectId, projectId),
+        eq(assets.id, assetId),
+        isNull(assets.expireAt),
+      ),
+    )
   return result[0]
 }
 
@@ -632,7 +646,13 @@ export const updateAssetMetadataValues = async (
     const result = await tx
       .update(assets)
       .set({ metadata, updatedAt: new Date() })
-      .where(and(eq(assets.projectId, projectId), eq(assets.id, assetId)))
+      .where(
+        and(
+          eq(assets.projectId, projectId),
+          eq(assets.id, assetId),
+          isNull(assets.expireAt),
+        ),
+      )
       .returning()
     const updated = result[0]
     if (!updated) return null
@@ -664,12 +684,18 @@ export const getAssetsByIds = async (projectId: string, assetIds: string[]) => {
   return await db
     .select()
     .from(assets)
-    .where(and(eq(assets.projectId, projectId), inArray(assets.id, assetIds)))
+    .where(
+      and(
+        eq(assets.projectId, projectId),
+        inArray(assets.id, assetIds),
+        isNull(assets.expireAt),
+      ),
+    )
 }
 
 export const deleteAsset = async (assetId: string) => {
-  const result = await db.delete(assets).where(eq(assets.id, assetId))
-  return (result.rowCount ?? 0) > 0
+  const expired = await expireAssets(eq(assets.id, assetId))
+  return expired > 0
 }
 
 export const deleteAssets = async (projectId: string, assetIds: string[]) => {
@@ -677,11 +703,12 @@ export const deleteAssets = async (projectId: string, assetIds: string[]) => {
     return 0
   }
 
-  const result = await db
-    .delete(assets)
-    .where(and(eq(assets.projectId, projectId), inArray(assets.id, assetIds)))
-
-  return result.rowCount ?? 0
+  const where = and(
+    eq(assets.projectId, projectId),
+    inArray(assets.id, assetIds),
+  )
+  if (!where) return 0
+  return expireAssets(where)
 }
 
 type AttachAssetToFileNodePayload = {
@@ -705,7 +732,13 @@ export const attachAssetToFileNode = async ({
     const res1 = await tx
       .select()
       .from(assets)
-      .where(and(eq(assets.projectId, projectId), eq(assets.id, assetId)))
+      .where(
+        and(
+          eq(assets.projectId, projectId),
+          eq(assets.id, assetId),
+          isNull(assets.expireAt),
+        ),
+      )
     const asset = res1[0]
     if (!asset) {
       throw new Error("Asset not found")
@@ -759,7 +792,7 @@ export const attachAssetToFileNode = async ({
     await tx
       .update(assets)
       .set({ fileNodeId: fileNode.id })
-      .where(eq(assets.id, assetId))
+      .where(and(eq(assets.id, assetId), isNull(assets.expireAt)))
 
     return { asset, fileNode }
   })
@@ -778,7 +811,13 @@ export const attachAssetsToFileNodes = async ({
     const selectedAssets = await tx
       .select()
       .from(assets)
-      .where(and(eq(assets.projectId, projectId), inArray(assets.id, assetIds)))
+      .where(
+        and(
+          eq(assets.projectId, projectId),
+          inArray(assets.id, assetIds),
+          isNull(assets.expireAt),
+        ),
+      )
 
     const assetsById = new Map(selectedAssets.map((asset) => [asset.id, asset]))
     const orderedAssets = assetIds.flatMap((assetId) => {
@@ -845,7 +884,13 @@ export const attachAssetsToFileNodes = async ({
       await tx
         .update(assets)
         .set({ fileNodeId: fileNode.id })
-        .where(and(eq(assets.projectId, projectId), eq(assets.id, asset.id)))
+        .where(
+          and(
+            eq(assets.projectId, projectId),
+            eq(assets.id, asset.id),
+            isNull(assets.expireAt),
+          ),
+        )
     }
 
     return { assets: orderedAssets, fileNodes: insertedFileNodes }

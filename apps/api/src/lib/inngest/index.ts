@@ -7,6 +7,8 @@ import {
   sweepBillingWallets,
   reconcilePolarBilling,
 } from "@/features/billing/inngest"
+import { sweepExpiredArtifacts } from "@/features/ai/agent/core/artifact-expiration"
+import { sweepExpiredAssets } from "@/features/media-engine/asset-expiration"
 
 export { inngest } from "./client"
 
@@ -18,4 +20,6 @@ export const functions = [
   sweepBillingReservations,
   sweepBillingWallets,
   reconcilePolarBilling,
+  sweepExpiredArtifacts,
+  sweepExpiredAssets,
 ]

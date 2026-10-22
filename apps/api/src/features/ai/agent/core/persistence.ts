@@ -2,7 +2,7 @@ import { Checkpoint } from "@/db/schema"
 import { AgentRunMetadata, AgentState, TokenUsage } from "@/type"
 import * as repo from "@/features/chat/repo"
 import { ModelMessage } from "ai"
-import { messagesForCheckpoint } from "./system-persist"
+import { isContextNote, messagesForCheckpoint } from "./system-persist"
 import { v4 as uuidv4 } from "uuid"
 
 export function agentRunMetadata(
@@ -85,7 +85,7 @@ export class CheckpointPersistence extends Persistence {
 
   async persistConversationAgentRun(metadata: AgentRunMetadata | undefined) {
     const filteredMessages = this.messages.filter(
-      (message) => message.role !== "system",
+      (message) => message.role !== "system" && !isContextNote(message),
     )
     const messages = filteredMessages.map((message) => ({
       ...message,

@@ -28,6 +28,7 @@ import {
 } from "./media-analyzer"
 import { getJobStatus, submitAssetGenerationJob, waitForJob } from "./wait-job"
 import { webPageExtractTool, webSearchTool } from "./web-search"
+import { getArtifactTool } from "./get-artifact"
 
 const toolRegistry = new Map<string, BaseTool<z.ZodType>>()
 
@@ -68,6 +69,7 @@ export const allTools = {
   fileSyntaxTool,
   webSearchTool,
   webPageExtractTool,
+  getArtifactTool,
 } as const
 
 for (const tool of Object.values(allTools)) {
