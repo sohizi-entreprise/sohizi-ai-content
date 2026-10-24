@@ -6,6 +6,10 @@ export type ErrorCode =
   | "payload_too_large"
   | "method_not_allowed"
   | "internal_error"
+  | "unprocessable"
+  | "rate_limited"
+  | "upstream_error"
+  | "timeout"
 
 const STATUS_BY_CODE: Record<ErrorCode, number> = {
   bad_request: 400,
@@ -15,6 +19,10 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   payload_too_large: 413,
   method_not_allowed: 405,
   internal_error: 500,
+  unprocessable: 422,
+  rate_limited: 429,
+  upstream_error: 502,
+  timeout: 504,
 }
 
 export class HttpError extends Error {
@@ -53,7 +61,11 @@ export function errorResponse(error: unknown): Response {
           details: error.details,
         },
       },
-      { status: error.status },
+      {
+        status: error.status,
+        headers:
+          error.code === "rate_limited" ? { "Retry-After": "5" } : undefined,
+      },
     )
   }
 

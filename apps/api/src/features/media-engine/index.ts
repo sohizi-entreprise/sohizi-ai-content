@@ -5,6 +5,7 @@ import { getUploadUrlSchema, uploadSuccessSchema } from "./schema"
 import { assertProjectAccess } from "@/lib/authorize"
 import { authMiddleware } from "@/lib/auth-middleware"
 import z from "zod"
+import { captureYoutubeScreenshot } from "./youtube-screenshot"
 
 export {
   MediaAccountError,
@@ -33,6 +34,19 @@ export const mediaEngineRoutes = new Elysia({ prefix: "/media/:projectId" })
   .guard({
     params: z.object({ projectId: z.uuid("Invalid project id") }),
   })
+  .post(
+    "/youtube-screenshot",
+    async ({ body, user, params }) => {
+      await assertProjectAccess(user.id, params.projectId)
+      return captureYoutubeScreenshot(body, user.id)
+    },
+    {
+      body: z.object({
+        youtubeUrl: z.url(),
+        seconds: z.number().int().min(0).max(86400).optional(),
+      }),
+    },
+  )
   .post(
     "/upload-success",
     async ({ body, user, params }) => {

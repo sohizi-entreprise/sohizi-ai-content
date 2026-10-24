@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sohizi-youtube-screenshots-dev",
+  "main": "src/youtube/index.ts",
+  "compatibility_date": "2026-06-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "upload_source_maps": true,
+  "browser": { "binding": "BROWSER" },
+  "vars": { "YOUTUBE_SCREENSHOT_MAX_TABS": "10" },
+  "durable_objects": {
+    "bindings": [
+      { "name": "YOUTUBE_BROWSER_POOL", "class_name": "YoutubeBrowserPool" },
+    ],
+  },
+  "migrations": [
+    { "tag": "youtube-browser-pool-v1", "new_sqlite_classes": ["YoutubeBrowserPool"] },
+  ],
+  "r2_buckets": [
+    { "binding": "R2_BUCKET", "bucket_name": "sohizi-ai-dev" },
+  ],
+}

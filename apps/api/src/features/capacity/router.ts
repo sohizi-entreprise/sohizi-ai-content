@@ -80,6 +80,7 @@ const STATIC_TASKS = new Set<CapacityTask>([
   "web.search",
   "web.extract",
   "video.export",
+  "youtube.screenshot",
 ])
 
 function abortError(signal: AbortSignal): Error {

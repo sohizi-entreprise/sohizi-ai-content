@@ -143,6 +143,22 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
       ),
     ],
   },
+  {
+    name: "cloudflare-browser",
+    adapter: "youtube-screenshot",
+    tasks: ["youtube.screenshot"],
+    strategy: "priority",
+    accounts: [
+      account(
+        "cloudflare-browser:primary",
+        {
+          ...DEFAULT_CIRCUIT,
+          maxConcurrency: Number(process.env.YOUTUBE_SCREENSHOT_MAX_TABS ?? 10),
+        },
+        { credentialEnv: "YOUTUBE_SCREENSHOT_TOKEN" },
+      ),
+    ],
+  },
 ]
 
 const providers = new Map<string, ProviderDefinition>(
@@ -276,17 +292,22 @@ export function resolveProviderAccounts(
 }
 
 export const TASK_POLICIES: Partial<
-  Record<"media" | "video.export", { userConcurrency: number }>
+  Record<
+    "media" | "video.export" | "youtube.screenshot",
+    { userConcurrency: number }
+  >
 > = {
   media: { userConcurrency: 5 },
   "video.export": { userConcurrency: 2 },
+  "youtube.screenshot": { userConcurrency: 1 },
 }
 
 export function userTaskKey(
   task: string,
-): "media" | "video.export" | undefined {
+): "media" | "video.export" | "youtube.screenshot" | undefined {
   if (task === "media" || task.startsWith("media:")) return "media"
   if (task === "video.export") return "video.export"
+  if (task === "youtube.screenshot") return "youtube.screenshot"
   return undefined
 }
 

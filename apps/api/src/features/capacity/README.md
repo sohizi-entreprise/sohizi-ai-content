@@ -9,7 +9,7 @@ Think of every outside service as a checkout lane. A request needs a ticket befo
 
 LLM and media routes come from the database: vendor name, adapter, API name, enabled flag, and priority. The code registry owns the adapter implementation, stable account ids, API keys, limits, selection strategy, and circuit settings. A database row with no matching registry account is skipped.
 
-`web.search`, `web.extract`, and `video.export` have no database route. The registry provider list is the route list. Their API name is the task name.
+`web.search`, `web.extract`, `video.export`, and `youtube.screenshot` have no database route. The registry provider list is the route list. Their API name is the task name.
 
 Missing credentials, or a Remotion account missing region, function name, or serve URL, make that account disappear. The request then tries the next account.
 
@@ -67,7 +67,9 @@ Error actions:
 
 ## The user gate
 
-`media` allows 5 jobs per user. `video.export` allows 2. Web search and LLM have no user cap.
+`media` allows 5 jobs per user. `video.export` allows 2. `youtube.screenshot` allows 1 active call per user across projects. Web search and LLM have no user cap.
+
+The screenshot API route acquires a user lease, then a `cloudflare-browser` account lease before calling the Worker. Both are released after the synchronous call. `YOUTUBE_SCREENSHOT_MAX_TABS` defaults to 10 and should match the screenshot Worker's tab cap; the Worker enforces the final limit inside its browser pool.
 
 The user ticket is taken at HTTP admission, before the job row and before the provider ticket. It is a different lease from the account lease. Rejected admission creates no row, no billing reservation, and no Inngest event. The HTTP error is 429. Durable jobs renew the user lease while they wait or poll, and release it when they finish.
 

@@ -6,6 +6,7 @@
   "scripts": {
     "deploy:dev": "wrangler deploy --env dev",
     "deploy:prod": "wrangler deploy --env prod",
+    "deploy:youtube:dev": "wrangler deploy --config wrangler.youtube.jsonc",
     "dev": "wrangler dev",
     "dev:remote": "wrangler dev --remote",
     "start": "wrangler dev",
@@ -23,10 +24,11 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@cloudflare/puppeteer": "^1.4.0",
     "@sohizi/eslint-config": "workspace:*",
+    "@types/node": "^25.9.2",
     "eslint": "^9.37.0",
     "prettier": "^3.5.3",
-    "@types/node": "^25.9.2",
     "typescript": "^5.5.2",
     "vitest": "~3.2.0",
     "wrangler": "^4.98.0"

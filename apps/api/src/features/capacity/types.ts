@@ -31,7 +31,12 @@ export type LeaseMutationResult =
   | { ok: false; reason: "not_found" | "stale_lease" | "unavailable" }
 
 export type CapacityTask =
-  "web.search" | "web.extract" | "llm" | "media" | "video.export"
+  | "web.search"
+  | "web.extract"
+  | "llm"
+  | "media"
+  | "video.export"
+  | "youtube.screenshot"
 
 export type ErrorAction =
   | "account_failure"

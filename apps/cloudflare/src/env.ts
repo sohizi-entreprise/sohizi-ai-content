@@ -5,3 +5,5 @@
  * `wrangler.jsonc`.
  */
 export type WorkerEnv = Env
+
+export type YoutubeEnv = YoutubeWorkerBindings
