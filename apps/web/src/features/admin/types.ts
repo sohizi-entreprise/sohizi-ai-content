@@ -289,22 +289,18 @@ export type AdminSkill = {
   name: string
   description: string
   instructions: string
-  fileNodeId: string | null
+  fileNodeId: string
+  projectId: string
   status: SkillStatus
   visibility: SkillVisibility
-  createdAt: string
-  updatedAt: string
   categoryIds: Array<string>
   categories: Array<{ id: string; name: string; slug: string; type: string }>
 }
 
-export type CreateSkillInput = {
-  name: string
+export type UpdateSkillInput = Partial<{
   description: string
   instructions: string
-  status?: SkillStatus
-  visibility?: SkillVisibility
-  categoryIds?: Array<string>
-}
-
-export type UpdateSkillInput = Partial<CreateSkillInput>
+  status: SkillStatus
+  visibility: SkillVisibility
+  categoryIds: Array<string>
+}>

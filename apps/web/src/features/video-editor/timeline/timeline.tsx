@@ -20,7 +20,6 @@ import { VideoBlock } from "./renderers/video-block"
 import { AudioBlock } from "./renderers/audio-block"
 import { TextBlock } from "./renderers/text-block"
 import { ImageBlock } from "./renderers/image-block"
-import { HtmlBlock, getHtmlClipLabel } from "./renderers/html-block"
 import { CaptionBlock } from "./renderers/caption-block"
 import { CLIP_ACCENT, clipSurface } from "./renderers/clip-shell"
 import type {
@@ -62,7 +61,7 @@ type DragGuide =
   | { mode: "create"; insertIndex: number }
   | null
 
-// type ClipKind = 'video' | 'audio' | 'text' | 'image' | 'html' | 'caption'
+// type ClipKind = 'video' | 'audio' | 'text' | 'image' | 'caption'
 type MediaClipKind = "video" | "audio" | "image"
 type ExternalClipKind = MediaClipKind | "text"
 
@@ -155,7 +154,6 @@ export function VideoTimeline() {
       [CLIP_EFFECT_IDS.audio]: { id: CLIP_EFFECT_IDS.audio, name: "Audio" },
       [CLIP_EFFECT_IDS.text]: { id: CLIP_EFFECT_IDS.text, name: "Text" },
       [CLIP_EFFECT_IDS.image]: { id: CLIP_EFFECT_IDS.image, name: "Image" },
-      [CLIP_EFFECT_IDS.html]: { id: CLIP_EFFECT_IDS.html, name: "HTML" },
       [CLIP_EFFECT_IDS.caption]: {
         id: CLIP_EFFECT_IDS.caption,
         name: "Caption",
@@ -523,9 +521,6 @@ export function VideoTimeline() {
       }
       if (clip.type === "image") {
         return <ImageBlock clip={clip} selected={selected} />
-      }
-      if (clip.type === "html") {
-        return <HtmlBlock clip={clip} selected={selected} />
       }
       if (clip.type === "caption") {
         return (
@@ -1013,11 +1008,9 @@ function clipDisplayLabel(clip: {
   type: TrackType
   fileName?: string
   text?: string
-  html?: string
   captions?: { text: string }
 }): string {
   if (clip.type === "text") return clip.text || "Text"
-  if (clip.type === "html") return getHtmlClipLabel(clip.html ?? "")
   if (clip.type === "caption") return clip.captions?.text || "Caption"
   return clip.fileName || clip.type
 }

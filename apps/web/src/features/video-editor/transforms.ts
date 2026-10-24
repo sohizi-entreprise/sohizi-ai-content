@@ -3,7 +3,6 @@ import type {
   AudioClip,
   CaptionClip,
   Clip,
-  HtmlClip,
   ImageClip,
   // ServerCaption,
   TextClip,
@@ -50,15 +49,16 @@ function arrayProp<T>(
   return Array.isArray(value) ? (value as Array<T>) : fallback
 }
 
-function objectProp<T extends Record<string, unknown>>(
-  props: Record<string, unknown>,
-  key: string,
-  fallback: T,
-): T {
-  const value = props[key]
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as T)
-    : fallback
+const CLIP_TYPES = new Set<string>([
+  "video",
+  "audio",
+  "text",
+  "image",
+  "caption",
+])
+
+function isTrackType(value: string): value is TrackType {
+  return CLIP_TYPES.has(value)
 }
 
 function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
@@ -137,18 +137,6 @@ function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
         widthRatio: numberProp(props, "widthRatio", 1),
         heightRatio: numberProp(props, "heightRatio", 1),
       } satisfies ImageClip
-    case "html":
-      return {
-        ...base,
-        type: "html",
-        html: stringProp(props, "html", ""),
-        variables: arrayProp(props, "variables", []),
-        values: objectProp(props, "values", {}),
-        xRatio: numberProp(props, "xRatio", 0.5),
-        yRatio: numberProp(props, "yRatio", 0.5),
-        widthRatio: numberProp(props, "widthRatio", 1),
-        heightRatio: numberProp(props, "heightRatio", 1),
-      } satisfies HtmlClip
     case "caption":
       return {
         ...base,
@@ -187,9 +175,12 @@ function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
   }
 }
 
-function serverTrackToStore(serverTrack: ServerTrack): Track {
-  const trackType = serverTrack.type as TrackType
-  const clips = serverTrack.clips.map((c) => serverClipToStore(c, trackType))
+function serverTrackToStore(serverTrack: ServerTrack): Track | null {
+  if (!isTrackType(serverTrack.type)) return null
+  const trackType = serverTrack.type
+  const clips = serverTrack.clips.flatMap((clip) =>
+    isTrackType(clip.type) ? [serverClipToStore(clip, trackType)] : [],
+  )
   return {
     id: serverTrack.id,
     type: trackType,
@@ -220,7 +211,10 @@ export function serverToHydration(res: LoadCompositionResponse): HydrationData {
     aspectRatio: res.composition.aspectRatio as AspectRatio,
     width: res.composition.width,
     height: res.composition.height,
-    tracks: res.tracks.map(serverTrackToStore),
+    tracks: res.tracks.flatMap((track) => {
+      const stored = serverTrackToStore(track)
+      return stored ? [stored] : []
+    }),
   }
 }
 

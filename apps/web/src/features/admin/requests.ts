@@ -18,7 +18,6 @@ import type {
   CreateModelVendorBindingInput,
   CreateParameterInput,
   CreateParameterOptionInput,
-  CreateSkillInput,
   CreateVendorInput,
   ModelParameterBinding,
   ReplaceModelParameterBinding,
@@ -353,13 +352,6 @@ export const deleteAdminContentCategory = async (
 
 export const listAdminSkills = async (): Promise<Array<AdminSkill>> => {
   const response = await api.get("/admin/skills")
-  return response.data
-}
-
-export const createAdminSkill = async (
-  input: CreateSkillInput,
-): Promise<AdminSkill> => {
-  const response = await api.post("/admin/skills", input)
   return response.data
 }
 

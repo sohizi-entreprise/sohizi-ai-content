@@ -1,10 +1,4 @@
-import {
-  FileNode,
-  FileNodeContent,
-  VideoComposition,
-  Skill,
-  Asset,
-} from "@/db/schema"
+import { FileNode, FileNodeContent, VideoComposition, Asset } from "@/db/schema"
 import { ProseDocument } from "@/type"
 import {
   deleteFileNode as deleteFileNodeFn,
@@ -32,7 +26,7 @@ import {
 import { getCompositionByFileNodeId } from "@/features/video-editor/repo"
 import { getAssetByFileNodeId } from "@/features/media-engine/repo"
 import { getErrorMessage } from "@/utils/get-error-message"
-import { serializeSkillDocument } from "../skill-document"
+import { ingestFileContentChunks } from "../ingest-file-content-chunks"
 
 type FileObjectResponse<T> = {
   ok: boolean
@@ -46,11 +40,7 @@ export type FileContentPayload =
       data: string
     }
   | {
-      type: "skill"
-      data: Skill
-    }
-  | {
-      type: "image" | "video" | "document" | "audio" | "html"
+      type: "asset"
       data: Asset
     }
   | {
@@ -289,6 +279,9 @@ export class FileObject {
     if (this.fileNode.directory) {
       return err(`Cannot copy a directory ${this.fileNode.name}`)
     }
+    if (this.type === fileType.SKILL) {
+      return this.copySkillTo(targetFile)
+    }
     const response = await this.getContent()
     if (response.error) {
       return err(response.error)
@@ -304,6 +297,54 @@ export class FileObject {
       proseContent: content.proseContent ?? undefined,
     })
 
+    if (!writeResponse.ok) {
+      return err(
+        writeResponse.error ??
+          `Failed to copy ${this.fileNode.name} to ${targetFile.fileNode.name}`,
+      )
+    }
+
+    return ok(
+      `File ${this.fileNode.name} copied to ${targetFile.fileNode.name} successfully`,
+    )
+  }
+
+  private async copySkillTo(
+    targetFile: FileObject,
+  ): Promise<FileObjectResponse<string | null>> {
+    const source = await this.loadStoredTextContent()
+    if (source.type !== "markdown") {
+      return err(
+        `Cannot copy ${this.fileNode.name} because its content is not markdown`,
+      )
+    }
+    const markdown = source.data
+
+    if (targetFile.type === fileType.SKILL) {
+      const updated = await fileSystemRepo.updateFileContent(
+        targetFile.fileNode.projectId,
+        targetFile.id,
+        { content: markdown },
+      )
+      if (!updated) {
+        return err(
+          `Failed to copy ${this.fileNode.name} to ${targetFile.fileNode.name}`,
+        )
+      }
+      await ingestFileContentChunks({
+        projectId: targetFile.fileNode.projectId,
+        fileNodeId: targetFile.id,
+        content: markdown,
+      })
+      return ok(
+        `File ${this.fileNode.name} copied to ${targetFile.fileNode.name} successfully`,
+      )
+    }
+
+    const writeResponse = await targetFile.writeContent({
+      content: markdown,
+      jsonContent: {},
+    })
     if (!writeResponse.ok) {
       return err(
         writeResponse.error ??
@@ -448,9 +489,6 @@ export class FileObject {
     if (this.fileContentCache !== undefined) {
       return ok(this.fileContentCache)
     }
-
-    let content: FileContentPayload | null = null
-
     if (this.isDirectory) {
       return err(`Cannot get content of a directory ${this.fileNode.id}`)
     }
@@ -458,116 +496,67 @@ export class FileObject {
       return err(`This file type is corrupted. It cannot be read.`)
     }
 
-    switch (this.type) {
-      case fileType.STORYBOARD:
-      case fileType.DOCUMENT: {
-        if (
-          this.format === fileFormat.FILE ||
-          this.format === fileFormat.PDF ||
-          this.format === fileFormat.HTML
-        ) {
-          const asset = await getAssetByFileNodeId(
-            this.fileNode.projectId,
-            this.fileNode.id,
-          )
-          if (!asset) {
-            content = null
-          } else {
-            content = {
-              type: asset.type,
-              data: asset,
-            }
-          }
-          break
-        }
-        const fileContent = await fileSystemRepo.getFileContentById(
-          this.fileNode.projectId,
-          this.fileNode.id,
-        )
-        if (this.format === fileFormat.JSON) {
-          content = {
-            type: "json",
-            data: fileContent?.jsonContent ?? {},
-          }
-        } else {
-          content = {
-            type: "markdown",
-            data: fileContent?.content ?? "",
-          }
-        }
-        break
-      }
-      case fileType.SKILL: {
-        const fileContent = await fileSystemRepo.getFileContentById(
-          this.fileNode.projectId,
-          this.fileNode.id,
-        )
-        if (fileContent?.content != null) {
-          content = {
-            type: "markdown",
-            data: fileContent.content,
-          }
-          break
-        }
-        const skill = await fileSystemRepo.getSkillByFileID(this.id)
-        if (!skill) {
-          content = null
-        } else {
-          content = {
-            type: "markdown",
-            data: serializeSkillDocument({
-              description: skill.description,
-              instructions: skill.instructions,
-            }),
-          }
-        }
-        break
-      }
-      case fileType.VIDEO_EDITOR: {
-        const composition = await getCompositionByFileNodeId(this.fileNode.id)
-        if (!composition) {
-          content = null
-        } else {
-          content = {
-            type: "video-editor",
-            data: composition,
-          }
-        }
-        break
-      }
-      case fileType.IMAGE:
-      case fileType.VIDEO:
-      case fileType.AUDIO: {
-        const asset = await getAssetByFileNodeId(
-          this.fileNode.projectId,
-          this.fileNode.id,
-        )
-        if (!asset) {
-          content = null
-        } else {
-          content = {
-            type: asset.type,
-            data: asset,
-          }
-        }
-        break
-      }
-
-      default:
-        return err(
-          `File with type: ${this.fileNode.type} is not yet supported.`,
-        )
+    const content = await this.loadFileContent(this.type)
+    if (content === undefined) {
+      return err(`File with type: ${this.fileNode.type} is not yet supported.`)
     }
 
     this.fileContentCache = content
-
     if (content === null) {
       return err(
         `File [Id: ${this.fileNode.id}] [format: ${this.fileNode.format}] not found`,
       )
     }
-
     return ok(content)
+  }
+
+  private async loadFileContent(
+    type: FileType,
+  ): Promise<FileContentPayload | null | undefined> {
+    switch (type) {
+      case fileType.IMAGE:
+      case fileType.VIDEO:
+      case fileType.AUDIO:
+        return this.loadAssetContent()
+      case fileType.VIDEO_EDITOR: {
+        const composition = await getCompositionByFileNodeId(this.fileNode.id)
+        return composition ? { type: "video-editor", data: composition } : null
+      }
+      case fileType.SKILL: {
+        return this.loadStoredTextContent()
+      }
+      case fileType.STORYBOARD:
+      case fileType.DOCUMENT:
+        if (
+          this.format === fileFormat.FILE ||
+          this.format === fileFormat.PDF ||
+          this.format === fileFormat.HTML
+        ) {
+          return this.loadAssetContent()
+        }
+        return this.loadStoredTextContent()
+      default:
+        return undefined
+    }
+  }
+
+  private async loadAssetContent(): Promise<FileContentPayload | null> {
+    const asset = await getAssetByFileNodeId(
+      this.fileNode.projectId,
+      this.fileNode.id,
+    )
+    return asset ? { type: "asset", data: asset } : null
+  }
+
+  private async loadStoredTextContent(): Promise<FileContentPayload> {
+    const fileContent = await fileSystemRepo.getFileContentById(
+      this.fileNode.projectId,
+      this.fileNode.id,
+    )
+    if (this.format === fileFormat.JSON) {
+      return { type: "json", data: fileContent?.jsonContent ?? {} }
+    }
+    return { type: "markdown", data: fileContent?.content ?? "" }
   }
 
   updateFileContentCache(content: FileContentPayload | null | undefined): void {
@@ -611,7 +600,6 @@ export function isCompatibleContentCacheType(
     return true
   }
   if (type === fileType.SKILL && contentType === "markdown") return true
-  if (type === fileType.SKILL && contentType === "skill") return true
   if (type === fileType.VIDEO_EDITOR && contentType === "video-editor") {
     return true
   }
@@ -619,21 +607,21 @@ export function isCompatibleContentCacheType(
     (type === fileType.IMAGE ||
       type === fileType.VIDEO ||
       type === fileType.AUDIO) &&
-    contentType === type
+    contentType === "asset"
   ) {
     return true
   }
   if (
     type === fileType.DOCUMENT &&
     format === fileFormat.HTML &&
-    contentType === "html"
+    contentType === "asset"
   ) {
     return true
   }
   if (
     type === fileType.DOCUMENT &&
     (format === fileFormat.PDF || format === fileFormat.FILE) &&
-    contentType === "document"
+    contentType === "asset"
   ) {
     return true
   }

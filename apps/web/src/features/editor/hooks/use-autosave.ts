@@ -2,13 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   markPendingOperationApplied,
-  patchSkillContentCache,
   writeMarkdownContentCache,
-  writeSkillContentCache,
 } from "../query-mutations"
 import { useEditorStore } from "../stores/editor-store"
-import { saveFileContent, saveSkill } from "../requests"
-import type { SaveSkillPayload } from "../requests"
+import { saveFileContent } from "../requests"
 
 export type AutosavePayload = {
   content: string
@@ -228,41 +225,6 @@ export function useAutoSave({
           payload.content,
         )
       }
-    },
-  })
-}
-
-/** Pass a getter so callers can defer expensive serialization until the debounce fires. */
-export type SkillAutosaveInput = SaveSkillPayload | (() => SaveSkillPayload)
-
-function resolveSkillAutosaveInput(
-  skill: SkillAutosaveInput,
-): SaveSkillPayload {
-  return typeof skill === "function" ? skill() : skill
-}
-
-export function useSkillAutosave({
-  duration,
-  projectId,
-  fileId,
-  onSaveComplete,
-  onSaveError,
-}: UseAutosaveOptions) {
-  const queryClient = useQueryClient()
-
-  return useAutosaveCore<SkillAutosaveInput, SaveSkillPayload>({
-    duration,
-    projectId,
-    fileId,
-    onSaveComplete,
-    onSaveError,
-    resolveInput: resolveSkillAutosaveInput,
-    writeOptimisticCache: (payload, ctx) => {
-      patchSkillContentCache(queryClient, ctx.projectId, ctx.fileId, payload)
-    },
-    persist: async (payload, ctx) => {
-      const data = await saveSkill(ctx.projectId, ctx.fileId, payload)
-      writeSkillContentCache(queryClient, ctx.projectId, ctx.fileId, data)
     },
   })
 }

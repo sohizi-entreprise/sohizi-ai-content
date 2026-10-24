@@ -33,7 +33,6 @@ import type {
   updateContentCategorySchema,
 } from "../content-categories/schema"
 import type {
-  createSkillSchema,
   replaceSkillCategoriesSchema,
   updateSkillSchema,
 } from "../skills/schema"
@@ -64,7 +63,6 @@ type CreateCommandInput = z.infer<typeof createCommandSchema>
 type UpdateCommandInput = z.infer<typeof updateCommandSchema>
 type CreateContentCategoryInput = z.infer<typeof createContentCategorySchema>
 type UpdateContentCategoryInput = z.infer<typeof updateContentCategorySchema>
-type CreateSkillInput = z.infer<typeof createSkillSchema>
 type UpdateSkillInput = z.infer<typeof updateSkillSchema>
 type ReplaceSkillCategoriesInput = z.infer<typeof replaceSkillCategoriesSchema>
 
@@ -713,24 +711,6 @@ export const getSkill = async (id: string) => {
     throw new NotFound("Skill not found")
   }
   return skill
-}
-
-export const createSkill = async (input: CreateSkillInput) => {
-  if (
-    !(await contentCategoriesRepo.contentCategoriesExist(input.categoryIds))
-  ) {
-    throw new BadRequest("One or more categoryIds do not exist")
-  }
-
-  const created = await skillsRepo.createSkill({
-    name: input.name,
-    description: input.description,
-    instructions: input.instructions,
-    status: input.status,
-    visibility: input.visibility,
-  })
-  await skillsRepo.replaceSkillCategories(created.id, input.categoryIds)
-  return getSkill(created.id)
 }
 
 export const updateSkill = async (id: string, input: UpdateSkillInput) => {

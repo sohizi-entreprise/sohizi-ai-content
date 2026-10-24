@@ -33,14 +33,7 @@ export function isExportTooLong(
   return durationInFrames / fps > RENDER_LIMITS.maxDurationSeconds
 }
 
-const trackTypes = [
-  "video",
-  "audio",
-  "text",
-  "image",
-  "html",
-  "caption",
-] as const
+const trackTypes = ["video", "audio", "text", "image", "caption"] as const
 
 const frame = z.number().int().min(0).max(RENDER_LIMITS.maxDurationInFrames)
 

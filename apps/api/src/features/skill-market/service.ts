@@ -3,7 +3,6 @@ import {
   FileSystemConflictError,
   FileSystemInputError,
   createFileNode as createFileNodeFn,
-  updateFileContent as updateFileContentFn,
 } from "@/features/file-system/functions"
 import * as fileSystemRepo from "@/features/file-system/repo"
 import { serializeSkillDocument } from "@/features/file-system/skill-document"
@@ -93,16 +92,12 @@ export const installSkill = async (
       )
     }
 
-    const content = serializeSkillDocument({
-      description: catalogSkill.description,
-      instructions: catalogSkill.instructions,
-    })
-    await updateFileContentFn(projectId, existingByCatalogName.id, {
-      content,
-    })
-    const updated = await fileSystemRepo.mirrorSkillRowFromContent(
+    const updated = await fileSystemRepo.updateFileContent(
+      projectId,
       existingByCatalogName.id,
-      content,
+      {
+        content: serializeSkillDocument(catalogSkill),
+      },
     )
     if (!updated) {
       throw new InternalServerError("Failed to replace skill")

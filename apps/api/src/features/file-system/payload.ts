@@ -168,22 +168,15 @@ export const updateTextFileContentRequestSchema = z
 
 export const updateSkillRequestSchema = z
   .object({
-    description: z.string().optional(),
-    instructions: z.string().optional(),
     status: z.enum(["draft", "published"]).optional(),
     visibility: z.enum(["public", "private"]).optional(),
   })
   .superRefine((data, ctx) => {
-    if (
-      data.description === undefined &&
-      data.instructions === undefined &&
-      data.status === undefined &&
-      data.visibility === undefined
-    ) {
+    if (data.status === undefined && data.visibility === undefined) {
       ctx.addIssue({
         code: "custom",
         message: "At least one update field must be provided",
-        path: ["description", "instructions", "status", "visibility"],
+        path: ["status", "visibility"],
       })
     }
   })

@@ -1,9 +1,6 @@
-import type { CompositionVariable } from "./variables"
-
 export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:5"
 
-export type TrackType =
-  "video" | "audio" | "text" | "image" | "html" | "caption"
+export type TrackType = "video" | "audio" | "text" | "image" | "caption"
 
 export type TextAlign = "left" | "center" | "right"
 
@@ -68,13 +65,6 @@ export interface ImageClip extends BaseClip, SpatialLayout {
   brightness: number
 }
 
-export interface HtmlClip extends BaseClip, SpatialLayout {
-  type: "html"
-  html: string
-  variables: Array<CompositionVariable> // schema — declared once by the AI
-  values: Record<string, string | number | boolean> // user-set overrides
-}
-
 export type ServerCaption = {
   word: string
   start: number
@@ -105,15 +95,13 @@ export interface CaptionClip extends BaseClip {
 }
 
 /** Clip types that can be selected and transformed on the canvas. */
-export type CanvasEditableClip =
-  TextClip | ImageClip | VideoClip | HtmlClip | CaptionClip
+export type CanvasEditableClip = TextClip | ImageClip | VideoClip | CaptionClip
 
 export function isCanvasEditableClip(clip: Clip): clip is CanvasEditableClip {
   return (
     clip.type === "text" ||
     clip.type === "image" ||
     clip.type === "video" ||
-    clip.type === "html" ||
     clip.type === "caption"
   )
 }
@@ -135,8 +123,7 @@ export function getClipLayout(clip: CanvasEditableClip): SpatialLayout {
   }
 }
 
-export type Clip =
-  VideoClip | AudioClip | TextClip | ImageClip | HtmlClip | CaptionClip
+export type Clip = VideoClip | AudioClip | TextClip | ImageClip | CaptionClip
 
 export interface Track {
   id: string

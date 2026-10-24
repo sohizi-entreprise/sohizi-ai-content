@@ -8,7 +8,6 @@ import type {
   CreateModelVendorBindingInput,
   CreateParameterInput,
   CreateParameterOptionInput,
-  CreateSkillInput,
   CreateVendorInput,
   ReplaceModelParameterBinding,
   UpdateCommandInput,
@@ -446,14 +445,6 @@ export const listAdminSkillsQueryOptions = () =>
   queryOptions({
     queryKey: keysFactory.skills,
     queryFn: requests.listAdminSkills,
-  })
-
-export const createAdminSkillMutationOptions = () =>
-  mutationOptions({
-    mutationFn: (input: CreateSkillInput) => requests.createAdminSkill(input),
-    meta: {
-      invalidateQueries: [keysFactory.skills],
-    },
   })
 
 export const updateAdminSkillMutationOptions = () =>

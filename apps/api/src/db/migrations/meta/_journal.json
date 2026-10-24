@@ -358,6 +358,27 @@
       "when": 1792700000000,
       "tag": "0050_asset_expire_at",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1792800000000,
+      "tag": "0051_clear_skill_file_content",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1792872000000,
+      "tag": "0052_file_backed_skills",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1792958400000,
+      "tag": "0053_drop_html_clips",
+      "breakpoints": true
     }
   ]
 }

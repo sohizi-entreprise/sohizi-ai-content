@@ -27,7 +27,7 @@ const listClipsCommand = z.object({
   fileNodeId,
   trackId: trackId.optional().describe("Filter to a specific track."),
   type: z
-    .enum(["video", "audio", "text", "image", "html"])
+    .enum(["video", "audio", "text", "image"])
     .optional()
     .describe("Filter by clip type."),
   fromFrame: z
@@ -76,7 +76,7 @@ const viewClipPropertiesSchema = z.object({
     .describe(
       "Returns the full schema of the properties of a specific clip type. Use this to understand the properties of a clip type before editing it.",
     ),
-  clipType: z.enum(["video", "audio", "text", "image", "html"]),
+  clipType: z.enum(["video", "audio", "text", "image"]),
 })
 
 const toolSchema = z.discriminatedUnion("cmd", [
@@ -253,13 +253,11 @@ async function executeViewTrack(trackId: string) {
   return success(output.trim())
 }
 
-function executeViewClipSchema(
-  clipType: "video" | "audio" | "text" | "image" | "html",
-) {
+function executeViewClipSchema(clipType: "video" | "audio" | "text" | "image") {
   const zodSchema = clipPropertiesSchemaByType[clipType]
   if (!zodSchema) {
     return failure(
-      "Unknown clip type. Valid types are: video, audio, text, image, html.",
+      "Unknown clip type. Valid types are: video, audio, text, image.",
     )
   }
   const schema = toJSONSchema(zodSchema)

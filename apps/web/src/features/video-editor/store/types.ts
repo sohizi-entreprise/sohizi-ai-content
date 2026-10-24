@@ -16,7 +16,6 @@ export type {
   CaptionClip,
   Clip,
   FontWeight,
-  HtmlClip,
   ImageClip,
   ProjectState,
   Selection,

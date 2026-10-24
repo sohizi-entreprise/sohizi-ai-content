@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import {
   AudioLines,
-  Code2,
   Eye,
   EyeOff,
   Film,
@@ -33,7 +32,6 @@ const TRACK_ICON: Record<TrackType, LucideIcon> = {
   image: ImageIcon,
   text: Type,
   caption: Subtitles,
-  html: Code2,
 }
 
 const iconBtn =

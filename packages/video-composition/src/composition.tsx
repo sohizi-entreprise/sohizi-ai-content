@@ -5,7 +5,6 @@ import {
   TextClipRenderer,
   VideoClipRenderer,
 } from "./clips"
-import { HyperframeSequence } from "./html-clip"
 import { CaptionsRenderer } from "./caption-clip"
 import type { Clip, Track } from "./types"
 
@@ -73,8 +72,6 @@ function ClipRouter({ clip, track }: { clip: Clip; track: Track }) {
       return <ImageClipRenderer clip={clip} />
     case "text":
       return <TextClipRenderer clip={clip} />
-    case "html":
-      return <HyperframeSequence clip={clip} />
     case "caption":
       return <CaptionsRenderer clip={clip} />
     default:

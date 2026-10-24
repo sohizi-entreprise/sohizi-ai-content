@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import {
+  EMPTY_SKILL_CONTENT,
   parseSkillDocument,
   resolveSkillFileMetadata,
   serializeSkillDocument,
@@ -60,21 +61,17 @@ Write the scene in present tense.`
 })
 
 describe("resolveSkillFileMetadata", () => {
-  it("prefers file node metadata over the skills-row fallback", () => {
+  it("reads publication flags from file node metadata", () => {
     expect(
-      resolveSkillFileMetadata(
-        { status: "published", visibility: "public" },
-        { status: "draft", visibility: "private" },
-      ),
+      resolveSkillFileMetadata({ status: "published", visibility: "public" }),
     ).toEqual({ status: "published", visibility: "public" })
   })
 
-  it("falls back to the skills row when metadata is missing", () => {
-    expect(
-      resolveSkillFileMetadata(null, {
-        status: "published",
-        visibility: "private",
-      }),
-    ).toEqual({ status: "published", visibility: "private" })
+  it("defaults missing metadata and exposes the empty skill document", () => {
+    expect(resolveSkillFileMetadata(null)).toEqual({
+      status: "draft",
+      visibility: "private",
+    })
+    expect(EMPTY_SKILL_CONTENT).toBe('---\ndescription: ""\n---')
   })
 })

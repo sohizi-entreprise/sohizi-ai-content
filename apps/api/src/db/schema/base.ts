@@ -1018,34 +1018,6 @@ export const videoRenderJobs = pgTable(
   ],
 )
 
-// ======================== SKILLS & TEMPLATES ==========================
-// Maybe let's have some tags for skills and templates
-export const skills = pgTable(
-  "skills",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    name: varchar("name", { length: 255 }).notNull(),
-    description: text("description").notNull(),
-    instructions: text("instructions").notNull(),
-    fileNodeId: uuid("file_node_id").references(() => fileNodes.id, {
-      onDelete: "cascade",
-    }),
-    status: varchar("status", { length: 50 })
-      .notNull()
-      .default("draft")
-      .$type<TemplateAndSkillStatus>(),
-    visibility: varchar("visibility", { length: 50 })
-      .notNull()
-      .default("private")
-      .$type<TemplateAndSkillVisibility>(),
-    ...timestamps,
-  },
-  (table) => [
-    index("skills_visibility_status_idx").on(table.visibility, table.status),
-    index("skills_file_node_id_idx").on(table.fileNodeId),
-  ],
-)
-
 export const templates = pgTable(
   "templates",
   {
@@ -1116,8 +1088,8 @@ export const skillCategories = pgTable(
   "skill_categories",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    skillId: uuid("skill_id")
-      .references(() => skills.id, { onDelete: "cascade" })
+    fileNodeId: uuid("file_node_id")
+      .references(() => fileNodes.id, { onDelete: "cascade" })
       .notNull(),
     categoryId: uuid("category_id")
       .references(() => categories.id, { onDelete: "cascade" })
@@ -1125,8 +1097,8 @@ export const skillCategories = pgTable(
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("skill_categories_skill_id_category_id_unique").on(
-      table.skillId,
+    uniqueIndex("skill_categories_file_node_id_category_id_unique").on(
+      table.fileNodeId,
       table.categoryId,
     ),
   ],
@@ -1323,6 +1295,5 @@ export type VideoRenderJobStatus =
   (typeof videoRenderJobStatusEnum.enumValues)[number]
 export type Template = typeof templates.$inferSelect
 export type PendingFileOperation = typeof pendingFileOperations.$inferSelect
-export type Skill = typeof skills.$inferSelect
 export type ConversationAgentRun = typeof conversationAgentRuns.$inferSelect
 export type Command = typeof commands.$inferSelect

@@ -1,28 +1,43 @@
 export default `
-## Skill markdown
+## Skill markdown syntax
 
-Skill files are markdown with a YAML description at the top. The file name is the skill identifier. Do not put \`name\` in the frontmatter.
+### 1. YAML Frontmatter (Required)
+Every skill must begin with frontmatter containing a single key \`description\` which is 1–2 sentences explaining **what** the skill does and **when** the agent must activate it (explicit trigger conditions).
 
-Create project skills at \`/root/core/skills/<skill-name>\`. Call this syntax before the first \`editFile\` write or patch on a skill.
-
-\`\`\`
----
-description: |
-  Use this when writing a scene.
-
-  Keep the tone dry.
----
-Write the scene in present tense.
-\`\`\`
-
-### Frontmatter
 - The file starts with a line that is exactly \`---\`.
 - The only key is \`description\`. Store it as a YAML literal block (\`description: |\`) so headings, colons, and a line of \`---\` inside the description stay inside the block.
 - Indent every description line by two spaces. An empty description is \`description: ""\`.
 - Close the frontmatter with a line that is exactly \`---\`.
 
-### Instructions
-- Everything after the closing \`---\` is the skill instructions, as ordinary markdown.
-- Edit the description only inside the frontmatter block. Edit the instructions only after the closing \`---\`.
-- Preserve the frontmatter fences when you patch. Do not convert the file to JSON or to a document without frontmatter.
+### 2. Markdown Body
+Structure the procedural instructions using these core sections:
+- \`## When to Use\`: Explicit trigger phrases and use-case scenarios.
+- \`## Workflow / Steps\`: Numbered, deterministic, step-by-step execution procedure.
+- \`## Rules & Constraints\`: Hard boundaries, error handling, and security restrictions.
+- \`## Examples\`: (Optional) 1–2 minimal input/output or command invocations.
+
+### 3. Authoring Guidelines
+- **Instructional Tone**: Use direct, imperative commands ("Parse the input...", "Call endpoint...").
+- **Token Efficient**: Keep the body concise (under 500 lines); reference external scripts/assets if complex.
+- **Deterministic**: Eliminate ambiguity—tell the agent exactly what to validate before and after execution.
+
+### Output Format Template:
+\`\`\`
+---
+description: |
+  Brief summary of capability. Trigger when user asks to [action] or mentions [keywords].
+---
+## When to Use
+- Trigger 1
+- Trigger 2
+
+## Instructions & Workflow
+1. **Validation**: Check prerequisite X.
+2. **Execution**: Run action Y.
+3. **Format**: Return output structured as Z.
+
+## Constraints
+- Do NOT do X without user confirmation.
+- Always handle error condition Y by doing Z.
+\`\`\`
 `.trim()

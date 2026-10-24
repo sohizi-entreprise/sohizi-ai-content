@@ -32,9 +32,9 @@ import {
   sliceDirectoryChildrenPage,
 } from "./directory-children"
 import {
+  EMPTY_SKILL_CONTENT,
   parseSkillDocument,
   resolveSkillFileMetadata,
-  serializeSkillDocument,
 } from "./skill-document"
 
 // List file trees -> ok
@@ -55,14 +55,13 @@ export const createFileNode = async (data: FileCreationRequest) => {
         data.type === fileType.SKILL) &&
       data.format === fileFormat.MARKDOWN
     ) {
-      const createdContent = await fileSystemRepo.getFileContentById(
-        data.projectId,
-        fileNode.id,
-      )
+      const content =
+        (await fileSystemRepo.getFileContentById(data.projectId, fileNode.id))
+          ?.content ?? ""
       await ingestFileContentChunks({
         projectId: data.projectId,
         fileNodeId: fileNode.id,
-        content: createdContent?.content ?? "",
+        content,
       })
     }
     return serializeFileNode(fileNode)
@@ -123,6 +122,10 @@ export const updateFileContent = async (
       throw new NotFound("File not found")
     }
 
+    if (fileNode.type === fileType.SKILL) {
+      return updateSkillDocument(projectId, fileNodeId, data)
+    }
+
     if (data.diff) {
       const fileContent = await getFileContentFn(projectId, fileNodeId)
       const baseRevision = data.baseRevision
@@ -137,7 +140,6 @@ export const updateFileContent = async (
       }
 
       const content = applyCompactTextDiff(fileContent.content ?? "", data.diff)
-      assertValidSkillContent(fileNode.type, content)
       const updated = await fileSystemRepo.updateFileContentAtRevision(
         projectId,
         fileNodeId,
@@ -154,17 +156,11 @@ export const updateFileContent = async (
         fileNodeId,
         content: updated.content ?? content,
       })
-      await mirrorSkillContentIfNeeded(
-        fileNode.type,
-        fileNodeId,
-        updated.content ?? content,
-      )
 
       return updated
     }
 
     const content = data.content ?? ""
-    assertValidSkillContent(fileNode.type, content)
     const updatedFileContent = await updateFileContentFn(
       projectId,
       fileNodeId,
@@ -176,7 +172,6 @@ export const updateFileContent = async (
           content,
         )
       : false
-    await mirrorSkillContentIfNeeded(fileNode.type, fileNodeId, content)
     return { ...updatedFileContent, pendingDiffApplied }
   } catch (error) {
     if (error instanceof Conflict || error instanceof NotFound) {
@@ -381,25 +376,16 @@ export const getFileContent = async (
         projectId,
         fileNodeId,
       )
-      const skill = await fileSystemRepo.getSkillByFileID(fileNodeId)
-      const content =
-        textContent?.content ??
-        (skill
-          ? serializeSkillDocument({
-              description: skill.description,
-              instructions: skill.instructions,
-            })
-          : null)
-      if (content === null) {
-        throw new NotFound("Skill not found")
+      if (!textContent) {
+        throw new NotFound("Skill content not found")
       }
-      const flags = resolveSkillFileMetadata(fileNode.metadata, skill)
+      const flags = resolveSkillFileMetadata(fileNode.metadata)
       return {
         type: "skill" as const,
         ...fileMeta,
-        content,
-        revision: textContent?.revision ?? 1,
-        updatedAt: textContent?.updatedAt ?? skill?.updatedAt,
+        content: textContent.content ?? EMPTY_SKILL_CONTENT,
+        revision: textContent.revision,
+        updatedAt: textContent.updatedAt,
         status: flags.status,
         visibility: flags.visibility,
       }
@@ -552,11 +538,19 @@ export const updateFileNode = async (
 export const getSkillByFileID = async (projectId: string, fileId: string) => {
   await validateProject(projectId)
 
-  const skill = await fileSystemRepo.getSkillByFileID(fileId)
-  if (!skill) {
+  const file = await fileSystemRepo.getFileNodeById(projectId, fileId)
+  if (!file || file.type !== fileType.SKILL) {
     throw new NotFound("Skill not found")
   }
-  return skill
+  const content = await fileSystemRepo.getFileContentById(projectId, fileId)
+  if (!content?.content) throw new NotFound("Skill content not found")
+  const skill = parseSkillContent(content.content)
+  return {
+    id: file.id,
+    name: file.name,
+    ...skill,
+    ...resolveSkillFileMetadata(file.metadata),
+  }
 }
 
 export const updateSkill = async (
@@ -565,11 +559,16 @@ export const updateSkill = async (
   request: UpdateSkillRequest,
 ) => {
   await validateProject(projectId)
-  const skill = await fileSystemRepo.updateSkill(fileId, request)
+  const skill = await fileSystemRepo.updateSkill(projectId, fileId, request)
   if (!skill) {
     throw new NotFound("Skill not found")
   }
-  return skill
+  return {
+    id: skill.id,
+    name: skill.name,
+    ...resolveSkillFileMetadata(skill.metadata),
+    updatedAt: skill.updatedAt,
+  }
 }
 
 // ============================== PENDING FILE OPERATIONS ==============================
@@ -601,25 +600,78 @@ export const deletePendingFileOperation = async (
   }
 }
 
-function assertValidSkillContent(
-  type: FileType | null | undefined,
-  content: string,
-) {
-  if (type !== fileType.SKILL) return
-  if (!parseSkillDocument(content)) {
+function parseSkillContent(content: string) {
+  const parsed = parseSkillDocument(content)
+  if (!parsed) {
     throw new FileSystemInputError(
       "Skill files must use a description frontmatter block.",
     )
   }
+  return parsed
 }
 
-async function mirrorSkillContentIfNeeded(
-  type: FileType | null | undefined,
+async function updateSkillDocument(
+  projectId: string,
   fileNodeId: string,
-  content: string,
+  data: UpdateTextFileContentRequest,
 ) {
-  if (type !== fileType.SKILL) return
-  await fileSystemRepo.mirrorSkillRowFromContent(fileNodeId, content)
+  let content: string
+  let baseRevision: number | undefined
+  if (data.diff) {
+    const fileContent = await fileSystemRepo.getFileContentById(
+      projectId,
+      fileNodeId,
+    )
+    if (!fileContent) {
+      throw new NotFound("File content not found")
+    }
+    if (data.baseRevision === undefined) {
+      throw new FileSystemInputError(
+        "baseRevision is required when diff is provided",
+      )
+    }
+    if (fileContent.revision !== data.baseRevision) {
+      throw new Conflict("File content changed before diff could be applied")
+    }
+    baseRevision = data.baseRevision
+    content = applyCompactTextDiff(
+      fileContent.content ?? EMPTY_SKILL_CONTENT,
+      data.diff,
+    )
+  } else {
+    content = data.content ?? ""
+  }
+
+  parseSkillContent(content)
+  const revisionRow =
+    baseRevision === undefined
+      ? await updateFileContentFn(projectId, fileNodeId, { content })
+      : await fileSystemRepo.updateFileContentAtRevision(
+          projectId,
+          fileNodeId,
+          { content },
+          baseRevision,
+        )
+  if (!revisionRow) {
+    if (data.diff) {
+      throw new Conflict("File content changed before diff could be applied")
+    }
+    throw new FileSystemOperationError("Failed to update file content")
+  }
+
+  await ingestFileContentChunks({
+    projectId,
+    fileNodeId,
+    content,
+  })
+  const pendingDiffApplied = data.diffApplied
+    ? await fileSystemRepo.markPendingFileOperationDiffApplied(
+        fileNodeId,
+        content,
+      )
+    : false
+
+  return { ...revisionRow, content, pendingDiffApplied }
 }
 
 // ============================== HELPER FUNCTIONS ==============================

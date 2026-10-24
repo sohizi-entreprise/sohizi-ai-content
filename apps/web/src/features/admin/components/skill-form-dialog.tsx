@@ -20,16 +20,10 @@ import {
   SelectValue,
 } from "@sohizi/ui/select"
 import {
-  createAdminSkillMutationOptions,
   listAdminContentCategoriesQueryOptions,
   updateAdminSkillMutationOptions,
 } from "../query-mutation"
-import type {
-  AdminSkill,
-  CreateSkillInput,
-  SkillStatus,
-  SkillVisibility,
-} from "../types"
+import type { AdminSkill, SkillStatus, SkillVisibility } from "../types"
 import { getErrorMessage } from "@/lib/errors"
 
 type Props = {
@@ -48,14 +42,12 @@ const emptyForm = {
 }
 
 export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
-  const isEdit = Boolean(skill)
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState<string | null>(null)
 
   const { data: categories = [] } = useQuery(
     listAdminContentCategoriesQueryOptions(),
   )
-  const createMutation = useMutation(createAdminSkillMutationOptions())
   const updateMutation = useMutation(updateAdminSkillMutationOptions())
 
   useEffect(() => {
@@ -88,7 +80,7 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
     event.preventDefault()
     setError(null)
     try {
-      const payload: CreateSkillInput = {
+      const payload = {
         name: form.name.trim(),
         description: form.description.trim(),
         instructions: form.instructions.trim(),
@@ -96,10 +88,8 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
         visibility: form.visibility,
         categoryIds: form.categoryIds,
       }
-      if (isEdit && skill) {
+      if (skill) {
         await updateMutation.mutateAsync({ id: skill.id, input: payload })
-      } else {
-        await createMutation.mutateAsync(payload)
       }
       onOpenChange(false)
     } catch (err) {
@@ -107,25 +97,18 @@ export function SkillFormDialog({ open, onOpenChange, skill }: Props) {
     }
   }
 
-  const pending = createMutation.isPending || updateMutation.isPending
+  const pending = updateMutation.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit skill" : "Add skill"}</DialogTitle>
+          <DialogTitle>Edit skill</DialogTitle>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="skill-name">Name</Label>
-            <Input
-              id="skill-name"
-              value={form.name}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, name: event.target.value }))
-              }
-              required
-            />
+            <Input id="skill-name" value={form.name} disabled />
           </div>
           <div className="space-y-2">
             <Label htmlFor="skill-description">Description</Label>

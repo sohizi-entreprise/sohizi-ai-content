@@ -215,8 +215,7 @@ export type CategoryType = "genre" | "format" | "audience" | "platform"
 
 export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:5"
 
-export type VideoTrackType =
-  "video" | "audio" | "text" | "image" | "html" | "caption"
+export type VideoTrackType = "video" | "audio" | "text" | "image" | "caption"
 
 export type TextAlign = "left" | "center" | "right"
 
@@ -316,12 +315,6 @@ export type ImageMediaClipProperties = {
   heightRatio: number
 }
 
-export type HtmlClipProperties = {
-  html: string
-  variables: CompositionVariable[]
-  values: Record<string, string | number | boolean>
-}
-
 export type CaptionWord = {
   word: string
   start: number
@@ -351,59 +344,7 @@ export type VideoClipProperties =
   | AudioMediaClipProperties
   | TextClipProperties
   | ImageMediaClipProperties
-  | HtmlClipProperties
   | CaptionClipProperties
-
-const compositionVariableBaseSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  description: z.string().optional(),
-})
-
-const stringVariableSchema = compositionVariableBaseSchema.extend({
-  type: z.literal("string"),
-  default: z.string(),
-  placeholder: z.string().optional(),
-  maxLength: z.number().optional(),
-}) satisfies z.ZodType<StringVariable>
-
-const numberVariableSchema = compositionVariableBaseSchema.extend({
-  type: z.literal("number"),
-  default: z.number(),
-  min: z.number().optional(),
-  max: z.number().optional(),
-  step: z.number().optional(),
-  unit: z.string().optional(),
-}) satisfies z.ZodType<NumberVariable>
-
-const colorVariableSchema = compositionVariableBaseSchema.extend({
-  type: z.literal("color"),
-  default: z.string(),
-}) satisfies z.ZodType<ColorVariable>
-
-const booleanVariableSchema = compositionVariableBaseSchema.extend({
-  type: z.literal("boolean"),
-  default: z.boolean(),
-}) satisfies z.ZodType<BooleanVariable>
-
-const enumVariableSchema = compositionVariableBaseSchema.extend({
-  type: z.literal("enum"),
-  default: z.string(),
-  options: z.array(
-    z.object({
-      value: z.string(),
-      label: z.string(),
-    }),
-  ),
-}) satisfies z.ZodType<EnumVariable>
-
-export const compositionVariableSchema = z.discriminatedUnion("type", [
-  stringVariableSchema,
-  numberVariableSchema,
-  colorVariableSchema,
-  booleanVariableSchema,
-  enumVariableSchema,
-]) satisfies z.ZodType<CompositionVariable>
 
 export const videoClipSchema = z.object({
   url: z.string(),
@@ -452,18 +393,11 @@ export const imageClipSchema = z.object({
   heightRatio: z.number(),
 }) satisfies z.ZodType<ImageMediaClipProperties>
 
-export const htmlClipSchema = z.object({
-  html: z.string(),
-  variables: z.array(compositionVariableSchema),
-  values: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
-}) satisfies z.ZodType<HtmlClipProperties>
-
 export const clipPropertiesSchemaByType = {
   video: videoClipSchema,
   audio: audioClipSchema,
   text: textClipSchema,
   image: imageClipSchema,
-  html: htmlClipSchema,
 } as const
 
 export type FileOperationType = "delete" | "patch" | "refresh"

@@ -32,7 +32,7 @@ type LlmConfig<T extends z.ZodType> = {
   buildInput: (data: z.infer<T>) => ModelMessage[]
 }
 
-type ToolExecutionOptions = {
+export type ToolExecutionOptions = {
   session: Session
   state: AgentStateManager
   abortSignal: AbortSignal

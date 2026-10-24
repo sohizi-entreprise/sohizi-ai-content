@@ -33,8 +33,6 @@ export const saveFileContent = async (
 }
 
 export type SaveSkillPayload = {
-  description?: string
-  instructions?: string
   status?: Skill["status"]
   visibility?: Skill["visibility"]
 }
@@ -43,7 +41,9 @@ export const saveSkill = async (
   projectId: string,
   fileId: string,
   skill: SaveSkillPayload,
-): Promise<Skill> => {
+): Promise<
+  Pick<Skill, "id" | "name" | "status" | "visibility" | "updatedAt">
+> => {
   const response = await api.put(
     `/projects/${projectId}/files/${fileId}/skill`,
     skill,

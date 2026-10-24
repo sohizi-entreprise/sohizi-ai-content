@@ -112,12 +112,12 @@ export function markPendingOperationApplied(
   )
 }
 
-/** Merges status/visibility from the skills row into the cached skill file. */
+/** Merges status/visibility from the skill file metadata into the cached skill. */
 export function writeSkillContentCache(
   client: QueryClient,
   projectId: string,
   fileId: string,
-  data: Skill,
+  data: Pick<Skill, "status" | "visibility" | "updatedAt">,
 ) {
   client.setQueryData(
     keysFactory.fileContent(projectId, fileId),

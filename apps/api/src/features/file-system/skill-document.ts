@@ -13,27 +13,19 @@ export const DEFAULT_SKILL_METADATA: SkillFileMetadata = {
   visibility: "private",
 }
 
-export const EMPTY_SKILL_CONTENT = serializeSkillDocument({
-  description: "",
-  instructions: "",
-})
+export const EMPTY_SKILL_CONTENT = '---\ndescription: ""\n---'
 
 export function resolveSkillFileMetadata(
   metadata: Record<string, unknown> | null | undefined,
-  fallback?: { status?: string; visibility?: string } | null,
 ): SkillFileMetadata {
   const status =
     metadata?.status === "published" || metadata?.status === "draft"
       ? metadata.status
-      : fallback?.status === "published" || fallback?.status === "draft"
-        ? fallback.status
-        : DEFAULT_SKILL_METADATA.status
+      : DEFAULT_SKILL_METADATA.status
   const visibility =
     metadata?.visibility === "public" || metadata?.visibility === "private"
       ? metadata.visibility
-      : fallback?.visibility === "public" || fallback?.visibility === "private"
-        ? fallback.visibility
-        : DEFAULT_SKILL_METADATA.visibility
+      : DEFAULT_SKILL_METADATA.visibility
   return { status, visibility }
 }
 

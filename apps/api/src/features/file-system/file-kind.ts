@@ -33,6 +33,26 @@ export function defaultFormatForType(type: FileType): FileFormat {
   }
 }
 
+const allowedFormatsByType: Record<FileType, readonly FileFormat[]> = {
+  [fileType.DOCUMENT]: [
+    fileFormat.MARKDOWN,
+    fileFormat.JSON,
+    fileFormat.HTML,
+    fileFormat.PDF,
+    fileFormat.FILE,
+  ],
+  [fileType.SKILL]: [fileFormat.MARKDOWN],
+  [fileType.STORYBOARD]: [fileFormat.MARKDOWN],
+  [fileType.IMAGE]: [fileFormat.FILE],
+  [fileType.VIDEO]: [fileFormat.FILE],
+  [fileType.AUDIO]: [fileFormat.FILE],
+  [fileType.VIDEO_EDITOR]: [fileFormat.JSON],
+}
+
+export function isAllowedFileKind(type: FileType, format: FileFormat): boolean {
+  return allowedFormatsByType[type].includes(format)
+}
+
 export function classifyFileKindFromContentType(contentType: string): {
   type: FileType
   format: FileFormat

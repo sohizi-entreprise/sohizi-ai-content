@@ -14,7 +14,6 @@ export const CLIP_ACCENT: Record<TrackType, string> = {
   audio: "#f59e0b",
   text: "#8b5cf6",
   caption: "#ec4899",
-  html: "#64748b",
 }
 
 export function clipSurface(type: TrackType, selected: boolean): string {

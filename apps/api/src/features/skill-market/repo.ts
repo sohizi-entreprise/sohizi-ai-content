@@ -1,19 +1,25 @@
 import { db } from "@/db"
 import {
   categories,
+  fileNodeContents,
   fileNodes,
   skillCategories,
-  skills,
-  type Skill,
 } from "@/db/schema"
 import { and, asc, eq, ilike, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { fileType } from "@/features/file-system/constants"
+import {
+  parseSkillDocument,
+  resolveSkillFileMetadata,
+} from "@/features/file-system/skill-document"
 import type { MarketCategory, MarketSkill } from "./types"
 
 const aggregateSkills = (
   rows: Array<{
-    skill: Skill
+    id: string
+    name: string
+    content: string | null
+    metadata: Record<string, unknown> | null
     categoryId: string | null
     categoryName: string | null
     categorySlug: string | null
@@ -23,14 +29,21 @@ const aggregateSkills = (
   const byId = new Map<string, MarketSkill>()
 
   for (const row of rows) {
-    let skill = byId.get(row.skill.id)
+    let skill = byId.get(row.id)
     if (!skill) {
+      const document = row.content ? parseSkillDocument(row.content) : null
+      const metadata = resolveSkillFileMetadata(row.metadata)
+      if (!document) continue
       skill = {
-        ...row.skill,
+        id: row.id,
+        fileNodeId: row.id,
+        name: row.name,
+        ...document,
+        ...metadata,
         categoryIds: [],
         categories: [],
       }
-      byId.set(row.skill.id, skill)
+      byId.set(row.id, skill)
     }
 
     if (
@@ -55,8 +68,10 @@ const aggregateSkills = (
 }
 
 const catalogBaseWhere = and(
-  eq(skills.status, "published"),
-  eq(skills.visibility, "public"),
+  eq(fileNodes.type, fileType.SKILL),
+  eq(fileNodes.directory, false),
+  sql`${fileNodes.metadata} ->> 'status' = 'published'`,
+  sql`${fileNodes.metadata} ->> 'visibility' = 'public'`,
 )
 
 export const listPublicCatalogSkills = async (options?: {
@@ -66,14 +81,14 @@ export const listPublicCatalogSkills = async (options?: {
   const filters = [catalogBaseWhere]
 
   if (options?.q?.trim()) {
-    filters.push(ilike(skills.name, `%${options.q.trim()}%`))
+    filters.push(ilike(fileNodes.name, `%${options.q.trim()}%`))
   }
 
   if (options?.categoryId) {
     filters.push(
       sql`exists (
         select 1 from ${skillCategories}
-        where ${skillCategories.skillId} = ${skills.id}
+        where ${skillCategories.fileNodeId} = ${fileNodes.id}
           and ${skillCategories.categoryId} = ${options.categoryId}
       )`,
     )
@@ -81,17 +96,27 @@ export const listPublicCatalogSkills = async (options?: {
 
   const rows = await db
     .select({
-      skill: skills,
+      id: fileNodes.id,
+      name: fileNodes.name,
+      content: fileNodeContents.content,
+      metadata: fileNodes.metadata,
       categoryId: categories.id,
       categoryName: categories.name,
       categorySlug: categories.slug,
       categoryType: categories.type,
     })
-    .from(skills)
-    .leftJoin(skillCategories, eq(skills.id, skillCategories.skillId))
+    .from(fileNodes)
+    .innerJoin(
+      fileNodeContents,
+      and(
+        eq(fileNodes.id, fileNodeContents.fileNodeId),
+        eq(fileNodes.projectId, fileNodeContents.projectId),
+      ),
+    )
+    .leftJoin(skillCategories, eq(fileNodes.id, skillCategories.fileNodeId))
     .leftJoin(categories, eq(skillCategories.categoryId, categories.id))
     .where(and(...filters))
-    .orderBy(asc(skills.name))
+    .orderBy(asc(fileNodes.name))
 
   return aggregateSkills(rows)
 }
@@ -101,16 +126,26 @@ export const getPublicCatalogSkillById = async (
 ): Promise<MarketSkill | null> => {
   const rows = await db
     .select({
-      skill: skills,
+      id: fileNodes.id,
+      name: fileNodes.name,
+      content: fileNodeContents.content,
+      metadata: fileNodes.metadata,
       categoryId: categories.id,
       categoryName: categories.name,
       categorySlug: categories.slug,
       categoryType: categories.type,
     })
-    .from(skills)
-    .leftJoin(skillCategories, eq(skills.id, skillCategories.skillId))
+    .from(fileNodes)
+    .innerJoin(
+      fileNodeContents,
+      and(
+        eq(fileNodes.id, fileNodeContents.fileNodeId),
+        eq(fileNodes.projectId, fileNodeContents.projectId),
+      ),
+    )
+    .leftJoin(skillCategories, eq(fileNodes.id, skillCategories.fileNodeId))
     .leftJoin(categories, eq(skillCategories.categoryId, categories.id))
-    .where(and(eq(skills.id, id), catalogBaseWhere))
+    .where(and(eq(fileNodes.id, id), catalogBaseWhere))
 
   if (rows.length === 0) return null
   return aggregateSkills(rows)[0] ?? null
@@ -128,7 +163,7 @@ export const listPublicSkillCategories = async (): Promise<
     })
     .from(categories)
     .innerJoin(skillCategories, eq(categories.id, skillCategories.categoryId))
-    .innerJoin(skills, eq(skillCategories.skillId, skills.id))
+    .innerJoin(fileNodes, eq(skillCategories.fileNodeId, fileNodes.id))
     .where(catalogBaseWhere)
     .orderBy(asc(categories.name))
 

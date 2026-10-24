@@ -5,21 +5,18 @@ import { act, cleanup, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { getFileContentQueryOptions } from "../query-mutations"
 import { useEditorStore } from "../stores/editor-store"
-import { useAutoSave, useSkillAutosave } from "./use-autosave"
+import { useAutoSave } from "./use-autosave"
 import type { PropsWithChildren } from "react"
-import type { Skill } from "../types"
 
 const requests = vi.hoisted(() => ({
   saveFileContent: vi.fn(),
-  saveSkill: vi.fn(),
 }))
 
 vi.mock("../requests", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../requests")>()
+  const actual = await importOriginal()
   return {
     ...actual,
     saveFileContent: requests.saveFileContent,
-    saveSkill: requests.saveSkill,
   }
 })
 
@@ -44,21 +41,6 @@ function deferred<T>() {
   return { promise, resolve, reject }
 }
 
-function skill(overrides: Partial<Skill> = {}): Skill {
-  return {
-    id: "skill-1",
-    name: "Skill",
-    description: "desc",
-    instructions: "inst",
-    fileNodeId: FILE_A,
-    status: "draft",
-    visibility: "private",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ...overrides,
-  }
-}
-
 function savingStatusFor(fileId: string) {
   return useEditorStore.getState().savingStatus[fileId]
 }
@@ -69,7 +51,7 @@ function contentCacheFor(fileId: string) {
   )
 }
 
-describe("useAutoSave / useSkillAutosave", () => {
+describe("useAutoSave", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
@@ -77,7 +59,6 @@ describe("useAutoSave / useSkillAutosave", () => {
       (_projectId: string, _fileId: string, content: string) =>
         Promise.resolve({ content, revision: 2 }),
     )
-    requests.saveSkill.mockResolvedValue(skill())
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -200,37 +181,6 @@ describe("useAutoSave / useSkillAutosave", () => {
       content: next,
       status: "draft",
     })
-  })
-
-  it("resolves the deferred skill getter on unmount instead of dropping it", async () => {
-    const { result, unmount } = renderHook(
-      () =>
-        useSkillAutosave({
-          duration: DURATION,
-          projectId: PROJECT_ID,
-          fileId: FILE_A,
-        }),
-      { wrapper },
-    )
-
-    const getter = vi.fn(() => ({
-      description: "new description",
-      instructions: "new instructions",
-    }))
-    act(() => result.current(getter))
-    // Serialization is deferred until the save actually runs.
-    expect(getter).not.toHaveBeenCalled()
-
-    await act(async () => {
-      unmount()
-    })
-
-    expect(getter).toHaveBeenCalledTimes(1)
-    expect(requests.saveSkill).toHaveBeenCalledWith(PROJECT_ID, FILE_A, {
-      description: "new description",
-      instructions: "new instructions",
-    })
-    expect(savingStatusFor(FILE_A)).toBe("saved")
   })
 
   it("flushes the previous file when the fileId changes, then saves the new file", async () => {

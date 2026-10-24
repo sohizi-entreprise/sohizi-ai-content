@@ -5,7 +5,6 @@ import {
   fileNodeContents,
   fileNodes,
   pendingFileOperations,
-  skills,
   videoCompositions,
   type FileNode,
 } from "@/db/schema"
@@ -933,17 +932,11 @@ async function createContentBasedOnFormat(
     case fileType.SKILL: {
       const description = initialContent?.skill?.description ?? ""
       const instructions = initialContent?.skill?.instructions ?? ""
-      await tx.insert(skills).values({
-        name: fileNode.name,
-        fileNodeId: fileNode.id,
-        description,
-        instructions,
-      })
       await tx.insert(fileNodeContents).values({
         projectId,
         fileNodeId: fileNode.id,
         content:
-          description || instructions
+          initialContent?.skill || initialContent?.markdown !== undefined
             ? serializeSkillDocument({ description, instructions })
             : EMPTY_SKILL_CONTENT,
       })
@@ -1359,79 +1352,39 @@ export const searchProjectChunksByKeyword = async (
   }>
 }
 
-export const getSkillByFileID = async (fileId: string) => {
-  const response = await db
-    .select()
-    .from(skills)
-    .where(and(eq(skills.fileNodeId, fileId)))
-  return response[0] ?? null
-}
-
 export const updateSkill = async (
+  projectId: string,
   fileId: string,
   request: UpdateSkillRequest,
 ) => {
-  return db.transaction(async (tx) => {
-    const payload = {
-      ...(request.description !== undefined
-        ? { description: request.description }
-        : {}),
-      ...(request.instructions !== undefined
-        ? { instructions: request.instructions }
-        : {}),
-      ...(request.status !== undefined ? { status: request.status } : {}),
-      ...(request.visibility !== undefined
-        ? { visibility: request.visibility }
-        : {}),
-    }
-    const response = await tx
-      .update(skills)
-      .set(payload)
-      .where(and(eq(skills.fileNodeId, fileId)))
-      .returning()
-    const skill = response[0]
-    if (!skill) return undefined
+  const file = await db
+    .select({ metadata: fileNodes.metadata })
+    .from(fileNodes)
+    .where(
+      and(
+        eq(fileNodes.projectId, projectId),
+        eq(fileNodes.id, fileId),
+        eq(fileNodes.type, fileType.SKILL),
+      ),
+    )
+    .limit(1)
+  if (!file[0]) return undefined
 
-    if (request.status !== undefined || request.visibility !== undefined) {
-      const file = await tx
-        .select({ metadata: fileNodes.metadata })
-        .from(fileNodes)
-        .where(eq(fileNodes.id, fileId))
-        .limit(1)
-      const current = file[0]?.metadata ?? {}
-      await tx
-        .update(fileNodes)
-        .set({
-          metadata: {
-            ...current,
-            ...(request.status !== undefined ? { status: request.status } : {}),
-            ...(request.visibility !== undefined
-              ? { visibility: request.visibility }
-              : {}),
-          },
-        })
-        .where(eq(fileNodes.id, fileId))
-    }
-
-    return skill
-  })
-}
-
-export const mirrorSkillRowFromContent = async (
-  fileNodeId: string,
-  content: string,
-) => {
-  const parsed = parseSkillDocument(content)
-  if (!parsed) return null
-  const response = await db
-    .update(skills)
+  const current = file[0].metadata ?? {}
+  const [updated] = await db
+    .update(fileNodes)
     .set({
-      description: parsed.description,
-      instructions: parsed.instructions,
+      metadata: {
+        ...current,
+        ...(request.status !== undefined ? { status: request.status } : {}),
+        ...(request.visibility !== undefined
+          ? { visibility: request.visibility }
+          : {}),
+      },
     })
-    .where(eq(skills.fileNodeId, fileNodeId))
+    .where(and(eq(fileNodes.projectId, projectId), eq(fileNodes.id, fileId)))
     .returning()
-  return response[0] ?? null
+  return updated
 }
 
 export const upsertPendingFileOperation = async (
@@ -1509,91 +1462,73 @@ export const markPendingFileOperationDiffApplied = async (
 }
 
 export const listSkills = async (projectId: string) => {
-  const projectSkills = await db
+  const rows = await db
     .select({
       name: fileNodes.name,
-      description: skills.description,
-      instructions: skills.instructions,
+      content: fileNodeContents.content,
+      metadata: fileNodes.metadata,
     })
     .from(fileNodes)
-    .innerJoin(skills, eq(fileNodes.id, skills.fileNodeId))
+    .innerJoin(
+      fileNodeContents,
+      and(
+        eq(fileNodes.id, fileNodeContents.fileNodeId),
+        eq(fileNodes.projectId, fileNodeContents.projectId),
+      ),
+    )
     .where(
       and(
         eq(fileNodes.projectId, projectId),
         eq(fileNodes.type, fileType.SKILL),
-        eq(skills.status, "published"),
+        eq(fileNodes.directory, false),
       ),
     )
 
-  const catalogSkills = await db
-    .select({
-      name: skills.name,
-      description: skills.description,
-      instructions: skills.instructions,
+  return rows
+    .filter((row) => row.metadata?.status === "published")
+    .flatMap((row) => {
+      const skill = row.content ? parseSkillDocument(row.content) : null
+      return skill
+        ? [
+            {
+              name: row.name,
+              description: skill.description,
+              instructions: skill.instructions,
+            },
+          ]
+        : []
     })
-    .from(skills)
-    .where(
-      and(
-        isNull(skills.fileNodeId),
-        eq(skills.status, "published"),
-        eq(skills.visibility, "public"),
-      ),
-    )
-
-  const byName = new Map<
-    string,
-    { name: string; description: string; instructions: string }
-  >()
-  for (const skill of catalogSkills) {
-    byName.set(skill.name.toLowerCase(), skill)
-  }
-  // Project skills win on name collision
-  for (const skill of projectSkills) {
-    byName.set(skill.name.toLowerCase(), skill)
-  }
-
-  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export const getSkillByName = async (projectId: string, name: string) => {
-  const fileResponse = await db
-    .select()
+  const rows = await db
+    .select({
+      id: fileNodes.id,
+      name: fileNodes.name,
+      content: fileNodeContents.content,
+      metadata: fileNodes.metadata,
+    })
     .from(fileNodes)
+    .innerJoin(
+      fileNodeContents,
+      and(
+        eq(fileNodes.id, fileNodeContents.fileNodeId),
+        eq(fileNodes.projectId, fileNodeContents.projectId),
+      ),
+    )
     .where(
       and(
         eq(fileNodes.projectId, projectId),
         eq(fileNodes.name, name),
         eq(fileNodes.type, fileType.SKILL),
+        eq(fileNodes.directory, false),
       ),
     )
-  const fileNode = fileResponse[0]
-  if (fileNode) {
-    const skillResponse = await db
-      .select()
-      .from(skills)
-      .where(and(eq(skills.fileNodeId, fileNode.id)))
-    const skill = skillResponse[0]
-    if (skill) {
-      if (skill.status !== "published") {
-        return null
-      }
-      return skill
-    }
-  }
-
-  const catalogResponse = await db
-    .select()
-    .from(skills)
-    .where(
-      and(
-        isNull(skills.fileNodeId),
-        eq(skills.name, name),
-        eq(skills.status, "published"),
-        eq(skills.visibility, "public"),
-      ),
-    )
-    .limit(1)
-  return catalogResponse[0] ?? null
+  const row = rows[0]
+  if (!row || row.metadata?.status !== "published" || !row.content) return null
+  const skill = parseSkillDocument(row.content)
+  return skill ? { id: row.id, name: row.name, ...skill } : null
 }
 
 // ================================

@@ -1,5 +1,3 @@
-import type { Skill } from "@/db/schema"
-
 export type MarketSkillCategory = {
   id: string
   name: string
@@ -7,7 +5,14 @@ export type MarketSkillCategory = {
   type: string
 }
 
-export type MarketSkill = Skill & {
+export type MarketSkill = {
+  id: string
+  fileNodeId: string
+  name: string
+  description: string
+  instructions: string
+  status: "draft" | "published"
+  visibility: "private" | "public"
   categoryIds: string[]
   categories: MarketSkillCategory[]
 }

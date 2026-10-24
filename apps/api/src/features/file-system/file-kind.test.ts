@@ -4,6 +4,7 @@ import {
   classifyFileKindFromAsset,
   classifyFileKindFromContentType,
   defaultFormatForType,
+  isAllowedFileKind,
   isMarkdownEditable,
   migrateLegacyFormat,
   resolveCreatedFileKind,
@@ -147,6 +148,33 @@ describe("defaultFormatForType", () => {
     expect(defaultFormatForType(fileType.VIDEO)).toBe(fileFormat.FILE)
     expect(defaultFormatForType(fileType.AUDIO)).toBe(fileFormat.FILE)
     expect(defaultFormatForType(fileType.VIDEO_EDITOR)).toBe(fileFormat.JSON)
+  })
+})
+
+describe("isAllowedFileKind", () => {
+  it("allows the formats each file type stores", () => {
+    expect(isAllowedFileKind(fileType.DOCUMENT, fileFormat.MARKDOWN)).toBe(true)
+    expect(isAllowedFileKind(fileType.DOCUMENT, fileFormat.JSON)).toBe(true)
+    expect(isAllowedFileKind(fileType.DOCUMENT, fileFormat.HTML)).toBe(true)
+    expect(isAllowedFileKind(fileType.DOCUMENT, fileFormat.PDF)).toBe(true)
+    expect(isAllowedFileKind(fileType.DOCUMENT, fileFormat.FILE)).toBe(true)
+    expect(isAllowedFileKind(fileType.SKILL, fileFormat.MARKDOWN)).toBe(true)
+    expect(isAllowedFileKind(fileType.STORYBOARD, fileFormat.MARKDOWN)).toBe(
+      true,
+    )
+    expect(isAllowedFileKind(fileType.IMAGE, fileFormat.FILE)).toBe(true)
+    expect(isAllowedFileKind(fileType.VIDEO, fileFormat.FILE)).toBe(true)
+    expect(isAllowedFileKind(fileType.AUDIO, fileFormat.FILE)).toBe(true)
+    expect(isAllowedFileKind(fileType.VIDEO_EDITOR, fileFormat.JSON)).toBe(true)
+  })
+
+  it("rejects formats a file type does not store", () => {
+    expect(isAllowedFileKind(fileType.SKILL, fileFormat.JSON)).toBe(false)
+    expect(isAllowedFileKind(fileType.STORYBOARD, fileFormat.HTML)).toBe(false)
+    expect(isAllowedFileKind(fileType.IMAGE, fileFormat.MARKDOWN)).toBe(false)
+    expect(isAllowedFileKind(fileType.VIDEO_EDITOR, fileFormat.MARKDOWN)).toBe(
+      false,
+    )
   })
 })
 

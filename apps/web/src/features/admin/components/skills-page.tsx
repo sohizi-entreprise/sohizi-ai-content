@@ -23,19 +23,12 @@ export function SkillsPage() {
     isLoading,
     error,
   } = useQuery(listAdminSkillsQueryOptions())
-  const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<AdminSkill | null>(null)
 
   const deleteMutation = useMutation(deleteAdminSkillMutationOptions())
 
-  const openCreate = () => {
-    setEditing(null)
-    setDialogOpen(true)
-  }
-
   const openEdit = (skill: AdminSkill) => {
     setEditing(skill)
-    setDialogOpen(true)
   }
 
   const handleDelete = (skill: AdminSkill) => {
@@ -54,7 +47,6 @@ export function SkillsPage() {
             agents.
           </p>
         </div>
-        <Button onClick={openCreate}>Add skill</Button>
       </div>
 
       {isLoading ? (
@@ -142,8 +134,10 @@ export function SkillsPage() {
       </div>
 
       <SkillFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null)
+        }}
         skill={editing}
       />
     </div>

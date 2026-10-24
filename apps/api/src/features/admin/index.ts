@@ -26,7 +26,6 @@ import {
   updateContentCategorySchema,
 } from "../content-categories/schema"
 import {
-  createSkillSchema,
   replaceSkillCategoriesSchema,
   updateSkillSchema,
 } from "../skills/schema"
@@ -290,9 +289,6 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     },
   )
   .get("/skills", () => adminService.listSkills())
-  .post("/skills", ({ body }) => adminService.createSkill(body), {
-    body: createSkillSchema,
-  })
   .get("/skills/:id", ({ params }) => adminService.getSkill(params.id), {
     params: z.object({ id: z.uuid() }),
   })

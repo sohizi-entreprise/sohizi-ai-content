@@ -7,7 +7,7 @@ import { getErrorMessage } from "@/utils/get-error-message"
 
 const fileNodeId = z.uuid().describe("The file node ID of the video file.")
 
-const trackTypeEnum = z.enum(["video", "audio", "text", "image", "html"])
+const trackTypeEnum = z.enum(["video", "audio", "text", "image"])
 
 const updateCompositionCommand = z.object({
   cmd: z
