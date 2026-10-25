@@ -3,6 +3,8 @@ import { billingService } from "@/features/billing"
 import { withBillingStream } from "@/features/billing/wrapper"
 import { readStreamChunks } from "@/features/generation-request/stream-handler"
 import { generateAsset } from "@/features/media-engine/service"
+import { captureYoutubeScreenshot } from "@/features/media-engine/youtube-screenshot"
+import { assertProjectAccess } from "@/lib/authorize"
 import {
   getModelSchema,
   listGenerationModels,
@@ -95,6 +97,35 @@ export function executeYoutubeAnalysis(
     buildYoutubeInput(data.body),
     options,
   )
+}
+
+export async function executeYoutubeScreenshot(
+  data: RequestFor<"/media/extract-frame/youtube">,
+  { session }: ToolExecutionOptions,
+): Promise<ToolResult> {
+  try {
+    await assertProjectAccess(session.userId, session.projectId)
+    const response = await captureYoutubeScreenshot(data.body, session.userId)
+    const result: unknown = await response.json()
+
+    if (response.ok) return success(JSON.stringify(result))
+
+    const message =
+      typeof result === "object" &&
+      result !== null &&
+      "error" in result &&
+      typeof result.error === "string"
+        ? result.error
+        : "Failed to capture the YouTube screenshot"
+    const retryAfter = response.headers.get("Retry-After")
+    return failure(
+      retryAfter ? `${message}. Retry after ${retryAfter} seconds.` : message,
+    )
+  } catch (error) {
+    return failure(
+      getErrorMessage(error, "Failed to capture the YouTube screenshot"),
+    )
+  }
 }
 
 export async function executeSubmitGeneration(

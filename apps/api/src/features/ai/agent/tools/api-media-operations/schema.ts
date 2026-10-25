@@ -81,6 +81,23 @@ const youtubeAnalysisSchema = z
   })
   .describe("Analyze a YouTube video by URL.")
 
+const youtubeScreenshotSchema = z
+  .object({
+    endpoint: z.literal("/media/extract-frame/youtube"),
+    method: z.literal("POST"),
+    body: z.object({
+      youtubeUrl: z.url().describe("The URL of the YouTube video to capture."),
+      seconds: z
+        .number()
+        .int()
+        .min(0)
+        .max(86400)
+        .optional()
+        .describe("Time to capture in seconds."),
+    }),
+  })
+  .describe("Extract a frame from a YouTube video at the requested time.")
+
 const submitGenerationSchema = z
   .object({
     endpoint: z.literal("/media/generate"),
@@ -126,6 +143,7 @@ export const apiMediaOperationsSchema = [
   imageAnalysisSchema,
   videoAnalysisSchema,
   youtubeAnalysisSchema,
+  youtubeScreenshotSchema,
   submitGenerationSchema,
   waitForJobSchema,
   getJobStatusSchema,

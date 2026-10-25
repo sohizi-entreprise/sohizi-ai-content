@@ -14,6 +14,7 @@ import {
   executeVideoAnalysis,
   executeWaitForJob,
   executeYoutubeAnalysis,
+  executeYoutubeScreenshot,
 } from "./handlers"
 import {
   apiMediaOperationsSchema,
@@ -22,7 +23,7 @@ import {
 
 export const apiMediaOperationsTool = buildBaseTool({
   name: "mediaOperationsAPI",
-  description: `API for analyzing media and submitting or monitoring media-generation jobs.`,
+  description: `API for analyzing media, capturing YouTube screenshots, and submitting or monitoring media-generation jobs.`,
   inputSchema: apiGenericApiSchema,
   execute: async (input, options) => {
     const request = parseMediaOperationsRequest(input)
@@ -58,6 +59,8 @@ function dispatchMediaOperationsRequest(
       return executeVideoAnalysis(request, options)
     case "/media/analyze/youtube":
       return executeYoutubeAnalysis(request, options)
+    case "/media/extract-frame/youtube":
+      return executeYoutubeScreenshot(request, options)
     case "/media/generate":
       return executeSubmitGeneration(request, options)
     case "/media/jobs/wait":
