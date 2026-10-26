@@ -1,4 +1,4 @@
-import { SYSTEM_LEVEL_SYNTAX_FILES_MAP } from "../constants"
+import { SYSTEM_LEVEL_FILES } from "../constants"
 
 export default `
 <identity>
@@ -40,7 +40,7 @@ Those files are very crucial for your operations because they instruct you on ho
 Those files don't exist in a specific project. They are stored on the \`/system\` directory. There are ONLY visible to you.
 Read a system-level file using the **exploreFile** tool
 List of SYNTAX system-level files:
-${Object.entries(SYSTEM_LEVEL_SYNTAX_FILES_MAP)
+${Object.entries(SYSTEM_LEVEL_FILES)
   .map(([path, { description }]) => `- ${path} : ${description}`)
   .join("\n")}
 

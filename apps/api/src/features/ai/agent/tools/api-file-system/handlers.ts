@@ -1,7 +1,7 @@
 import type { ToolResult, ToolExecutionOptions } from "../tool-definition"
 import type { ApiFileSystemRequest } from "./schema"
 import { failure, success } from "../utils"
-import { SYSTEM_LEVEL_SYNTAX_FILES_MAP } from "../../constants/system-files"
+import { SYSTEM_LEVEL_FILES } from "../../constants/system-files"
 import type { FileContentPayload } from "@/features/file-system/objects/file"
 import * as fileSystemRepo from "@/features/file-system/repo"
 import {
@@ -159,7 +159,7 @@ export async function executeFileSyntax(
   _options: ToolExecutionOptions,
 ): Promise<ToolResult> {
   const path = `/system/syntax/${data.params.fileType}`
-  const syntax = SYSTEM_LEVEL_SYNTAX_FILES_MAP[path]
+  const syntax = SYSTEM_LEVEL_FILES[path]
   if (!syntax)
     return failure(`No syntax reference found for ${data.params.fileType}`)
   return success(syntax.content)

@@ -9,7 +9,7 @@ import {
 import { failure, success } from "./utils"
 import { FileContentPayload } from "@/features/file-system/objects/file"
 import { Session } from "../core/session"
-import { SYSTEM_LEVEL_SYNTAX_FILES_MAP } from "../constants/system-files"
+import { SYSTEM_LEVEL_FILES } from "../constants/system-files"
 
 const toolSchema = z.discriminatedUnion("cmd", [
   listCommandSchema,
@@ -176,7 +176,7 @@ function maybeReadSystemFile(filePathOrId: string): {
   }
   if (filePathOrId.startsWith("/system/")) {
     result.isSystemFile = true
-    const systemFile = SYSTEM_LEVEL_SYNTAX_FILES_MAP[filePathOrId]
+    const systemFile = SYSTEM_LEVEL_FILES[filePathOrId]
     if (!systemFile) {
       return result
     }

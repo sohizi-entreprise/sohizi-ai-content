@@ -356,7 +356,11 @@ function readStoredCommandId(
 
 function enrichSystemPrompt(
   systemPrompt: string,
-  projectSkills: { name: string; description: string; instructions: string }[],
+  projectSkills: {
+    path: string
+    description: string
+    instructions: string
+  }[],
   subAgents: AgentName[],
   invokedCommands: Array<{ name: string; action: string }> = [],
   projectSettingsPrompt = "",
@@ -371,7 +375,7 @@ function enrichSystemPrompt(
     )
     .map(
       (skill, index) =>
-        `${index + 1}. ${skill.name}:\n${skill.description}\n---\n`,
+        `${index + 1}. ${skill.path}:\n${skill.description}\n---\n`,
     )
     .join("\n")
   const subAgentDefinitions = subAgents.map((name) => getAgentDefinition(name))
@@ -384,14 +388,10 @@ function enrichSystemPrompt(
     .join("\n")
   if (skillPrompts.length > 0) {
     finalPrompt += `
-<project-skills>
-Here are the skills that you have access to within this project. A skill is a package of instructions, metadata and resources that can give you
-specialized capabilities and domain expertise to better perform your tasks. You can load skills "on-demand" depending on the task.
-
-Project Skills (Name + Description):
+<project-published-skills>
+Published skills available to you (Path + Description):
 ${skillPrompts}
-
-</project-skills>
+</project-published-skills>
 `
   }
   if (subAgentPrompts.length > 0) {

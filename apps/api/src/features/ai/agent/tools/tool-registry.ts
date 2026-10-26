@@ -29,6 +29,11 @@ import {
 import { getJobStatus, submitAssetGenerationJob, waitForJob } from "./wait-job"
 import { webPageExtractTool, webSearchTool } from "./web-search"
 import { getArtifactTool } from "./get-artifact"
+import { apiDocReadTool } from "./api-doc-read"
+import { apiFileSystemTool } from "./api-file-system"
+import { apiMediaOperationsTool } from "./api-media-operations"
+import { apiVideoEditorTool } from "./api-video-editor"
+import { apiWebTool } from "./api-web"
 
 const toolRegistry = new Map<string, BaseTool<z.ZodType>>()
 
@@ -70,6 +75,11 @@ export const allTools = {
   webSearchTool,
   webPageExtractTool,
   getArtifactTool,
+  apiDocReadTool,
+  apiFileSystemTool,
+  apiMediaOperationsTool,
+  apiVideoEditorTool,
+  apiWebTool,
 } as const
 
 for (const tool of Object.values(allTools)) {

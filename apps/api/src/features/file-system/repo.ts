@@ -1467,6 +1467,7 @@ export const listSkills = async (projectId: string) => {
       name: fileNodes.name,
       content: fileNodeContents.content,
       metadata: fileNodes.metadata,
+      path: fileNodes.path,
     })
     .from(fileNodes)
     .innerJoin(
@@ -1492,6 +1493,7 @@ export const listSkills = async (projectId: string) => {
         ? [
             {
               name: row.name,
+              path: toApiPath(row.path),
               description: skill.description,
               instructions: skill.instructions,
             },

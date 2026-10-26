@@ -1,6 +1,8 @@
 export default `
 ## Skill markdown syntax
 
+ALL skills MUST be saved inside the \`/root/core/skills\` directory.
+
 ### 1. YAML Frontmatter (Required)
 Every skill must begin with frontmatter containing a single key \`description\` which is 1–2 sentences explaining **what** the skill does and **when** the agent must activate it (explicit trigger conditions).
 
@@ -20,9 +22,10 @@ Structure the procedural instructions using these core sections:
 - **Instructional Tone**: Use direct, imperative commands ("Parse the input...", "Call endpoint...").
 - **Token Efficient**: Keep the body concise (under 500 lines); reference external scripts/assets if complex.
 - **Deterministic**: Eliminate ambiguity—tell the agent exactly what to validate before and after execution.
+- **NEVER expose internal tools names into the skill body.** Only describe the actions in a way that is independent of the tools.
 
 ### Output Format Template:
-\`\`\`
+\`
 ---
 description: |
   Brief summary of capability. Trigger when user asks to [action] or mentions [keywords].
@@ -39,5 +42,5 @@ description: |
 ## Constraints
 - Do NOT do X without user confirmation.
 - Always handle error condition Y by doing Z.
-\`\`\`
+\`
 `.trim()
