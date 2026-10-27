@@ -5,7 +5,7 @@ import type { ModelMessage } from "ai"
 
 function input(
   overrides: Partial<
-    Pick<LlmCallInput, "reasoningEffort" | "reasoningSummary">
+    Pick<LlmCallInput, "reasoningEffort" | "reasoningSummary" | "gatewayModels">
   >,
 ): LlmCallInput {
   return {
@@ -39,6 +39,24 @@ describe("gatewayCallExtras", () => {
     ).toEqual({
       reasoning: "low",
       providerOptions: { openai: { reasoningSummary: "auto" } },
+    })
+  })
+
+  it("sends gateway model fallbacks with OpenAI options", () => {
+    expect(
+      gatewayCallExtras(
+        input({
+          reasoningEffort: "low",
+          gatewayModels: ["typesafe-ai/jev", "perplexity/pplx-decider-v1.2"],
+        }),
+      ),
+    ).toEqual({
+      reasoning: "low",
+      providerOptions: {
+        gateway: {
+          models: ["typesafe-ai/jev", "perplexity/pplx-decider-v1.2"],
+        },
+      },
     })
   })
 

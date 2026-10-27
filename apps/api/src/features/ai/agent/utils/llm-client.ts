@@ -23,6 +23,11 @@ import {
   ESTIMATE_OVERBOOKING_FACTOR,
   TOKEN_OVERHEAD_RATE,
 } from "@/features/billing/constants"
+import type { BillingService } from "@/features/billing/service"
+import {
+  withBilling,
+  type WithBillingCallContext,
+} from "@/features/billing/wrapper"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { simpleHash } from "@/utils/simple-hash"
 
@@ -34,6 +39,7 @@ export type ModelConfig = {
   temperature?: number
   reasoningEffort?: ReasoningEffort
   reasoningSummary?: "auto" | "none"
+  gatewayModels?: string[]
   maxRetries?: number
   maxOutputTokens?: number
   timeout?: number
@@ -42,7 +48,7 @@ export type ModelConfig = {
 export type InvokeRequest = {
   messages: ModelMessage[]
   abortSignal: AbortSignal
-  outputSchema?: z.ZodSchema
+  outputSchema?: z.ZodType
   stream?: boolean
   telemetryFunctionId?: string
 }
@@ -86,6 +92,7 @@ export class LlmClient {
         maxOutputTokens: modelConfig?.maxOutputTokens,
         reasoningEffort: modelConfig?.reasoningEffort,
         reasoningSummary: modelConfig?.reasoningSummary,
+        gatewayModels: modelConfig?.gatewayModels,
         telemetryFunctionId,
       })
       cost = response.costUsd
@@ -96,6 +103,7 @@ export class LlmClient {
         finishReason: response.finishReason,
         usage: this.getTokenUsage(response.usage, cost),
         vendor: response.vendorName,
+        ...(outputSchema ? { output: response.output } : {}),
       }
     } catch (error) {
       yield {
@@ -139,6 +147,8 @@ export class LlmClient {
     }
 
     let vendor: string | undefined
+    let structuredOutput: unknown
+    let hasStructuredOutput = false
     try {
       const response = await streamTextWithFailover({
         modelId: this.model,
@@ -149,6 +159,7 @@ export class LlmClient {
         maxOutputTokens: modelConfig?.maxOutputTokens,
         reasoningEffort: modelConfig?.reasoningEffort,
         reasoningSummary: modelConfig?.reasoningSummary,
+        gatewayModels: modelConfig?.gatewayModels,
         telemetryFunctionId,
       })
       vendor = response.vendorName
@@ -234,6 +245,10 @@ export class LlmClient {
       ])
       usage = this.getTokenUsage(tokenUsage, cost)
       finishReason = finish
+      if (outputSchema && response.output) {
+        structuredOutput = await response.output
+        hasStructuredOutput = true
+      }
     } catch (e) {
       error = getErrorMessage(e)
       finishReason = "error"
@@ -250,6 +265,7 @@ export class LlmClient {
         usage,
         reasoningText,
         vendor,
+        ...(hasStructuredOutput ? { output: structuredOutput } : {}),
       }
     }
   }
@@ -269,21 +285,50 @@ export class LlmClient {
   }
 }
 
-export type BillableLlmInput = {
+export type BillableLlmInput<
+  TSchema extends z.ZodType | undefined = undefined,
+> = {
   messages: ModelMessage[]
-  outputSchema?: z.ZodSchema
+  outputSchema?: TSchema
   stream?: boolean
   estimatedInputTokens: number
   estimatedOutputTokens: number
   telemetryFunctionId?: string
 }
 
-export type BillableLlmOutput = {
-  text: string
-  finishReason: CompleteReason
-  usage: TokenUsage
-  reasoningText?: string
-  error?: string
+export type BillableLlmOutput<TOutput = undefined> =
+  | {
+      text: string
+      finishReason: CompleteReason
+      usage: TokenUsage
+      reasoningText?: string
+      output: TOutput
+      error?: undefined
+    }
+  | {
+      text: string
+      finishReason: CompleteReason
+      usage: TokenUsage
+      reasoningText?: string
+      output?: undefined
+      error: string
+    }
+
+type WideLlmInput = BillableLlmInput<z.ZodType | undefined>
+
+function toBillableLlmOutput(
+  chunk: LlmCompleteChunk,
+): BillableLlmOutput<unknown> {
+  const shared = {
+    text: chunk.text,
+    finishReason: chunk.finishReason,
+    usage: chunk.usage,
+    reasoningText: chunk.reasoningText,
+  }
+  if (chunk.error) {
+    return { ...shared, error: chunk.error }
+  }
+  return { ...shared, output: chunk.output }
 }
 
 export type BillableLlmConfig = {
@@ -304,8 +349,11 @@ const DEFAULT_TIMEOUT_MS = 600_000 // 10 minutes
  * Estimation, idempotency, and per-token cost math live here so callers
  * never re-implement billing logic.
  */
-export type BillableLlmClient = Billable<BillableLlmInput, BillableLlmOutput> &
-  BillableStream<BillableLlmInput, LlmChunk>
+export type BillableLlmClient = Billable<
+  WideLlmInput,
+  BillableLlmOutput<unknown>
+> &
+  BillableStream<WideLlmInput, LlmChunk>
 
 export function createBillableLlmClient(
   config: BillableLlmConfig,
@@ -328,7 +376,7 @@ export function createBillableLlmClient(
   }
 
   async function* stream(
-    input: BillableLlmInput,
+    input: WideLlmInput,
     abortSignal: AbortSignal,
   ): AsyncGenerator<LlmChunk, void, unknown> {
     yield* client.invoke({
@@ -354,7 +402,7 @@ export function createBillableLlmClient(
       return null
     },
 
-    estimateCost(input: BillableLlmInput): Credits {
+    estimateCost(input: WideLlmInput): Credits {
       const estimatedUsage = {
         inputTokens: input.estimatedInputTokens,
         outputTokens: input.estimatedOutputTokens,
@@ -365,9 +413,9 @@ export function createBillableLlmClient(
     },
 
     async execute(
-      input: BillableLlmInput,
+      input: WideLlmInput,
       ctx: BillableContext,
-    ): Promise<BillableResult<BillableLlmOutput>> {
+    ): Promise<BillableResult<BillableLlmOutput<unknown>>> {
       // Drain the stream looking for the terminal complete chunk; usage,
       // text, and finishReason are all carried on that chunk so we don't
       // need to buffer intermediate chunks.
@@ -383,19 +431,13 @@ export function createBillableLlmClient(
       }
 
       return {
-        output: {
-          text: finalChunk.text,
-          finishReason: finalChunk.finishReason,
-          usage: finalChunk.usage,
-          reasoningText: finalChunk.reasoningText,
-          error: finalChunk.error,
-        },
+        output: toBillableLlmOutput(finalChunk),
         actualCredits: creditsFromUsage(finalChunk.usage),
       }
     },
 
     idempotencyKey(
-      input: BillableLlmInput,
+      input: WideLlmInput,
       ctx: {
         organizationId: string
         userId?: string | null
@@ -407,4 +449,25 @@ export function createBillableLlmClient(
       return `llm:${ctx.organizationId}:${model.id}:${messageHash}:${runId}`
     },
   }
+}
+
+type TypedLlmOutputCall = {
+  <TSchema extends z.ZodType>(
+    input: BillableLlmInput<TSchema> & { outputSchema: TSchema },
+    ctx: WithBillingCallContext,
+  ): Promise<BillableLlmOutput<z.output<TSchema>>>
+  (
+    input: BillableLlmInput,
+    ctx: WithBillingCallContext,
+  ): Promise<BillableLlmOutput<undefined>>
+}
+
+/** Bills through `withBilling` and types `output` from the call's `outputSchema`. */
+export function withTypedLlmOutput(
+  client: BillableLlmClient,
+  billing: BillingService,
+): TypedLlmOutputCall {
+  const call = withBilling(client, billing)
+  return ((input: WideLlmInput, ctx: WithBillingCallContext) =>
+    call(input, ctx)) as TypedLlmOutputCall
 }

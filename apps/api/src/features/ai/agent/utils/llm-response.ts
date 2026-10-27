@@ -110,6 +110,7 @@ export type LlmCompleteChunk = {
   error?: string
   reasoningText?: string
   vendor?: string
+  output?: unknown
 }
 
 export type LlmChunk =

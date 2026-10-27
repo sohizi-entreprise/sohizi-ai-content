@@ -78,7 +78,8 @@ export async function generateWithModel(
     text: response.text,
     finishReason: response.finishReason,
     usage: response.usage,
-    costUsd: extras.costFrom(response.providerMetadata),
+    costUsd: extras.costFrom(response.finalStep.providerMetadata),
+    ...(input.outputSchema ? { output: response.output } : {}),
   }
 }
 
@@ -99,6 +100,7 @@ export function streamWithModel(
       (step) => extras.costFrom(step.providerMetadata),
       () => 0,
     ),
+    ...(input.outputSchema ? { output: response.output } : {}),
   }
 }
 
@@ -157,10 +159,17 @@ export function gatewayCallExtras(input: LlmCallInput): {
   if (input.reasoningEffort === "max") openai.reasoningEffort = "max"
   if (input.reasoningSummary) openai.reasoningSummary = input.reasoningSummary
 
+  const providerOptions: ProviderOptions = {}
+  if (Object.keys(openai).length > 0) providerOptions.openai = openai
+  if (input.gatewayModels && input.gatewayModels.length > 0) {
+    providerOptions.gateway = { models: input.gatewayModels }
+  }
+
   return {
     reasoning: input.reasoningEffort
       ? gatewayReasoningByEffort[input.reasoningEffort]
       : undefined,
-    providerOptions: Object.keys(openai).length > 0 ? { openai } : undefined,
+    providerOptions:
+      Object.keys(providerOptions).length > 0 ? providerOptions : undefined,
   }
 }

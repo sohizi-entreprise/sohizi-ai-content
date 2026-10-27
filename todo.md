@@ -67,3 +67,10 @@
 [ ] Add an error when the streaming fails, and when a run fails too (currently we display a raw message - replace it with a generic one)
 [ ] Some types of files do not require user approval, like context file
 [ ] Test ai context summarization
+
+<!-- Close it today -->
+[ ] Add all the needed models
+[ ] Review their descriptions and optimize them when needed
+[ ] For the memory model let's try claude haiku 5.5 and then fallback to gpt 6 luna
+[ ] Add preview memory on the frontend
+[ ] Improve the system prompt

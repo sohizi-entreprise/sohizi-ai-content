@@ -34,6 +34,7 @@ import { apiFileSystemTool } from "./api-file-system"
 import { apiMediaOperationsTool } from "./api-media-operations"
 import { apiVideoEditorTool } from "./api-video-editor"
 import { apiWebTool } from "./api-web"
+import { recallMemoryTool, saveMemoryTool } from "./memory"
 
 const toolRegistry = new Map<string, BaseTool<z.ZodType>>()
 
@@ -80,6 +81,8 @@ export const allTools = {
   apiMediaOperationsTool,
   apiVideoEditorTool,
   apiWebTool,
+  recallMemoryTool,
+  saveMemoryTool,
 } as const
 
 for (const tool of Object.values(allTools)) {

@@ -1,7 +1,7 @@
 import { ModelMessage } from "ai"
-import { createBillableLlmClient } from "./llm-client"
+import { createBillableLlmClient, withTypedLlmOutput } from "./llm-client"
 import { getResolvedTextModel } from "@/features/models/repo"
-import { billingService, withBilling } from "@/features/billing"
+import { billingService } from "@/features/billing"
 import { estimateInputTokens } from "./estimate-token"
 import { v4 as uuidv4 } from "uuid"
 
@@ -35,7 +35,7 @@ export async function generateTitle(
         maxOutputTokens: 32,
       },
     })
-    const billedClient = withBilling(client, billingService)
+    const billedClient = withTypedLlmOutput(client, billingService)
 
     const titleMessages: ModelMessage[] = [
       {

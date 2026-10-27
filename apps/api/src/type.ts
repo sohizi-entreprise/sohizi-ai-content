@@ -129,6 +129,9 @@ export type TokenUsage = {
   cost: number
 }
 
+export type MemoryScope = "project" | "user" | "user-project"
+export type MemoryLoadingPolicy = "always" | "on-demand"
+
 export type ChatMetadata = {
   usage: TokenUsage | null
   latestRunUsage?: TokenUsage | null

@@ -24,5 +24,8 @@
     "@sohizi/eslint-config": "workspace:*",
     "eslint": "^9.37.0",
     "prettier": "^3.5.3"
+  },
+  "overrides": {
+    "@ai-sdk/otel": "1.0.154"
   }
 }

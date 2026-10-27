@@ -51,6 +51,8 @@ import {
   VendorKind,
   VendorRateLimit,
   ChatMetadata,
+  MemoryScope,
+  MemoryLoadingPolicy,
 } from "@/type"
 import { FileFormat, FileType } from "@/features/file-system/constants"
 
@@ -1254,6 +1256,41 @@ export const assetVariants = pgTable(
       table.assetId,
       table.type,
     ),
+  ],
+)
+
+export const memories = pgTable(
+  "memories",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .references(() => projects.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: text("user_id")
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+    content: text("content").notNull(),
+    scope: varchar("scope", { length: 50 }).notNull().$type<MemoryScope>(),
+    loadingPolicy: varchar("loading_policy", { length: 50 })
+      .notNull()
+      .$type<MemoryLoadingPolicy>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("memories_project_id_loading_policy_idx").on(
+      table.projectId,
+      table.loadingPolicy,
+    ),
+    index("memories_user_id_loading_policy_idx").on(
+      table.userId,
+      table.loadingPolicy,
+    ),
+    index("memories_last_used_at_idx").on(table.lastUsedAt),
   ],
 )
 

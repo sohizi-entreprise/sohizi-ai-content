@@ -97,6 +97,7 @@ function callInput(
     maxOutputTokens: request.maxOutputTokens,
     reasoningEffort: request.reasoningEffort,
     reasoningSummary: request.reasoningSummary,
+    gatewayModels: request.gatewayModels,
     telemetryFunctionId: request.telemetryFunctionId,
   }
 }
@@ -147,6 +148,7 @@ async function openStream(
       usage: handle.usage,
       finishReason: handle.finishReason,
       costUsd: handle.costUsd,
+      output: handle.output,
     },
   }
 }

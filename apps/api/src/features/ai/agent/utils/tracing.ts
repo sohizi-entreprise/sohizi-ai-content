@@ -122,7 +122,7 @@ export async function withSubAgentObservation<T>(
 }
 
 export async function* observeToolExecution<
-  T extends { type: string; output?: string },
+  T extends { type: string; output?: unknown },
 >(
   toolName: string,
   input: unknown,

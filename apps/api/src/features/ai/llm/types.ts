@@ -19,6 +19,7 @@ export type LlmCallInput = {
   maxOutputTokens?: number
   reasoningEffort?: LlmReasoningEffort
   reasoningSummary?: "auto" | "none"
+  gatewayModels?: string[]
   telemetryFunctionId?: string
 }
 
@@ -27,6 +28,7 @@ export type LlmTextResult = {
   finishReason: FinishReason
   usage: LanguageModelUsage
   costUsd: number
+  output?: unknown
 }
 
 export type LlmStream = {
@@ -34,6 +36,7 @@ export type LlmStream = {
   usage: PromiseLike<LanguageModelUsage>
   finishReason: PromiseLike<FinishReason>
   costUsd: PromiseLike<number>
+  output?: PromiseLike<unknown>
 }
 
 export type FulfilledLlmText = LlmTextResult & {
