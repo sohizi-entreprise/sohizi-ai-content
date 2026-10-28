@@ -122,23 +122,3 @@ ${lines.join("\n")}
 Call waitForJob if you need the result. If you no longer need them, you may finish.
 </job_update>`
 }
-
-export function pendingJobsFinishRefusal(jobs: AgentJob[]): string | null {
-  if (jobs.length === 0) return null
-  const listed = jobs
-    .map((job) => `${job.label} [${job.jobId}] (${job.status})`)
-    .join(", ")
-  return `Cannot finish: ${jobs.length} job(s) still running: ${listed}. Call waitForJob if you need the result, or end your turn without tools if you no longer need them.`
-}
-
-export function applyFinishGuard(state: {
-  getPendingJobs: () => AgentJob[]
-  finishRun: () => void
-}): { allowed: boolean; output: string } {
-  const refusal = pendingJobsFinishRefusal(state.getPendingJobs())
-  if (refusal) {
-    return { allowed: false, output: refusal }
-  }
-  state.finishRun()
-  return { allowed: true, output: "finished" }
-}

@@ -5,11 +5,8 @@ import {
   formatPendingJobReminder,
   isTerminalGenerationStatus,
   jobPatchFromRequest,
-  pendingJobsFinishRefusal,
-  applyFinishGuard,
   toAgentJobStatus,
 } from "./job-status"
-import { AgentStateManager } from "../core/state-manager"
 import type { AgentJob } from "@/type"
 
 const job: AgentJob = {
@@ -188,36 +185,5 @@ describe("formatPendingJobReminder", () => {
     expect(formatPendingJobReminder([job])).toContain(
       "hero portrait [job-1] queued",
     )
-  })
-})
-
-describe("pendingJobsFinishRefusal", () => {
-  it("returns null when nothing is pending", () => {
-    expect(pendingJobsFinishRefusal([])).toBeNull()
-  })
-
-  it("lists pending jobs so finish can be refused", () => {
-    const message = pendingJobsFinishRefusal([{ ...job, status: "running" }])
-    expect(message).toContain("hero portrait [job-1] (running)")
-    expect(message).toContain("Call waitForJob")
-  })
-
-  it("blocks finishRun while jobs are pending and allows it afterward", () => {
-    const state = new AgentStateManager()
-    state.addJob({
-      jobId: "job-1",
-      kind: "image",
-      toolCallId: "call-1",
-      label: "hero portrait",
-    })
-
-    const refused = applyFinishGuard(state)
-    expect(refused.allowed).toBe(false)
-    expect(state.isExitStatus).toBe(false)
-
-    state.updateJob({ jobId: "job-1", status: "completed" })
-    const allowed = applyFinishGuard(state)
-    expect(allowed.allowed).toBe(true)
-    expect(state.status).toBe("finished")
   })
 })

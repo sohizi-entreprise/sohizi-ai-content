@@ -34,8 +34,7 @@ mock.module("@/features/media-engine/youtube-screenshot", () => ({
   },
 }))
 
-const { apiMediaOperationsTool, youtubeScreenshotTool } =
-  await import("./index")
+const { apiMediaOperationsTool } = await import("./index")
 
 const options = {
   session: { userId: "user-1", projectId: "project-1" },
@@ -56,7 +55,7 @@ describe("YouTube screenshot agent tool", () => {
   test("passes a URL and timestamp through the media API handler", async () => {
     const result = (await apiMediaOperationsTool.params.execute(
       {
-        endpoint: "/media/youtube-screenshot",
+        endpoint: "/media/extract-frame/youtube",
         method: "POST",
         body: { youtubeUrl: "https://youtu.be/example?t=5", seconds: 42 },
       },
@@ -79,9 +78,13 @@ describe("YouTube screenshot agent tool", () => {
     })
   })
 
-  test("exposes the operation as a dedicated agent tool", async () => {
-    const result = (await youtubeScreenshotTool.params.execute(
-      { youtubeUrl: "https://www.youtube.com/watch?v=example" },
+  test("allows omitting seconds on the media API endpoint", async () => {
+    const result = (await apiMediaOperationsTool.params.execute(
+      {
+        endpoint: "/media/extract-frame/youtube",
+        method: "POST",
+        body: { youtubeUrl: "https://www.youtube.com/watch?v=example" },
+      },
       options,
     )) as ToolResult
 
@@ -95,8 +98,12 @@ describe("YouTube screenshot agent tool", () => {
       { status: 429, headers: { "Retry-After": "5" } },
     )
 
-    const result = (await youtubeScreenshotTool.params.execute(
-      { youtubeUrl: "https://youtu.be/example" },
+    const result = (await apiMediaOperationsTool.params.execute(
+      {
+        endpoint: "/media/extract-frame/youtube",
+        method: "POST",
+        body: { youtubeUrl: "https://youtu.be/example" },
+      },
       options,
     )) as ToolResult
 
@@ -110,8 +117,12 @@ describe("YouTube screenshot agent tool", () => {
   test("does not capture when project access is denied", async () => {
     accessAllowed = false
 
-    const result = (await youtubeScreenshotTool.params.execute(
-      { youtubeUrl: "https://youtu.be/example" },
+    const result = (await apiMediaOperationsTool.params.execute(
+      {
+        endpoint: "/media/extract-frame/youtube",
+        method: "POST",
+        body: { youtubeUrl: "https://youtu.be/example" },
+      },
       options,
     )) as ToolResult
 
@@ -119,12 +130,16 @@ describe("YouTube screenshot agent tool", () => {
     expect(captures).toHaveLength(0)
   })
 
-  test("rejects timestamps outside the HTTP endpoint range", () => {
-    expect(
-      youtubeScreenshotTool.params.inputSchema.safeParse({
-        youtubeUrl: "https://youtu.be/example",
-        seconds: 86401,
-      }).success,
-    ).toBe(false)
+  test("rejects timestamps outside the HTTP endpoint range", async () => {
+    const result = (await apiMediaOperationsTool.params.execute(
+      {
+        endpoint: "/media/extract-frame/youtube",
+        method: "POST",
+        body: { youtubeUrl: "https://youtu.be/example", seconds: 86401 },
+      },
+      options,
+    )) as ToolResult
+
+    expect(result.success).toBe(false)
   })
 })

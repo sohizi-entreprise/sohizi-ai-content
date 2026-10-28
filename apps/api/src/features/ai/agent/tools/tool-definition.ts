@@ -9,12 +9,8 @@ import {
 import type { AgentChunk } from "../core/agent"
 import { Session } from "../core/session"
 import { FilePendingOperation } from "@/type"
-import { Tool, ModelMessage } from "ai"
+import { Tool } from "ai"
 import { AgentStateManager } from "../core/state-manager"
-import { withBillingStream } from "@/features/billing/wrapper"
-import { createBillableLlmClient, ModelConfig } from "../utils/llm-client"
-import { billingService } from "@/features/billing"
-import { estimateInputTokens } from "../utils/estimate-token"
 import { getErrorMessage } from "@/utils/get-error-message"
 
 export type ToolResult = {
@@ -25,12 +21,6 @@ export type ToolResult = {
 }
 
 type AgenticToolResult = AgentChunk | AgenticToolChunk | OperationChunk
-
-type LlmConfig<T extends z.ZodType> = {
-  modelId: string
-  modelConfig: ModelConfig
-  buildInput: (data: z.infer<T>) => ModelMessage[]
-}
 
 export type ToolExecutionOptions = {
   session: Session
@@ -100,7 +90,6 @@ export class BaseTool<T extends z.ZodType> {
             yield chunk
           }
         }
-        // yield* (result as AsyncGenerator<AgentChunk, void, unknown>);
       } else {
         if ("operation" in result && result.operation) {
           const operations = result.operation.map((operation) => ({
@@ -157,107 +146,8 @@ export class BaseTool<T extends z.ZodType> {
   }
 }
 
-type LlmToolParams<T extends z.ZodType> = Omit<
-  BaseToolDefinition<T>,
-  "execute"
-> & { config: LlmConfig<T> }
-
-export class LlmTool<T extends z.ZodType> extends BaseTool<T> {
-  private config: LlmConfig<T>
-
-  constructor(params: LlmToolParams<T>) {
-    const { config, ...rest } = params
-    super({ ...rest, execute: async function* () {} })
-    this.config = config
-  }
-  async *execute(
-    toolCall: ToolCall,
-    options: Omit<ToolExecutionOptions, "toolCallId">,
-  ): AsyncGenerator<ToolResultComplete, void, unknown> {
-    const { session, abortSignal } = options
-    const result: ToolResultComplete = {
-      type: streamEvents.toolResultComplete,
-      toolName: toolCall.toolName,
-      toolCallId: toolCall.toolCallId,
-      success: false,
-      output: "An error occurred while executing the tool",
-      usage: {
-        input: 0,
-        output: 0,
-        reasoning: 0,
-        cached: 0,
-        total: 0,
-        cost: 0,
-      },
-      metadata: {},
-    }
-    const model = await session.resolveModel(this.config.modelId)
-    if (!model) {
-      throw new Error(
-        `Model ${this.config.modelId} not found in the current session`,
-      )
-    }
-    const billableLlmClient = createBillableLlmClient({
-      model,
-      modelConfig: this.config.modelConfig,
-    })
-    const billedLlmStream = withBillingStream(billableLlmClient, billingService)
-    const messages = this.config.buildInput(
-      this.validateInput(toolCall.input as z.infer<T>),
-    )
-    const input = {
-      messages,
-      estimatedInputTokens: estimateInputTokens(messages, 1.15),
-      estimatedOutputTokens: this.config.modelConfig.maxOutputTokens || 1500,
-    }
-    const billedStream = billedLlmStream(input, {
-      organizationId: session.organizationId,
-      userId: session.userId,
-      signal: abortSignal,
-      metadata: {
-        sessionId: session.id,
-        conversationId: session.conversationId,
-        conversationRunId: session.runId,
-        runId: session.runId,
-      },
-    })
-    for await (const chunk of billedStream) {
-      if (chunk.type == "error") {
-        console.error("error", chunk.error)
-      }
-      if (chunk.type === "complete") {
-        switch (chunk.finishReason) {
-          case "content-filter":
-            result.success = false
-            result.output =
-              "Content filter violation stopped the model. The file provided may contain sensitive content."
-            break
-          case "error":
-            result.success = false
-            result.output =
-              chunk.error ||
-              "An unknown error occurred while executing the tool"
-            break
-          default:
-            result.success = true
-            result.output = chunk.text || ""
-        }
-        result.usage = chunk.usage
-        break
-      }
-    }
-    yield result
-  }
-}
-
 export const buildBaseTool = <T extends z.ZodType>(
   params: BaseToolDefinition<T>,
 ): BaseTool<T> => {
   return new BaseTool(params)
-}
-
-export const buildLlmTool = <T extends z.ZodType>(
-  params: LlmToolParams<T>,
-): LlmTool<T> => {
-  return new LlmTool(params)
 }
