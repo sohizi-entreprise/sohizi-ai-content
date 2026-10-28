@@ -1,8 +1,8 @@
 import { z } from "zod"
 
-const filePath = z.string().describe("The path of the video file.")
-const clipId = z.uuid().describe("The clip ID.")
-const trackId = z.uuid().describe("The track ID.")
+const filePath = z.string()
+const clipId = z.uuid()
+const trackId = z.uuid()
 const trackTypeEnum = z.enum(["video", "audio", "text", "image"])
 
 const overviewSchema = z

@@ -1,4 +1,3 @@
-import buildDoc from "../api-build-doc"
 import {
   buildBaseTool,
   type ToolExecutionOptions,
@@ -9,13 +8,9 @@ import { executeExtractWeb, executeSearchWeb } from "./handlers"
 import { apiWebSchema, type ApiWebRequest } from "./schema"
 import { apiGenericApiSchema } from "../api-generic-api-schema"
 
-const documentation = apiWebSchema
-  .map((schema) => buildDoc(schema))
-  .join("\n\n")
-
 export const apiWebTool = buildBaseTool({
   name: "webAPI",
-  description: `API for searching the live web and extracting public pages.\n\n${documentation}`,
+  description: `API for searching the live web and extracting public pages.`,
   inputSchema: apiGenericApiSchema,
   execute: async (input, options) => {
     const request = parseWebRequest(input)

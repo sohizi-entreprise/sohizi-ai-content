@@ -4,6 +4,7 @@ type SchemaDef = {
   type: string
   shape?: Record<string, z.ZodType>
   innerType?: z.ZodType
+  element?: z.ZodType
   entries?: Record<string, unknown>
   values?: readonly unknown[]
   defaultValue?: unknown
@@ -80,13 +81,13 @@ function typeLabel(schema: z.ZodType): string {
     case "enum":
       return Object.values(def.entries ?? {})
         .map(formatValue)
-        .join(" | ")
+        .join("|")
     case "literal":
-      return (def.values ?? []).map(formatValue).join(" | ")
-    case "array":
-      return def.innerType
-        ? `${typeLabel(unwrap(def.innerType).schema)}[]`
-        : "array"
+      return (def.values ?? []).map(formatValue).join("|")
+    case "array": {
+      const itemType = def.element ?? def.innerType
+      return itemType ? `${typeLabel(unwrap(itemType).schema)}[]` : "array"
+    }
     case "object":
     case "record":
       return "object"
@@ -95,29 +96,42 @@ function typeLabel(schema: z.ZodType): string {
   }
 }
 
-function fieldLine(name: string, schema: z.ZodType): string {
+function formatField(name: string, schema: z.ZodType) {
   const field = unwrap(schema)
   const type = typeLabel(field.schema)
-  const details = field.hasDefault
-    ? `${type}, default=${formatValue(field.defaultValue)}`
-    : type
-  const description = field.description ? `: ${field.description}` : ""
   const optionalMark = field.optional ? "?" : ""
+  const defaultPart = field.hasDefault
+    ? ` = ${formatValue(field.defaultValue)}`
+    : ""
 
-  return `  - \`${name}${optionalMark}\` (${details})${description}`
+  return {
+    signature: `${name}${optionalMark}: ${type}${defaultPart}`,
+    description: field.description,
+  }
 }
 
 function section(
-  title: "Params" | "Body",
+  title: "params" | "body",
   schema: z.ZodType | undefined,
-): string[] {
-  if (!schema || schema.type !== "object") return []
+): string | null {
+  if (!schema || schema.type !== "object") return null
   const shape = schemaDef(schema).shape ?? {}
-  const lines = Object.entries(shape).map(([name, field]) =>
-    fieldLine(name, field),
+  const entries = Object.entries(shape).map(([name, field]) =>
+    formatField(name, field),
   )
-  if (lines.length === 0) return []
-  return [`- **${title}:**`, ...lines]
+  if (entries.length === 0) return null
+
+  const hasDescriptions = entries.some((e) => e.description)
+  if (!hasDescriptions && entries.length <= 4) {
+    return `  ${title}: { ${entries.map((e) => e.signature).join(", ")} }`
+  }
+
+  const lines = entries.map((e) =>
+    e.description
+      ? `    ${e.signature} // ${e.description}`
+      : `    ${e.signature}`,
+  )
+  return `  ${title}: {\n${lines.join("\n")}\n  }`
 }
 
 function literalValue(schema: z.ZodType | undefined): string | undefined {
@@ -126,7 +140,7 @@ function literalValue(schema: z.ZodType | undefined): string | undefined {
   return value === undefined ? undefined : String(value)
 }
 
-export default function buildDoc(schema: z.ZodType): string {
+function buildEndpointDoc(schema: z.ZodType): string {
   if (schema.type !== "object") {
     throw new Error("Expected an object schema with endpoint and method")
   }
@@ -140,10 +154,19 @@ export default function buildDoc(schema: z.ZodType): string {
 
   const summary =
     schema.description ?? shape.params?.description ?? shape.body?.description
-  const lines = [`### \`${method} ${endpoint}\``]
-  if (summary) lines.push(summary)
-  lines.push(...section("Params", shape.params))
-  lines.push(...section("Body", shape.body))
+  const header = summary
+    ? `${method} ${endpoint} — ${summary}`
+    : `${method} ${endpoint}`
 
-  return lines.join("\n")
+  const parts = [
+    header,
+    section("params", shape.params),
+    section("body", shape.body),
+  ].filter((part): part is string => part !== null)
+
+  return parts.join("\n")
+}
+
+export default function buildDoc(schemas: readonly z.ZodType[]): string {
+  return schemas.map(buildEndpointDoc).join("\n\n")
 }

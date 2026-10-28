@@ -11,6 +11,8 @@ import {
   fileSystemPrompt,
 } from "../prompts"
 import modelsTracker from "@/catalog/models-tracker"
+import buildDoc from "../tools/api-build-doc"
+import { apiFileSystemSchema } from "../tools/api-file-system/schema"
 
 export type AgentName = (typeof supportedAgents)[number]
 
@@ -48,7 +50,8 @@ const registerAgent = (definition: AgentDefinition): void => {
 registerAgent({
   name: "main-agent",
   description: "The main agent for the application.",
-  baseSystemPrompt: mainAgentPrompt + "\n\n" + fileSystemPrompt,
+  baseSystemPrompt:
+    mainAgentPrompt + "\n\n" + fileSystemPrompt + "\n\n" + buildFileApiDoc(),
   modelConfig: {
     tools: getSchemas([
       allTools.manageTodoListTool,
@@ -114,3 +117,11 @@ registerAgent({
   summaryModelId: modelsTracker.summarizer,
   subAgents: [],
 })
+
+function buildFileApiDoc() {
+  return `
+<documentation api="fileSystemAPI">
+  ${buildDoc(apiFileSystemSchema)}
+</documentation>
+  `
+}

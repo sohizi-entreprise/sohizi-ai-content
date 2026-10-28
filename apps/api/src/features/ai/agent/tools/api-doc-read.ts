@@ -17,13 +17,7 @@ const apiSchemas = {
 const apiNames = [...Object.keys(apiSchemas)] as (keyof typeof apiSchemas)[]
 
 const getDoc = (api: keyof typeof apiSchemas) => {
-  const schema = apiSchemas[api]
-  return schema
-    .map(
-      (schema) =>
-        `<documentation api="${api}">${buildDoc(schema)}</documentation>`,
-    )
-    .join("\n\n")
+  return buildDoc(apiSchemas[api])
 }
 
 export const apiDocReadTool = buildBaseTool({
