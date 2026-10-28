@@ -715,6 +715,7 @@ type AttachAssetToFileNodePayload = {
   projectId: string
   assetId: string
   folderId: string
+  fileName?: string
 }
 
 type AttachAssetsToFileNodesPayload = {
@@ -727,6 +728,7 @@ export const attachAssetToFileNode = async ({
   projectId,
   assetId,
   folderId,
+  fileName: customFileName,
 }: AttachAssetToFileNodePayload) => {
   return await db.transaction(async (tx) => {
     const res1 = await tx
@@ -765,7 +767,9 @@ export const attachAssetToFileNode = async ({
     if (!folder) {
       throw new Error("Folder not found")
     }
-    const fileName = normalizeFileName(asset.name) || asset.name
+    const rawName = customFileName?.trim() || asset.name
+    const fileName =
+      normalizeFileName(rawName) || normalizeFileName(asset.name) || asset.name
     const kind = classifyFileKindFromAsset(
       asset.type,
       asset.metadata?.contentType,

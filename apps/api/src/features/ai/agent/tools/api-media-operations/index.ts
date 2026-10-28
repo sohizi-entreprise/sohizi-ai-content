@@ -1,4 +1,7 @@
-import { apiGenericApiSchema } from "../api-generic-api-schema"
+import {
+  apiGenericApiSchema,
+  parseApiToolRequest,
+} from "../api-generic-api-schema"
 import {
   buildBaseTool,
   type ToolExecutionOptions,
@@ -10,6 +13,7 @@ import {
   executeGetJobStatus,
   executeImageAnalysis,
   executeListModels,
+  executeSaveAsset,
   executeSubmitGeneration,
   executeVideoAnalysis,
   executeWaitForJob,
@@ -26,23 +30,13 @@ export const apiMediaOperationsTool = buildBaseTool({
   description: `API for analyzing media, capturing YouTube screenshots, and submitting or monitoring media-generation jobs.`,
   inputSchema: apiGenericApiSchema,
   execute: async (input, options) => {
-    const request = parseMediaOperationsRequest(input)
-    if (!request) {
-      return failure(`Unknown or invalid endpoint "${input.endpoint}"`)
+    const parsed = parseApiToolRequest(input, apiMediaOperationsSchema)
+    if (!parsed.ok) {
+      return failure(parsed.error)
     }
-    return dispatchMediaOperationsRequest(request, options)
+    return dispatchMediaOperationsRequest(parsed.data, options)
   },
 })
-
-function parseMediaOperationsRequest(
-  input: unknown,
-): ApiMediaOperationsRequest | null {
-  for (const schema of apiMediaOperationsSchema) {
-    const parsed = schema.safeParse(input)
-    if (parsed.success) return parsed.data
-  }
-  return null
-}
 
 function dispatchMediaOperationsRequest(
   request: ApiMediaOperationsRequest,
@@ -61,8 +55,10 @@ function dispatchMediaOperationsRequest(
       return executeYoutubeAnalysis(request, options)
     case "/media/extract-frame/youtube":
       return executeYoutubeScreenshot(request, options)
-    case "/media/generate":
+    case "/media/assets/generate":
       return executeSubmitGeneration(request, options)
+    case "/media/assets/save":
+      return executeSaveAsset(request, options)
     case "/media/jobs/wait":
       return executeWaitForJob(request, options)
     case "/media/jobs/status":

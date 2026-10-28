@@ -1,4 +1,7 @@
-import { apiGenericApiSchema } from "../api-generic-api-schema"
+import {
+  apiGenericApiSchema,
+  parseApiToolRequest,
+} from "../api-generic-api-schema"
 import {
   buildBaseTool,
   type ToolExecutionOptions,
@@ -27,21 +30,13 @@ export const apiVideoEditorTool = buildBaseTool({
   description: `API for exploring and editing a video timeline.`,
   inputSchema: apiGenericApiSchema,
   execute: async (input, options) => {
-    const request = parseVideoEditorRequest(input)
-    if (!request) {
-      return failure(`Unknown or invalid endpoint "${input.endpoint}"`)
+    const parsed = parseApiToolRequest(input, apiVideoEditorSchema)
+    if (!parsed.ok) {
+      return failure(parsed.error)
     }
-    return dispatchVideoEditorRequest(request, options)
+    return dispatchVideoEditorRequest(parsed.data, options)
   },
 })
-
-function parseVideoEditorRequest(input: unknown): ApiVideoEditorRequest | null {
-  for (const schema of apiVideoEditorSchema) {
-    const parsed = schema.safeParse(input)
-    if (parsed.success) return parsed.data
-  }
-  return null
-}
 
 function dispatchVideoEditorRequest(
   request: ApiVideoEditorRequest,

@@ -428,6 +428,7 @@ export type ChatStreamChunk = {
         | "not-finished"
         | "response"
         | "tool-calls"
+        | "abort"
         | "aborted"
         | "max-iterations"
       usage: StreamTokenUsage

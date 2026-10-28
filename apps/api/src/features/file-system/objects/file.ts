@@ -69,7 +69,7 @@ function err(error: string): FileObjectResponse<null> {
 
 export class FileObject {
   private fileNode: FileNode
-  private fileContentCache: FileContentPayload | null | undefined
+  private fileContentCache: FileContentPayload | undefined
 
   constructor(fileNode: FileNode) {
     this.fileNode = fileNode
@@ -501,12 +501,12 @@ export class FileObject {
       return err(`File with type: ${this.fileNode.type} is not yet supported.`)
     }
 
-    this.fileContentCache = content
     if (content === null) {
       return err(
-        `File [Id: ${this.fileNode.id}] [format: ${this.fileNode.format}] not found`,
+        `Asset record not found for file "${this.fileNode.name}" [Id: ${this.fileNode.id}] [format: ${this.fileNode.format}]. This file node has no associated media asset.`,
       )
     }
+    this.fileContentCache = content
     return ok(content)
   }
 
@@ -560,9 +560,13 @@ export class FileObject {
   }
 
   updateFileContentCache(content: FileContentPayload | null | undefined): void {
-    if (!isCompatibleContentCacheType(this.type, this.format, content?.type)) {
+    if (!content) {
+      this.fileContentCache = undefined
+      return
+    }
+    if (!isCompatibleContentCacheType(this.type, this.format, content.type)) {
       console.error(
-        `Setting cache failed due to type mismatch. Expected: ${this.type}/${this.format}, Got: ${content?.type}`,
+        `Setting cache failed due to type mismatch. Expected: ${this.type}/${this.format}, Got: ${content.type}`,
       )
       return
     }

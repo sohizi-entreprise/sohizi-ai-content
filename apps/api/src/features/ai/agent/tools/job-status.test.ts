@@ -95,6 +95,39 @@ describe("buildJobWaitOutput", () => {
       error: "provider timeout",
     })
   })
+
+  it("preserves assets and assetId from in-memory completed job result when request is omitted", () => {
+    const serialized = JSON.stringify([
+      {
+        assetId: "asset-1",
+        type: "image",
+        url: "https://cdn.example/hero.png",
+        name: "hero.png",
+      },
+    ])
+    expect(
+      buildJobWaitOutput({
+        ...job,
+        status: "completed",
+        result: serialized,
+      }),
+    ).toEqual({
+      jobId: "job-1",
+      status: "completed",
+      kind: "image",
+      label: "hero portrait",
+      assets: [
+        {
+          assetId: "asset-1",
+          type: "image",
+          url: "https://cdn.example/hero.png",
+          name: "hero.png",
+        },
+      ],
+      result: serialized,
+      error: null,
+    })
+  })
 })
 
 describe("jobPatchFromRequest", () => {

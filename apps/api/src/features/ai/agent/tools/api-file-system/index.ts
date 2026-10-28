@@ -21,7 +21,10 @@ import {
   executeSearchFiles,
   executeWriteFile,
 } from "./handlers"
-import { apiGenericApiSchema } from "../api-generic-api-schema"
+import {
+  apiGenericApiSchema,
+  parseApiToolRequest,
+} from "../api-generic-api-schema"
 
 export const apiFileSystemTool = buildBaseTool({
   name: "fileSystemAPI",
@@ -29,21 +32,13 @@ export const apiFileSystemTool = buildBaseTool({
     "API for interacting with the files in the project. Refer to its documentation for the available endpoints and methods.",
   inputSchema: apiGenericApiSchema,
   execute: async (input, options) => {
-    const request = parseFileSystemRequest(input)
-    if (!request) {
-      return failure(`Unknown or invalid endpoint "${input.endpoint}"`)
+    const parsed = parseApiToolRequest(input, apiFileSystemSchema)
+    if (!parsed.ok) {
+      return failure(parsed.error)
     }
-    return dispatchFileSystemRequest(request, options)
+    return dispatchFileSystemRequest(parsed.data, options)
   },
 })
-
-function parseFileSystemRequest(input: unknown): ApiFileSystemRequest | null {
-  for (const schema of apiFileSystemSchema) {
-    const parsed = schema.safeParse(input)
-    if (parsed.success) return parsed.data
-  }
-  return null
-}
 
 function dispatchFileSystemRequest(
   request: ApiFileSystemRequest,

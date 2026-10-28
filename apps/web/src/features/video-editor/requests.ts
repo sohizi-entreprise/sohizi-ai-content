@@ -39,7 +39,6 @@ export type ServerClip = {
   endFrame: number
   sourceStartFrame: number
   sourceDurationInFrames: number
-  assetId: string | null
   properties: Record<string, unknown>
   createdAt: string
   updatedAt: string
@@ -98,7 +97,6 @@ export type BatchOperation =
         endFrame: number
         sourceStartFrame?: number
         sourceDurationInFrames: number
-        assetId?: string | null
         properties: Record<string, unknown>
       }
     }

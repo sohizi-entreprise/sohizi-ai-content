@@ -41,12 +41,19 @@ export async function resolveFileByPathOrId(
 
   let fileObjectRef: FileObject | null = null
   const pathObject = new PathObject()
-  if (filePath) {
-    const { fileObject } = await pathObject.resolveByPath(filePath, projectId)
-    fileObjectRef = fileObject
-  } else if (fileId) {
-    const fileObject = await pathObject.resolveById(fileId, projectId)
-    fileObjectRef = fileObject
+  try {
+    if (filePath) {
+      const { fileObject } = await pathObject.resolveByPath(filePath, projectId)
+      fileObjectRef = fileObject
+    } else if (fileId) {
+      const fileObject = await pathObject.resolveById(fileId, projectId)
+      fileObjectRef = fileObject
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Invalid file path",
+    }
   }
   if (!fileObjectRef) {
     return { success: false, error: "File not found" }

@@ -29,7 +29,17 @@ import {
   type WithBillingCallContext,
 } from "@/features/billing/wrapper"
 import { getErrorMessage } from "@/utils/get-error-message"
+import { isUserAbort } from "@/features/ai/llm/errors"
 import { simpleHash } from "@/utils/simple-hash"
+
+export function isAbortedByUser(
+  abortSignal: AbortSignal,
+  error?: unknown,
+): boolean {
+  if (isUserAbort(error)) return true
+  if (!abortSignal.aborted) return false
+  return isUserAbort(abortSignal.reason) || abortSignal.reason === undefined
+}
 
 export type ReasoningEffort =
   "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
@@ -106,6 +116,23 @@ export class LlmClient {
         ...(outputSchema ? { output: response.output } : {}),
       }
     } catch (error) {
+      if (isAbortedByUser(abortSignal, error)) {
+        yield {
+          type: streamEvents.complete,
+          text: "",
+          finishReason: "abort",
+          usage: {
+            input: 0,
+            output: 0,
+            reasoning: 0,
+            cached: 0,
+            total: 0,
+            modelId: this.model,
+            cost,
+          },
+        }
+        return
+      }
       yield {
         type: streamEvents.complete,
         text: "",
@@ -187,6 +214,13 @@ export class LlmClient {
             break
           }
           case "error": {
+            if (
+              finishReason === "abort" ||
+              isAbortedByUser(abortSignal, chunk.error)
+            ) {
+              finishReason = "abort"
+              break
+            }
             error = getErrorMessage(chunk.error)
             finishReason = "error"
             yield {
@@ -238,23 +272,37 @@ export class LlmClient {
             break
         }
       }
-      const [tokenUsage, finish, cost] = await Promise.all([
-        response.usage,
-        response.finishReason,
-        response.costUsd,
-      ])
-      usage = this.getTokenUsage(tokenUsage, cost)
-      finishReason = finish
-      if (outputSchema && response.output) {
-        structuredOutput = await response.output
-        hasStructuredOutput = true
+      if (finishReason === "abort" || isAbortedByUser(abortSignal)) {
+        finishReason = "abort"
+        error = undefined
+        void response.usage.then(undefined, () => undefined)
+        void response.finishReason.then(undefined, () => undefined)
+        void response.costUsd.then(undefined, () => undefined)
+        void response.output?.then(undefined, () => undefined)
+      } else {
+        const [tokenUsage, finish, cost] = await Promise.all([
+          response.usage,
+          response.finishReason,
+          response.costUsd,
+        ])
+        usage = this.getTokenUsage(tokenUsage, cost)
+        finishReason = finish
+        if (outputSchema && response.output) {
+          structuredOutput = await response.output
+          hasStructuredOutput = true
+        }
       }
     } catch (e) {
-      error = getErrorMessage(e)
-      finishReason = "error"
-      yield {
-        type: streamEvents.error,
-        error,
+      if (finishReason === "abort" || isAbortedByUser(abortSignal, e)) {
+        finishReason = "abort"
+        error = undefined
+      } else {
+        error = getErrorMessage(e)
+        finishReason = "error"
+        yield {
+          type: streamEvents.error,
+          error,
+        }
       }
     } finally {
       yield {

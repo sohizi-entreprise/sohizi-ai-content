@@ -49,7 +49,7 @@ export const updateConversationAgentRun = async (
   data: {
     status?: AgentRunStatus
     metadata?: AgentRunMetadata
-    error?: string
+    error?: string | null
     messages?: AgentRunMessage[]
   },
 ) => {

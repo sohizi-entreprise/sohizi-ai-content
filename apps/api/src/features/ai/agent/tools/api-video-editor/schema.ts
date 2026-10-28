@@ -158,12 +158,6 @@ const addClipSchema = z
       endFrame: z.number().int().min(1),
       sourceStartFrame: z.number().int().min(0).default(0),
       sourceDurationInFrames: z.number().int().min(1),
-      assetId: z
-        .uuid()
-        .optional()
-        .describe(
-          "Reference to an asset. Required for video/audio/image clips.",
-        ),
       properties: z.record(z.string(), z.any()),
     }),
   })

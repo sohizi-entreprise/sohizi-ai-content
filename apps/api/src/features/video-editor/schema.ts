@@ -62,7 +62,6 @@ export const addClipSchema = z.object({
   endFrame: z.number().int().min(1),
   sourceStartFrame: z.number().int().min(0).default(0),
   sourceDurationInFrames: z.number().int().min(1),
-  assetId: z.uuid().nullish(),
   properties: clipPropertiesSchema,
 })
 

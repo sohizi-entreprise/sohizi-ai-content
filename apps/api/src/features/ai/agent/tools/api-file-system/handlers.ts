@@ -68,6 +68,11 @@ export async function executeReadFile(
   data: RequestFor<"/files/read">,
   { session }: ToolExecutionOptions,
 ): Promise<ToolResult> {
+  const systemFile = SYSTEM_LEVEL_FILES[data.params.filePath]
+  if (systemFile) {
+    return success(systemFile.content)
+  }
+
   const file = await session.resolveFileByPathOrId(data.params.filePath)
   if (!file) return failure(`File ${data.params.filePath} not found`)
   if (file.isDirectory) {
@@ -415,7 +420,7 @@ function formatFileContent(data: FileContentPayload): string {
     case "asset": {
       const payload = {
         type: data.data.type,
-        id: data.data.id,
+        assetId: data.data.id,
         url: data.data.url,
         source: data.data.source,
       }

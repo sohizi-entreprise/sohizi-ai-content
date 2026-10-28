@@ -10,7 +10,10 @@ import {
   type ModelReasoningEffort,
   type ResolvedTextModel,
 } from "@/features/models/repo"
-import type { ReasoningEffort } from "../ai/agent/utils/llm-client"
+import {
+  isAbortedByUser,
+  type ReasoningEffort,
+} from "../ai/agent/utils/llm-client"
 import { BadRequest } from "../error"
 import { Session } from "../ai/agent/core/session"
 import { v4 as uuidv4 } from "uuid"
@@ -99,7 +102,10 @@ export const completionSchema = z.object({
 export const cancelRun = async (runId: string) => {
   try {
     await broadcastCancellation(runId)
-    await repo.updateConversationAgentRun(runId, { status: "finished" })
+    await repo.updateConversationAgentRun(runId, {
+      status: "finished",
+      error: null,
+    })
     await removeStreamActive(runId)
     return { ok: true, error: null }
   } catch (error) {
@@ -292,24 +298,29 @@ async function runAgent(payload: RunAgentPayload) {
         let outputText = ""
 
         for await (const chunk of chunks) {
+          if (controller.signal.aborted && chunk.type === "error") {
+            continue
+          }
           const text = textFromAgentChunk(chunk)
           if (text !== undefined) {
             outputText = text
           }
-          if (chunk.type === "error") {
-            streamError = chunk.error
-          } else if (
-            chunk.type === "complete" &&
-            chunk.finishReason === "error" &&
-            chunk.error
-          ) {
-            streamError = chunk.error
+          if (!controller.signal.aborted) {
+            if (chunk.type === "error") {
+              streamError = chunk.error
+            } else if (
+              chunk.type === "complete" &&
+              chunk.finishReason === "error" &&
+              chunk.error
+            ) {
+              streamError = chunk.error
+            }
           }
           await writeStreamData(runId, { runId, event: "chunk", chunk })
         }
 
         const stateError = agent.stateManager.getState().error
-        if (!streamError && stateError) {
+        if (!streamError && stateError && !controller.signal.aborted) {
           streamError = stateError
         }
 
@@ -340,15 +351,25 @@ async function runAgent(payload: RunAgentPayload) {
           "Completion failed",
       })
     } else {
-      await repo.updateConversationAgentRun(runId, { status: "finished" })
+      await repo.updateConversationAgentRun(runId, {
+        status: "finished",
+        error: null,
+      })
     }
   } catch (error) {
-    const errorMessage = getErrorMessage(error, "Completion failed")
-    console.error(error)
-    await repo.updateConversationAgentRun(runId, {
-      status: "error",
-      error: errorMessage,
-    })
+    if (controller.signal.aborted || isAbortedByUser(controller.signal, error)) {
+      await repo.updateConversationAgentRun(runId, {
+        status: "finished",
+        error: null,
+      })
+    } else {
+      const errorMessage = getErrorMessage(error, "Completion failed")
+      console.error(error)
+      await repo.updateConversationAgentRun(runId, {
+        status: "error",
+        error: errorMessage,
+      })
+    }
   } finally {
     await writeStreamData(runId, { runId, event: "done" })
     await removeStreamActive(runId)

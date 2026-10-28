@@ -16,22 +16,25 @@ import { getFilePendingKey } from "@/features/editor/query-mutations"
 export const ChatRunBlock = ({ run }: { run: AgentRunBlock }) => {
   const status = run.status
   const messages = run.messages
-  const hasError = status === "error" || Boolean(run.error)
+  const isCancelled = useChatStore((state) =>
+    Boolean(state.cancelledRunIds[run.id]),
+  )
+  const hasError = !isCancelled && (status === "error" || Boolean(run.error))
 
   const patchConversation = useChatStore(
     (state) => state.patchActiveConversation,
   )
 
   useEffect(() => {
-    if (status === "finished" || status === "error") {
+    if (status === "finished" || status === "error" || isCancelled) {
       patchConversation({ isStreaming: false })
     } else {
       patchConversation({ isStreaming: true, activeRunId: run.id })
     }
-  }, [status, run.id, patchConversation])
+  }, [status, run.id, isCancelled, patchConversation])
 
   if (status === "pending" || status === "running") {
-    return <PendingRunBlock run={run} />
+    return <PendingRunBlock run={run} isCancelled={isCancelled} />
   }
 
   return (
@@ -44,7 +47,13 @@ export const ChatRunBlock = ({ run }: { run: AgentRunBlock }) => {
   )
 }
 
-function PendingRunBlock({ run }: { run: AgentRunBlock }) {
+function PendingRunBlock({
+  run,
+  isCancelled,
+}: {
+  run: AgentRunBlock
+  isCancelled: boolean
+}) {
   const queryClient = useQueryClient()
   const [isFinished, setIsFinished] = useState(false)
   const onFinish = (_: AgentRunBlock["status"]) => {
@@ -72,16 +81,19 @@ function PendingRunBlock({ run }: { run: AgentRunBlock }) {
   const { messages, error: streamError } = useBufferChunks({
     url,
     initialMessages: run.messages,
+    isCancelled,
     onFinish,
     onOperation,
   })
-  const activeError = streamError ?? run.error
+  const activeError = isCancelled ? null : (streamError ?? run.error)
 
   return (
     <ChatRunProvider runId={run.id} messages={messages}>
       <div className="space-y-3">
         <RenderMessages messages={messages} />
-        {!isFinished && !activeError && <TextShimmerCss text="Processing..." />}
+        {!isFinished && !isCancelled && !activeError && (
+          <TextShimmerCss text="Processing..." />
+        )}
         {activeError ? <ChatRunErrorBanner error={activeError} /> : null}
       </div>
     </ChatRunProvider>

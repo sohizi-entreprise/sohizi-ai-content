@@ -69,6 +69,16 @@ export function inferJobKind(
   return "image"
 }
 
+function parseJobResultAssets(result?: string): GenerationRequestAsset[] {
+  if (!result) return []
+  try {
+    const parsed: unknown = JSON.parse(result)
+    return Array.isArray(parsed) ? (parsed as GenerationRequestAsset[]) : []
+  } catch {
+    return []
+  }
+}
+
 export function buildJobWaitOutput(
   job?: Pick<
     AgentJob,
@@ -79,7 +89,8 @@ export function buildJobWaitOutput(
   const status = request
     ? toAgentJobStatus(request.status)
     : (job?.status ?? "queued")
-  const assets = (request?.assets ?? []) as GenerationRequestAsset[]
+  const assets = (request?.assets ??
+    parseJobResultAssets(job?.result)) as GenerationRequestAsset[]
   const error = request?.error ?? job?.error ?? null
   const result =
     status === "completed" ? JSON.stringify(assets) : (job?.result ?? undefined)

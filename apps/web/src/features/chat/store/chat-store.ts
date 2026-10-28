@@ -31,6 +31,7 @@ type ChatState = {
   model: LlmModel | null
   reasoningEffortByModelId: Record<string, string>
   attachedFiles: Array<AttachedFile>
+  cancelledRunIds: Record<string, true>
 }
 
 type ChatActions = {
@@ -40,6 +41,8 @@ type ChatActions = {
   setReasoningEffort: (modelId: string, reasoningEffort: string) => void
   setActiveConversation: (conversation: StoreConversation) => void
   patchActiveConversation: (conversation: Partial<StoreConversation>) => void
+  markRunCancelled: (runId: string) => void
+  unmarkRunCancelled: (runId: string) => void
   clearInput: () => void
   reset: () => void
   init: (projectId: string) => void
@@ -54,6 +57,7 @@ const initialState: ChatState = {
   model: null,
   reasoningEffortByModelId: {},
   attachedFiles: [],
+  cancelledRunIds: {},
 }
 
 // ============================================================================
@@ -66,6 +70,7 @@ function applyChatState(state: ChatState, next: ChatState) {
   state.model = next.model
   state.reasoningEffortByModelId = { ...next.reasoningEffortByModelId }
   state.attachedFiles = next.attachedFiles
+  state.cancelledRunIds = { ...next.cancelledRunIds }
 }
 
 export const useChatStore = create<ChatState & ChatActions>()(
@@ -92,6 +97,14 @@ export const useChatStore = create<ChatState & ChatActions>()(
             ...conversation,
           }
         }
+      }),
+    markRunCancelled: (runId) =>
+      set((state) => {
+        state.cancelledRunIds[runId] = true
+      }),
+    unmarkRunCancelled: (runId) =>
+      set((state) => {
+        delete state.cancelledRunIds[runId]
       }),
     clearInput: () => set({ userPrompt: "", attachedFiles: [] }),
     init: (projectId) =>

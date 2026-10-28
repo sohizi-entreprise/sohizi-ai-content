@@ -239,7 +239,6 @@ export type CreateClipData = {
   endFrame: number
   sourceStartFrame?: number
   sourceDurationInFrames: number
-  assetId?: string | null
   properties: VideoClipProperties
 }
 

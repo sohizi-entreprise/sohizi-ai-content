@@ -199,7 +199,6 @@ export const addClip = async (
     endFrame: input.endFrame,
     sourceStartFrame: input.sourceStartFrame,
     sourceDurationInFrames: input.sourceDurationInFrames,
-    assetId: input.assetId || null,
     properties: input.properties as VideoClipProperties,
   })
 }
@@ -280,7 +279,6 @@ export const batchEdit = async (
             endFrame: op.data.endFrame,
             sourceStartFrame: op.data.sourceStartFrame,
             sourceDurationInFrames: op.data.sourceDurationInFrames,
-            assetId: op.data.assetId || null,
             properties: op.data.properties as VideoClipProperties,
           },
         }

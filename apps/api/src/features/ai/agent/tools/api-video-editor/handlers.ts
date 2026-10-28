@@ -57,7 +57,7 @@ export async function executeOverview(
           : "empty"
       const mutedLabel = track.muted ? " (muted)" : ""
       const hiddenLabel = track.hidden ? " (hidden)" : ""
-      output += `  ${track.position + 1}. [${track.type}] — ${trackClips.length} clips, span: ${span}${mutedLabel}${hiddenLabel}\n`
+      output += `  ${track.position + 1}. [${track.type}] (trackId: ${track.id}) — ${trackClips.length} clips, span: ${span}${mutedLabel}${hiddenLabel}\n`
     }
   }
 
@@ -114,7 +114,6 @@ export async function executeViewClip(
       endFrame: clip.endFrame,
       sourceStartFrame: clip.sourceStartFrame,
       sourceDurationInFrames: clip.sourceDurationInFrames,
-      assetId: clip.assetId,
       properties: clip.properties,
     },
     null,
@@ -282,7 +281,6 @@ export async function executeAddClip(
     endFrame: data.body.endFrame,
     sourceStartFrame: data.body.sourceStartFrame,
     sourceDurationInFrames: data.body.sourceDurationInFrames,
-    assetId: data.body.assetId ?? null,
     properties: data.body.properties as VideoClipProperties,
   })
   return success(
@@ -319,5 +317,5 @@ function getClipLabel(clip: VideoClip): string {
     const text = String(props.text ?? "")
     return `"${text.length > 30 ? text.slice(0, 30) + "…" : text}"`
   }
-  return String(props.fileName ?? clip.assetId ?? "unknown")
+  return String(props.fileName ?? "unknown")
 }

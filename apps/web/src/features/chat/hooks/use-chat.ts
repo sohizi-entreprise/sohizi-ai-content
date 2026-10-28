@@ -34,6 +34,8 @@ export const useSendMessage = (projectId: string) => {
   const patchActiveConversation = useChatStore(
     (state) => state.patchActiveConversation,
   )
+  const markRunCancelled = useChatStore((state) => state.markRunCancelled)
+  const unmarkRunCancelled = useChatStore((state) => state.unmarkRunCancelled)
 
   const { mutate: sendMessageMutation, isPending } = useMutation(
     submitChatCompletionMutationOptions(projectId),
@@ -96,6 +98,7 @@ export const useSendMessage = (projectId: string) => {
     const runId = conversation?.activeRunId
     if (!conversationId || !runId || isCancelling) return
 
+    markRunCancelled(runId)
     cancelRunMutation(
       { conversationId, runId },
       {
@@ -106,6 +109,7 @@ export const useSendMessage = (projectId: string) => {
           })
         },
         onError: (error) => {
+          unmarkRunCancelled(runId)
           toast.error(getErrorMessage(error, "Failed to cancel generation"))
         },
       },

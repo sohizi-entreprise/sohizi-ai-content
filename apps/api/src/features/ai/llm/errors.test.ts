@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { APICallError } from "ai"
 import { LlmConfigurationError, isFailoverError } from "./errors"
+import { isAbortedByUser } from "../agent/utils/llm-client"
 
 function apiError(statusCode: number, isRetryable: boolean) {
   return new APICallError({
@@ -55,5 +56,36 @@ describe("isFailoverError", () => {
     expect(isFailoverError(new LlmConfigurationError("missing key"))).toBe(
       false,
     )
+  })
+})
+
+describe("isAbortedByUser", () => {
+  test("detects user AbortController cancellation even when downstream throws another error", () => {
+    const controller = new AbortController()
+    controller.abort()
+
+    expect(
+      isAbortedByUser(controller.signal, new Error("No output generated.")),
+    ).toBe(true)
+  })
+
+  test("does not treat a non-aborted signal with a generic error as a user abort", () => {
+    const controller = new AbortController()
+
+    expect(
+      isAbortedByUser(controller.signal, new Error("Provider failed")),
+    ).toBe(false)
+  })
+
+  test("does not treat a TimeoutError reason as a user abort", () => {
+    const controller = new AbortController()
+    controller.abort(new DOMException("timed out", "TimeoutError"))
+
+    expect(
+      isAbortedByUser(
+        controller.signal,
+        new DOMException("timed out", "TimeoutError"),
+      ),
+    ).toBe(false)
   })
 })

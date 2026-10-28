@@ -6,28 +6,23 @@ import {
 import { failure } from "../utils"
 import { executeExtractWeb, executeSearchWeb } from "./handlers"
 import { apiWebSchema, type ApiWebRequest } from "./schema"
-import { apiGenericApiSchema } from "../api-generic-api-schema"
+import {
+  apiGenericApiSchema,
+  parseApiToolRequest,
+} from "../api-generic-api-schema"
 
 export const apiWebTool = buildBaseTool({
   name: "webAPI",
   description: `API for searching the live web and extracting public pages.`,
   inputSchema: apiGenericApiSchema,
   execute: async (input, options) => {
-    const request = parseWebRequest(input)
-    if (!request) {
-      return failure(`Unknown or invalid endpoint "${input.endpoint}"`)
+    const parsed = parseApiToolRequest(input, apiWebSchema)
+    if (!parsed.ok) {
+      return failure(parsed.error)
     }
-    return dispatchWebRequest(request, options)
+    return dispatchWebRequest(parsed.data, options)
   },
 })
-
-function parseWebRequest(input: unknown): ApiWebRequest | null {
-  for (const schema of apiWebSchema) {
-    const parsed = schema.safeParse(input)
-    if (parsed.success) return parsed.data
-  }
-  return null
-}
 
 function dispatchWebRequest(
   request: ApiWebRequest,

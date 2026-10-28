@@ -1,5 +1,6 @@
 import type { FileNode } from "@/db/schema"
 import * as fileSystemRepo from "../repo"
+import { normalizeFileName } from "../utils"
 import { FileObject } from "./file"
 
 const ROOT_SENTINEL = Symbol("root")
@@ -87,11 +88,35 @@ export class PathObject {
       return { fileNode: null, isRoot: true }
     }
 
-    const fileNode = await fileSystemRepo.getFileNodeByPath(
-      projectId,
-      parts.join("."),
-    )
-    return { fileNode: fileNode ?? null, isRoot: false }
+    const literalLtree = parts.join(".")
+    try {
+      const fileNode = await fileSystemRepo.getFileNodeByPath(
+        projectId,
+        literalLtree,
+      )
+      if (fileNode) {
+        return { fileNode, isRoot: false }
+      }
+    } catch {
+      // Fall through to normalized lookup if literal path contains non-ltree characters
+    }
+
+    const normalizedLtree = parts
+      .map((part) => normalizeFileName(part) || part)
+      .join(".")
+    if (normalizedLtree !== literalLtree) {
+      try {
+        const normalizedFileNode = await fileSystemRepo.getFileNodeByPath(
+          projectId,
+          normalizedLtree,
+        )
+        return { fileNode: normalizedFileNode ?? null, isRoot: false }
+      } catch {
+        return { fileNode: null, isRoot: false }
+      }
+    }
+
+    return { fileNode: null, isRoot: false }
   }
 
   private parsePath(path: string): ParsedPath {
@@ -119,13 +144,8 @@ export class PathObject {
 
     const parts = normalizedPath.split("/")
     for (const part of parts) {
-      if (!part) {
+      if (!part || part === "." || part === ".." || part.includes("/")) {
         throw new Error(`Invalid path provided - "${path}"`)
-      }
-      if (part === "." || part === ".." || /[/.]/.test(part)) {
-        throw new Error(
-          `Invalid path: slash or dot not allowed in filename - "${path}"`,
-        )
       }
     }
 

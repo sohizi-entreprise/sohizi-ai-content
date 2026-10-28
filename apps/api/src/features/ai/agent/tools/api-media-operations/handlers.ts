@@ -6,9 +6,12 @@ import { generateAsset } from "@/features/media-engine/service"
 import { captureYoutubeScreenshot } from "@/features/media-engine/youtube-screenshot"
 import { assertProjectAccess } from "@/lib/authorize"
 import {
+  attachAssetToFileNode,
+  getAssetById,
   getModelSchema,
   listGenerationModels,
 } from "@/features/media-engine/repo"
+import { normalizeFileName, toApiPath } from "@/features/file-system/utils"
 import { getErrorMessage } from "@/utils/get-error-message"
 import type { ModelMessage } from "ai"
 import type { AgentStateManager } from "../../core/state-manager"
@@ -141,7 +144,7 @@ export async function executeYoutubeScreenshot(
 }
 
 export async function executeSubmitGeneration(
-  data: RequestFor<"/media/generate">,
+  data: RequestFor<"/media/assets/generate">,
   { session, state, artifacts, toolCallId }: ToolExecutionOptions,
 ): Promise<ToolResult> {
   const input = data.body
@@ -156,7 +159,7 @@ export async function executeSubmitGeneration(
     const validation = validateInput(schema, input.parameters)
     if (!validation.isValid) {
       return failure(
-        `Validation failed. ${validation.errorMsg} Fix the parameters and call submitAssetGenerationJob again.`,
+        `Validation failed. ${validation.errorMsg} Fix the parameters and call /media/assets/generate again.`,
       )
     }
 
@@ -198,6 +201,70 @@ export async function executeSubmitGeneration(
   }
 }
 
+export async function executeSaveAsset(
+  data: RequestFor<"/media/assets/save">,
+  { session }: ToolExecutionOptions,
+): Promise<ToolResult> {
+  const { fileName, directoryPath, assetId } = data.body
+  try {
+    const directory = await session.resolveFileByPathOrId(directoryPath)
+    if (!directory) {
+      return failure(`Directory ${directoryPath} not found`)
+    }
+    if (!directory.isDirectory) {
+      return failure(`Path "${directoryPath}" is not a directory`)
+    }
+    if (directory.isSkillFolder) {
+      return failure("Cannot save media assets inside a skill folder")
+    }
+
+    const normalizedName = normalizeFileName(fileName)
+    if (!normalizedName) {
+      return failure("Invalid file name")
+    }
+
+    const asset = await getAssetById(session.projectId, assetId)
+    if (!asset) {
+      return failure(`Asset ${assetId} not found`)
+    }
+    if (asset.fileNodeId) {
+      const existingFile = await session.resolveFileByPathOrId(asset.fileNodeId)
+      if (existingFile) {
+        return failure(
+          `Asset ${assetId} is already saved at ${toApiPath(existingFile.path)}`,
+        )
+      }
+    }
+
+    const { fileNode, asset: attachedAsset } = await attachAssetToFileNode({
+      projectId: session.projectId,
+      assetId,
+      folderId: directory.id,
+      fileName: normalizedName,
+    })
+
+    return success(
+      JSON.stringify({
+        fileId: fileNode.id,
+        name: fileNode.name,
+        path: toApiPath(fileNode.path),
+        type: fileNode.type,
+        format: fileNode.format,
+        assetId: attachedAsset.id,
+        url: attachedAsset.url,
+      }),
+      [{ type: "refresh", fileId: directory.id, fileName: directory.name }],
+    )
+  } catch (error) {
+    return failure(
+      getErrorMessage(
+        error,
+        `Failed to save asset ${assetId} in "${directoryPath}"`,
+      ),
+    )
+  }
+}
+
 export async function executeWaitForJob(
   data: RequestFor<"/media/jobs/wait">,
   { session, state, abortSignal }: ToolExecutionOptions,
@@ -205,11 +272,15 @@ export async function executeWaitForJob(
   const { jobId } = data.body
   try {
     const tracked = state.getJob(jobId)
-    if (tracked?.status === "completed" || tracked?.status === "failed") {
+    if (
+      (tracked?.status === "completed" && tracked.result) ||
+      tracked?.status === "failed"
+    ) {
       state.markJobsNotified([jobId])
+      const output = buildJobWaitOutput(tracked)
       return tracked.status === "failed"
-        ? failure(JSON.stringify(buildJobWaitOutput(tracked)))
-        : success(JSON.stringify(buildJobWaitOutput(tracked)))
+        ? failure(JSON.stringify(output))
+        : success(JSON.stringify(output))
     }
 
     const settled = await waitUntilTerminal(

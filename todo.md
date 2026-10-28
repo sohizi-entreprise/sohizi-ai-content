@@ -74,3 +74,9 @@
 [ ] For the memory model let's try claude haiku 5.5 and then fallback to gpt 6 luna
 [ ] Add preview memory on the frontend
 [ ] Improve the system prompt
+
+
+[ ] The ask question tool (for plan mode???)
+[ ] Detect loop when the agent is stocked
+[ ] Add the ability to create asset file
+[ ] Error for /system level files

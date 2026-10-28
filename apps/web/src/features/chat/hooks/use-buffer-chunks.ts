@@ -16,6 +16,7 @@ type AssistantMessageContent = AssistantMessage["content"]
 type Params = {
   url: string
   initialMessages: Array<Message>
+  isCancelled?: boolean
   onFinish: (status: AgentRunBlock["status"], error?: string | null) => void
   onAsset?: (asset: MediaAsset) => void
   onOperation?: (operation: FilePendingOperation) => void
@@ -25,6 +26,7 @@ type Params = {
 export function useBufferChunks({
   url,
   initialMessages,
+  isCancelled = false,
   onFinish,
   onAsset,
   onOperation,
@@ -35,11 +37,21 @@ export function useBufferChunks({
   const [error, setError] = useState<string | null>(null)
   const streamErrorRef = useRef<string | null>(null)
   const finishedRef = useRef(false)
+  const abortedRef = useRef(isCancelled)
+  const unsubscribeRef = useRef<(() => void) | null>(null)
   const patchConversation = useChatStore(
     (state) => state.patchActiveConversation,
   )
 
+  abortedRef.current = abortedRef.current || isCancelled
+
+  const clearStreamError = () => {
+    streamErrorRef.current = null
+    setError(null)
+  }
+
   const recordStreamError = (errorMessage: string) => {
+    if (abortedRef.current) return
     streamErrorRef.current = errorMessage
     setError(errorMessage)
     setMessages((prev) => stopStreamingParts(prev))
@@ -66,7 +78,16 @@ export function useBufferChunks({
           })
         }
         if (chunk.source !== "subAgent") {
-          if (chunk.type === "error") {
+          if (
+            chunk.type === "abort" ||
+            (chunk.type === "complete" &&
+              (chunk.finishReason === "abort" ||
+                chunk.finishReason === "aborted"))
+          ) {
+            abortedRef.current = true
+            clearStreamError()
+            setMessages((prev) => stopStreamingParts(prev))
+          } else if (chunk.type === "error") {
             recordStreamError(chunk.error)
           } else if (
             chunk.type === "complete" &&
@@ -85,14 +106,15 @@ export function useBufferChunks({
       done: (_, { closeEventSource }) => {
         finishedRef.current = true
         setMessages((prev) => stopStreamingParts(prev))
-        const finalStatus = streamErrorRef.current ? "error" : "finished"
-        onFinish(finalStatus, streamErrorRef.current)
+        const finalError = abortedRef.current ? null : streamErrorRef.current
+        const finalStatus = finalError ? "error" : "finished"
+        onFinish(finalStatus, finalError)
         closeEventSource()
         patchConversation({ isStreaming: false, activeRunId: null })
       },
     },
     onError: (err) => {
-      if (!finishedRef.current) {
+      if (!finishedRef.current && !abortedRef.current) {
         const errorMessage = streamErrorRef.current ?? err.message
         recordStreamError(errorMessage)
         onFinish("error", errorMessage)
@@ -103,13 +125,27 @@ export function useBufferChunks({
   })
 
   useEffect(() => {
+    if (isCancelled) {
+      abortedRef.current = true
+      finishedRef.current = true
+      clearStreamError()
+      setMessages((prev) => stopStreamingParts(prev))
+      unsubscribeRef.current?.()
+      unsubscribeRef.current = null
+      onFinish("finished", null)
+      return
+    }
     finishedRef.current = false
     const unsubscribe = subscribe(url)
+    unsubscribeRef.current = unsubscribe
 
-    return () => unsubscribe()
-  }, [url, subscribe])
+    return () => {
+      unsubscribe()
+      unsubscribeRef.current = null
+    }
+  }, [url, subscribe, isCancelled])
 
-  return { messages, assets, error }
+  return { messages, assets, error: isCancelled ? null : error }
 }
 
 function applyChunk(

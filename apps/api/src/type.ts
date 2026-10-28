@@ -280,6 +280,10 @@ export type VideoMediaClipProperties = {
   opacity: number
   speed: number
   borderRadius: number
+  xRatio?: number
+  yRatio?: number
+  widthRatio?: number
+  heightRatio?: number
 }
 
 export type AudioMediaClipProperties = {
@@ -354,31 +358,96 @@ export const videoClipSchema = z.object({
   fileName: z.string(),
   width: z.number().optional(),
   height: z.number().optional(),
-  volume: z.number(),
-  opacity: z.number(),
-  speed: z.number(),
-  borderRadius: z.number(),
+  volume: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Audio volume from 0 to 1 (default: 1)"),
+  opacity: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Opacity from 0 to 1 (default: 1)"),
+  speed: z
+    .number()
+    .positive()
+    .describe("Playback speed multiplier (default: 1)"),
+  borderRadius: z
+    .number()
+    .min(0)
+    .describe("Corner radius in pixels (default: 0)"),
+  xRatio: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe("Horizontal center position ratio from 0 to 1 (default: 0.5)"),
+  yRatio: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe("Vertical center position ratio from 0 to 1 (default: 0.5)"),
+  widthRatio: z
+    .number()
+    .positive()
+    .optional()
+    .describe("Width ratio relative to canvas from 0.05 to 2 (default: 1)"),
+  heightRatio: z
+    .number()
+    .positive()
+    .optional()
+    .describe("Height ratio relative to canvas from 0.04 to 2 (default: 1)"),
 }) satisfies z.ZodType<VideoMediaClipProperties>
 
 export const audioClipSchema = z.object({
   url: z.string(),
   fileName: z.string(),
-  volume: z.number(),
-  speed: z.number(),
+  volume: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Audio volume from 0 to 1 (default: 1)"),
+  speed: z
+    .number()
+    .positive()
+    .describe("Playback speed multiplier (default: 1)"),
 }) satisfies z.ZodType<AudioMediaClipProperties>
 
 export const textClipSchema = z.object({
   text: z.string(),
-  fontSize: z.number(),
-  color: z.string(),
-  fontFamily: z.string(),
-  fontWeight: z.union([z.string(), z.number()]),
+  fontSize: z.number().positive().describe("Font size in pixels (default: 64)"),
+  color: z.string().describe("Hex or CSS color (default: '#ffffff')"),
+  fontFamily: z.string().describe("Font family name (default: 'Inter')"),
+  fontWeight: z
+    .union([z.string(), z.number()])
+    .describe(
+      "Font weight such as 'normal', 'bold', or numeric (default: 'bold')",
+    ),
   align: z.enum(["left", "center", "right"]),
-  opacity: z.number(),
-  xRatio: z.number(),
-  yRatio: z.number(),
-  widthRatio: z.number(),
-  heightRatio: z.number(),
+  opacity: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Opacity from 0 to 1 (default: 1)"),
+  xRatio: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Horizontal center position ratio from 0 to 1 (default: 0.5)"),
+  yRatio: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Vertical center position ratio from 0 to 1 (default: 0.85)"),
+  widthRatio: z
+    .number()
+    .positive()
+    .describe("Width ratio relative to canvas (default: 0.7)"),
+  heightRatio: z
+    .number()
+    .positive()
+    .describe("Height ratio relative to canvas (default: 0.18)"),
 }) satisfies z.ZodType<TextClipProperties>
 
 export const imageClipSchema = z.object({
@@ -386,14 +455,41 @@ export const imageClipSchema = z.object({
   fileName: z.string(),
   width: z.number().optional(),
   height: z.number().optional(),
-  opacity: z.number(),
-  borderRadius: z.number(),
-  blur: z.number(),
-  brightness: z.number(),
-  xRatio: z.number(),
-  yRatio: z.number(),
-  widthRatio: z.number(),
-  heightRatio: z.number(),
+  opacity: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Opacity from 0 to 1 (default: 1)"),
+  borderRadius: z
+    .number()
+    .min(0)
+    .describe("Corner radius in pixels (default: 0)"),
+  blur: z.number().min(0).describe("Blur radius in pixels (default: 0)"),
+  brightness: z
+    .number()
+    .min(0)
+    .max(200)
+    .describe(
+      "Brightness percentage from 0 to 200, where 100 is normal brightness and 0 is completely black (default: 100)",
+    ),
+  xRatio: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Horizontal center position ratio from 0 to 1 (default: 0.5)"),
+  yRatio: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Vertical center position ratio from 0 to 1 (default: 0.5)"),
+  widthRatio: z
+    .number()
+    .positive()
+    .describe("Width ratio relative to canvas from 0.05 to 2 (default: 1)"),
+  heightRatio: z
+    .number()
+    .positive()
+    .describe("Height ratio relative to canvas from 0.04 to 2 (default: 1)"),
 }) satisfies z.ZodType<ImageMediaClipProperties>
 
 export const clipPropertiesSchemaByType = {

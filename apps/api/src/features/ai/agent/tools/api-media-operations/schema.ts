@@ -4,7 +4,15 @@ const mediaGenerationTypes = [
   "text-to-image",
   "image-to-image",
   "text-to-video",
+  "image-to-video",
   "video-to-video",
+  "text-to-speech",
+  "music-generation",
+  // "voice-control",
+  // "motion-transfer",
+  "lip-sync",
+  "image-upscaler",
+  "video-upscaler",
 ] as const
 
 const listModelsSchema = z
@@ -100,7 +108,7 @@ const youtubeScreenshotSchema = z
 
 const submitGenerationSchema = z
   .object({
-    endpoint: z.literal("/media/generate"),
+    endpoint: z.literal("/media/assets/generate"),
     method: z.literal("POST"),
     body: z.object({
       kind: z.enum(["image", "video", "audio", "speech"]),
@@ -114,6 +122,24 @@ const submitGenerationSchema = z
     }),
   })
   .describe("Submit an asynchronous media-generation job.")
+
+const saveAssetSchema = z
+  .object({
+    endpoint: z.literal("/media/assets/save"),
+    method: z.literal("POST"),
+    body: z.object({
+      fileName: z.string().min(1).describe("The name for the file to create."),
+      directoryPath: z
+        .string()
+        .describe(
+          "The destination directory path where the asset file will be saved.",
+        ),
+      assetId: z
+        .uuid()
+        .describe("The ID of the generated or existing asset to save."),
+    }),
+  })
+  .describe("Save an asset as a file in a project directory.")
 
 const waitForJobSchema = z
   .object({
@@ -145,6 +171,7 @@ export const apiMediaOperationsSchema = [
   youtubeAnalysisSchema,
   youtubeScreenshotSchema,
   submitGenerationSchema,
+  saveAssetSchema,
   waitForJobSchema,
   getJobStatusSchema,
 ]

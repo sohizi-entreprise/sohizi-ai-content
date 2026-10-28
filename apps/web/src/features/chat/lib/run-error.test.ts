@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { useChatStore } from "../store/chat-store"
 import {
   BILLING_RUN_ERROR_MESSAGE,
   GENERIC_RUN_ERROR_MESSAGE,
@@ -30,5 +31,16 @@ describe("classifyRunError", () => {
       kind: "generic",
       message: GENERIC_RUN_ERROR_MESSAGE,
     })
+  })
+
+  it("tracks cancelled run IDs in the chat store so cancelled runs suppress error banners", () => {
+    useChatStore.getState().reset()
+    expect(useChatStore.getState().cancelledRunIds["run-1"]).toBeUndefined()
+
+    useChatStore.getState().markRunCancelled("run-1")
+    expect(useChatStore.getState().cancelledRunIds["run-1"]).toBe(true)
+
+    useChatStore.getState().unmarkRunCancelled("run-1")
+    expect(useChatStore.getState().cancelledRunIds["run-1"]).toBeUndefined()
   })
 })

@@ -143,6 +143,19 @@ const createFileSchema = z
           })
         }
 
+        if (
+          !data.dir &&
+          (data.type === "image" ||
+            data.type === "video" ||
+            data.type === "audio")
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Cannot create empty "${data.type}" files via /files/create. Generate media using mediaOperationsAPI (/media/assets/generate) and save it to a file using /media/assets/save instead.`,
+            path: ["type"],
+          })
+        }
+
         if (!data.dir && !isAllowedFileKind(data.type, data.format)) {
           ctx.addIssue({
             code: "custom",

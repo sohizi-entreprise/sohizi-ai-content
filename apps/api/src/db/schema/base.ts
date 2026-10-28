@@ -915,9 +915,6 @@ export const videoClips = pgTable(
     endFrame: integer("end_frame").notNull(),
     sourceStartFrame: integer("source_start_frame").default(0).notNull(),
     sourceDurationInFrames: integer("source_duration_in_frames").notNull(),
-    assetId: uuid("asset_id").references(() => assets.id, {
-      onDelete: "set null",
-    }),
     properties: jsonb("properties").$type<VideoClipProperties>().notNull(),
     ...timestamps,
   },
@@ -935,7 +932,6 @@ export const videoClips = pgTable(
       table.compositionId,
       table.type,
     ),
-    index("video_clips_asset_id_idx").on(table.assetId),
   ],
 )
 

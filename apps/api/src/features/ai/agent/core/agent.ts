@@ -12,6 +12,7 @@ import {
 } from "./system-persist"
 import {
   createBillableLlmClient,
+  isAbortedByUser,
   type BillableLlmClient,
   type BillableLlmInput,
   type ModelConfig,
@@ -122,7 +123,17 @@ export class Agent {
         if (this.stateManager.isExitStatus) {
           break
         }
+        if (abortSignal.aborted) {
+          this.stateManager.setFinishReason("abort")
+          this.stateManager.finishRun()
+          break
+        }
         yield* this.runStep(billedLlmStream, abortSignal, step)
+        if (abortSignal.aborted) {
+          this.stateManager.setFinishReason("abort")
+          this.stateManager.finishRun()
+          break
+        }
         yield* this.drainCompletedJobs()
 
         if (
@@ -152,9 +163,14 @@ export class Agent {
         this.stateManager.finishRun()
       }
     } catch (error) {
-      console.log("runLoop error", error)
-      const errorMessage = this.captureStepError(error)
-      yield this.buildErrorEvent(errorMessage)
+      if (isAbortedByUser(abortSignal, error)) {
+        this.stateManager.setFinishReason("abort")
+        this.stateManager.finishRun()
+      } else {
+        console.log("runLoop error", error)
+        const errorMessage = this.captureStepError(error)
+        yield this.buildErrorEvent(errorMessage)
+      }
     } finally {
       this.stateManager.dropNotifiedTerminalJobs()
       // Persist optionally based on the agent config
@@ -241,20 +257,29 @@ export class Agent {
             yield this.buildEvent(chunk)
             break
           case streamEvents.error:
-            yield this.buildEvent(chunk)
+            if (!isAbortedByUser(abortSignal)) {
+              yield this.buildEvent(chunk)
+            }
             break
-          case streamEvents.complete:
+          case streamEvents.complete: {
             this.stateManager.recordModelStepUsage(chunk.usage)
             if (chunk.vendor) this.stateManager.recordVendor(chunk.vendor)
-            this.updateStatus(chunk.finishReason, chunk.error)
+            const finishReason =
+              isAbortedByUser(abortSignal) && chunk.finishReason === "error"
+                ? "abort"
+                : chunk.finishReason
+            const finishError =
+              finishReason === "abort" ? undefined : chunk.error
+            this.updateStatus(finishReason, finishError)
             text = chunk.text || text
             reasoning_text = chunk.reasoningText ?? reasoning_text
-            if (chunk.finishReason === "error") {
-              stepError = chunk.error ?? "Unknown agent error"
+            if (finishReason === "error") {
+              stepError = finishError ?? "Unknown agent error"
               this.captureStepError(stepError)
             }
             yield this.buildUsageEvent()
             break
+          }
           case streamEvents.toolCallStart:
             if (chunk.toolName === PROVIDE_STATUS_UPDATE_TOOL_NAME) {
               statusUpdateToolCallIds.add(chunk.toolCallId)
@@ -304,23 +329,38 @@ export class Agent {
 
       registerAssistantMessage()
 
-      if (tool_calls.length > 0 && !stepError) {
+      if (
+        isAbortedByUser(abortSignal) ||
+        this.stateManager.finishReason === "abort"
+      ) {
+        this.stateManager.setFinishReason("abort")
+        this.stateManager.finishRun()
+      } else if (tool_calls.length > 0 && !stepError) {
         toolCallsStarted = true
         yield* this.runToolCalls(tool_calls, abortSignal)
       } else if (!stepError && !this.stateManager.isExitStatus) {
         this.stateManager.finishRun()
       }
     } catch (error) {
-      console.log("runStep error", error)
-      stepError = this.captureStepError(error)
-      yield this.buildErrorEvent(stepError)
+      if (isAbortedByUser(abortSignal, error)) {
+        this.stateManager.setFinishReason("abort")
+        this.stateManager.finishRun()
+      } else {
+        console.log("runStep error", error)
+        stepError = this.captureStepError(error)
+        yield this.buildErrorEvent(stepError)
+      }
     } finally {
       registerAssistantMessage()
-      if (stepError && tool_calls.length > 0 && !toolCallsStarted) {
-        this.appendToolCallErrors(
-          tool_calls,
-          `Tool call was not executed because the step failed: ${stepError}`,
-        )
+      if (
+        tool_calls.length > 0 &&
+        !toolCallsStarted &&
+        (stepError || this.stateManager.finishReason === "abort")
+      ) {
+        const reason = stepError
+          ? `Tool call was not executed because the step failed: ${stepError}`
+          : "Tool call was not executed because the run was cancelled."
+        this.appendToolCallErrors(tool_calls, reason)
       }
     }
   }
@@ -358,6 +398,8 @@ export class Agent {
       state = {
         ...existingState,
         status: "idle",
+        error: null,
+        finishReason: null,
         jobs: existingState.jobs ?? [],
         latestRunUsage: existingState.latestRunUsage ?? null,
         messages: restoreSessionMessages(systemPrompt, existingState.messages),
