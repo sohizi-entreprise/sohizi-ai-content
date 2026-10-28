@@ -5,6 +5,15 @@ models:
     provider: bytedance
     description: >
       Best Seedance instruction edit. Prefer for subject/style changes with optional reference images and audio. Input longer than 30s is trimmed; shorter than 4s is padded. generate_audio false keeps the source track. Listed rate is WaveSpeed base; resolution can raise the charge.
+    promptingTechnics:
+      - Treat video-edit as a locked timeline task — explicitly state what changes in the source video and what must remain locked (camera path, timing, background, or unedited subjects).
+      - Map each reference image or audio in upload order (e.g., "@Image1 replaces the character's outfit; do not copy @Image1 background").
+      - Specify time ranges when an edit applies only to a segment of the clip, and keep input clips under 20s when possible for highest fidelity.
+      - Set generate_audio to false when the original audio track should be preserved, or describe replacement audio cues explicitly.
+    selectionGuidance:
+      - Shines at instruction-driven video restyling, subject/wardrobe replacement, and time-ranged visual/audio edits on clips up to 30s using up to 30 image and 10 audio references.
+      - Avoid for quick single-prop tweaks or short clips where Gemini Omni 1.1 Flash Edit or Kling O3 Std Edit is faster and more economical.
+      - Latency and resource consumption scale with source clip length and jump sharply above 720p; trim source footage to the active segment and test edits at 720p before rendering at 1080p or 4k.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -36,6 +45,14 @@ models:
     provider: bytedance
     description: >
       Previous Seedance edit. Inputs longer than 15s are trimmed. Prefer when 2.5 is unnecessary. Listed rate is WaveSpeed base; duration and resolution can raise the charge.
+    promptingTechnics:
+      - State the exact subject, wardrobe, material, or style modification clearly and add a preservation clause for camera motion and unchanged elements.
+      - Map each reference asset to a single role (identity, style, or audio atmosphere) and avoid uploading more than 4-5 references.
+      - Describe lighting and shadow integration so edited elements blend into the source footage.
+    selectionGuidance:
+      - Shines at restyling or modifying 4-15s video clips with reference images and audio when Seedance 2.5 Edit's 30s capacity is not needed.
+      - Avoid for clips longer than 15s (which get trimmed) or when explicit tag-based reference addressing (`<<<image_1>>>`) is preferred (use Kling O3 Edit).
+      - Lighter base resource footprint than Seedance 2.5 Edit, though longer durations and 1080p/4k resolutions still increase latency and spend significantly over 720p.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -78,6 +95,14 @@ models:
     provider: kwaivgi
     description: >
       Highest Kling O3 video edit. Refer to extras as <<<image_1>>> and the source as <<<video_1>>>. Source 3-15s, trimmed to 15s. Up to 4 reference images. Listed rate is WaveSpeed base.
+    promptingTechnics:
+      - Reference the source video as `<<<video_1>>>` and uploaded reference images as `<<<image_1>>>` through `<<<image_4>>>` directly in the instruction.
+      - State the exact transformation (e.g., "Replace the subject in <<<video_1>>> with the character from <<<image_1>>>") and what to preserve from `<<<video_1>>>` (camera motion, lighting, background).
+      - Focus on one primary edit per pass and describe how the modified subject or style integrates with the scene's lighting and shadows.
+    selectionGuidance:
+      - Shines at targeted character or object replacement in 3-15s clips where up to 4 reference images (`<<<image_1>>>` to `<<<image_4>>>`) must map cleanly onto `<<<video_1>>>`.
+      - Avoid for clips over 15s or workflows needing audio reference conditioning (prefer Seedance 2.5 Edit).
+      - Delivers high temporal and identity coherence across the edited clip, trading slightly higher resource usage than Kling O3 Std Edit for cleaner subject integration.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -93,6 +118,13 @@ models:
     provider: kwaivgi
     description: >
       Cheaper Kling O3 video edit. Same <<<image_n>>> / <<<video_1>>> references as Pro. Prefer for draft edits. Listed rate is WaveSpeed base.
+    promptingTechnics:
+      - Always tag the source clip as `<<<video_1>>>` and reference images as `<<<image_1>>>`, `<<<image_2>>>`, etc.
+      - Write a concise, single-intent edit instruction that specifies what changes in `<<<video_1>>>` and what stays locked.
+    selectionGuidance:
+      - Shines at fast draft video edits and reference-swap tests (`<<<video_1>>>` + `<<<image_n>>>`) before committing to Kling O3 Pro Edit.
+      - Avoid for final hero shots with complex lighting or fine facial detail where Pro Edit reduces temporal shimmer.
+      - Faster turnaround and a lighter resource footprint than Kling O3 Pro Edit on 3-15s clips.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -108,6 +140,14 @@ models:
     provider: google
     description: >
       Newest Gemini Omni video edit with resolution control. Prefer for cheap instruction edits. Listed rate is WaveSpeed base; resolution can raise the charge.
+    promptingTechnics:
+      - Give a direct conversational edit instruction naming the specific element to add, remove, or restyle without re-describing the entire scene.
+      - Explicitly state which aspects of the original video (subject identity, camera motion, timing, lighting) must remain unchanged.
+      - Apply one focused change per iteration for the cleanest preservation of the base clip.
+    selectionGuidance:
+      - Shines at quick, conversational instruction edits (background swaps, color/weather shifts, simple object additions) on short clips with selectable resolution from 360p to 4k.
+      - Avoid when multi-image reference anchoring is needed to lock a specific new character or product identity (prefer Kling O3 Edit or Seedance 2.5 Edit).
+      - Very low latency and lightweight resource usage at 360p/720p make it ideal for rapid iterative video tweaking before a final high-res pass.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -128,6 +168,13 @@ models:
     provider: google
     description: >
       Previous Gemini Omni video edit. No resolution control. Prefer 1.1 Flash unless this endpoint is required. Listed rate is WaveSpeed base.
+    promptingTechnics:
+      - Describe only the targeted update (e.g., background change, object swap, or color grade shift) and state what to keep from the source clip.
+      - Keep edits to one clear modification per pass rather than bundling multiple unrelated changes.
+    selectionGuidance:
+      - Shines only as a fallback for basic text-instructed video edits when Gemini Omni 1.1 Flash Edit is unavailable.
+      - Avoid for new workflows—prefer Gemini Omni 1.1 Flash Edit for explicit resolution control and better efficiency.
+      - Fixed output resolution with fast turnaround and a lightweight base footprint.
     contextWindow: ~
     pricing:
       unit: per_inference

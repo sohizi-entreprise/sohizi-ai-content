@@ -984,6 +984,7 @@ export const getVendorParamsMapping = async (
 export const getModelSchema = async (modelId: string) => {
   const rows = await db
     .select({
+      promptingTechnics: llmModels.promptingTechnics,
       key: modelParameters.key,
       type: modelParameters.type,
       description: modelParameters.description,
@@ -991,8 +992,12 @@ export const getModelSchema = async (modelId: string) => {
       required: modelsAndParameters.required,
       optionValue: parameterOptions.value,
     })
-    .from(modelsAndParameters)
-    .innerJoin(
+    .from(llmModels)
+    .leftJoin(
+      modelsAndParameters,
+      eq(modelsAndParameters.modelId, llmModels.id),
+    )
+    .leftJoin(
       modelParameters,
       eq(modelParameters.id, modelsAndParameters.parameterId),
     )
@@ -1013,13 +1018,13 @@ export const getModelSchema = async (modelId: string) => {
         eq(parameterOptions.parameterId, modelsAndParameterOptions.parameterId),
       ),
     )
-    .where(eq(modelsAndParameters.modelId, modelId))
+    .where(eq(llmModels.id, modelId))
 
   const byKey = new Map<
     string,
     {
       key: string
-      type: (typeof rows)[number]["type"]
+      type: NonNullable<(typeof rows)[number]["type"]>
       description: string | null
       constraints: (typeof rows)[number]["constraints"]
       required: boolean
@@ -1028,6 +1033,9 @@ export const getModelSchema = async (modelId: string) => {
   >()
 
   for (const row of rows) {
+    if (!row.key || !row.type || row.required == null) {
+      continue
+    }
     let parameter = byKey.get(row.key)
     if (!parameter) {
       parameter = {
@@ -1045,7 +1053,10 @@ export const getModelSchema = async (modelId: string) => {
     }
   }
 
-  return [...byKey.values()]
+  return {
+    promptingTechnics: rows[0]?.promptingTechnics ?? [],
+    parameters: [...byKey.values()],
+  }
 }
 
 export const listGenerationModels = async (type: string) => {
@@ -1053,6 +1064,7 @@ export const listGenerationModels = async (type: string) => {
     .select({
       id: llmModels.id,
       description: llmModels.description,
+      selectionGuidance: llmModels.selectionGuidance,
       pricing: llmModels.pricing,
     })
     .from(llmModels)

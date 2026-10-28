@@ -70,7 +70,7 @@
 
 <!-- Close it today -->
 [ ] Add all the needed models
-[ ] Review their descriptions and optimize them when needed
+[ ] Review their descriptions and optimize them where needed
 [ ] For the memory model let's try claude haiku 5.5 and then fallback to gpt 6 luna
 [ ] Add preview memory on the frontend
 [ ] Improve the system prompt

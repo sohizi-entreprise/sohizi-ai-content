@@ -5,6 +5,15 @@ models:
     provider: bytedance
     description: >
       Best Seedance generate. Prefer for cinematic text-to-video with native audio and optional reference images/video/audio. Duration 4-30s. Price is linear with duration and jumps hard at 1080p/4k. Start at 720p / 5s.
+    promptingTechnics:
+      - Use the four-part structure — Asset mapping (@Image1/@Video1/@Audio1 roles) + one-sentence scene brief + continuous second-level timeline (e.g., 0-3s, 3-5s) + global constraints.
+      - Bind each reference asset to one clear responsibility and state what NOT to copy from it (e.g., "@Image1 controls identity only; do not copy background").
+      - Specify camera movement path and timing separately from subject action.
+      - Direct native audio explicitly (quoted dialogue, contact SFX, room tone, BGM or silence) and add global constraints like "no subtitles, no watermark".
+    selectionGuidance:
+      - Shines at flagship cinematic clips up to 30 seconds with synchronized native dialogue/SFX and rich multimodal conditioning (up to 30 reference images, 10 videos, and 10 audio tracks).
+      - Avoid for quick roughs or simple 5-second b-roll where Seedance 2.0 Fast, Kling O3 Std, or Gemini Omni 1.1 Flash delivers much faster and lighter results.
+      - Latency and resource consumption scale linearly with duration and jump steeply at 1080p and 4k; always block out timing and motion at 480p or 720p for 5 seconds before committing to long high-resolution renders.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -160,6 +169,15 @@ models:
     provider: bytedance
     description: >
       Previous Seedance generate. Prefer when 2.5 is more than the shot needs. Duration 4-15s, fewer reference slots than 2.5. Same resolution ladder at a lower per-second rate.
+    promptingTechnics:
+      - Sequence multi-shot clips using ordered shot labels (Shot 1, Shot 2, Shot 3) with explicit cut phrases ("cut to...") rather than second-level timestamps, which are unstable on 2.0.
+      - Order each shot block as camera move/framing → subject action and expression → environment/lighting → audio, ending with a continuity lock line.
+      - Limit reference assets to 4-5 total (1-2 character images, 1 scene image, 1 motion video, 1 audio clip) and assign each a single role.
+      - Use one clear camera movement per shot (or state "locked camera" in prose) and include constraints like "no subtitles, no logo, no watermark".
+    selectionGuidance:
+      - Shines at multi-shot narrative sequences (4-15s) with native audio and moderate reference anchoring (up to 9 images, 3 videos, 3 audios) when Seedance 2.5's 30s ceiling is unnecessary.
+      - Avoid when you need second-accurate timeline beat control or more than 15 seconds of continuous action (prefer Seedance 2.5).
+      - More economical per second than Seedance 2.5 across all resolutions, though 1080p and 4k still carry a steep resource and latency multiplier over 720p.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -255,6 +273,14 @@ models:
     provider: bytedance
     description: >
       Speed-tier Seedance 2.0. Prefer for previews and iteration. Same 4-15s window and reference limits as 2.0 at the lowest Seedance per-second rate.
+    promptingTechnics:
+      - Use ordered shot blocks (Shot 1, Shot 2) rather than exact second ranges, keeping action density matched to the 4-15s duration.
+      - Lead each shot with camera framing and one camera move, followed by subject action, lighting, and sound cues.
+      - Keep reference uploads to 4-5 focused assets with explicit role assignments to avoid style conflicts during fast previews.
+    selectionGuidance:
+      - Shines at rapid storyboard pre-visualization, multi-shot pacing tests, and reference-guided video drafts with native audio.
+      - Avoid for final hero shots requiring peak texture fidelity or complex 20-30s choreography (promote approved prompts to Seedance 2.0 or 2.5).
+      - Lowest latency and lightest per-second resource footprint in the Seedance family, especially at 480p and 720p, making it the best entry point for iterative prompting.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -350,6 +376,15 @@ models:
     provider: kwaivgi
     description: >
       Highest Kling O3 text-to-video. Prefer for character-accurate motion and optional native sound. Duration 3-15s. Price scales with duration only ($0.112/s). Aspect ratios 16:9, 9:16, 1:1.
+    promptingTechnics:
+      - Start from the camera move (one named move with start and end points), then build the subject action, setting, lighting, and sound around it.
+      - Write motion as a 2-3 link physical cause-and-effect chain (e.g., "A clips B, causing C to stumble and catch the railing") rather than generic motion adjectives.
+      - For multi-shot clips, use labeled shots with durations (e.g., "Shot 1 (2s) wide shot... Shot 2 (3s) close-up..."); for single takes, write one continuous description.
+      - When generate_audio is enabled, place spoken dialogue in quotes after "says:" and link SFX to visible actions plus an ambient bed.
+    selectionGuidance:
+      - Shines at physics-heavy human action, expressive character motion, camera-first showpiece shots, and timed multi-shot cuts (3-15s) with optional synchronized sound.
+      - Avoid when you need conditioning from reference video/audio tracks or ultra-wide 21:9 framing (prefer Seedance 2.5), or when you need a dedicated negative prompt field (prefer Kling V3.0 Pro).
+      - Resource usage scales strictly with duration rather than resolution tiers, offering a predictable and much lighter footprint than high-res Seedance while maintaining high motion realism.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -389,6 +424,14 @@ models:
     provider: kwaivgi
     description: >
       Cheaper Kling O3 generate. Prefer for drafts before promoting to Pro. Same 3-15s window at $0.084/s.
+    promptingTechnics:
+      - Prompt like a shot list — camera framing and one movement → subject and cause-and-effect action → setting and lighting → audio cues.
+      - Use labeled shots with durations (e.g., "Shot 1 (2s) ...") for multi-shot sequences or a single continuous paragraph for one-take clips.
+      - Keep physical action chains to 2-3 clear beats so motion remains coherent in draft runs.
+    selectionGuidance:
+      - Shines at drafting camera moves, blocking multi-shot timing, and testing cause-and-effect motion before promoting the winning prompt to Kling O3 Pro.
+      - Avoid for final close-up character performances or intricate physical interactions where Pro's motion refinement is noticeable.
+      - Faster turnaround and a lighter per-second footprint than Kling O3 Pro across the same 3-15s duration range.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -428,6 +471,15 @@ models:
     provider: kwaivgi
     description: >
       Kling V3.0 generate with negative prompt and shot control. Prefer when you need prompt adherence knobs more than O3's newer motion. $0.112/s, 3-15s.
+    promptingTechnics:
+      - Write prompts as scene directions rather than object lists, defining shot framing, explicit camera behavior (tracking, panning, locking), subject motion, and lighting.
+      - For multi-shot storyboards (up to 6 shots), label each shot clearly with its own camera angle, framing, and action for smooth coverage.
+      - Use negative_prompt to exclude blur, distortion, extra limbs, watermarks, or unwanted camera shake.
+      - When audio is enabled, specify dialogue in quotes, action-linked foley, and ambient room tone in a clear hierarchy.
+    selectionGuidance:
+      - Shines at multi-shot storyboards (up to 6 shots) and cinematic scenes where explicit negative prompting is needed to suppress artifacts or unwanted elements.
+      - Avoid when Kling O3 Pro's newer physics reasoning and motion fluidity matter more than negative prompt control.
+      - Matches Kling O3 Pro's duration-based resource profile and turnaround speed across 3-15s clips.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -468,6 +520,14 @@ models:
     provider: kwaivgi
     description: >
       Cheaper Kling V3.0 generate. Prefer for volume previews. $0.084/s, 3-15s.
+    promptingTechnics:
+      - Structure prompts with explicit shot size, one camera movement, clear subject verb chains, and lighting direction.
+      - Label shots sequentially when testing multi-shot storyboards, or keep to one focused action for short single takes.
+      - Populate negative_prompt with artifact and layout exclusions to keep preview motion clean.
+    selectionGuidance:
+      - Shines at high-volume storyboard previews and motion tests that benefit from negative prompt exclusions.
+      - Avoid for final production renders where Kling V3.0 Pro or Kling O3 Pro provides cleaner fine detail and motion stability.
+      - Pairs low latency with an economical duration-only resource footprint for 3-15s preview clips.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -508,6 +568,15 @@ models:
     provider: google
     description: >
       Newest Gemini Omni generate. Prefer for cheap, short clips with explicit resolution control (360p-4k). Duration 3-10s. Start at 720p; 4k is 3x 720p.
+    promptingTechnics:
+      - Follow the five-element structure in order — shot framing and camera motion → visual style → lighting → location → focused subject action.
+      - Dedicate each short clip (3-10s) to a single focused moment and include "in a single unbroken scene" or "no scene cuts" to prevent unwanted cuts.
+      - Format spoken dialogue using a colon without quotation marks (e.g., A woman says — My name is Clara, using a colon before the spoken line) so the model does not render burned-in text on screen.
+      - Describe audio explicitly and add "no music" or "no dialogue" when a clean ambient or foley track is required.
+    selectionGuidance:
+      - Shines at fast, single-moment commercial b-roll, social clips (16:9 or 9:16), and rapid video ideation from 360p roughs up to 4k finals (3-10s).
+      - Avoid for clips longer than 10 seconds, non-standard aspect ratios (such as 1:1 or 21:9), or complex multi-event storylines in a single pass.
+      - 360p and 720p offer exceptionally low latency and resource usage for exploration, while 1080p and 4k scale up fidelity at a moderate increase in processing time and footprint.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -571,6 +640,14 @@ models:
     provider: google
     description: >
       Previous Gemini Omni generate. Prefer only if 1.1 is unavailable. No resolution control. $0.13/s, 3-10s. 1.1 Flash is cheaper at 720p.
+    promptingTechnics:
+      - Open with shot framing and camera movement, followed by style, lighting source, setting, and a single focused action.
+      - Specify "single unbroken scene" to avoid abrupt cuts, and avoid chaining multiple distinct events into one short clip.
+      - Use a colon without quotation marks for speech to prevent unwanted on-screen captions, and state audio exclusions ("no music") explicitly.
+    selectionGuidance:
+      - Shines as a fallback for short 3-10s single-scene clips when Gemini Omni 1.1 Flash is unavailable.
+      - Avoid for new workflows—prefer Gemini Omni 1.1 Flash, which adds explicit resolution control (360p-4k) and is more efficient at 720p and below.
+      - Fixed resolution with linear duration scaling; lacks the lightweight 360p/720p draft tiers and 4k ceiling of 1.1 Flash.
     contextWindow: ~
     pricing:
       unit: parameter_table

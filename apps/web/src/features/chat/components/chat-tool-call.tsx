@@ -106,6 +106,7 @@ function ChatToolCallComponent({ toolCall }: ChatToolCallProps) {
               : `Called ${humanize(toolName)}`
           }
           isStreaming={toolCall.isStreaming ?? false}
+          input={toolCall.input as Record<string, unknown>}
         />
       )
   }

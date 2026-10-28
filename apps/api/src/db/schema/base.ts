@@ -459,6 +459,8 @@ export const llmModels = pgTable("llm_models", {
   provider: varchar("provider", { length: 50 }).notNull(),
   name: varchar("name", { length: 50 }).notNull(),
   description: text("description"),
+  promptingTechnics: jsonb("prompting_technics").$type<string[]>(),
+  selectionGuidance: jsonb("selection_guidance").$type<string[]>(),
   enabled: boolean("enabled").default(true).notNull(),
   pricing: jsonb("pricing").$type<ModelBasePricing>(),
   contextWindow: integer("context_window"),

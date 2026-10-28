@@ -170,6 +170,8 @@ export const createModel = async (input: CreateModelInput) => {
     provider: input.provider,
     name: input.name,
     description: input.description,
+    promptingTechnics: input.promptingTechnics,
+    selectionGuidance: input.selectionGuidance,
     enabled: input.enabled,
     pricing: input.pricing,
     contextWindow: input.contextWindow,

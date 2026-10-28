@@ -5,6 +5,13 @@ models:
     provider: wavespeed-ai
     description: >
       Higher-quality WaveSpeed video upscaler. Prefer for 4K recovery with smoother motion. target_resolution 720p, 1080p, 2k, or 4k. Listed rate is WaveSpeed base; duration can raise the charge.
+    promptingTechnics:
+      - Finalize edits, motion, and timing at 480p or 720p first, then run Video Upscaler Pro once on the approved cut to reach 2K or 4K without temporal flicker.
+      - Match `resolution` (`target_resolution`) to final delivery (1080p, 2k, or 4k) as billing scales per second with a 3-second minimum.
+    selectionGuidance:
+      - Shines at promoting final 480p/720p AI-generated clips (such as Seedance or Kling outputs) to broadcast-clean 2K or 4K with strong temporal stability and minimal flicker.
+      - Avoid for unapproved draft clips or bulk real-world archive cleanup where ByteDance Video Upscaler is significantly faster and lighter.
+      - Higher per-second latency and resource usage than ByteDance Video Upscaler, scaling with clip duration and target resolution tier—reserve for locked hero cuts.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -24,6 +31,13 @@ models:
     provider: bytedance
     description: >
       Cheaper ByteDance video upscaler. Prefer for fast 1080p-4K super-resolution when cost matters more than the Pro path. target_resolution 1080p, 2k, or 4k. Listed rate is WaveSpeed base; duration can raise the charge.
+    promptingTechnics:
+      - Pair with Seedance 2.0/2.5 drafts or compressed real-world footage to recover 1080p-4K sharpness alongside built-in denoising, deblurring, and face/text enhancement.
+      - Trim the input clip to the exact needed segment before upscaling since cost scales per second of input video.
+    selectionGuidance:
+      - Shines at high-volume 1080p-4K super-resolution for Seedance outputs and compressed real-world footage needing combined denoising, deblurring, low-light correction, and face/text sharpening.
+      - Avoid when you need a 720p target tier or when maximum temporal smoothness on complex 4K hero shots warrants Video Upscaler Pro.
+      - Exceptionally lightweight per-second resource footprint and fast turnaround make it the best default upscaler for everyday 1080p, 2K, and 4K delivery.
     contextWindow: ~
     pricing:
       unit: per_inference

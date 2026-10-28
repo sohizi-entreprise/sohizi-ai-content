@@ -5,6 +5,13 @@ models:
     provider: elevenlabs
     description: >
       ElevenLabs voice restyle. Prefer when existing speech should keep timing and become a different preset voice. Does not mint a reusable voice id. Listed rate is WaveSpeed base; duration can raise the charge.
+    promptingTechnics:
+      - Supply clean, dry source speech audio with minimal background noise or music so prosody, timing, and micro-inflections transfer cleanly to the target `voice`.
+      - Put the desired pacing, pauses, and emotional emphasis into the source audio performance, since Voice Changer preserves original cadence rather than taking a text prompt.
+    selectionGuidance:
+      - Shines at speech-to-speech voice conversion when you want to keep the exact timing, inflection, and emotion of an existing vocal recording while swapping the speaker timbre.
+      - Avoid when generating speech from scratch without a reference recording (use Eleven V4 or Gemini 3.8 Flash Speech) or when the source audio is heavily mixed with music/noise.
+      - Fast turnaround with resource consumption scaling with input audio duration; trim silence and unused takes before uploading.
     contextWindow: ~
     pricing:
       unit: per_inference

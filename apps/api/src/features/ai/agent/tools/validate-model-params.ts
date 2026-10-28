@@ -11,12 +11,13 @@ export type ModelParameterSchema = {
 }
 
 export function validateInput(
-  schema: ModelParameterSchema[],
+  schema: ModelParameterSchema[] | { parameters: ModelParameterSchema[] },
   inputParameters: Record<string, unknown>,
 ) {
+  const parameters = Array.isArray(schema) ? schema : schema.parameters
   const errors: string[] = []
 
-  for (const parameter of schema) {
+  for (const parameter of parameters) {
     const value = inputParameters[parameter.key]
     const constraint = parameter.constraints ?? {}
 

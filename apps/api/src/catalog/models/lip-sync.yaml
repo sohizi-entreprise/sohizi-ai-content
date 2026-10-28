@@ -5,6 +5,13 @@ models:
     provider: sync
     description: >
       Current Sync zero-shot lip sync. Prefer to retarget an existing video to new audio. sync_mode handles length mismatch; default cut_off. Listed rate is WaveSpeed base; duration can raise the charge.
+    promptingTechnics:
+      - Provide a video with a clearly visible speaker mouth and clean, isolated speech audio free of heavy background music or overlapping speakers.
+      - Choose `sync_mode` to handle duration mismatches (`cut_off` trims to the shorter input, `loop` or `bounce` extends shorter video to match longer audio, `silence` pads shorter audio, and `remap` time-stretches video to fit audio).
+    selectionGuidance:
+      - Shines at zero-shot video dubbing, multilingual localization, and re-voicing live-action, 3D, or AI-generated characters while preserving original head motion, lighting, and up to 4K clarity.
+      - Avoid when generating a talking video from a single still image (use an Image-to-Video model with native audio like Seedance 2.5 or Kling O3) or when the speaker's mouth is fully occluded.
+      - Latency and resource usage scale per second of processed video; pre-trimming video and audio to the active speech segment keeps turnaround fast and efficient.
     contextWindow: ~
     pricing:
       unit: per_inference

@@ -35,12 +35,16 @@ export async function executeListModels(
 ): Promise<ToolResult> {
   try {
     const models = await listGenerationModels(data.params.type)
+    const formattedModels = models.map((model) => ({
+      id: model.id,
+      selectionGuidance: model.selectionGuidance?.join("\n"),
+    }))
     if (models.length === 0) {
       return success(
         "No models found for the given media type. No need to continue if no models are available for the given media type.",
       )
     }
-    return success(JSON.stringify(models))
+    return success(JSON.stringify(formattedModels))
   } catch (error) {
     return failure(
       getErrorMessage(error, "An error occurred while listing models"),
@@ -55,7 +59,15 @@ export async function executeGetModelSchema(
   try {
     const schema = await getModelSchema(data.params.modelId)
     artifacts.set(`schema-${data.params.modelId}`, schema)
-    return success(JSON.stringify(schema))
+    const formattedSchema = `
+  <prompting_guidance>
+    ${schema.promptingTechnics?.join("\n")}
+  </prompting_guidance>
+  <parameters_schema>
+    ${JSON.stringify(schema.parameters)}
+  </parameters_schema>
+    `
+    return success(formattedSchema)
   } catch (error) {
     return failure(
       getErrorMessage(

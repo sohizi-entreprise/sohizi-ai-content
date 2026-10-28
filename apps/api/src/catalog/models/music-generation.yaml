@@ -5,6 +5,15 @@ models:
     provider: google
     description: >
       Flagship Google music. Prefer for full songs with vocals, timed lyrics, and arrangement. Optional image sets mood. Flat WaveSpeed rate.
+    promptingTechnics:
+      - Structure prompts as Genre & era/style + Mood + Key instrumentation (3-5 instruments) + Tempo/BPM & rhythm + Vocal style & language + Lyrics or lyric theme.
+      - Describe arrangement progression explicitly (e.g., "starts with solo piano, builds into an anthemic chorus with strings") or include "instrumental" to exclude vocals.
+      - Enclose exact lyrics in quotation marks when specific words must be sung, or state a narrative theme for the model to write lyrics.
+      - Optionally attach an image reference to anchor the visual mood and sonic atmosphere.
+    selectionGuidance:
+      - Shines at full songs or 30s musical cues with polished production, natural vocals, and optional visual mood conditioning from a reference image.
+      - Avoid when you need fine-grained section-tag lyric formatting (`##`, `[Verse]`) with an explicit instrumental toggle (prefer MiniMax Music 3.0) or pure sound effects (prefer Sonilo or Kling Text to Audio).
+      - Flat per-generation resource footprint with fast, predictable turnaround regardless of arrangement complexity.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -19,6 +28,15 @@ models:
     provider: minimax
     description: >
       Newest MiniMax full-song model. Prefer when you have a style prompt and optional lyrics; is_instrumental true drops vocals. lyrics_optimizer can invent lyrics when lyrics is empty. Flat WaveSpeed rate.
+    promptingTechnics:
+      - Write the style `prompt` like a producer's brief — Genre + Mood/Scenario + Tempo/BPM + Instrumentation (Instrument + Role + Playing technique) + Vocal delivery (Voice + Tone + Emotion).
+      - Format `lyrics` with section headers (`[Verse]`, `[Chorus]`, `[Bridge]`), single newlines (`\n`) between lines, double newlines (`\n\n`) for section pauses, and `##` where instrumental accompaniment drops in.
+      - Control track duration through lyric length (e.g., one verse + one chorus for a ~1-minute cue) rather than asking for a second count in the style prompt.
+      - Set `is_instrumental` to `true` for pure backing tracks, or enable `lyrics_optimizer` when `lyrics` is omitted and you want auto-generated lyrics.
+    selectionGuidance:
+      - Shines at full-length commercial-grade songs (up to 5 minutes) with realistic vocals, articulated instrument playing techniques, and structured section transitions (`[Verse]`, `[Chorus]`, `##`).
+      - Avoid for short foley/SFX cues or when re-arranging an existing vocal audio file (use MiniMax Music Cover).
+      - Flat per-song resource usage; although slightly heavier per run than Mureka O2 or Lyria 3.5, it delivers complete studio-mixed arrangements in a single pass.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -35,6 +53,14 @@ models:
     provider: mureka-ai
     description: >
       Mureka O2 song. Prefer when lyrics are the source of truth; prompt is optional style. Lyrics cap 3000 characters, prompt cap 1024. number_of_songs 1-3. Listed rate is USD per generated song.
+    promptingTechnics:
+      - Structure `lyrics` with clear section markers (`[Verse]`, `[Chorus]`, `[Bridge]`, `[Outro]`) and concise, singable meter; lyric length directly governs output song duration.
+      - Use the optional `prompt` (up to 1024 chars) to specify genre, emotional arc, vocal timbre, rhythmic feel, and 3-5 core instruments.
+      - Describe contrast between sections (e.g., intimate acoustic verse building into a full-band chorus) rather than stacking generic adjectives.
+    selectionGuidance:
+      - Shines at lyric-first songwriting and rapid style exploration where custom lyrics are the source of truth and 1-3 song variations can be compared side by side.
+      - Avoid for purely instrumental background beds (use Mureka V8 BGM) or when you do not want to supply or generate lyrics.
+      - Lightweight per-song resource footprint; note that setting `number_of_songs` to 2 or 3 multiplies total resource usage proportionally while letting you audition multiple melodies in one run.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -61,6 +87,14 @@ models:
     provider: mureka-ai
     description: >
       Mureka V8 background music. Prefer instrumental beds and underscore from a style prompt. Prompt cap 1024 characters. number_of_songs 1-3. Listed rate is USD per generated track.
+    promptingTechnics:
+      - Specify genre, mood, target scene/use case (e.g., "tech product reveal underscore", "cozy cafe background"), tempo/BPM, and 3-5 lead and rhythm instruments.
+      - Describe how the arrangement evolves across the track (intro texture, main groove, dynamic swell) and spatial mix character (e.g., "warm, wide stereo reverb, unobtrusive midrange").
+      - Focus on concrete musical and acoustic descriptors rather than abstract story plotlines.
+    selectionGuidance:
+      - Shines at instrumental background music, podcast/video underscore, and ambient beds tailored to a scene or mood without competing vocals.
+      - Avoid when sung vocals and lyrics are needed (use Mureka O2 Song, MiniMax Music 3.0, or Lyria 3.5) or when generating non-musical foley/SFX.
+      - Economical per-track footprint with support for lossless `wav`/`flac` delivery; generating multiple variations (`number_of_songs` 1-3) scales resource usage per generated track.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -86,6 +120,14 @@ models:
     provider: kwaivgi
     description: >
       Kling short sound design. Prefer foley and SFX, not songs. Prompt cap 200 characters. Duration 3-10s. Flat WaveSpeed rate.
+    promptingTechnics:
+      - Keep prompts under 200 characters and name the physical sound source, the action/impact, and the acoustic space (e.g., "heavy leather boots walking on wet concrete in an echoing alley").
+      - Limit each 3-10s generation to 1-2 distinct sound events so layers do not muddy together.
+      - Describe acoustic texture (crisp, muffled, metallic, low-frequency thud) rather than emotional buzzwords.
+    selectionGuidance:
+      - Shines at short, punchy 3-10s foley, UI/transition sounds, and environmental sound effects.
+      - Avoid for musical compositions, songs, or ambient soundscapes longer than 10 seconds (use Sonilo Text to SFX for long ambiences up to 180s).
+      - Very low latency and a tiny flat resource footprint regardless of whether duration is set to 3s or 10s.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -105,6 +147,14 @@ models:
     provider: minimax
     description: >
       MiniMax style cover. Prefer to restyle an existing vocal track; audio must include vocals, 6s-6min. Prompt 10-300 characters describing the new style. Flat WaveSpeed rate.
+    promptingTechnics:
+      - Keep the style prompt concise (10-300 characters) specifying target genre, instrumentation, tempo feel, and vocal timbre to reimagine the source melody.
+      - Provide a source audio track (6s-6min) with a clear vocal melody, as the model preserves the original melody while replacing arrangement and voice style.
+      - Avoid putting lyrics in the prompt; use the prompt strictly for musical style and production direction.
+    selectionGuidance:
+      - Shines at genre-swapping or remixing an existing vocal song (6s-6min) into a new musical style and vocal timbre while keeping the original melody intact.
+      - Avoid when starting from text/lyrics alone (use MiniMax Music 3.0) or when the input audio has no clear vocal melody.
+      - Flat per-run resource footprint even on multi-minute tracks, though longer source audio increases processing latency.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -119,6 +169,14 @@ models:
     provider: sonilo
     description: >
       Sonilo sound effects. Prefer longer or format-controlled SFX (1-180s). Listed rate is USD per second with a $0.006 minimum.
+    promptingTechnics:
+      - Use the four-part SFX anatomy — specific sound source + physical action/event + environment/acoustic space + texture characteristics (e.g., "distant, muffled, low-frequency, crisp").
+      - Describe acoustic properties rather than narrative plot or musical key terms (e.g., write "heavy metal door slamming in a reverberant concrete hallway" instead of "scary horror sound in C minor").
+      - Match the prompt event structure to the requested `duration` — use one impact/decay for short durations (1-5s) and continuous ambient textures (rain, engines, room tone) for longer durations.
+    selectionGuidance:
+      - Shines at custom-duration sound effects and continuous ambient beds from 1 second up to 3 minutes (180s) with selectable output format (`wav`, `mp3`, `aac`, `flac`).
+      - Avoid for music/song generation (use Lyria 3.5, MiniMax Music 3.0, or Mureka V8 BGM).
+      - Resource usage and latency scale linearly per second (with a 3-second minimum floor), making short 1-5s foley hits ultra-lightweight while allowing long uninterrupted ambiences when needed.
     contextWindow: ~
     pricing:
       unit: per_inference

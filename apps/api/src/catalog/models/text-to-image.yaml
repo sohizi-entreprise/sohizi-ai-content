@@ -5,6 +5,15 @@ models:
     provider: openai
     description: >
       Default GPT Image 2 generate. Prefer for photoreal scenes, product shots, and readable in-image text when 2.5 quality tiers are unnecessary. Quality and resolution drive price; start at medium / 1k.
+    promptingTechnics:
+      - Structure prompts as deliverable/use case → subject → scene → composition → lighting/materials → constraints.
+      - Enclose exact required in-image text in quotation marks, specify font style and placement, and add "no extra text".
+      - Use concrete physical descriptors (light direction, surface texture, camera framing) instead of vague quality adjectives.
+      - State explicit exclusions at the end of the prompt to prevent unwanted props, logos, or background clutter.
+    selectionGuidance:
+      - Shines at photorealistic lifestyle scenes, e-commerce product shots, and posters or mockups that require accurate, readable in-image text.
+      - Avoid when rapid, high-volume concept exploration is the priority (prefer GPT Image 2.5 Flare or Nano Banana 2 Fast) or when intricate multi-element brand layouts demand 2.5 Sunburst precision.
+      - Medium quality at 1k resolution provides the sweet spot between visual fidelity, generation speed, and budget efficiency; stepping up to high quality or 4k substantially increases latency and credit usage.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -68,6 +77,15 @@ models:
     provider: openai
     description: >
       Faster GPT Image 2.5 generate. Prefer for drafts and iteration; use xhigh or max only when extra fidelity is worth the jump. Same quality/resolution grid as Sunburst at a lower default cost than GPT Image 2 high.
+    promptingTechnics:
+      - Lead with the deliverable type (e.g., product photo, UI mockup, poster), then order subject, scene, composition, visual direction, and constraints.
+      - Quote exact text strings verbatim and state how many times and where each string should appear.
+      - Describe human pose, gaze direction, hand interactions, and framing ("full body visible") explicitly.
+      - Keep API settings (aspect ratio, quality, resolution) out of the prose prompt and iterate one variable at a time.
+    selectionGuidance:
+      - Shines at fast daily image generation, storyboard frames, ad variations, and iterative layout drafting where strong prompt adherence and readable text are needed quickly.
+      - Avoid for final flagship campaign key art with dense micro-typography or complex spatial hierarchies where GPT Image 2.5 Sunburst is more reliable.
+      - Delivers GPT Image 2-level quality with noticeably lower latency and better budget efficiency at medium/high tiers; reserve xhigh and max tiers only for final passes as they trade speed and economy for peak detail.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -137,6 +155,15 @@ models:
     provider: openai
     description: >
       Highest GPT Image 2.5 generate. Prefer for hero frames, brand layouts, and dense typography. Same price grid as Flare; pick Sunburst when composition accuracy matters more than turnaround.
+    promptingTechnics:
+      - Organize complex layouts into clear labeled sections (Deliverable, Subject, Scene, Composition, Visual Direction, Text, and Constraints).
+      - For dense typography, infographics, or UI layouts, quote exact copy, spell unusual brand names letter-by-letter if needed, and define hierarchy and placement.
+      - Specify exact material finishes, light source geometry, negative space, and color palette rather than mood buzzwords.
+      - Explicitly forbid unwanted elements ("no watermarks, no extra labels, no background text") in a dedicated constraints block.
+    selectionGuidance:
+      - Shines at hero campaign visuals, complex brand layouts, UI/slide mockups, infographics, and scenes with dense or multi-font typography requiring strict compositional accuracy.
+      - Avoid for quick throwaway drafts, moodboards, or bulk ideation where GPT Image 2.5 Flare or Nano Banana 2 delivers faster turnaround.
+      - Prioritizes maximum compositional fidelity over latency; iterate layout structure at medium/1k first, then promote to high, xhigh, or max at 2k/4k only on the final approved prompt to manage turnaround time and spend.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -206,6 +233,15 @@ models:
     provider: google
     description: >
       Top Nano Banana generate. Prefer for stylized stills and fast concept frames when GPT Image text rendering is not required. 1k and 2k cost the same; 4k is the premium step.
+    promptingTechnics:
+      - Direct the scene like a creative director covering subject, action, location, composition, camera/lens, lighting, and film stock or color grading.
+      - Use positive framing to describe what should be visible (e.g., "an empty street") rather than negative phrasing ("no cars").
+      - Specify photographic hardware and optical cues (e.g., "85mm f/1.8 shallow depth of field", "three-point softbox lighting") and exact surface materiality.
+      - Put rendered text in quotation marks with explicit typography style and placement instructions.
+    selectionGuidance:
+      - Shines at stylized concept art, editorial photography with rich lens/film character, character design, and culturally or factually grounded scenes.
+      - Avoid when dense, multi-line typography or strict UI layout geometry is the primary requirement (prefer GPT Image 2.5 Sunburst).
+      - 1k and 2k resolutions share the same resource footprint, making 2k the best default for sharp detail with low latency, whereas 4k carries a higher latency and budget premium.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -240,6 +276,15 @@ models:
     provider: google
     description: >
       Cheaper Nano Banana generate with ultra-wide ratios (1:8 / 8:1) and a 0.5k draft tier. Prefer for banners, storyboards, and volume stills. Use the fast endpoint when only 2k/4k is needed.
+    promptingTechnics:
+      - Open with a strong directive verb and specify subject, action, setting, framing, lighting, and visual medium.
+      - Prefer positive visual descriptions over negative constraints, and name specific textures and color palettes.
+      - For ultra-wide or vertical banners, describe spatial composition and negative space across the canvas.
+      - Enclose any text to be rendered in quotes alongside font weight and position.
+    selectionGuidance:
+      - Shines at ultra-wide or ultra-tall panoramic banners (up to 8:1 and 1:8), multi-panel storyboards, and high-volume still generation.
+      - Avoid when maximum photographic micro-texture or complex multi-font poster typography is required on the first pass.
+      - Offers a 0.5k tier for ultra-fast, budget-friendly roughs and scales smoothly up to 4k; if 2k or 4k is your target resolution, Nano Banana 2 Fast is both faster and more economical.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -291,6 +336,14 @@ models:
     provider: google
     description: >
       Speed-tier Nano Banana 2. Only 2k and 4k. Prefer for rapid iteration at about half the 2k cost of the standard endpoint.
+    promptingTechnics:
+      - Write focused, concrete prompts with subject, action, setting, camera angle, and lighting for rapid concept iteration.
+      - Use positive phrasing instead of exclusions, and specify lens/lighting terms to lock the aesthetic quickly.
+      - Quote any required display text and state its typography style and placement.
+    selectionGuidance:
+      - Shines at rapid high-resolution (2k and 4k) concept iteration, social media creatives, and wide/vertical banners when turnaround speed matters.
+      - Avoid when you need 0.5k/1k thumbnails or the subtle lighting and texture refinement of Nano Banana Pro or GPT Image 2.5 Sunburst.
+      - Optimized for velocity and efficiency at 2k and 4k with minimal resource overhead difference between the two tiers, making it ideal for high-volume high-res workflows.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -340,6 +393,15 @@ models:
     provider: microsoft
     description: >
       Highest MAI still generate. Prefer for cinematic lighting and illustration when GPT Image / Nano Banana are a poor stylistic match. Flat per-image price; aspect ratio does not change cost.
+    promptingTechnics:
+      - Layer details in order — subject (shape, material, finish) → visual register/style → lighting direction → composition/layout zones → mood.
+      - Name the exact photography or illustration register (e.g., "editorial product photography", "flat vector illustration", "cinematic wide-angle").
+      - Anchor in-image text by quoting exact wording and specifying position, relative size, and font weight.
+      - Avoid mixing conflicting art styles in a single prompt; keep lighting and material descriptors specific.
+    selectionGuidance:
+      - Shines at dramatic chiaroscuro or studio lighting, editorial magazine covers, stylized key art, and clean vector/educational illustrations with short headline text.
+      - Avoid when ultra-high 4k native pixel dimensions or extreme panoramic ratios (like 8:1) are required.
+      - Predictable flat resource usage per run regardless of aspect ratio, trading slightly higher latency and footprint than standard MAI Image 2.5 for superior lighting depth and material realism.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -365,6 +427,15 @@ models:
     provider: microsoft
     description: >
       Cheaper MAI generate. Prefer for volume stills and style exploration. Uses size for aspect ratio. Flat per-image price.
+    promptingTechnics:
+      - Lead with a specific subject description (materials, colors, silhouette) followed by style, lighting setup, and framing.
+      - Quote verbatim any short text or labels and explicitly define where they sit in the composition.
+      - Specify concrete lighting ("soft window light from the left", "golden hour backlighting") rather than generic praise words.
+      - Change one prompt variable at a time when exploring styles or compositions.
+    selectionGuidance:
+      - Shines at high-volume style exploration, social posts, lifestyle illustrations, and everyday marketing visuals with short labels or titles.
+      - Avoid for hero deliverables demanding deep cinematic shadow roll-off (prefer MAI Image 2.5 Pro) or multi-paragraph text rendering (prefer GPT Image 2.5).
+      - Fast turnaround and a flat, lightweight resource footprint across all supported aspect ratios make it ideal for broad creative exploration before locking a final look.
     contextWindow: ~
     pricing:
       unit: per_inference

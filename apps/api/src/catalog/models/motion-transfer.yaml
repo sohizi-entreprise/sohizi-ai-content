@@ -5,6 +5,15 @@ models:
     provider: kwaivgi
     description: >
       Highest Kling 3.0 motion transfer. Drive a character image with a reference video. Output length follows the driving video: 3-30s when character_orientation is video, 3-10s when image; longer clips are trimmed. keep_original_sound true keeps the source track. Listed rate is WaveSpeed base; duration can raise the charge.
+    promptingTechnics:
+      - Do not describe the choreography or body movement in the prompt—the driving video already supplies the motion; instead describe setting, lighting, wardrobe details, and atmosphere.
+      - Supply a single-person, continuous driving video (no hard cuts) with hands, feet, and face clearly visible and moderate motion speed.
+      - When character_orientation is "image", include at most one clear camera instruction (or "fixed camera, no camera movement"); when "video", keep the prompt focused on environment and lighting.
+      - Use negative_prompt to suppress limb distortion, extra fingers, blur, and background artifacts.
+    selectionGuidance:
+      - Shines at transferring exact choreography, dance routines, gestures, or acting beats from a driving video onto a target character image (up to 30s in video orientation, 10s in image orientation).
+      - Avoid when simple prose-described motion suffices (use Image-to-Video instead) or when the reference clip has multiple people, hard cuts, or extreme motion blur.
+      - Processing time and resource consumption scale with the driving video's duration; trim the driving clip to the exact performance beat needed to minimize latency and footprint.
     contextWindow: ~
     pricing:
       unit: per_inference

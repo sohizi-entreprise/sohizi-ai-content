@@ -5,6 +5,15 @@ models:
     provider: openai
     description: >
       Instruction-driven GPT Image 2 edit. Prefer for object add/remove, background swap, and in-image text fixes. Accepts up to 16 source images. Edit costs slightly more than the matching generate cell.
+    promptingTechnics:
+      - Explicitly separate what should change ("Change only X") from what must remain untouched (identity, pose, lighting, layout).
+      - When passing multiple reference images, assign each image a distinct role (e.g., Image 1 for subject identity, Image 2 for background).
+      - Describe how added or modified elements integrate with existing perspective, lighting direction, and cast shadows.
+      - Quote exact replacement text verbatim and make one focused edit per iteration to prevent drift.
+    selectionGuidance:
+      - Shines at instruction-driven object addition/removal, background replacement, multi-image compositing (up to 16 references), and fixing or localizing in-image text.
+      - Avoid for fast, low-latency iterative retouching where GPT Image 2.5 Flare Edit is faster and more economical, or ultra-delicate identity preservation where 2.5 Sunburst Edit excels.
+      - Medium quality at 1k balances speed, edit accuracy, and efficiency for most retouches; higher quality and resolution tiers noticeably increase processing time and resource usage.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -69,6 +78,15 @@ models:
     provider: openai
     description: >
       Faster GPT Image 2.5 edit. Prefer for iterative retouching. Use xhigh/max only when identity or typography must stay exact. Up to 16 source images.
+    promptingTechnics:
+      - Structure edit prompts into Edit Target, Preserve, Reference Roles, Integration, and Exclusions.
+      - Assign a clear role to every uploaded reference image (subject, wardrobe, product, or style) in upload order.
+      - Make one targeted change per pass and restate critical preservation rules so unedited regions do not drift.
+      - Quote exact copy for typography edits and specify matching lighting, perspective, and surface texture.
+    selectionGuidance:
+      - Shines at multi-step iterative retouching, wardrobe or prop swaps, and multi-reference scene assembly (up to 16 images) when responsiveness matters.
+      - Avoid when a single pass must lock intricate brand packaging, micro-typography, or strict facial likeness across complex lighting changes (prefer GPT Image 2.5 Sunburst Edit).
+      - Offers faster turnaround and lower resource consumption than GPT Image 2 Edit at medium and high settings; step up to xhigh or max only when finer preservation is essential.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -139,6 +157,15 @@ models:
     provider: openai
     description: >
       Highest GPT Image 2.5 edit. Prefer for brand-safe retouching and multi-reference consistency. Same price grid as Flare edit; pick Sunburst when the source must stay recognizable.
+    promptingTechnics:
+      - Use labeled sections (Edit Target, Preserve, Reference Roles, Integration, Exclusions) for surgical, brand-safe edits.
+      - Bind each reference image to a single responsibility (e.g., facial identity, product packaging, layout geometry, or environment).
+      - Specify how new or replaced elements match the source lighting angle, contact shadows, camera perspective, and material finish.
+      - Quote any edited or preserved text verbatim and explicitly forbid redesigning surrounding layout elements.
+    selectionGuidance:
+      - Shines at precision brand-safe retouching, multi-reference character/product consistency (up to 16 images), complex compositing, and exact typography updates.
+      - Avoid for simple background cleanups or rapid exploratory tweaks where GPT Image 2.5 Flare Edit or MAI Image 2.5 Edit is faster.
+      - Built for maximum subject and layout preservation over speed; test edits at medium/1k or 2k first, reserving xhigh/max and 4k for final production outputs due to higher latency and resource demand.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -209,6 +236,15 @@ models:
     provider: google
     description: >
       Top Nano Banana edit. Prefer for style transfer and local changes when GPT Image fidelity is unnecessary. Up to 14 source images. Same resolution prices as generate.
+    promptingTechnics:
+      - Start with a direct action verb describing the exact modification (e.g., "Replace the background with...", "Change the jacket to...").
+      - Clearly define the role of each reference image (e.g., "Use Image 1 for character pose, Image 2 for art style, Image 3 for environment").
+      - Assign consistent names to recurring characters or objects across references and state what must stay unchanged.
+      - Specify camera angle, lighting integration, and quoted text when reframing or restyling a scene.
+    selectionGuidance:
+      - Shines at artistic style transfers, reframing scenes from new camera angles, relighting, and multi-reference character/environment blending (up to 14 images).
+      - Avoid when surgical pixel-level typography replacement or strict UI layout preservation is the main goal (prefer GPT Image 2.5 Sunburst Edit).
+      - 1k and 2k edits carry the same resource weight with brisk turnaround, so prefer 2k by default and step up to 4k only when final print/UHD detail is required.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -244,6 +280,14 @@ models:
     provider: google
     description: >
       Cheaper Nano Banana edit with ultra-wide ratios. Prefer for volume retouching and banner edits. Up to 14 source images. Same resolution prices as generate.
+    promptingTechnics:
+      - Give direct, specific editing instructions naming the target element and desired replacement or style shift.
+      - Map each uploaded reference image to a distinct role (identity, pose, palette, or background) to maintain multi-reference consistency.
+      - Use positive descriptions of the desired result and explicitly state which subject features and layout elements to keep.
+    selectionGuidance:
+      - Shines at high-volume retouching, ultra-wide banner adaptations (up to 8:1 / 1:8), and consistent character staging across storyboard panels using up to 14 references.
+      - Avoid when subtle studio relighting or heavy typographic redesign is needed in a single pass.
+      - Scales from lightweight 0.5k/1k drafts to 4k finals; for 2k and 4k edits, consider Nano Banana 2 Fast Edit for lower latency and higher efficiency.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -296,6 +340,14 @@ models:
     provider: google
     description: >
       Speed-tier Nano Banana 2 edit. Only 2k and 4k. Prefer for quick reference-guided tweaks.
+    promptingTechnics:
+      - Keep edit instructions focused on a single clear change per pass for fast turnaround.
+      - Explicitly label what each reference image contributes and state which elements of the base image must remain unchanged.
+      - Describe lighting and material match positively rather than listing negative exclusions.
+    selectionGuidance:
+      - Shines at rapid 2k/4k reference-guided variations, quick color/wardrobe swaps, and banner resizing when speed and throughput are top priorities.
+      - Avoid for complex multi-constraint surgical edits or heavy text replacement where GPT Image 2.5 Sunburst Edit or Nano Banana Pro Edit is more dependable.
+      - Delivers fast high-resolution (2k and 4k) turnarounds at a fraction of standard high-res edit resource usage.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -346,6 +398,15 @@ models:
     provider: microsoft
     description: >
       Highest MAI single-image edit. Prefer when the source lighting should stay cinematic. One source image. Flat per-edit price, higher than generate.
+    promptingTechnics:
+      - Keep edit prompts narrow and surgical by specifying one change per run (e.g., split a background swap and a headline update into separate passes).
+      - Always end with an explicit preservation clause (e.g., "Keep the subject identity, pose, label text, and drop shadow exactly as they are").
+      - Describe how added or modified objects match the existing scene lighting direction, perspective, and shadows.
+      - Quote any updated in-image text verbatim and specify its placement and typography.
+    selectionGuidance:
+      - Shines at single-image surgical edits—such as localized object swaps, background cleanup, portrait relighting, and short headline localization—where realistic shadows and perspective must blend seamlessly.
+      - Avoid when you need to combine multiple reference images in one call (supports only a single input image; use GPT Image 2.5 Edit or Nano Banana Edit for multi-reference workflows).
+      - Flat per-edit resource footprint with higher visual fidelity and shadow coherence than standard MAI Image 2.5 Edit, at the trade-off of slightly longer processing time.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -372,6 +433,14 @@ models:
     provider: microsoft
     description: >
       Cheaper MAI single-image edit. Prefer for volume retouches. Aspect ratio size=auto keeps the source frame.
+    promptingTechnics:
+      - Name the single element to modify and the exact change instead of bundling multiple edits in one instruction.
+      - State explicitly what must remain untouched (facial identity, outfit silhouette, layout structure, and lighting).
+      - Match added objects to the source lighting and perspective, and quote any replacement text verbatim.
+    selectionGuidance:
+      - Shines at fast, everyday single-image cleanup (removing background distractions, swapping a prop, or tweaking colors) while automatically preserving the source aspect ratio.
+      - Avoid for multi-reference compositing or high-stakes hero retouching requiring deep cinematic lighting reconstruction.
+      - Very low latency and a lightweight, flat resource footprint make it ideal for batch retouching and iterative single-variable edits.
     contextWindow: ~
     pricing:
       unit: per_inference

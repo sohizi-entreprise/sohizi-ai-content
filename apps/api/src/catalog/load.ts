@@ -46,6 +46,8 @@ export type CatalogModel = {
   name: string
   provider: string
   description?: string | null
+  promptingTechnics?: string[]
+  selectionGuidance?: string[]
   contextWindow: number | null
   pricing: ModelBasePricing | null
   categories: string[]
@@ -203,6 +205,12 @@ const parseModel = (value: unknown, sourceFile: string): CatalogModel => {
     provider: asString(record.provider),
     description:
       record.description == null ? null : asString(record.description),
+    promptingTechnics: Array.isArray(record.promptingTechnics)
+      ? record.promptingTechnics.map((item) => asString(item))
+      : undefined,
+    selectionGuidance: Array.isArray(record.selectionGuidance)
+      ? record.selectionGuidance.map((item) => asString(item))
+      : undefined,
     contextWindow: parseContextWindow(record.contextWindow),
     pricing: parsePricing(record.pricing),
     categories: asArray(record.categories).map((category) =>

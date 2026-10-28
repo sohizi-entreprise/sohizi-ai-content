@@ -47,7 +47,7 @@ function formatMemories(
 export const recallMemoryTool = buildBaseTool({
   name: "recallMemory",
   description:
-    "Load stored user and project memories that would change the answer. Pass what you need to match. Returns always-loaded memories and any memories selected for this prompt.",
+    "Helps remember from the past stored memories about the user or project.",
   inputSchema: z.object({
     prompt: z
       .string()

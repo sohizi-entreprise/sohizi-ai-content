@@ -9,7 +9,6 @@ import {
   webSearcherPrompt,
   mainAgentPrompt,
   fileSystemPrompt,
-  navigateContextPrompt,
 } from "../prompts"
 import modelsTracker from "@/catalog/models-tracker"
 
@@ -49,12 +48,7 @@ const registerAgent = (definition: AgentDefinition): void => {
 registerAgent({
   name: "main-agent",
   description: "The main agent for the application.",
-  baseSystemPrompt:
-    mainAgentPrompt +
-    "\n\n" +
-    fileSystemPrompt +
-    "\n\n" +
-    navigateContextPrompt,
+  baseSystemPrompt: mainAgentPrompt + "\n\n" + fileSystemPrompt,
   modelConfig: {
     tools: getSchemas([
       allTools.manageTodoListTool,
@@ -97,8 +91,7 @@ registerAgent({
 registerAgent({
   name: "explorer",
   description: "Explore the file system.",
-  baseSystemPrompt:
-    explorerPrompt + "\n\n" + fileSystemPrompt + "\n\n" + navigateContextPrompt,
+  baseSystemPrompt: explorerPrompt + "\n\n" + fileSystemPrompt,
   modelConfig: {
     tools: getSchemas([
       allTools.exploreFileTool,

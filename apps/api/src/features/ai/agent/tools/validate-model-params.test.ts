@@ -78,4 +78,17 @@ describe("validateInput", () => {
     expect(invalid.errorMsg).toContain("must be a boolean")
     expect(invalid.errorMsg).toContain("contains invalid values")
   })
+
+  it("accepts wrapped model schema objects with promptingTechnics", () => {
+    const schema = {
+      promptingTechnics: ["Write concrete prompts"],
+      parameters: [param({ key: "prompt", required: true })],
+    }
+
+    expect(validateInput(schema, { prompt: "A neon skyline" })).toEqual({
+      isValid: true,
+      errorMsg: null,
+    })
+    expect(validateInput(schema, {}).isValid).toBe(false)
+  })
 })

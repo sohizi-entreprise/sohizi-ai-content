@@ -5,6 +5,15 @@ models:
     provider: bytedance
     description: >
       Best Seedance image-to-video. Prefer when a start frame (and optional last frame) should lock identity. Same duration/resolution prices as text-to-video. Duration 4-30s.
+    promptingTechnics:
+      - Do not re-describe static details already visible in the start image; focus the prompt on what moves next, how the camera travels, and the ending state.
+      - Use continuous second-level timeline beats (e.g., 0-3s, 3-5s) to pace actions from the starting frame to the final frame.
+      - When supplying a last_image, describe the physical transition path and camera motion that bridges the first and last frames naturally.
+      - Specify synchronized audio (dialogue, action SFX, ambient room tone) and add constraints like "preserve subject identity, no subtitles, no watermark".
+    selectionGuidance:
+      - Shines at high-end character and product animation from a start frame (plus optional end frame) over long 4-30s durations with synchronized native speech and sound effects.
+      - Avoid for simple 3-5s parallax motion or quick tests where Seedance 2.0 Fast, Kling O3 Std, or Gemini Omni 1.1 Flash is much faster and lighter.
+      - Duration and resolution (especially 1080p and 4k) heavily impact latency and resource consumption; validate motion trajectories at 720p and 5s before rendering extended high-res takes.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -141,6 +150,15 @@ models:
     provider: bytedance
     description: >
       Previous Seedance image-to-video. Prefer when 2.5 is unnecessary. Optional last frame. Duration 4-15s. Same prices as Seedance 2.0 text-to-video.
+    promptingTechnics:
+      - Describe the motion continuing from the start frame (subject action + one camera move + environmental motion) without re-describing the static scene.
+      - Use ordered shot blocks (Shot 1, Shot 2) or sequential prose rather than second-level timestamps, which are unstable on Seedance 2.0.
+      - When using last_image, keep the connecting action simple and physically direct so the interpolation lands cleanly.
+      - Direct audio (speech, foley, ambience) explicitly and end with continuity locks for lighting and identity.
+    selectionGuidance:
+      - Shines at animating a start image (and optional end frame) into a 4-15s clip with native audio when 30-second duration is not needed.
+      - Avoid when second-exact action timing or >15s continuous animation is required (prefer Seedance 2.5).
+      - Lighter per-second resource footprint than Seedance 2.5 across 480p-4k; keep previews at 480p/720p as 1080p and 4k substantially increase render time and spend.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -222,6 +240,14 @@ models:
     provider: bytedance
     description: >
       Speed-tier Seedance image-to-video. Prefer for start-frame previews. Duration 4-15s. Lowest Seedance per-second rate.
+    promptingTechnics:
+      - Focus on a single clear subject action and one camera move starting from the input frame.
+      - Avoid second-level timestamps; use sequential prose or Shot 1 / Shot 2 labels and state "locked camera" when the frame should stay still.
+      - Specify simple audio cues (foley and room tone) and continuity constraints ("no subtitles, no watermark").
+    selectionGuidance:
+      - Shines at fast start-frame animation previews, first-to-last frame transition checks, and storyboard motion tests with audio (4-15s).
+      - Avoid for final hero shots with complex secondary physics or fine facial micro-expressions where Seedance 2.5 or Kling O3 Pro is stronger.
+      - Delivers the fastest turnaround and lowest resource footprint in the Seedance image-to-video lineup, particularly at 480p and 720p.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -303,6 +329,15 @@ models:
     provider: kwaivgi
     description: >
       Highest Kling O3 image-to-video. Prefer when a first frame (and optional last frame) must stay on-model. $0.112/s, 3-15s. No aspect-ratio control; follow the start image.
+    promptingTechnics:
+      - Focus the prompt on what happens next from the start image — one camera move, a 2-3 beat cause-and-effect subject action, and one environmental motion.
+      - Do not waste tokens re-describing the static appearance of the start frame; instead specify how the camera moves relative to the subject.
+      - When using last_image (end_image), describe a single continuous action that bridges the start pose to the end pose.
+      - When generate_audio is enabled, quote dialogue after "says:" and tie sound effects to visible actions in the clip.
+    selectionGuidance:
+      - Shines at anchoring character identity from a start image (and optional end image) while executing realistic physical motion and camera moves over 3-15s.
+      - Avoid when you need to override the input image's aspect ratio (output follows the start frame) or condition on extra audio/video reference tracks.
+      - Resource usage scales linearly with duration alone, offering strong identity lock and cinematic motion without high-resolution tier surcharges.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -338,6 +373,14 @@ models:
     provider: kwaivgi
     description: >
       Cheaper Kling O3 image-to-video. Prefer for start-frame drafts before Pro. $0.084/s, 3-15s.
+    promptingTechnics:
+      - Describe the immediate motion that follows the start frame along with a single clear camera trajectory (e.g., slow push-in, lateral track, or fixed camera).
+      - Keep subject movement to a concise 2-3 step physical chain rather than abstract adjectives.
+      - When pairing a start and end frame, describe the direct transitional movement between the two poses.
+    selectionGuidance:
+      - Shines at quick start-frame and start-to-end-frame animation drafts (3-15s) before committing to Kling O3 Pro.
+      - Avoid for final production takes with fast, complex limb interactions or subtle facial acting.
+      - Lower latency and reduced per-second resource consumption compared to Kling O3 Pro while preserving the same start/end frame workflow.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -373,6 +416,15 @@ models:
     provider: kwaivgi
     description: >
       Kling V3.0 image-to-video with negative prompt. Last frame cannot combine with multi-shot. $0.112/s, 3-15s.
+    promptingTechnics:
+      - Direct how the scene evolves from the start frame by specifying camera behavior (tracking, panning, freezing) and explicit subject action.
+      - Do not combine multi-shot storyboard labels with last_image; use single-take transition descriptions when an end frame is provided.
+      - Use negative_prompt to suppress morphing, facial drift, blur, and unwanted background changes.
+      - When sound is enabled, specify spoken lines in quotes and match foley to on-screen motion.
+    selectionGuidance:
+      - Shines at start-frame animation (3-15s) when negative prompting is needed to prevent facial drift, morphing, or unwanted background artifacts.
+      - Avoid when combining multi-shot cuts with an end frame (unsupported on V3.0) or when Kling O3 Pro's newer physics engine is preferred.
+      - Predictable duration-based resource footprint matching Kling O3 Pro with solid motion stability.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -409,6 +461,13 @@ models:
     provider: kwaivgi
     description: >
       Cheaper Kling V3.0 image-to-video. Prefer for volume start-frame tests. $0.084/s, 3-15s.
+    promptingTechnics:
+      - Specify one camera move and one clear subject action progressing from the input image.
+      - Keep prompts to a single continuous take when using last_image, and use negative_prompt to prevent distortion or identity drift.
+    selectionGuidance:
+      - Shines at volume start-frame animation tests and storyboard animatics where negative prompt guardrails help keep subjects clean.
+      - Avoid for final hero renders requiring Pro-tier motion polish and fine detail retention.
+      - Fast, economical duration-based resource profile suited for broad iteration across 3-15s clips.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -445,6 +504,15 @@ models:
     provider: google
     description: >
       Newest Gemini Omni image-to-video. Prefer for cheap start-frame animation with optional last frame and resolution control. Same per-second rates as text-to-video.
+    promptingTechnics:
+      - Focus on camera motion, subject action, and audio rather than re-describing visual details already locked by the start image.
+      - Include "in a single unbroken scene" to keep animation continuous and prevent abrupt cuts across the 3-10s clip.
+      - When last_image is provided, describe the direct motion path connecting the start and end frames.
+      - Write dialogue after a colon without quotation marks to avoid burned-in subtitles, and explicitly state "no music" when only foley/ambience is wanted.
+    selectionGuidance:
+      - Shines at fast, lightweight start-frame (and optional end-frame) animation for 3-10s clips in 16:9 or 9:16 with explicit resolution tiers from 360p to 4k.
+      - Avoid for clips longer than 10s, square/ultra-wide aspect ratios, or complex multi-character choreography.
+      - 360p and 720p provide rapid, highly economical motion previews, while 1080p and 4k allow direct high-resolution delivery when motion is finalized.
     contextWindow: ~
     pricing:
       unit: parameter_table
@@ -510,6 +578,14 @@ models:
     provider: google
     description: >
       Previous Gemini Omni image-to-video. No last-frame or resolution control. Prefer 1.1 Flash unless this endpoint is required. $0.13/s.
+    promptingTechnics:
+      - Describe the camera movement and a single focused action continuing from the input image in an unbroken take.
+      - Omit redundant descriptions of the starting frame's static appearance.
+      - Use a colon without quotation marks for spoken lines and specify ambient audio or "no music" explicitly.
+    selectionGuidance:
+      - Shines only as a legacy fallback for simple 3-10s start-frame animation when Gemini Omni 1.1 Flash is unavailable.
+      - Avoid whenever Gemini Omni 1.1 Flash is available, as this earlier endpoint lacks end-frame (`last_image`) support and resolution selection.
+      - Higher per-second resource usage than 1.1 Flash at 720p with no low-res draft option or 4k output option.
     contextWindow: ~
     pricing:
       unit: parameter_table

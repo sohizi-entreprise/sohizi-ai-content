@@ -5,6 +5,15 @@ models:
     provider: elevenlabs
     description: >
       Default ElevenLabs speech. Prefer for expressive single-speaker reads; tags such as [whispering] and [laughing] are supported. Accepts a preset name or any ElevenLabs voice id. Cap 10,000 characters. Listed rate is USD per 1,000 characters.
+    promptingTechnics:
+      - Place inline square-bracket audio tags (e.g., `[whispers]`, `[laughs]`, `[sighs]`, `[sarcastic]`, `[excited]`) right before the words where delivery should shift.
+      - Write voice-quality tags clearly (e.g., `[low, gravelly voice]`) so the model treats them as vocal delivery rather than a standalone sound effect.
+      - Control pacing and emphasis with punctuation — use ellipses (`...`) and em-dashes for pauses/hesitation and ALL CAPS for stressed words (SSML `<break>` tags are not supported).
+      - Lower stability (0.3-0.45) for more expressive emotional range, or raise stability (0.65-0.85) for steady narration.
+    selectionGuidance:
+      - Shines at expressive voiceovers, dramatic character performances, and scripts requiring inline emotional shifts or vocal reactions (`[whispers]`, `[laughs]`, `[sighs]`).
+      - Avoid when you want to restyle an existing audio recording while preserving its exact spoken timing (use ElevenLabs Voice Changer) or when you prefer separate turn-level style metadata over inline bracket tags (consider Gemini 3.8 Flash Speech).
+      - Low latency with resource usage scaling linearly by character count (up to 10,000 characters); generate and test short paragraph chunks when dialing in stability and similarity settings.
     contextWindow: ~
     pricing:
       unit: per_inference
@@ -53,6 +62,15 @@ models:
     provider: google
     description: >
       Latest Gemini speech. Prefer for preset voices plus a style_instructions note. Single-speaker only in this catalog; speakers and turns are omitted. Billed in 1,000-character blocks. Listed rate is USD per 1,000-character block.
+    promptingTechnics:
+      - Keep the prompt (text) strictly as a verbatim transcript—do not put stage directions in prose or the model will speak them aloud.
+      - Put sustained turn-level delivery directions (emotion, pace, pitch, tone, e.g., "whispered, nervous" or "speaking rapidly, cheerful") in `style_instructions`.
+      - Insert momentary non-speech vocal events and pauses inline in the transcript using English angle-bracket tags (e.g., `<short pause>`, `<long pause>`, `<sigh>`, `<gasp>`, `<laugh>`).
+      - Use ellipses (`...`), dashes (`--`), and ALL CAPS inside the transcript to shape natural hesitation and word stress.
+    selectionGuidance:
+      - Shines at clean, steerable single-speaker narration and character reads where sustained delivery tone is controlled via `style_instructions` and momentary breaths/pauses via `<...>` tags.
+      - Avoid when you need a specific ElevenLabs voice ID or inline sound-effect tags.
+      - Fast turnaround and high efficiency, with resource usage metered in 1,000-character blocks—batching very short lines into a single block is more economical than firing many tiny requests.
     contextWindow: ~
     pricing:
       unit: per_inference

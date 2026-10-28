@@ -5,6 +5,14 @@ models:
     provider: clarity-ai
     description: >
       Photoreal image upscaler with identity preservation. creativity below 0 stays closer to the source; above 0 invents more detail. target_megapixels 1-64. Listed rate is USD per target megapixel.
+    promptingTechnics:
+      - Set `creativity` to 0 or negative (-1 to -5) when facial identity, product labels, or exact typography must stay strictly faithful to the source image.
+      - Use positive `creativity` (1 to 5) only when upscaling low-detail or soft renders where hallucinated micro-texture (skin pores, foliage, fabric weave) is desired.
+      - Choose `target_megapixels` to match delivery needs (e.g., 4 MP for ~2K, 8-9 MP for 4K) since cost scales linearly per target megapixel.
+    selectionGuidance:
+      - Shines at upscaling photorealistic portraits, product shots, and low-res drafts up to 64 megapixels while either strictly preserving facial/text fidelity (`creativity` <= 0) or synthesizing fine micro-detail (`creativity` > 0).
+      - Avoid when a native 2k or 4k generation from GPT Image 2.5 or Nano Banana 2 Fast already meets resolution needs without an extra post-processing step.
+      - Latency and resource consumption scale linearly with `target_megapixels`; use 4-9 MP for standard 2K-4K delivery and reserve 16-64 MP only for large-format print or heavy cropping.
     contextWindow: ~
     pricing:
       unit: per_inference

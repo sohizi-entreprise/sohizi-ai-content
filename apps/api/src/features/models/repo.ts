@@ -251,6 +251,8 @@ export const getModelWithRelations = async (id: string) => {
       provider: llmModels.provider,
       name: llmModels.name,
       description: llmModels.description,
+      promptingTechnics: llmModels.promptingTechnics,
+      selectionGuidance: llmModels.selectionGuidance,
       enabled: llmModels.enabled,
       pricing: llmModels.pricing,
       contextWindow: llmModels.contextWindow,
@@ -317,6 +319,8 @@ export const getModelWithRelations = async (id: string) => {
     provider: first.provider,
     name: first.name,
     description: first.description,
+    promptingTechnics: first.promptingTechnics,
+    selectionGuidance: first.selectionGuidance,
     enabled: first.enabled,
     pricing: first.pricing,
     contextWindow: first.contextWindow,
@@ -451,6 +455,8 @@ export const listAllModels = async () => {
       provider: llmModels.provider,
       name: llmModels.name,
       description: llmModels.description,
+      promptingTechnics: llmModels.promptingTechnics,
+      selectionGuidance: llmModels.selectionGuidance,
       enabled: llmModels.enabled,
       pricing: llmModels.pricing,
       contextWindow: llmModels.contextWindow,
@@ -481,6 +487,8 @@ export const listAllModels = async () => {
       provider: string
       name: string
       description: string | null
+      promptingTechnics: string[] | null
+      selectionGuidance: string[] | null
       enabled: boolean
       pricing: ModelBasePricing | null
       contextWindow: number | null
@@ -501,6 +509,8 @@ export const listAllModels = async () => {
         provider: row.provider,
         name: row.name,
         description: row.description,
+        promptingTechnics: row.promptingTechnics,
+        selectionGuidance: row.selectionGuidance,
         enabled: row.enabled,
         pricing: row.pricing,
         contextWindow: row.contextWindow,
@@ -605,6 +615,8 @@ export const createModel = async (data: {
   provider: string
   name: string
   description?: string | null
+  promptingTechnics?: string[] | null
+  selectionGuidance?: string[] | null
   enabled?: boolean
   pricing?: ModelBasePricing | null
   contextWindow: number
@@ -616,6 +628,8 @@ export const createModel = async (data: {
       provider: data.provider,
       name: data.name,
       description: data.description,
+      promptingTechnics: data.promptingTechnics ?? null,
+      selectionGuidance: data.selectionGuidance ?? null,
       enabled: data.enabled ?? true,
       pricing: data.pricing ?? null,
       contextWindow: data.contextWindow,
@@ -630,6 +644,8 @@ export const updateModel = async (
     provider: string
     name: string
     description: string | null
+    promptingTechnics: string[] | null
+    selectionGuidance: string[] | null
     enabled: boolean
     pricing: ModelBasePricing | null
     contextWindow: number
