@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { parse } from "partial-json"
 import { useChatStore } from "../store/chat-store"
 import type {
@@ -16,7 +16,7 @@ type AssistantMessageContent = AssistantMessage["content"]
 type Params = {
   url: string
   initialMessages: Array<Message>
-  onFinish: (status: AgentRunBlock["status"]) => void
+  onFinish: (status: AgentRunBlock["status"], error?: string | null) => void
   onAsset?: (asset: MediaAsset) => void
   onOperation?: (operation: FilePendingOperation) => void
   onError?: (error: Error) => void
@@ -32,9 +32,18 @@ export function useBufferChunks({
 }: Params) {
   const [messages, setMessages] = useState<Array<Message>>(initialMessages)
   const [assets, setAssets] = useState<Array<MediaAsset>>([])
+  const [error, setError] = useState<string | null>(null)
+  const streamErrorRef = useRef<string | null>(null)
+  const finishedRef = useRef(false)
   const patchConversation = useChatStore(
     (state) => state.patchActiveConversation,
   )
+
+  const recordStreamError = (errorMessage: string) => {
+    streamErrorRef.current = errorMessage
+    setError(errorMessage)
+    setMessages((prev) => stopStreamingParts(prev))
+  }
 
   const subscribe = useGetSSE({
     eventFuncMap: {
@@ -56,6 +65,16 @@ export function useBufferChunks({
             },
           })
         }
+        if (chunk.source !== "subAgent") {
+          if (chunk.type === "error") {
+            recordStreamError(chunk.error)
+          } else if (
+            chunk.type === "complete" &&
+            chunk.finishReason === "error"
+          ) {
+            recordStreamError(chunk.error || "Unknown agent error")
+          }
+        }
         setMessages((prev) => applyChunk(chunk, prev, onOperation))
       },
       asset: (data) => {
@@ -64,22 +83,33 @@ export function useBufferChunks({
         onAsset?.(asset)
       },
       done: (_, { closeEventSource }) => {
+        finishedRef.current = true
         setMessages((prev) => stopStreamingParts(prev))
-        onFinish("finished")
+        const finalStatus = streamErrorRef.current ? "error" : "finished"
+        onFinish(finalStatus, streamErrorRef.current)
         closeEventSource()
         patchConversation({ isStreaming: false, activeRunId: null })
       },
     },
-    onError,
+    onError: (err) => {
+      if (!finishedRef.current) {
+        const errorMessage = streamErrorRef.current ?? err.message
+        recordStreamError(errorMessage)
+        onFinish("error", errorMessage)
+        patchConversation({ isStreaming: false, activeRunId: null })
+      }
+      onError?.(err)
+    },
   })
 
   useEffect(() => {
+    finishedRef.current = false
     const unsubscribe = subscribe(url)
 
     return () => unsubscribe()
   }, [url, subscribe])
 
-  return { messages, assets }
+  return { messages, assets, error }
 }
 
 function applyChunk(
@@ -216,15 +246,6 @@ function applyChunkToMessage(
           }
         }),
       }
-    // case 'tool_call_end':
-    //   return {
-    //     ...message,
-    //     content: message.content.map((part) =>
-    //       part.type === 'tool-call' && part.toolCallId === chunk.toolCallId
-    //         ? { ...part, isStreaming: false }
-    //         : part,
-    //     ),
-    //   }
     case "tool_call":
       return {
         ...currentMessage,

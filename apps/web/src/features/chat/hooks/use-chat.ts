@@ -9,8 +9,10 @@ import {
 } from "../query-mutation"
 import { buildUserFileParts } from "../lib/attached-files"
 import { buildEditorContext } from "../lib/editor-context"
+import { classifyRunError } from "../lib/run-error"
 import type { ChatCompletionRequest } from "../types"
 import type { ChatStatus } from "ai"
+import { collectCommandsFromChatEditor } from "@/features/editor/extensions/command-mention"
 import { useEditorInputBridge } from "@/features/editor/bridge/use-editor-input-bridge"
 import { getErrorMessage } from "@/lib/errors"
 
@@ -53,9 +55,13 @@ export const useSendMessage = (projectId: string) => {
   const sendMessage = () => {
     if (disableSendButton || !modelId) return
 
+    const chatEditor = useEditorInputBridge.getState().chatEditor
+    const commands = collectCommandsFromChatEditor(chatEditor)
+
     const payload: ChatCompletionRequest = {
       modelId,
       reasoningEffort: resolveReasoningEffort(model, reasoningEffortByModelId),
+      ...(commands.length > 0 ? { commands } : {}),
       userPrompt: {
         role: "user",
         content: [
@@ -64,13 +70,9 @@ export const useSendMessage = (projectId: string) => {
         ],
       },
       conversationId,
-      editorContext: buildEditorContext(
-        useEditorInputBridge.getState().chatEditor,
-      ),
+      editorContext: buildEditorContext(chatEditor),
       isNew: conversation?.isNew ?? true,
     }
-    // console.log("payload", payload)
-    // return
 
     sendMessageMutation(payload, {
       onSuccess: (data) => {
@@ -81,6 +83,11 @@ export const useSendMessage = (projectId: string) => {
           activeRunId: data.run.id,
         })
         clearInput()
+      },
+      onError: (error) => {
+        const rawMessage = getErrorMessage(error, "")
+        const classified = classifyRunError(rawMessage)
+        toast.error(classified.message)
       },
     })
   }
@@ -115,4 +122,3 @@ export const useSendMessage = (projectId: string) => {
     submitStatus,
   }
 }
-

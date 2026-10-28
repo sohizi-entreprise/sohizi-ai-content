@@ -1,4 +1,5 @@
 import { z } from "zod"
+import type { CatalogCommand } from "@/catalog/commands"
 
 export const attachedSelectionSchema = z.object({
   file: z.string().min(1),
@@ -114,28 +115,50 @@ function renderAttachedFiles(
   return lines.join("\n")
 }
 
+function renderCommands(commands: CatalogCommand[]): string | null {
+  if (commands.length === 0) return null
+
+  const lines = [
+    "<invoked_commands>",
+    "The user selected these commands for this message. Follow their instructions:",
+  ]
+  for (const command of commands) {
+    lines.push(
+      `  <command id="${escapeXmlAttr(command.id)}" name="${escapeXmlAttr(command.name)}">${escapeXmlText(command.promptModifier.trim())}</command>`,
+    )
+  }
+  lines.push("</invoked_commands>")
+  return lines.join("\n")
+}
+
 export function buildEditorContextPrompt(
   editorContext?: EditorContext,
+  commands: CatalogCommand[] = [],
 ): string {
-  if (!editorContext) return ""
-
-  const hasFocusedTab = Boolean(editorContext.focusedTab)
-  const hasOpenTabs = editorContext.openTabs.length > 0
-  const hasSelections = editorContext.selections.length > 0
+  const hasFocusedTab = Boolean(editorContext?.focusedTab)
+  const hasOpenTabs = Boolean(
+    editorContext && editorContext.openTabs.length > 0,
+  )
+  const hasSelections = Boolean(
+    editorContext && editorContext.selections.length > 0,
+  )
   const localTime = renderLocalTime(
-    editorContext.localTime ?? "",
-    editorContext.timeZone ?? "",
+    editorContext?.localTime ?? "",
+    editorContext?.timeZone ?? "",
   )
   const attachedFiles = renderAttachedFiles(
-    editorContext.loadedFiles ?? [],
-    editorContext.availableFiles ?? [],
+    editorContext?.loadedFiles ?? [],
+    editorContext?.availableFiles ?? [],
   )
+  const commandsBlock = renderCommands(commands)
+
   if (
     !hasFocusedTab &&
     !hasOpenTabs &&
     !hasSelections &&
     !localTime &&
-    !attachedFiles
+    !attachedFiles &&
+    !commandsBlock
   ) {
     return ""
   }
@@ -149,12 +172,12 @@ export function buildEditorContextPrompt(
       "<editor_state>",
       'The user\'s editor at the time of this message. Prefer these files when the request is about "this file" or current work.',
     ]
-    if (editorContext.focusedTab) {
+    if (editorContext?.focusedTab) {
       lines.push(
         `  <focused_tab>${escapeXmlText(editorContext.focusedTab)}</focused_tab>`,
       )
     }
-    if (hasOpenTabs) {
+    if (hasOpenTabs && editorContext) {
       lines.push("  <open_tabs>")
       lines.push("    Files on the tab bar that are not currently visible.")
       for (const file of editorContext.openTabs) {
@@ -166,7 +189,7 @@ export function buildEditorContextPrompt(
     blocks.push(lines.join("\n"))
   }
 
-  if (hasSelections) {
+  if (hasSelections && editorContext) {
     const lines = [
       "<attached_selections>",
       "Text the user explicitly attached. This is the cited content; do not treat the compact file tag in the user message as the full selection.",
@@ -177,6 +200,7 @@ export function buildEditorContextPrompt(
   }
 
   if (attachedFiles) blocks.push(attachedFiles)
+  if (commandsBlock) blocks.push(commandsBlock)
 
   return blocks.join("\n\n")
 }

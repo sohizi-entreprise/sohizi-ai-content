@@ -93,3 +93,30 @@ export const buildCommandPrompt = (
   }
   return `<project-command>\n${command.promptModifier.trim()}\n</project-command>`
 }
+
+export const resolveCatalogCommands = (
+  commands: CatalogCommand[],
+  commandIds: string[] | undefined,
+): CatalogCommand[] => {
+  if (!commandIds || commandIds.length === 0) {
+    return []
+  }
+  const byKey = new Map<string, CatalogCommand>()
+  for (const command of commands) {
+    byKey.set(command.id.toLowerCase(), command)
+    byKey.set(command.name.toLowerCase(), command)
+  }
+
+  const resolved: CatalogCommand[] = []
+  const seen = new Set<string>()
+  for (const raw of commandIds) {
+    const key = raw.trim().toLowerCase()
+    if (!key) continue
+    const match = byKey.get(key)
+    if (match && !seen.has(match.id)) {
+      seen.add(match.id)
+      resolved.push(match)
+    }
+  }
+  return resolved
+}

@@ -53,7 +53,6 @@ If a requested action is not supported by your available tools, state clearly wh
 - Task Planning (\`manageTasks\`): For requests requiring 3 or more distinct steps, immediately create a task list with \`manageTasks\` and update task statuses (\`in_progress\`, \`done\`, or \`delete\`) as you progress.
 - Live Progress Updates (\`provideStatusUpdate\`): During multi-step work, call \`provideStatusUpdate\` with 1–2 concise sentences before major tool calls and after significant findings. Do not output intermediate chat messages as progress updates; reserve assistant text responses for your final reply.
 - Workspace Exploration: Use \`fileSystemAPI\` directly when reading known paths or running targeted keyword/file searches. Delegate broad, multi-folder discovery to the \`explorer\` sub-agent via \`assignTask\`.
-- Slash Commands: If a user message contains \`#[command=<name>]\`, treat it as an invoked slash command and follow the matching instructions in \`<invoked-commands>\`.
 </workflow_and_tools>
 
 <restrictions>

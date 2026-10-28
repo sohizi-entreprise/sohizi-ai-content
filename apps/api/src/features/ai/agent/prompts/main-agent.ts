@@ -23,7 +23,6 @@ Assign exploration to the EXPLORER SUB-AGENT when:
 <tool-calling-policy>
 - **Task Management:** For multi-step requests (3 or more steps), you MUST use the \`manageTasks\` tool to plan and track your progress.
 - **No Hallucinations:** Never guess command names, tool names, or parameters. Strictly adhere to the tools as defined in your schema and system prompt.
-- **Slash Commands:** If a user message contains \`#[command=<name>]\`, treat it as an invoked slash command and strictly follow the corresponding instructions located in the \`<invoked-commands>\` section.
 </tool-calling-policy>
 
 <skills-policy>

@@ -32,15 +32,14 @@ import {
   writeStreamData,
 } from "../generation-request/stream-handler"
 import { getProjectBrief, getProjectById } from "../project/repo"
-import { buildCommandPrompt, getCommands } from "@/catalog/commands"
+import {
+  buildCommandPrompt,
+  getCommands,
+  resolveCatalogCommands,
+} from "@/catalog/commands"
 import { buildProjectSettingsPrompt, getPresets } from "@/catalog/presets"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { listSkills } from "../file-system/repo"
-import * as commandService from "../command/service"
-import {
-  buildInvokedCommandsPrompt,
-  extractCommandNames,
-} from "../command/resolve"
 import {
   buildEditorContextPrompt,
   editorContextSchema,
@@ -92,6 +91,7 @@ export const completionSchema = z.object({
   conversationId: z.uuid("Invalid conversation id").nullable(),
   modelId: z.string("Invalid model id"),
   reasoningEffort: z.string().optional(),
+  commands: z.array(z.string().min(1)).optional(),
   userPrompt: userModelMessageSchema,
   editorContext: editorContextSchema.optional(),
 })
@@ -125,6 +125,7 @@ export const chatCompletion = async (
     userPrompt,
     editorContext,
     reasoningEffort,
+    commands,
   } = payload
 
   const shouldGenerateTitle = conversationId === null
@@ -179,6 +180,7 @@ export const chatCompletion = async (
     runId: result.run.id,
     userPrompt,
     editorContext,
+    commands,
     shouldGenerateTitle,
     reasoningEffort: resolvedReasoningEffort,
   })
@@ -194,6 +196,7 @@ type RunAgentPayload = {
   runId: string
   userPrompt: UserModelMessage
   editorContext?: EditorContext
+  commands?: string[]
   shouldGenerateTitle: boolean
   reasoningEffort?: ReasoningEffort
 }
@@ -207,6 +210,7 @@ async function runAgent(payload: RunAgentPayload) {
     runId,
     userPrompt,
     editorContext,
+    commands: requestedCommands,
     shouldGenerateTitle,
     reasoningEffort,
   } = payload
@@ -240,15 +244,7 @@ async function runAgent(payload: RunAgentPayload) {
       commands,
       readStoredCommandId(brief?.additionalSettings),
     )
-
-    const invokedCommandNames = extractCommandNames(userPromptText)
-    const invokedCommands =
-      invokedCommandNames.length > 0
-        ? await commandService.resolveCommandsByNames(
-            projectId,
-            invokedCommandNames,
-          )
-        : []
+    const invokedCommands = resolveCatalogCommands(commands, requestedCommands)
 
     const session = new Session({
       sessionId: uuidv4(),
@@ -270,12 +266,12 @@ async function runAgent(payload: RunAgentPayload) {
           baseSystemPrompt,
           projectSkills,
           definition.subAgents,
-          invokedCommands,
           projectSettingsPrompt,
           commandPrompt,
-          // editorContext,
         ),
     })
+
+    let streamError: string | null = null
 
     await withAgentTrace(
       session,
@@ -285,7 +281,10 @@ async function runAgent(payload: RunAgentPayload) {
         input: userPromptText,
       },
       async (updateOutput) => {
-        const editorContextPrompt = buildEditorContextPrompt(editorContext)
+        const editorContextPrompt = buildEditorContextPrompt(
+          editorContext,
+          invokedCommands,
+        )
         const messages = editorContextPrompt
           ? [durableSystemMessage(editorContextPrompt), userPrompt]
           : [userPrompt]
@@ -297,10 +296,24 @@ async function runAgent(payload: RunAgentPayload) {
           if (text !== undefined) {
             outputText = text
           }
+          if (chunk.type === "error") {
+            streamError = chunk.error
+          } else if (
+            chunk.type === "complete" &&
+            chunk.finishReason === "error" &&
+            chunk.error
+          ) {
+            streamError = chunk.error
+          }
           await writeStreamData(runId, { runId, event: "chunk", chunk })
         }
 
-        if (shouldGenerateTitle && !controller.signal.aborted) {
+        const stateError = agent.stateManager.getState().error
+        if (!streamError && stateError) {
+          streamError = stateError
+        }
+
+        if (shouldGenerateTitle && !controller.signal.aborted && !streamError) {
           const conversationTitle = await handleTitleGeneration(
             userPrompt,
             project.organizationId,
@@ -315,7 +328,20 @@ async function runAgent(payload: RunAgentPayload) {
       },
     )
 
-    await repo.updateConversationAgentRun(runId, { status: "finished" })
+    if (
+      (agent.stateManager.status === "error" || streamError !== null) &&
+      !controller.signal.aborted
+    ) {
+      await repo.updateConversationAgentRun(runId, {
+        status: "error",
+        error:
+          streamError ??
+          agent.stateManager.getState().error ??
+          "Completion failed",
+      })
+    } else {
+      await repo.updateConversationAgentRun(runId, { status: "finished" })
+    }
   } catch (error) {
     const errorMessage = getErrorMessage(error, "Completion failed")
     console.error(error)
@@ -362,7 +388,6 @@ function enrichSystemPrompt(
     instructions: string
   }[],
   subAgents: AgentName[],
-  invokedCommands: Array<{ name: string; action: string }> = [],
   projectSettingsPrompt = "",
   commandPrompt = "",
   editorContext?: EditorContext,
@@ -403,11 +428,6 @@ Sub-Agents (Name + Description):
 ${subAgentPrompts}
 </sub-agents>
 `
-  }
-
-  const invokedCommandsPrompt = buildInvokedCommandsPrompt(invokedCommands)
-  if (invokedCommandsPrompt.length > 0) {
-    finalPrompt += `\n\n${invokedCommandsPrompt}`
   }
 
   if (projectSettingsPrompt.length > 0) {

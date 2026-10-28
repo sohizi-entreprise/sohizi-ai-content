@@ -3,6 +3,7 @@ import {
   buildCommandPrompt,
   getCommands,
   resetCommandCache,
+  resolveCatalogCommands,
   toPublicCommands,
 } from "./commands"
 
@@ -38,5 +39,17 @@ describe("commands", () => {
     expect(buildCommandPrompt(commands, "plan")).toContain("Plan the video")
     expect(buildCommandPrompt(commands, null)).toBe("")
     expect(buildCommandPrompt(commands, "missing")).toBe("")
+  })
+
+  it("resolves catalog commands by id or name without duplicates", async () => {
+    const commands = await getCommands()
+    const resolved = resolveCatalogCommands(commands, [
+      "plan",
+      "Storyboard",
+      "plan",
+      "unknown",
+    ])
+
+    expect(resolved.map((command) => command.id)).toEqual(["plan", "storyboard"])
   })
 })

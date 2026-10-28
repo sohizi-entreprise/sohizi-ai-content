@@ -1,7 +1,6 @@
 import { useCallback } from "react"
-import { useMentionSearch } from "./use-mention-search"
-import { searchCommandsQueryOptions } from "@/features/chat/query-mutation"
-import { searchCommands } from "@/features/projects/request"
+import { useQueryClient } from "@tanstack/react-query"
+import { getProjectOptionsQueryOptions } from "@/features/projects/query-mutation"
 
 export type CommandMentionItem = {
   id: string
@@ -9,26 +8,31 @@ export type CommandMentionItem = {
   display: string
 }
 
-export function useCommandMentionSearch(projectId: string) {
-  return useMentionSearch(
-    useCallback(
-      async (query: string, options?: { signal?: AbortSignal }) => {
-        const commands = await searchCommands(projectId, query, undefined, {
-          signal: options?.signal,
-        })
+export function useCommandMentionSearch(_projectId: string) {
+  const queryClient = useQueryClient()
 
-        return commands.map((command) => ({
-          id: command.id,
-          name: command.name,
-          display: command.name,
-        }))
-      },
-      [projectId],
-    ),
-    useCallback(
-      (query: string) => searchCommandsQueryOptions(projectId, query),
-      [projectId],
-    ),
-    { allowEmptyQuery: true },
+  return useCallback(
+    async (query: string): Promise<Array<CommandMentionItem>> => {
+      const options = await queryClient.fetchQuery(
+        getProjectOptionsQueryOptions("project"),
+      )
+      const trimmed = query.trim().toLowerCase()
+      const commands = options.commands
+
+      const filtered = trimmed
+        ? commands.filter(
+            (command) =>
+              command.name.toLowerCase().includes(trimmed) ||
+              command.id.toLowerCase().includes(trimmed),
+          )
+        : commands
+
+      return filtered.map((command) => ({
+        id: command.id,
+        name: command.id,
+        display: command.name,
+      }))
+    },
+    [queryClient],
   )
 }

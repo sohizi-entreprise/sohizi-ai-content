@@ -354,6 +354,7 @@ export type EditorContext = {
 export type ChatCompletionRequest = {
   modelId: string
   reasoningEffort?: string
+  commands?: Array<string>
   userPrompt: {
     role: "user"
     content: Array<ImagePart | FilePart | MsgTextPart>

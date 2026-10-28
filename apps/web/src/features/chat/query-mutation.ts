@@ -7,7 +7,7 @@ import {
 import * as requests from "./requests"
 import type { InfiniteData } from "@tanstack/react-query"
 import type { AgentRunBlock, ChatCompletionRequest } from "./types"
-import { searchCommands, searchFilesByName } from "@/features/projects/request"
+import { searchFilesByName } from "@/features/projects/request"
 
 type AgentRunsInfiniteData = InfiniteData<
   requests.CursorPaginationResult<AgentRunBlock>,
@@ -36,12 +36,6 @@ const keysFactory = {
   ],
   fileNameSearch: (projectId: string, name: string, limit: number) => [
     "file-name-search",
-    projectId,
-    name,
-    limit,
-  ],
-  commandSearch: (projectId: string, name: string, limit: number) => [
-    "command-search",
     projectId,
     name,
     limit,
@@ -229,14 +223,4 @@ export const searchFilesByNameQueryOptions = (
     queryFn: ({ signal }) =>
       searchFilesByName(projectId, name, limit, { signal }),
     enabled: name.trim().length > 0,
-  })
-
-export const searchCommandsQueryOptions = (
-  projectId: string,
-  name: string,
-  limit = 15,
-) =>
-  queryOptions({
-    queryKey: keysFactory.commandSearch(projectId, name, limit),
-    queryFn: ({ signal }) => searchCommands(projectId, name, limit, { signal }),
   })

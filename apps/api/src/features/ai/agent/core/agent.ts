@@ -219,7 +219,6 @@ export class Agent {
         reasoning_text,
         text,
         tool_calls,
-        stepError,
       )
       if (content.length > 0) {
         this.registerMessage({
@@ -432,7 +431,6 @@ export class Agent {
     reasoningText: string,
     text: string,
     toolCalls: ToolCall[],
-    stepError: string | null,
   ): AssistantContent {
     const content: AssistantContent = []
     if (reasoningText) {
@@ -440,9 +438,6 @@ export class Agent {
     }
     if (text) {
       content.push({ type: "text", text })
-    }
-    if (stepError) {
-      content.push({ type: "text", text: `Step failed: ${stepError}` })
     }
     for (const tool_call of toolCalls) {
       content.push({

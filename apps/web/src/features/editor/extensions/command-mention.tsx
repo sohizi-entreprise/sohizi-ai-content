@@ -12,27 +12,26 @@ import type { Editor } from "@tiptap/core"
 import type { RefObject } from "react"
 import type { CommandMentionItem } from "@/hooks/use-command-mention-search"
 
-export const COMMAND_MENTION_REGEX = /#\[command=([^\]]+)\]/g
-
-const COMMAND_MENTION_PATTERN = /^#\[command=([^\]]+)\]/
-
-function escapeHtmlAttribute(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-}
-
 const CommandMentionExtension = Mention.extend({
   name: "commandMention",
 
   addAttributes() {
     return {
+      id: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("data-id"),
+        renderHTML: (attrs) => (attrs.id ? { "data-id": attrs.id } : {}),
+      },
       name: {
         default: null,
         parseHTML: (el) => el.getAttribute("data-name"),
         renderHTML: (attrs) => ({ "data-name": attrs.name }),
+      },
+      display: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("data-display"),
+        renderHTML: (attrs) =>
+          attrs.display ? { "data-display": attrs.display } : {},
       },
     }
   },
@@ -42,7 +41,7 @@ const CommandMentionExtension = Mention.extend({
   },
 
   renderText({ node }) {
-    return `/${node.attrs.name ?? ""}`
+    return `/${node.attrs.display ?? node.attrs.name ?? ""}`
   },
 
   renderHTML({ node, HTMLAttributes }) {
@@ -53,51 +52,13 @@ const CommandMentionExtension = Mention.extend({
         HTMLAttributes,
         this.options.HTMLAttributes,
       ),
-      `/${node.attrs.name ?? ""}`,
+      `/${node.attrs.display ?? node.attrs.name ?? ""}`,
     ]
   },
 
   renderMarkdown(node) {
-    const name = node.attrs?.name ?? ""
-    return `#[command=${name}]`
-  },
-
-  markdownTokenizer: {
-    name: "commandMention",
-    level: "inline",
-    start: (src) => src.indexOf("#["),
-    tokenize: (src) => {
-      const match = COMMAND_MENTION_PATTERN.exec(src)
-      if (!match) return undefined
-
-      return {
-        type: "commandMention",
-        raw: match[0],
-        name: match[1],
-      }
-    },
-  },
-
-  parseMarkdown: (token) => ({
-    type: "commandMention",
-    attrs: {
-      name: token.name,
-    },
-  }),
-
-  addPasteRules() {
-    return [
-      {
-        find: COMMAND_MENTION_REGEX,
-        handler: ({ match, chain, range }) => {
-          const name = match[1]
-          chain().deleteRange(range).insertContentAt(range.from, {
-            type: this.name,
-            attrs: { name },
-          })
-        },
-      },
-    ]
+    const label = node.attrs?.display ?? node.attrs?.name ?? ""
+    return `/${label}`
   },
 })
 
@@ -110,10 +71,28 @@ export const CommandMention = CommandMentionExtension as Omit<
   ) => ReturnType<typeof CommandMentionExtension.configure>
 }
 
-export function preprocessCommandMentions(markdown: string): string {
-  return markdown.replace(COMMAND_MENTION_REGEX, (_match, name) => {
-    return `<span data-type="commandMention" data-name="${escapeHtmlAttribute(name)}" class="command-mention">/${name}</span>`
+export function collectCommandsFromChatEditor(
+  editor: Editor | null,
+): Array<string> {
+  if (!editor) return []
+  const commands: Array<string> = []
+  const seen = new Set<string>()
+
+  editor.state.doc.descendants((node) => {
+    if (node.type.name !== "commandMention") return
+    const id =
+      typeof node.attrs.id === "string" && node.attrs.id.trim()
+        ? node.attrs.id.trim()
+        : typeof node.attrs.name === "string" && node.attrs.name.trim()
+          ? node.attrs.name.trim()
+          : null
+    if (id && !seen.has(id)) {
+      seen.add(id)
+      commands.push(id)
+    }
   })
+
+  return commands
 }
 
 type CommandMentionListRef = {
@@ -189,7 +168,9 @@ export function createCommandMentionSuggestion(
         .insertContent({
           type: "commandMention",
           attrs: {
+            id: props.id,
             name: props.name,
+            display: props.display,
           },
         })
         .insertContent(" ")
