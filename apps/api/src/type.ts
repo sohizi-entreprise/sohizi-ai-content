@@ -529,6 +529,54 @@ export type PatchOperation = {
 export type FilePendingOperation =
   DeleteOperation | PatchOperation | RefreshOperation
 
+export type VideoCompositionEntity = {
+  id: string
+  projectId: string
+  fileNodeId: string | null
+  fps: number
+  durationInFrames: number
+  aspectRatio: AspectRatio
+  width: number
+  height: number
+  version: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type VideoTrackEntity = {
+  id: string
+  compositionId: string
+  type: VideoTrackType
+  position: number
+  muted: boolean
+  hidden: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type VideoClipEntity = {
+  id: string
+  trackId: string
+  compositionId: string
+  type: VideoTrackType
+  startFrame: number
+  endFrame: number
+  sourceStartFrame: number
+  sourceDurationInFrames: number
+  properties: VideoClipProperties
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type VideoEditorChange =
+  | { type: "update_composition"; composition: VideoCompositionEntity }
+  | { type: "add_track"; track: VideoTrackEntity; name?: string }
+  | { type: "update_track"; track: VideoTrackEntity; name?: string }
+  | { type: "remove_track"; trackId: string }
+  | { type: "add_clip"; clip: VideoClipEntity }
+  | { type: "update_clip"; clip: VideoClipEntity }
+  | { type: "remove_clip"; clipId: string }
+
 export type AgentRunStatus = "pending" | "running" | "finished" | "error"
 export type AgentRunMetadata = {
   usage: TokenUsage

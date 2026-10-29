@@ -1,4 +1,9 @@
-import { CompleteReason, FilePendingOperation, TokenUsage } from "@/type"
+import {
+  CompleteReason,
+  FilePendingOperation,
+  TokenUsage,
+  VideoEditorChange,
+} from "@/type"
 
 export const streamEvents = {
   textDelta: "text_delta",
@@ -14,6 +19,7 @@ export const streamEvents = {
   toolResultDelta: "tool_result_delta",
   toolResultComplete: "tool_result_complete",
   operation: "operation",
+  videoEditorChange: "video_editor_change",
   progressUpdate: "progress_update",
 } as const
 
@@ -46,6 +52,11 @@ export type AgenticToolChunk = {
 export type OperationChunk = {
   type: typeof streamEvents.operation
   operation: FilePendingOperation
+}
+
+export type VideoEditorChangeChunk = {
+  type: typeof streamEvents.videoEditorChange
+  change: VideoEditorChange
 }
 
 export type ToolResultEvent = ToolResultDelta | ToolResultComplete

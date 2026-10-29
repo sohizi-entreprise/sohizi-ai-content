@@ -24,6 +24,7 @@ import {
   streamEvents,
   ToolCall,
   ToolResultComplete,
+  VideoEditorChangeChunk,
 } from "../utils/llm-response"
 import { v4 as uuidv4 } from "uuid"
 import { getTool } from "../tools/tool-registry"
@@ -52,7 +53,7 @@ const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096
 export type AgentChunk = {
   name: string
   runId: string
-} & (LlmChunk | ToolResultComplete | OperationChunk)
+} & (LlmChunk | ToolResultComplete | OperationChunk | VideoEditorChangeChunk)
 
 type AgentConfig = {
   model: ResolvedTextModel
@@ -415,7 +416,10 @@ export class Agent {
     abortSignal: AbortSignal,
   ): AsyncGenerator<AgentChunk, void, unknown> {
     const generators: AsyncGenerator<
-      ToolResultComplete | AgentChunk | OperationChunk,
+      | ToolResultComplete
+      | AgentChunk
+      | OperationChunk
+      | VideoEditorChangeChunk,
       void,
       unknown
     >[] = []
@@ -612,7 +616,12 @@ export class Agent {
   }
 
   private buildEvent(
-    chunk: LlmChunk | ToolResultComplete | OperationChunk | AgentChunk,
+    chunk:
+      | LlmChunk
+      | ToolResultComplete
+      | OperationChunk
+      | VideoEditorChangeChunk
+      | AgentChunk,
   ): AgentChunk {
     return {
       ...chunk,

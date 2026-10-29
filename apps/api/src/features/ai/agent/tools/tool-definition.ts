@@ -5,10 +5,11 @@ import {
   streamEvents,
   ToolCall,
   ToolResultComplete,
+  VideoEditorChangeChunk,
 } from "../utils/llm-response"
 import type { AgentChunk } from "../core/agent"
 import { Session } from "../core/session"
-import { FilePendingOperation } from "@/type"
+import { FilePendingOperation, VideoEditorChange } from "@/type"
 import { Tool } from "ai"
 import { AgentStateManager } from "../core/state-manager"
 import { getErrorMessage } from "@/utils/get-error-message"
@@ -18,9 +19,14 @@ export type ToolResult = {
   output: string
   metadata?: Record<string, unknown>
   operation?: FilePendingOperation[]
+  videoEditorChanges?: VideoEditorChange[]
 }
 
-type AgenticToolResult = AgentChunk | AgenticToolChunk | OperationChunk
+type AgenticToolResult =
+  | AgentChunk
+  | AgenticToolChunk
+  | OperationChunk
+  | VideoEditorChangeChunk
 
 export type ToolExecutionOptions = {
   session: Session
@@ -59,7 +65,7 @@ export class BaseTool<T extends z.ZodType> {
     toolCall: ToolCall,
     options: Omit<ToolExecutionOptions, "toolCallId">,
   ): AsyncGenerator<
-    ToolResultComplete | AgentChunk | OperationChunk,
+    ToolResultComplete | AgentChunk | OperationChunk | VideoEditorChangeChunk,
     void,
     unknown
   > {
@@ -98,6 +104,14 @@ export class BaseTool<T extends z.ZodType> {
           }))
           for (const operation of operations) {
             yield operation
+          }
+        }
+        if ("videoEditorChanges" in result && result.videoEditorChanges) {
+          for (const change of result.videoEditorChanges) {
+            yield {
+              type: streamEvents.videoEditorChange,
+              change,
+            }
           }
         }
         const event = this.buildEvent(toolCall, result as ToolResult)

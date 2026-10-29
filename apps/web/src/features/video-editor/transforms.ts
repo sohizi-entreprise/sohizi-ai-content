@@ -57,11 +57,14 @@ const CLIP_TYPES = new Set<string>([
   "caption",
 ])
 
-function isTrackType(value: string): value is TrackType {
+export function isTrackType(value: string): value is TrackType {
   return CLIP_TYPES.has(value)
 }
 
-function serverClipToStore(serverClip: ServerClip, trackType: TrackType): Clip {
+export function serverClipToStore(
+  serverClip: ServerClip,
+  trackType: TrackType,
+): Clip {
   const base = {
     id: serverClip.id,
     trackId: serverClip.trackId,

@@ -44,6 +44,7 @@ export function useVideoEditorAutosave() {
   )
 
   const lastSavedRef = useRef<SnapshotState | null>(null)
+  const lastServerSyncVersionRef = useRef<number>(0)
   const pendingOpsRef = useRef<Array<BatchOperation> | null>(null)
   const isSavingRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -82,8 +83,16 @@ export function useVideoEditorAutosave() {
     if (!isHydrated || !compositionId || !projectId) return
 
     lastSavedRef.current = takeSnapshot()
+    lastServerSyncVersionRef.current =
+      useVideoEditorStore.getState().serverSyncVersion
 
-    const unsubscribe = useVideoEditorStore.subscribe(() => {
+    const unsubscribe = useVideoEditorStore.subscribe((state) => {
+      if (state.serverSyncVersion !== lastServerSyncVersionRef.current) {
+        lastServerSyncVersionRef.current = state.serverSyncVersion
+        lastSavedRef.current = takeSnapshot()
+        return
+      }
+
       const prev = lastSavedRef.current
       const current = takeSnapshot()
       if (!prev || !current || diffableSnapshotsEqual(prev, current)) return

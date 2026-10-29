@@ -9,9 +9,15 @@ import { classifyRunError } from "../lib/run-error"
 import { useChatStore } from "../store/chat-store"
 import ChatBuble from "./chat-buble"
 import { ChatRunProvider } from "./chat-run-context"
-import type { AgentRunBlock, FilePendingOperation, Message } from "../types"
+import type {
+  AgentRunBlock,
+  FilePendingOperation,
+  Message,
+  VideoEditorChange,
+} from "../types"
 import { fileTreeKey } from "@/features/projects/query-mutation"
 import { getFilePendingKey } from "@/features/editor/query-mutations"
+import { useVideoEditorStore } from "@/features/video-editor/store/editor-store"
 
 export const ChatRunBlock = ({ run }: { run: AgentRunBlock }) => {
   const status = run.status
@@ -77,6 +83,10 @@ function PendingRunBlock({
     }
   }
 
+  const onVideoEditorChange = (change: VideoEditorChange) => {
+    useVideoEditorStore.getState().applyServerChange(change)
+  }
+
   const url = `/api/chats/${run.projectId}/conversations/${run.conversationId}/runs/${run.id}`
   const { messages, error: streamError } = useBufferChunks({
     url,
@@ -84,6 +94,7 @@ function PendingRunBlock({
     isCancelled,
     onFinish,
     onOperation,
+    onVideoEditorChange,
   })
   const activeError = isCancelled ? null : (streamError ?? run.error)
 

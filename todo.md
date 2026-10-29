@@ -80,3 +80,4 @@
 [ ] Detect loop when the agent is stocked
 [ ] Add the ability to create asset file
 [ ] Error for /system level files
+[ ] Handle caption generation / for the agent as well

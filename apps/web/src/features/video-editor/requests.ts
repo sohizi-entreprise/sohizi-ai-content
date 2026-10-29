@@ -44,6 +44,15 @@ export type ServerClip = {
   updatedAt: string
 }
 
+export type VideoEditorChange =
+  | { type: "update_composition"; composition: ServerComposition }
+  | { type: "add_track"; track: ServerTrack; name?: string }
+  | { type: "update_track"; track: ServerTrack; name?: string }
+  | { type: "remove_track"; trackId: string }
+  | { type: "add_clip"; clip: ServerClip }
+  | { type: "update_clip"; clip: ServerClip }
+  | { type: "remove_clip"; clipId: string }
+
 type ServerTrackWithClips = ServerTrack & { clips: Array<ServerClip> }
 
 export type LoadCompositionResponse = {

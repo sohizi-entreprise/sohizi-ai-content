@@ -1,3 +1,7 @@
+import type { VideoEditorChange } from "@/features/video-editor/requests"
+
+export type { VideoEditorChange }
+
 // ============================================================================
 // EDITOR TYPES
 // ============================================================================
@@ -439,6 +443,7 @@ export type ChatStreamChunk = {
   | { type: "abort" }
   | { type: "identifier"; conversationId: string; conversationTitle: string }
   | { type: "operation"; operation: FilePendingOperation }
+  | { type: "video_editor_change"; change: VideoEditorChange }
 )
 
 export type ModelReasoningEffortOption = {

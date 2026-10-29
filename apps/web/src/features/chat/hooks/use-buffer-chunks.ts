@@ -6,6 +6,7 @@ import type {
   ChatStreamChunk,
   FilePendingOperation,
   Message,
+  VideoEditorChange,
 } from "../types"
 import type { MediaAsset } from "@/features/media-generator/requests"
 import { useGetSSE } from "@/hooks/use-get-sse"
@@ -20,6 +21,7 @@ type Params = {
   onFinish: (status: AgentRunBlock["status"], error?: string | null) => void
   onAsset?: (asset: MediaAsset) => void
   onOperation?: (operation: FilePendingOperation) => void
+  onVideoEditorChange?: (change: VideoEditorChange) => void
   onError?: (error: Error) => void
 }
 
@@ -30,6 +32,7 @@ export function useBufferChunks({
   onFinish,
   onAsset,
   onOperation,
+  onVideoEditorChange,
   onError,
 }: Params) {
   const [messages, setMessages] = useState<Array<Message>>(initialMessages)
@@ -96,7 +99,9 @@ export function useBufferChunks({
             recordStreamError(chunk.error || "Unknown agent error")
           }
         }
-        setMessages((prev) => applyChunk(chunk, prev, onOperation))
+        setMessages((prev) =>
+          applyChunk(chunk, prev, onOperation, onVideoEditorChange),
+        )
       },
       asset: (data) => {
         const asset = (data as { data: MediaAsset }).data
@@ -152,6 +157,7 @@ function applyChunk(
   chunk: ChatStreamChunk,
   messages: Array<Message>,
   onOperation?: (operation: FilePendingOperation) => void,
+  onVideoEditorChange?: (change: VideoEditorChange) => void,
 ): Array<Message> {
   if (chunk.source === "subAgent") {
     return applySubAgentChunkToMessages(chunk, messages)
@@ -164,7 +170,12 @@ function applyChunk(
       m.id === chunk.runId && m.role === "assistant",
   )
   const message = existingMessage ?? createAssistantMessage(chunk.runId)
-  const nextMessage = applyChunkToMessage(message, chunk, onOperation)
+  const nextMessage = applyChunkToMessage(
+    message,
+    chunk,
+    onOperation,
+    onVideoEditorChange,
+  )
 
   if (!existingMessage) {
     return [...messages, nextMessage]
@@ -221,6 +232,7 @@ function applyChunkToMessage(
   message: AssistantMessage,
   chunk: ChatStreamChunk,
   onOperation?: (operation: FilePendingOperation) => void,
+  onVideoEditorChange?: (change: VideoEditorChange) => void,
 ): AssistantMessage {
   const currentMessage =
     chunk.type === "reasoning_delta" ? message : finishReasoning(message)
@@ -336,6 +348,9 @@ function applyChunkToMessage(
       return currentMessage
     case "operation":
       onOperation?.(chunk.operation)
+      return currentMessage
+    case "video_editor_change":
+      onVideoEditorChange?.(chunk.change)
       return currentMessage
     case "complete":
     case "identifier":

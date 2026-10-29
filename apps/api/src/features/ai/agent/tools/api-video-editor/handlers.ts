@@ -211,7 +211,10 @@ export async function executeUpdateComposition(
   if (!updated) {
     return failure("Failed to update composition.")
   }
-  return success(`Composition updated. Version: ${updated.version}`)
+  return {
+    ...success(`Composition updated. Version: ${updated.version}`),
+    videoEditorChanges: [{ type: "update_composition", composition: updated }],
+  }
 }
 
 export async function executeAddTrack(
@@ -232,9 +235,14 @@ export async function executeAddTrack(
     type: data.body.type,
     position,
   })
-  return success(
-    `Track created: ID: ${track.id} - Type: ${track.type} - Position: ${track.position}`,
-  )
+  return {
+    ...success(
+      `Track created: ID: ${track.id} - Type: ${track.type} - Position: ${track.position}`,
+    ),
+    videoEditorChanges: [
+      { type: "add_track", track, name: data.body.name },
+    ],
+  }
 }
 
 export async function executeUpdateTrack(
@@ -246,7 +254,12 @@ export async function executeUpdateTrack(
   if (!updated) {
     return failure("Track not found.")
   }
-  return success(`Track ${updated.id} updated.`)
+  return {
+    ...success(`Track ${updated.id} updated.`),
+    videoEditorChanges: [
+      { type: "update_track", track: updated, name: data.body.name },
+    ],
+  }
 }
 
 export async function executeRemoveTrack(
@@ -257,7 +270,12 @@ export async function executeRemoveTrack(
   if (!deleted) {
     return failure("Track not found.")
   }
-  return success(`Track ${data.params.trackId} removed (along with its clips).`)
+  return {
+    ...success(`Track ${data.params.trackId} removed (along with its clips).`),
+    videoEditorChanges: [
+      { type: "remove_track", trackId: data.params.trackId },
+    ],
+  }
 }
 
 export async function executeAddClip(
@@ -283,9 +301,12 @@ export async function executeAddClip(
     sourceDurationInFrames: data.body.sourceDurationInFrames,
     properties: data.body.properties as VideoClipProperties,
   })
-  return success(
-    `Clip created: ${clip.id} [${clip.type}] at frames ${clip.startFrame}–${clip.endFrame}`,
-  )
+  return {
+    ...success(
+      `Clip created: ${clip.id} [${clip.type}] at frames ${clip.startFrame}–${clip.endFrame}`,
+    ),
+    videoEditorChanges: [{ type: "add_clip", clip }],
+  }
 }
 
 export async function executeUpdateClip(
@@ -297,7 +318,10 @@ export async function executeUpdateClip(
   if (!updated) {
     return failure("Clip not found.")
   }
-  return success(`Clip ${updated.id} updated.`)
+  return {
+    ...success(`Clip ${updated.id} updated.`),
+    videoEditorChanges: [{ type: "update_clip", clip: updated }],
+  }
 }
 
 export async function executeRemoveClip(
@@ -308,7 +332,10 @@ export async function executeRemoveClip(
   if (!deleted) {
     return failure("Clip not found.")
   }
-  return success(`Clip ${data.params.clipId} removed.`)
+  return {
+    ...success(`Clip ${data.params.clipId} removed.`),
+    videoEditorChanges: [{ type: "remove_clip", clipId: data.params.clipId }],
+  }
 }
 
 function getClipLabel(clip: VideoClip): string {

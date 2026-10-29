@@ -11,7 +11,9 @@ import {
   maxTimelineFrames,
 } from "../utils/timeline-limit"
 import { ASPECT_RATIO_DIMENSIONS } from "./types"
+import { isTrackType, serverClipToStore } from "../transforms"
 import type { HydrationData } from "../transforms"
+import type { VideoEditorChange } from "../requests"
 import type { StateCreator } from "zustand"
 import type { TemporalState } from "zundo"
 import type {
@@ -35,10 +37,12 @@ type EditorState = ProjectState & {
   fileNodeId: string | null
   projectId: string | null
   isHydrated: boolean
+  serverSyncVersion: number
 }
 
 interface EditorActions {
   hydrate: (data: HydrationData & { projectId: string }) => void
+  applyServerChange: (change: VideoEditorChange) => void
   resetStore: () => void
   addTrack: (type: TrackType, name?: string) => string
   insertTrackAt: (type: TrackType, insertIndex: number, name?: string) => string
@@ -131,6 +135,7 @@ const initialState: EditorState = {
   fileNodeId: null,
   projectId: null,
   isHydrated: false,
+  serverSyncVersion: 0,
   fps: DEFAULT_FPS,
   durationInFrames: DEFAULT_FPS * 30,
   currentFrame: 0,
@@ -299,6 +304,170 @@ const creator: StateCreator<
       state.selection = { clipIds: [] }
       state.isPlaying = false
       state.isHydrated = true
+    })
+  },
+
+  applyServerChange: (change) => {
+    set((state) => {
+      if (!state.isHydrated || !state.compositionId) return
+
+      switch (change.type) {
+        case "update_composition": {
+          const { composition } = change
+          if (composition.id !== state.compositionId) return
+          state.fps = composition.fps
+          state.aspectRatio = composition.aspectRatio as AspectRatio
+          state.width = composition.width
+          state.height = composition.height
+          state.durationInFrames = clampTimelineDuration(
+            composition.durationInFrames,
+            composition.fps,
+          )
+          trimClipsToTimeline(state)
+          state.currentFrame = Math.min(
+            state.currentFrame,
+            Math.max(0, state.durationInFrames - 1),
+          )
+          state.serverSyncVersion += 1
+          break
+        }
+        case "add_track": {
+          const { track: serverTrack, name } = change
+          if (serverTrack.compositionId !== state.compositionId) return
+          if (!isTrackType(serverTrack.type)) return
+          const trackType = serverTrack.type
+          const defaultName = `${trackType[0].toUpperCase()}${trackType.slice(1)} ${serverTrack.position + 1}`
+          const existingIndex = state.tracks.findIndex(
+            (t) => t.id === serverTrack.id,
+          )
+          if (existingIndex >= 0) {
+            const existing = state.tracks[existingIndex]
+            existing.type = trackType
+            if (name) existing.name = name
+            existing.muted = serverTrack.muted
+            existing.hidden = serverTrack.hidden
+          } else {
+            const newTrack: Track = {
+              id: serverTrack.id,
+              type: trackType,
+              name: name || defaultName,
+              muted: serverTrack.muted,
+              hidden: serverTrack.hidden,
+              clips: [],
+            }
+            const insertIdx = Math.max(
+              0,
+              Math.min(serverTrack.position, state.tracks.length),
+            )
+            state.tracks.splice(insertIdx, 0, newTrack)
+          }
+          state.serverSyncVersion += 1
+          break
+        }
+        case "update_track": {
+          const { track: serverTrack, name } = change
+          if (serverTrack.compositionId !== state.compositionId) return
+          const currentIndex = state.tracks.findIndex(
+            (t) => t.id === serverTrack.id,
+          )
+          if (currentIndex === -1) return
+          const track = state.tracks[currentIndex]
+          track.muted = serverTrack.muted
+          track.hidden = serverTrack.hidden
+          if (name !== undefined) {
+            track.name = name
+          }
+          const targetIndex = Math.max(
+            0,
+            Math.min(serverTrack.position, state.tracks.length - 1),
+          )
+          if (targetIndex !== currentIndex) {
+            const [moved] = state.tracks.splice(currentIndex, 1)
+            state.tracks.splice(targetIndex, 0, moved)
+          }
+          state.serverSyncVersion += 1
+          break
+        }
+        case "remove_track": {
+          const prevLen = state.tracks.length
+          state.tracks = state.tracks.filter((t) => t.id !== change.trackId)
+          if (state.tracks.length === prevLen) return
+          state.selection.clipIds = state.selection.clipIds.filter((id) =>
+            state.tracks.some((t) => t.clips.some((c) => c.id === id)),
+          )
+          recomputeDuration(state)
+          state.serverSyncVersion += 1
+          break
+        }
+        case "add_clip": {
+          const { clip: serverClip } = change
+          if (serverClip.compositionId !== state.compositionId) return
+          const track = state.tracks.find((t) => t.id === serverClip.trackId)
+          if (!track) return
+          const clipType = isTrackType(serverClip.type)
+            ? serverClip.type
+            : track.type
+          const storeClip = serverClipToStore(serverClip, clipType)
+          const existingIdx = track.clips.findIndex(
+            (c) => c.id === storeClip.id,
+          )
+          if (existingIdx >= 0) {
+            track.clips[existingIdx] = storeClip
+          } else {
+            track.clips.push(storeClip)
+          }
+          trimClipsToTimeline(state)
+          recomputeDuration(state)
+          state.serverSyncVersion += 1
+          break
+        }
+        case "update_clip": {
+          const { clip: serverClip } = change
+          if (serverClip.compositionId !== state.compositionId) return
+          const targetTrack = state.tracks.find(
+            (t) => t.id === serverClip.trackId,
+          )
+          if (!targetTrack) return
+          const clipType = isTrackType(serverClip.type)
+            ? serverClip.type
+            : targetTrack.type
+          const storeClip = serverClipToStore(serverClip, clipType)
+
+          const found = findClip(state.tracks, serverClip.id)
+          if (found) {
+            if (found.track.id === targetTrack.id) {
+              found.track.clips[found.clipIndex] = storeClip
+            } else {
+              found.track.clips.splice(found.clipIndex, 1)
+              targetTrack.clips.push(storeClip)
+            }
+          } else {
+            targetTrack.clips.push(storeClip)
+          }
+          trimClipsToTimeline(state)
+          recomputeDuration(state)
+          state.serverSyncVersion += 1
+          break
+        }
+        case "remove_clip": {
+          let removed = false
+          for (const track of state.tracks) {
+            const idx = track.clips.findIndex((c) => c.id === change.clipId)
+            if (idx >= 0) {
+              track.clips.splice(idx, 1)
+              removed = true
+              break
+            }
+          }
+          if (!removed) return
+          state.selection.clipIds = state.selection.clipIds.filter(
+            (id) => id !== change.clipId,
+          )
+          recomputeDuration(state)
+          state.serverSyncVersion += 1
+          break
+        }
+      }
     })
   },
 
@@ -937,6 +1106,7 @@ export const useVideoEditorStore = create<EditorState & EditorActions>()(
         fileNodeId,
         projectId,
         isHydrated,
+        serverSyncVersion,
         ...rest
       } = state
       void currentFrame
@@ -947,6 +1117,7 @@ export const useVideoEditorStore = create<EditorState & EditorActions>()(
       void fileNodeId
       void projectId
       void isHydrated
+      void serverSyncVersion
       return rest
     },
     limit: 100,
