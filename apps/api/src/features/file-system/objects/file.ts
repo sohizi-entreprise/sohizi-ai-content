@@ -13,7 +13,7 @@ import { KeywordChunkHit } from "../types"
 import {
   countLines,
   countWords,
-  normalizeFileName,
+  normalizeFileNodeName,
   serializeFileContent,
 } from "../utils"
 import * as fileSystemRepo from "../repo"
@@ -238,7 +238,10 @@ export class FileObject {
     if (!this.fileNode.editable) {
       return err(`Cannot rename a built-in file ${this.fileNode.name}`)
     }
-    const normalizedName = normalizeFileName(newName)
+    const normalizedName = normalizeFileNodeName(
+      newName,
+      this.fileNode.directory,
+    )
     if (!normalizedName) {
       return err("Invalid file name")
     }

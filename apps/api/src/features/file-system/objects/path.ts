@@ -1,6 +1,6 @@
 import type { FileNode } from "@/db/schema"
 import * as fileSystemRepo from "../repo"
-import { normalizeFileName } from "../utils"
+import { fileNodePathCandidates } from "../utils"
 import { FileObject } from "./file"
 
 const ROOT_SENTINEL = Symbol("root")
@@ -88,31 +88,15 @@ export class PathObject {
       return { fileNode: null, isRoot: true }
     }
 
-    const literalLtree = parts.join(".")
-    try {
-      const fileNode = await fileSystemRepo.getFileNodeByPath(
-        projectId,
-        literalLtree,
-      )
-      if (fileNode) {
-        return { fileNode, isRoot: false }
-      }
-    } catch {
-      // Fall through to normalized lookup if literal path contains non-ltree characters
-    }
-
-    const normalizedLtree = parts
-      .map((part) => normalizeFileName(part) || part)
-      .join(".")
-    if (normalizedLtree !== literalLtree) {
+    for (const candidate of fileNodePathCandidates(parts)) {
       try {
-        const normalizedFileNode = await fileSystemRepo.getFileNodeByPath(
+        const fileNode = await fileSystemRepo.getFileNodeByPath(
           projectId,
-          normalizedLtree,
+          candidate,
         )
-        return { fileNode: normalizedFileNode ?? null, isRoot: false }
+        if (fileNode) return { fileNode, isRoot: false }
       } catch {
-        return { fileNode: null, isRoot: false }
+        // An invalid literal ltree label may still resolve after normalization.
       }
     }
 

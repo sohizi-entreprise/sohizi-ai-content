@@ -25,9 +25,11 @@ import type {
 } from "@/type"
 import { and, eq, desc, lt, isNull, max, inArray, or, sql } from "drizzle-orm"
 import { ORDER_GAP } from "../file-system/repo"
+import { FileNodeUniqueConstraintError } from "../file-system/repo"
 import { expireAssets } from "./asset-retention"
 import { classifyFileKindFromAsset } from "../file-system/file-kind"
-import { joinLtree, normalizeFileName } from "../file-system/utils"
+import { joinLtree, normalizeFileNodeName } from "../file-system/utils"
+import { DatabaseError } from "pg"
 import { mergeAssetFileNodeMetadata } from "./file-node-metadata"
 import {
   createGenerationRequest,
@@ -56,6 +58,28 @@ type CreateAssetWithFileNodePayload = {
   storageKey: string
   metadata: AssetMetadata
   filePosition: number
+}
+
+function isFileNodeNameConflict(error: unknown): boolean {
+  const cause = error instanceof Error && "cause" in error ? error.cause : null
+  const databaseError = error instanceof DatabaseError ? error : cause
+  return (
+    databaseError instanceof DatabaseError &&
+    databaseError.code === "23505" &&
+    [
+      "file_nodes_project_id_parent_id_name_unique",
+      "file_nodes_project_id_path_unique",
+    ].includes(databaseError.constraint ?? "")
+  )
+}
+
+function rethrowFileNodeNameConflict(error: unknown): never {
+  if (isFileNodeNameConflict(error)) {
+    throw new FileNodeUniqueConstraintError(
+      "File name already exists in that parent directory.",
+    )
+  }
+  throw error
 }
 
 export const createAsset = async (payload: CreateAssetPayload) => {
@@ -109,7 +133,8 @@ export const createAssetWithFileNode = async (
     storageKey,
     filePosition,
   } = payload
-  const normalizedName = normalizeFileName(name) || name
+  const normalizedName = normalizeFileNodeName(name, false)
+  if (!normalizedName) throw new Error("Invalid file name")
 
   const result = await db.transaction(async (tx) => {
     const existingFileNodeResponse = await tx
@@ -126,66 +151,9 @@ export const createAssetWithFileNode = async (
     const existingFileNode = existingFileNodeResponse[0]
 
     if (existingFileNode) {
-      if (existingFileNode.directory) {
-        throw new Error("Cannot overwrite a directory with an asset")
-      }
-
-      const kind = classifyFileKindFromAsset(type, metadata.contentType)
-      const fileNodeMetadata = mergeAssetFileNodeMetadata(
-        existingFileNode.metadata,
-        {
-          metadata,
-          url,
-          storageKey,
-        },
+      throw new FileNodeUniqueConstraintError(
+        "File name already exists in that parent directory.",
       )
-      const updatedFileNodeResponse = await tx
-        .update(fileNodes)
-        .set({
-          type: kind.type,
-          format: kind.format,
-          editable: true,
-          metadata: fileNodeMetadata,
-        })
-        .where(
-          and(
-            eq(fileNodes.projectId, projectId),
-            eq(fileNodes.id, existingFileNode.id),
-          ),
-        )
-        .returning()
-      const fileNode = updatedFileNodeResponse[0] ?? existingFileNode
-
-      const assetPayload = {
-        projectId,
-        name,
-        type,
-        url,
-        source,
-        fileNodeId: fileNode.id,
-        metadata,
-        storageKey,
-      }
-
-      const assetResponse = await tx
-        .update(assets)
-        .set(assetPayload)
-        .where(
-          and(
-            eq(assets.projectId, projectId),
-            eq(assets.fileNodeId, fileNode.id),
-            isNull(assets.expireAt),
-          ),
-        )
-        .returning()
-      const asset =
-        assetResponse[0] ??
-        (await tx.insert(assets).values(assetPayload).returning())[0]
-      if (!asset) {
-        throw new Error("Failed to upsert asset")
-      }
-
-      return { asset, fileNode }
     }
 
     const folderResponse = await tx
@@ -209,12 +177,18 @@ export const createAssetWithFileNode = async (
       editable: true,
       position: filePosition,
       path: joinLtree(folder.path, normalizedName),
-      metadata: mergeAssetFileNodeMetadata(null, { metadata, url, storageKey }),
+      metadata: mergeAssetFileNodeMetadata(null, {
+        metadata,
+        url,
+        storageKey,
+      }),
     }
     const fileNodeResponse = await tx
       .insert(fileNodes)
       .values(filePayload)
       .returning()
+      .execute()
+      .catch(rethrowFileNodeNameConflict)
     const fileNode = fileNodeResponse[0]
     if (!fileNode) {
       throw new Error("Failed to create file node")
@@ -768,8 +742,8 @@ export const attachAssetToFileNode = async ({
       throw new Error("Folder not found")
     }
     const rawName = customFileName?.trim() || asset.name
-    const fileName =
-      normalizeFileName(rawName) || normalizeFileName(asset.name) || asset.name
+    const fileName = normalizeFileNodeName(rawName, false)
+    if (!fileName) throw new Error("Invalid file name")
     const kind = classifyFileKindFromAsset(
       asset.type,
       asset.metadata?.contentType,
@@ -788,6 +762,8 @@ export const attachAssetToFileNode = async ({
         metadata: mergeAssetFileNodeMetadata(null, asset),
       })
       .returning()
+      .execute()
+      .catch(rethrowFileNodeNameConflict)
     const fileNode = res2[0]
     if (!fileNode) {
       throw new Error("Failed to create file node")
@@ -853,7 +829,8 @@ export const attachAssetsToFileNodes = async ({
     }
 
     const fileNodeRows = orderedAssets.map((asset, index) => {
-      const fileName = normalizeFileName(asset.name) || asset.name
+      const fileName = normalizeFileNodeName(asset.name, false)
+      if (!fileName) throw new Error("Invalid file name")
       const kind = classifyFileKindFromAsset(
         asset.type,
         asset.metadata?.contentType,
@@ -875,6 +852,8 @@ export const attachAssetsToFileNodes = async ({
       .insert(fileNodes)
       .values(fileNodeRows)
       .returning()
+      .execute()
+      .catch(rethrowFileNodeNameConflict)
     if (insertedFileNodes.length !== orderedAssets.length) {
       throw new Error("Failed to create all file nodes")
     }

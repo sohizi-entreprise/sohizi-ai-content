@@ -2,15 +2,16 @@ import { captureConsentedEvent } from "@/features/analytics-consent"
 import * as repo from "./repo"
 import * as storage from "./storage"
 import type { GetUploadUrlInput, uploadSuccessSchema } from "./schema"
-import { BadRequest, Forbidden, NotFound } from "../error"
+import { BadRequest, Conflict, Forbidden, NotFound } from "../error"
 import { getProjectById } from "../project/repo"
 import z from "zod"
 import {
   getFileNodeById,
   listDirectoryFiles,
   ORDER_GAP,
+  FileNodeUniqueConstraintError,
 } from "../file-system/repo"
-import { serializeFileNode } from "../file-system/utils"
+import { normalizeFileNodeName, serializeFileNode } from "../file-system/utils"
 import { AssetType, CursorPaginationOptions } from "@/type"
 import { broadcastCancellation } from "../generation-request/abort-manager"
 import { v4 as uuidv4 } from "uuid"
@@ -129,8 +130,13 @@ export async function uploadSuccess(
   const uploadfolderId = folder.id
 
   const siblingsFiles = await listDirectoryFiles(projectId, uploadfolderId)
-  const isOverwrite = siblingsFiles.some((file) => file.name === fileName)
-  if (siblingsFiles.length >= 100 && !isOverwrite) {
+  const fileNodeName = normalizeFileNodeName(fileName, false)
+  if (!fileNodeName) throw new BadRequest("Invalid file name")
+  if (siblingsFiles.some((file) => file.name === fileNodeName)) {
+    await storage.deleteFile(storageKey)
+    throw new Conflict("File name already exists in that parent directory.")
+  }
+  if (siblingsFiles.length >= 100) {
     throw new BadRequest("Maximum number of files reached in the folder")
   }
 
@@ -154,6 +160,10 @@ export async function uploadSuccess(
       fileNode: serializeFileNode(response.fileNode),
     }
   } catch (error) {
+    if (error instanceof FileNodeUniqueConstraintError) {
+      await storage.deleteFile(storageKey)
+      throw new Conflict(error.message)
+    }
     console.error(error)
     throw new BadRequest("Failed to create asset with file node")
   }
@@ -405,11 +415,17 @@ export const attachAssetToFileNode = async (
     throw new Forbidden("Folder does not exist or is not a directory")
   }
 
-  const result = await repo.attachAssetToFileNode({
-    projectId,
-    assetId,
-    folderId,
-  })
+  const result = await repo
+    .attachAssetToFileNode({
+      projectId,
+      assetId,
+      folderId,
+    })
+    .catch((error: unknown) => {
+      if (error instanceof FileNodeUniqueConstraintError)
+        throw new Conflict(error.message)
+      throw error
+    })
   return {
     ...result,
     fileNode: serializeFileNode(result.fileNode),
@@ -446,11 +462,17 @@ export const attachAssetsToFileNodes = async (
     throw new Forbidden("Folder does not exist or is not a directory")
   }
 
-  const result = await repo.attachAssetsToFileNodes({
-    projectId,
-    assetIds: normalizedAssetIds,
-    folderId,
-  })
+  const result = await repo
+    .attachAssetsToFileNodes({
+      projectId,
+      assetIds: normalizedAssetIds,
+      folderId,
+    })
+    .catch((error: unknown) => {
+      if (error instanceof FileNodeUniqueConstraintError)
+        throw new Conflict(error.message)
+      throw error
+    })
   return {
     ...result,
     fileNodes: result.fileNodes.map(serializeFileNode),

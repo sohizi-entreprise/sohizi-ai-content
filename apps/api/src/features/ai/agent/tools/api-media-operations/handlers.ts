@@ -11,7 +11,7 @@ import {
   getModelSchema,
   listGenerationModels,
 } from "@/features/media-engine/repo"
-import { normalizeFileName, toApiPath } from "@/features/file-system/utils"
+import { normalizeFileNodeName, toApiPath } from "@/features/file-system/utils"
 import { getErrorMessage } from "@/utils/get-error-message"
 import type { ModelMessage } from "ai"
 import type { AgentStateManager } from "../../core/state-manager"
@@ -218,7 +218,7 @@ export async function executeSaveAsset(
       return failure("Cannot save media assets inside a skill folder")
     }
 
-    const normalizedName = normalizeFileName(fileName)
+    const normalizedName = normalizeFileNodeName(fileName, false)
     if (!normalizedName) {
       return failure("Invalid file name")
     }
@@ -240,7 +240,7 @@ export async function executeSaveAsset(
       projectId: session.projectId,
       assetId,
       folderId: directory.id,
-      fileName: normalizedName,
+      fileName,
     })
 
     return success(

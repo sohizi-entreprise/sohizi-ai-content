@@ -8,6 +8,36 @@ export const normalizeFileName = (name: string) => {
     .replace(/[\W\s]+/g, "-")
 }
 
+/** A file's final extension is part of one ltree label, never a path separator. */
+export function normalizeFileNodeName(
+  name: string,
+  directory: boolean,
+): string {
+  const trimmed = name.trim()
+  if (directory) return normalizeFileName(trimmed)
+  const dot = trimmed.lastIndexOf(".")
+  if (dot <= 0 || dot === trimmed.length - 1) return normalizeFileName(trimmed)
+  const stem = normalizeFileName(trimmed.slice(0, dot))
+  const extension = normalizeFileName(trimmed.slice(dot + 1))
+  return stem && extension ? `${stem}_${extension}` : normalizeFileName(trimmed)
+}
+
+export function fileNodePathCandidates(parts: string[]): string[] {
+  return [
+    ...new Set([
+      parts.join("."),
+      parts
+        .map((part, index) =>
+          index === parts.length - 1
+            ? normalizeFileNodeName(part, false)
+            : normalizeFileName(part),
+        )
+        .join("."),
+      parts.map((part) => normalizeFileName(part)).join("."),
+    ]),
+  ]
+}
+
 export function joinLtree(parentPath: string | null | undefined, name: string) {
   if (!parentPath) {
     return name

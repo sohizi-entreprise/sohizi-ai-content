@@ -34,7 +34,12 @@ import {
   parseSkillDocument,
   serializeSkillDocument,
 } from "./skill-document"
-import { joinLtree, toApiPath, ltreeDepth } from "./utils"
+import {
+  joinLtree,
+  toApiPath,
+  ltreeDepth,
+  normalizeFileNodeName,
+} from "./utils"
 import { expireAssetsForFileNode } from "../media-engine/asset-retention"
 
 export const ORDER_GAP = 1000
@@ -473,16 +478,12 @@ export const isFileNodeInAncestorChain = async (
 }
 
 export const createFileNode = async (data: FileCreationRequest) => {
-  const path = await resolveChildPath(
-    db,
-    data.projectId,
-    data.parentId,
-    data.name,
-  )
+  const name = normalizeFileNodeName(data.name, data.directory)
+  const path = await resolveChildPath(db, data.projectId, data.parentId, name)
   const kind = resolveCreatedFileKind(data)
   const result = await db
     .insert(fileNodes)
-    .values({ ...data, ...kind, path })
+    .values({ ...data, ...kind, name, path })
     .onConflictDoNothing()
     .returning()
   if (result.length === 0) {
@@ -847,6 +848,7 @@ export const createFileWithContentAtPosition = async (
   initialContent?: InitialFileContent,
 ) => {
   return db.transaction(async (tx) => {
+    const name = normalizeFileNodeName(data.name, data.directory)
     const kind = resolveCreatedFileKind(data)
     if (!data.directory && kind.type === fileType.SKILL) {
       const [parent] = await tx
@@ -870,7 +872,7 @@ export const createFileWithContentAtPosition = async (
       data.parentId,
     )
     const provisionalPosition = getNextPositionFromSiblings(siblings)
-    const path = await resolveChildPath(tx, projectId, data.parentId, data.name)
+    const path = await resolveChildPath(tx, projectId, data.parentId, name)
     const metadata =
       kind.type === fileType.SKILL ? DEFAULT_SKILL_METADATA : undefined
     const file = await tx
@@ -878,6 +880,7 @@ export const createFileWithContentAtPosition = async (
       .values({
         ...data,
         ...kind,
+        name,
         position: provisionalPosition,
         path,
         ...(metadata ? { metadata } : {}),

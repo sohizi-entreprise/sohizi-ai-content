@@ -14,7 +14,11 @@ import { createProjectSchema } from "./schema"
 import { z } from "zod"
 import { ORDER_GAP } from "../file-system/repo"
 import { fileType } from "../file-system/constants"
-import { joinLtree, serializeFileNode } from "../file-system/utils"
+import {
+  joinLtree,
+  normalizeFileNodeName,
+  serializeFileNode,
+} from "../file-system/utils"
 import { RepositoryError } from "../error"
 import { expireAssetsForProject } from "../media-engine/asset-retention"
 import { DatabaseError } from "pg"
@@ -468,7 +472,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
   const resp4 = await tx
     .insert(fileNodes)
     .values({
-      name: "context",
+      name: normalizeFileNodeName("context", false),
       directory: false,
       projectId: projectId,
       parentId: coreFolder.id,
@@ -476,7 +480,7 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
       editable: false,
       type: "document",
       format: "markdown",
-      path: joinLtree(coreFolder.path, "context"),
+      path: joinLtree(coreFolder.path, normalizeFileNodeName("context", false)),
     })
     .returning()
 
@@ -512,7 +516,7 @@ async function createSecondaryFiles(
     const response = await tx
       .insert(fileNodes)
       .values({
-        name: file.name,
+        name: normalizeFileNodeName(file.name, false),
         directory: false,
         projectId: projectId,
         parentId: rootFolderId,
@@ -520,7 +524,7 @@ async function createSecondaryFiles(
         editable: false,
         type: file.type,
         format: file.format,
-        path: joinLtree("root", file.name),
+        path: joinLtree("root", normalizeFileNodeName(file.name, false)),
       })
       .returning()
     const fileNode = response[0]

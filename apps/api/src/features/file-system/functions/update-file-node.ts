@@ -7,6 +7,7 @@ import {
   FileSystemOperationError,
 } from "./base"
 import { validateMoveTarget } from "./validate-move-target"
+import { normalizeFileNodeName } from "../utils"
 
 export const updateFileNode = async (
   projectId: string,
@@ -26,7 +27,11 @@ export const updateFileNode = async (
     throw new FileSystemNotFoundError("File not found")
   }
 
-  const nextName = request.name ?? currentFileNode.name
+  const nextName =
+    request.name === undefined
+      ? currentFileNode.name
+      : normalizeFileNodeName(request.name, currentFileNode.directory)
+  if (!nextName) throw new FileSystemInputError("Invalid file name")
   const nextParentId =
     request.parentId === undefined ? currentFileNode.parentId : request.parentId
   const shouldReorder =
@@ -54,7 +59,7 @@ export const updateFileNode = async (
 
     const updatedFileNode = await fileSystemRepo.updateFileNode(projectId, {
       id: request.id,
-      ...(request.name === undefined ? {} : { name: request.name }),
+      ...(request.name === undefined ? {} : { name: nextName }),
       ...(request.parentId === undefined ? {} : { parentId: request.parentId }),
     })
 

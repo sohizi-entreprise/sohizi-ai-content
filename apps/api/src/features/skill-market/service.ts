@@ -6,13 +6,13 @@ import {
 } from "@/features/file-system/functions"
 import * as fileSystemRepo from "@/features/file-system/repo"
 import { serializeSkillDocument } from "@/features/file-system/skill-document"
-import { normalizeFileName } from "@/features/file-system/utils"
+import { normalizeFileNodeName } from "@/features/file-system/utils"
 import { NameConflictError } from "./errors"
 import * as repo from "./repo"
 import type { InstallSkillInput } from "./schema"
 
 function resolveSkillFileName(name: string) {
-  const normalized = normalizeFileName(name)
+  const normalized = normalizeFileNodeName(name, false)
   if (!normalized) {
     throw new BadRequest("Invalid skill name")
   }
@@ -42,7 +42,7 @@ export const listMarketCategories = async () => {
 }
 
 export const isSkillNameAvailable = async (projectId: string, name: string) => {
-  const normalized = normalizeFileName(name)
+  const normalized = normalizeFileNodeName(name, false)
   if (!normalized) {
     return { available: false }
   }

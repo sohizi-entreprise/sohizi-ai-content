@@ -25,6 +25,7 @@ import { ingestFileContentChunks } from "./ingest-file-content-chunks"
 import { CursorPaginationOptions } from "@/type"
 import * as videoEditorRepo from "../video-editor/repo"
 import { fromApiPath, serializeFileNode, toApiPath } from "./utils"
+import { PathObject } from "./objects/path"
 import {
   DIRECTORY_CHILDREN_PAGE_SIZE,
   decodeDirectoryChildCursor,
@@ -221,11 +222,16 @@ function applyCompactTextDiff(content: string, diff: CompactTextDiff) {
 
 export const getFileNodeByPath = async (projectId: string, apiPath: string) => {
   await validateProject(projectId)
-  const ltreePath = fromApiPath(apiPath)
-  if (!ltreePath) {
+  if (!fromApiPath(apiPath)) {
     throw new BadRequest("Invalid path")
   }
-  const fileNode = await fileSystemRepo.getFileNodeByPath(projectId, ltreePath)
+  const { fileObject } = await new PathObject().resolveByPath(
+    apiPath,
+    projectId,
+  )
+  const fileNode = fileObject
+    ? await fileSystemRepo.getFileNodeById(projectId, fileObject.id)
+    : null
   if (!fileNode) {
     throw new NotFound("File not found")
   }

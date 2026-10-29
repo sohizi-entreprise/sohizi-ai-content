@@ -5,7 +5,7 @@ import { SYSTEM_LEVEL_FILES } from "../../constants/system-files"
 import type { FileContentPayload } from "@/features/file-system/objects/file"
 import * as fileSystemRepo from "@/features/file-system/repo"
 import {
-  normalizeFileName,
+  normalizeFileNodeName,
   toApiPath,
   formatKeywordChunkResults,
 } from "@/features/file-system/utils"
@@ -197,13 +197,13 @@ export async function executeCreateFile(
       return failure(anchorId.slice("ERROR:".length))
     }
 
-    const normalizedName = normalizeAndValidateName(name)
+    assertValidName(name, dir)
     const file = await fileSystemRepo.createFileWithContentAtPosition(
       session.projectId,
       {
         projectId: session.projectId,
         parentId: parent.id,
-        name: normalizedName,
+        name,
         directory: dir,
         position: 0,
         editable: true,
@@ -218,7 +218,7 @@ export async function executeCreateFile(
     }
 
     return success(
-      `Created ${dir ? "directory" : "file"} "${normalizedName}" successfully.`,
+      `Created ${dir ? "directory" : "file"} "${file.name}" successfully.`,
       [refresh(parent)],
     )
   } catch (error) {
@@ -432,10 +432,10 @@ function formatFileContent(data: FileContentPayload): string {
   }
 }
 
-function normalizeAndValidateName(name: string) {
-  const normalizedName = normalizeFileName(name)
-  if (!normalizedName) throw new Error("Invalid file name")
-  return normalizedName
+function assertValidName(name: string, directory: boolean) {
+  if (!normalizeFileNodeName(name, directory)) {
+    throw new Error("Invalid file name")
+  }
 }
 
 async function resolveAnchorId(

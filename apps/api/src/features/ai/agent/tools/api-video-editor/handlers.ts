@@ -239,9 +239,7 @@ export async function executeAddTrack(
     ...success(
       `Track created: ID: ${track.id} - Type: ${track.type} - Position: ${track.position}`,
     ),
-    videoEditorChanges: [
-      { type: "add_track", track, name: data.body.name },
-    ],
+    videoEditorChanges: [{ type: "add_track", track, name: data.body.name }],
   }
 }
 

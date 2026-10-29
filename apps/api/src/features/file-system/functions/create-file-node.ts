@@ -3,7 +3,7 @@ import { MAX_FILE_DEPTH, fileType } from "../constants"
 import { resolveCreatedFileKind } from "../file-kind"
 import * as fileSystemRepo from "../repo"
 import type { InitialFileContent } from "../repo"
-import { normalizeFileName, ltreeDepth } from "../utils"
+import { normalizeFileNodeName, ltreeDepth } from "../utils"
 import { FileSystemConflictError, FileSystemInputError } from "./base"
 
 const EMPTY_FILE_CONTENT: UpdateFileContentRequest = {
@@ -55,7 +55,7 @@ export const createFileNode = async (
     )
   }
 
-  const normalizedName = normalizeFileName(data.name)
+  const normalizedName = normalizeFileNodeName(data.name, data.directory)
   if (!normalizedName) {
     throw new FileSystemInputError("Invalid file name")
   }
