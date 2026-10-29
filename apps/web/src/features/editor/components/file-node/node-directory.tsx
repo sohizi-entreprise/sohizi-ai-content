@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { IconCaretDownFilled, IconCaretRightFilled } from "@tabler/icons-react"
+import {
+  IconCaretDownFilled,
+  IconCaretRightFilled,
+  IconLoader2,
+} from "@tabler/icons-react"
 import { useEditorStore } from "../../stores/editor-store"
 import { getDirectoryIcon } from "../../utils/get-file-icon"
 import { canCreateFileTypeInFolder } from "./node-menu"
@@ -29,9 +33,14 @@ export function DirectoryNode(props: NodeProps) {
     return () => cancelAnimationFrame(frame)
   }, [node.isEditing])
 
-  useDirectoryChildren(node.data.projectId, node.data.id, isDir && node.isOpen)
+  const { isLoading } = useDirectoryChildren(
+    node.data.projectId,
+    node.data.id,
+    isDir && node.isOpen,
+  )
 
   const handleClick = () => {
+    if (isLoading) return
     if (isDir) {
       node.toggle()
     } else {
@@ -87,13 +96,24 @@ export function DirectoryNode(props: NodeProps) {
       data-format={node.data.format}
       data-fileid={node.data.id}
     >
-      <span className="flex size-4 shrink-0 items-center justify-center">
-        {node.isOpen ? (
+      <button
+        type="button"
+        disabled={isLoading}
+        aria-label={node.isOpen ? "Collapse folder" : "Expand folder"}
+        className="flex size-4 shrink-0 cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={(event) => {
+          event.stopPropagation()
+          if (event.button === 0) handleClick()
+        }}
+      >
+        {isLoading ? (
+          <IconLoader2 className="size-3 animate-spin" />
+        ) : node.isOpen ? (
           <IconCaretDownFilled className="size-3" />
         ) : (
           <IconCaretRightFilled className="size-3" />
         )}
-      </span>
+      </button>
 
       {getDirectoryIcon(node.isOpen, node.data.editable, node.data.name)}
 

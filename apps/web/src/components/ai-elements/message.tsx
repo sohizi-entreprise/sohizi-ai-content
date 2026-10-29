@@ -27,6 +27,7 @@ import type { ComponentProps, HTMLAttributes, ReactElement } from "react"
 import type { UIMessage } from "ai"
 import { cn } from "@/lib/utils"
 import { FilePathLink } from "@/features/editor/components/file-path-link"
+import { replaceClipTagsWithLinks } from "@/features/editor/extensions/clip-tag"
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"]
@@ -324,7 +325,7 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>
 const streamdownPlugins = { cjk, code, math, mermaid }
 
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => (
+  ({ className, children, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
@@ -333,7 +334,11 @@ export const MessageResponse = memo(
       plugins={streamdownPlugins}
       {...props}
       components={{ a: FilePathLink, ...props.components }}
-    />
+    >
+      {typeof children === "string"
+        ? replaceClipTagsWithLinks(children)
+        : children}
+    </Streamdown>
   ),
   (prevProps, nextProps) =>
     prevProps.children === nextProps.children &&

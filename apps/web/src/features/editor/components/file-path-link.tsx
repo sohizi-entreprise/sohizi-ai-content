@@ -1,4 +1,5 @@
 import { useEditorStore } from "../stores/editor-store"
+import { getClipBadgeClassName, toClipId } from "../extensions/clip-tag"
 import type { AnchorHTMLAttributes, MouseEvent } from "react"
 import { toProjectFilePath } from "@/lib/file-tag"
 import { cn } from "@/lib/utils"
@@ -11,6 +12,20 @@ export function FilePathLink({
   target,
   ...props
 }: AnchorHTMLAttributes<HTMLAnchorElement> & { node?: unknown }) {
+  const clipId = toClipId(href)
+  if (clipId) {
+    return (
+      <span
+        data-type="clipTag"
+        data-slot="badge"
+        data-clip-id={clipId}
+        className={getClipBadgeClassName(props.className)}
+      >
+        {children ?? "clip"}
+      </span>
+    )
+  }
+
   const path = toProjectFilePath(href)
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {

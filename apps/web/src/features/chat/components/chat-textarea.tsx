@@ -20,6 +20,7 @@ import {
   createFileLinkSuggestion,
 } from "@/features/editor/extensions/file-link-suggestion"
 import { EditorLink } from "@/features/editor/extensions/editor-link"
+import { ClipTag } from "@/features/editor/extensions/clip-tag"
 
 type ChatTextareaProps = {
   projectId: string
@@ -114,6 +115,7 @@ export default function ChatTextarea(props: ChatTextareaProps) {
         link: false,
       }),
       EditorLink,
+      ClipTag,
       Placeholder.configure({
         placeholder: placeholder ?? "Write your prompt ...",
       }),

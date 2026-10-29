@@ -35,7 +35,11 @@ export function captureUnexpectedError(
   error: unknown,
   tags: Record<string, string | undefined> = {},
 ): void {
-  if (!sentryEnabled || isExpectedCancellation(error)) return
+  if (!sentryEnabled) {
+    console.error("Unexpected error (Sentry disabled)", error)
+    return
+  }
+  if (isExpectedCancellation(error)) return
   Sentry.withScope((scope) => {
     for (const [key, value] of Object.entries(tags)) {
       if (value && value.length <= 128 && /^[\w./:{}-]+$/.test(value)) {

@@ -43,12 +43,13 @@ a.file-tag-link,
 a.file-tag-link:hover,
 a.file-tag-link:focus,
 a.file-tag-link:visited {
-  background-color: color-mix(in oklch, var(--primary) 20%, transparent);
+  background-color: color-mix(in oklch, var(--primary) 10%, transparent);
   color: var(--primary);
   text-decoration: none;
-  font-weight: 500;
-  border-radius: 0.25rem;
-  padding: 0.1em 0.3em;
+  /* font-weight: 500; */
+  font-size: 0.875rem;
+  border-radius: 25rem;
+  padding: 0.15em 0.5em;
   cursor: pointer;
 }
 

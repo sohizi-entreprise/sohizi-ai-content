@@ -4,6 +4,7 @@ import * as repo from "@/features/chat/repo"
 import { ModelMessage } from "ai"
 import { isContextNote, messagesForCheckpoint } from "./system-persist"
 import { v4 as uuidv4 } from "uuid"
+import { captureUnexpectedError } from "@/sentry"
 
 export function agentRunMetadata(
   usage: TokenUsage | null,
@@ -62,7 +63,13 @@ export class CheckpointPersistence extends Persistence {
         this.persistConversationUsage(runtimeState),
       ])
     } catch (error) {
-      console.error("Failed to persist session state", error)
+      captureUnexpectedError(error, {
+        service: "api",
+        operation: "session_persist",
+        project_id: this.checkpoint.projectId,
+        conversation_id: this.checkpoint.conversationId,
+        run_id: this.runId,
+      })
     } finally {
       this.messages = []
     }
