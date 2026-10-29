@@ -404,6 +404,11 @@ export type ChatStreamChunk = {
   | { type: "reasoning_delta"; text: string }
   | { type: "progress_update"; toolCallId: string; text: string }
   | {
+      type: "context_compaction"
+      compactionId: string
+      status: "started" | "completed"
+    }
+  | {
       type: "usage"
       usage: StreamTokenUsage
       latestRunUsage?: StreamTokenUsage | null

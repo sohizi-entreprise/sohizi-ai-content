@@ -1,20 +1,26 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { IconAlertCircle, IconCoins } from "@tabler/icons-react"
-import { TextShimmerCss } from "@sohizi/ui/loaders"
 import { Button } from "@sohizi/ui/button"
 import { useBufferChunks } from "../hooks/use-buffer-chunks"
 import { classifyRunError } from "../lib/run-error"
+import { buildRunPresentation } from "../lib/tool-activity"
 import { useChatStore } from "../store/chat-store"
 import ChatBuble from "./chat-buble"
-import { ChatRunProvider } from "./chat-run-context"
+import { ChatRunProvider, useChatRun } from "./chat-run-context"
+import { ChatThoughtBlock } from "./chat-thought-block"
 import type {
   AgentRunBlock,
   FilePendingOperation,
   Message,
   VideoEditorChange,
 } from "../types"
+import {
+  MessageContent,
+  MessageResponse,
+  Message as UIMessage,
+} from "@/components/ai-elements/message"
 import { fileTreeKey } from "@/features/projects/query-mutation"
 import { getFilePendingKey } from "@/features/editor/query-mutations"
 import { useVideoEditorStore } from "@/features/video-editor/store/editor-store"
@@ -46,7 +52,12 @@ export const ChatRunBlock = ({ run }: { run: AgentRunBlock }) => {
   return (
     <ChatRunProvider runId={run.id} messages={messages}>
       <div className="space-y-3">
-        <RenderMessages messages={messages} />
+        <RenderRunTurn
+          messages={messages}
+          isRunning={false}
+          createdAt={run.createdAt}
+          updatedAt={run.updatedAt}
+        />
         {hasError ? <ChatRunErrorBanner error={run.error} /> : null}
       </div>
     </ChatRunProvider>
@@ -62,8 +73,11 @@ function PendingRunBlock({
 }) {
   const queryClient = useQueryClient()
   const [isFinished, setIsFinished] = useState(false)
+  const [finishedAt, setFinishedAt] = useState<string | undefined>(undefined)
+
   const onFinish = (_: AgentRunBlock["status"]) => {
     setIsFinished(true)
+    setFinishedAt(new Date().toISOString())
   }
   const onOperation = (operation: FilePendingOperation) => {
     const fileId = operation.fileId
@@ -97,26 +111,74 @@ function PendingRunBlock({
     onVideoEditorChange,
   })
   const activeError = isCancelled ? null : (streamError ?? run.error)
+  const isRunning = !isFinished && !isCancelled && !activeError
 
   return (
     <ChatRunProvider runId={run.id} messages={messages}>
       <div className="space-y-3">
-        <RenderMessages messages={messages} />
-        {!isFinished && !isCancelled && !activeError && (
-          <TextShimmerCss text="Processing..." />
-        )}
+        <RenderRunTurn
+          messages={messages}
+          isRunning={isRunning}
+          createdAt={run.createdAt}
+          updatedAt={finishedAt ?? run.updatedAt}
+        />
         {activeError ? <ChatRunErrorBanner error={activeError} /> : null}
       </div>
     </ChatRunProvider>
   )
 }
 
-function RenderMessages({ messages }: { messages: Array<Message> }) {
+function RenderRunTurn({
+  messages,
+  isRunning,
+  createdAt,
+  updatedAt,
+}: {
+  messages: Array<Message>
+  isRunning: boolean
+  createdAt: string
+  updatedAt?: string
+}) {
+  const { tasks, firstAddToolCallId } = useChatRun()
+
+  const { userMessages, timelineItems, finalResponse } = useMemo(
+    () =>
+      buildRunPresentation(messages, {
+        firstAddToolCallId,
+        hasTasks: tasks.length > 0,
+      }),
+    [messages, firstAddToolCallId, tasks.length],
+  )
+
+  const showThoughtBlock = timelineItems.length > 0 || isRunning
+
   return (
     <div className="flex flex-col gap-4">
-      {messages.map((msg) => (
+      {userMessages.map((msg) => (
         <ChatBuble key={msg.id} data={msg} />
       ))}
+
+      {showThoughtBlock || finalResponse ? (
+        <UIMessage from="assistant">
+          <MessageContent className="w-full gap-3">
+            {showThoughtBlock ? (
+              <ChatThoughtBlock
+                timelineItems={timelineItems}
+                isRunning={isRunning}
+                createdAt={createdAt}
+                updatedAt={updatedAt}
+                hasFinalResponse={Boolean(finalResponse)}
+              />
+            ) : null}
+
+            {finalResponse ? (
+              <MessageResponse isAnimating={finalResponse.isStreaming}>
+                {finalResponse.text}
+              </MessageResponse>
+            ) : null}
+          </MessageContent>
+        </UIMessage>
+      ) : null}
     </div>
   )
 }

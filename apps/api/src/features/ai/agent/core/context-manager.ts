@@ -11,6 +11,12 @@ import { extractTextFromContent } from "../utils/message-content"
 import { contextSummaryMessage } from "./system-persist"
 import { selectCompressionWindow, splitRetainedRuns } from "./context-window"
 import { truncatedToolResult } from "./context-artifact-format"
+import { v4 as uuidv4 } from "uuid"
+
+export type CompactionStatusEvent = {
+  compactionId: string
+  status: "started" | "completed"
+}
 
 export type ContextArtifactStore = {
   save(
@@ -89,20 +95,24 @@ export class ContextManager {
     inputTokens: number,
     abortSignal: AbortSignal,
     runId: string,
-  ): Promise<void> {
+    onCompactionStatus?: (event: CompactionStatusEvent) => void | Promise<void>,
+  ): Promise<boolean> {
     if (
       abortSignal.aborted ||
       stateManager.status === "error" ||
       stateManager.status === "paused"
     ) {
-      return
+      return false
     }
 
     const consumption = this.getConsumption(inputTokens)
     // console.log(`[context] ${consumption.tokens}/${consumption.max} tokens (${(consumption.percentage * 100).toFixed(1)}%)`);
     if (!consumption.exceeded) {
-      return
+      return false
     }
+
+    const compactionId = uuidv4()
+    await onCompactionStatus?.({ compactionId, status: "started" })
 
     const messages = stateManager.getState().messages
     const summaryStream = await this.getSummaryStream()
@@ -124,12 +134,16 @@ export class ContextManager {
         : this.pruneMessages(messages)
     } catch (error) {
       console.error("Failed to compress context", error)
-      return
+      await onCompactionStatus?.({ compactionId, status: "completed" })
+      return false
     }
 
-    if (compressed !== messages) {
+    const didCompress = compressed !== messages
+    if (didCompress) {
       stateManager.replaceMessages(compressed)
     }
+    await onCompactionStatus?.({ compactionId, status: "completed" })
+    return didCompress
   }
 
   getConsumption(inputTokens: number): ConsumptionInfo {
@@ -273,7 +287,9 @@ export class ContextManager {
       })),
     )
     if (ids.length !== jobs.length) {
-      throw new Error("Artifact storage did not return an id for every tool result")
+      throw new Error(
+        "Artifact storage did not return an id for every tool result",
+      )
     }
     return applyToolResultArtifacts(messages, jobs, ids)
   }
@@ -445,7 +461,10 @@ function applyToolResultArtifacts(
   ids: string[],
 ): ModelMessage[] {
   const replacements = new Map(
-    jobs.map((job, index) => [`${job.messageIndex}:${job.partIndex}`, ids[index]]),
+    jobs.map((job, index) => [
+      `${job.messageIndex}:${job.partIndex}`,
+      ids[index],
+    ]),
   )
   return messages.map((message, messageIndex) => {
     if (message.role !== "tool" || !Array.isArray(message.content)) {

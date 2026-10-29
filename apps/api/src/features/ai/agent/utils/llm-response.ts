@@ -21,6 +21,7 @@ export const streamEvents = {
   operation: "operation",
   videoEditorChange: "video_editor_change",
   progressUpdate: "progress_update",
+  contextCompaction: "context_compaction",
 } as const
 
 export type ToolResultDelta = {
@@ -108,6 +109,12 @@ export type ProgressUpdate = {
   text: string
 }
 
+export type ContextCompactionChunk = {
+  type: typeof streamEvents.contextCompaction
+  compactionId: string
+  status: "started" | "completed"
+}
+
 type ErrorChunk = {
   type: typeof streamEvents.error
   error: string
@@ -133,5 +140,6 @@ export type LlmChunk =
   | ToolCallEnd
   | ToolCall
   | ProgressUpdate
+  | ContextCompactionChunk
   | ErrorChunk
   | LlmCompleteChunk

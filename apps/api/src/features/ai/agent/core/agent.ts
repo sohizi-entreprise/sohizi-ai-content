@@ -152,11 +152,9 @@ export class Agent {
           )
         }
 
-        await this.contextManager.maybeCompress(
-          this.stateManager,
+        yield* this.maybeCompressWithEvents(
           this.stateManager.getState().latestRunUsage?.input ?? 0,
           abortSignal,
-          this.ensureRunId(),
         )
       }
 
@@ -200,11 +198,9 @@ export class Agent {
     let assistantMessageRegistered = false
     let toolCallsStarted = false
 
-    await this.contextManager.maybeCompress(
-      this.stateManager,
+    yield* this.maybeCompressWithEvents(
       estimateInputTokens(this.stateManager.getState().messages, 1.15),
       abortSignal,
-      this.ensureRunId(),
     )
     const stateMessages = this.modelMessages()
 
@@ -416,10 +412,7 @@ export class Agent {
     abortSignal: AbortSignal,
   ): AsyncGenerator<AgentChunk, void, unknown> {
     const generators: AsyncGenerator<
-      | ToolResultComplete
-      | AgentChunk
-      | OperationChunk
-      | VideoEditorChangeChunk,
+      ToolResultComplete | AgentChunk | OperationChunk | VideoEditorChangeChunk,
       void,
       unknown
     >[] = []
@@ -593,6 +586,74 @@ export class Agent {
         toolCallId: job.toolCallId,
         text: progressTextForJob(job),
       })
+    }
+  }
+
+  private async *maybeCompressWithEvents(
+    inputTokens: number,
+    abortSignal: AbortSignal,
+  ): AsyncGenerator<AgentChunk, void, unknown> {
+    if (
+      abortSignal.aborted ||
+      this.stateManager.status === "error" ||
+      this.stateManager.status === "paused"
+    ) {
+      return
+    }
+    const consumption = this.contextManager.getConsumption(inputTokens)
+    if (!consumption.exceeded) {
+      return
+    }
+
+    const compactionId = uuidv4()
+    const runId = this.ensureRunId()
+    yield this.buildEvent({
+      type: streamEvents.contextCompaction,
+      compactionId,
+      status: "started",
+    })
+
+    const didCompress = await this.contextManager.maybeCompress(
+      this.stateManager,
+      inputTokens,
+      abortSignal,
+      runId,
+    )
+
+    yield this.buildEvent({
+      type: streamEvents.contextCompaction,
+      compactionId,
+      status: "completed",
+    })
+
+    if (didCompress) {
+      this.persistence?.registerMessage([
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool-call",
+              toolCallId: compactionId,
+              toolName: "contextCompaction",
+              input: {},
+            },
+          ],
+        },
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: compactionId,
+              toolName: "contextCompaction",
+              output: {
+                type: "text",
+                value: "Context automatically compacted",
+              },
+            },
+          ],
+        },
+      ])
     }
   }
 

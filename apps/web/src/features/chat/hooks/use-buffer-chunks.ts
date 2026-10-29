@@ -246,12 +246,22 @@ function applyChunkToMessage(
     case "progress_update":
       return {
         ...currentMessage,
-        content: upsertTextPart(
-          currentMessage.content,
-          "text",
-          chunk.text,
-          true,
-        ),
+        content: upsertToolCallPart(currentMessage.content, {
+          toolCallId: chunk.toolCallId,
+          toolName: "provideStatusUpdate",
+          input: { message: chunk.text },
+          isStreaming: true,
+        }),
+      }
+    case "context_compaction":
+      return {
+        ...currentMessage,
+        content: upsertToolCallPart(currentMessage.content, {
+          toolCallId: chunk.compactionId,
+          toolName: "contextCompaction",
+          input: { status: chunk.status },
+          isStreaming: chunk.status === "started",
+        }),
       }
     case "reasoning_delta":
       return {
