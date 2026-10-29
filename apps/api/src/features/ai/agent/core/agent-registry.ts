@@ -57,6 +57,7 @@ registerAgent({
       allTools.manageTodoListTool,
       allTools.assignTaskTool,
       allTools.provideStatusUpdateTool,
+      allTools.askQuestionsTool,
       allTools.getArtifactTool,
       allTools.apiDocReadTool,
       allTools.apiFileSystemTool,

@@ -10,6 +10,7 @@ import { apiFileSystemTool } from "./api-file-system"
 import { apiMediaOperationsTool } from "./api-media-operations"
 import { apiVideoEditorTool } from "./api-video-editor"
 import { apiWebTool } from "./api-web"
+import { askQuestionsTool } from "./ask-questions"
 import { recallMemoryTool, saveMemoryTool } from "./memory"
 
 const toolRegistry = new Map<string, BaseTool<z.ZodType>>()
@@ -27,6 +28,7 @@ export const allTools = {
   submitHtmlCompositionTool,
   assignTaskTool,
   provideStatusUpdateTool,
+  askQuestionsTool,
   getArtifactTool,
   apiDocReadTool,
   apiFileSystemTool,

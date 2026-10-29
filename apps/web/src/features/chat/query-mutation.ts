@@ -198,6 +198,28 @@ function upsertAgentRun(
   }
 }
 
+export function updateAgentRunInCache(
+  current: AgentRunsInfiniteData | undefined,
+  runId: string,
+  patch: Partial<
+    Pick<AgentRunBlock, "status" | "messages" | "error" | "updatedAt">
+  >,
+): AgentRunsInfiniteData | undefined {
+  if (!current) return current
+  return {
+    ...current,
+    pages: current.pages.map((page) => ({
+      ...page,
+      data: page.data.map((item) =>
+        item.id === runId ? { ...item, ...patch } : item,
+      ),
+    })),
+  }
+}
+
+export const agentRunsQueryKey = keysFactory.agentRuns
+export const conversationsQueryKey = keysFactory.conversations
+
 export const listModelsQueryOptions = (
   projectId: string,
   categories: Array<string>,

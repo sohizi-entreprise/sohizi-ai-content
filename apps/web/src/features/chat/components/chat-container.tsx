@@ -1,5 +1,6 @@
 import { ChatHeader } from "./chat-header"
 import { ChatMessages } from "./chat-messages"
+import { ChatQuestionDock } from "./chat-question-dock"
 import { ChatInput } from "./chat-input"
 import type { RefObject } from "react"
 import type { Editor } from "@tiptap/react"
@@ -27,6 +28,9 @@ export function ChatContainer({ projectId, className }: ChatContainerProps) {
 
       {/* Messages */}
       <ChatMessages projectId={projectId} className="flex-1 min-h-0" />
+
+      {/* Clarifying questions dock */}
+      <ChatQuestionDock projectId={projectId} />
 
       {/* Input */}
       <ChatInput projectId={projectId} />

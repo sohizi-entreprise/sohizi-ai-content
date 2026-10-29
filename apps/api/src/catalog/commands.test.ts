@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test"
 import {
-  buildCommandPrompt,
   getCommands,
   resetCommandCache,
   resolveCatalogCommands,
@@ -30,15 +29,6 @@ describe("commands", () => {
       name: "Plan",
     })
     expect(plan).not.toHaveProperty("promptModifier")
-  })
-
-  it("builds a prompt from the selected command", async () => {
-    const commands = await getCommands()
-
-    expect(buildCommandPrompt(commands, "plan")).toContain("<project-command>")
-    expect(buildCommandPrompt(commands, "plan")).toContain("Plan the video")
-    expect(buildCommandPrompt(commands, null)).toBe("")
-    expect(buildCommandPrompt(commands, "missing")).toBe("")
   })
 
   it("resolves catalog commands by id or name without duplicates", async () => {

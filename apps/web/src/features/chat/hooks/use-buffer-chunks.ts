@@ -22,6 +22,7 @@ type Params = {
   onAsset?: (asset: MediaAsset) => void
   onOperation?: (operation: FilePendingOperation) => void
   onVideoEditorChange?: (change: VideoEditorChange) => void
+  onTitleUpdate?: (conversationId: string, title: string) => void
   onError?: (error: Error) => void
 }
 
@@ -33,6 +34,7 @@ export function useBufferChunks({
   onAsset,
   onOperation,
   onVideoEditorChange,
+  onTitleUpdate,
   onError,
 }: Params) {
   const [messages, setMessages] = useState<Array<Message>>(initialMessages)
@@ -107,6 +109,20 @@ export function useBufferChunks({
         const asset = (data as { data: MediaAsset }).data
         setAssets((prev) => [...prev, asset])
         onAsset?.(asset)
+      },
+      title: (data) => {
+        const { conversationId, title } = data as {
+          conversationId?: string
+          title?: string
+        }
+        if (!title) return
+        const activeId = useChatStore.getState().activeConversation?.id
+        if (!conversationId || activeId === conversationId) {
+          patchConversation({ title })
+        }
+        if (conversationId) {
+          onTitleUpdate?.(conversationId, title)
+        }
       },
       done: (_, { closeEventSource }) => {
         finishedRef.current = true

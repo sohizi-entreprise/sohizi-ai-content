@@ -61,6 +61,7 @@ export type InvokeRequest = {
   outputSchema?: z.ZodType
   stream?: boolean
   telemetryFunctionId?: string
+  disableTools?: boolean
 }
 
 export class LlmClient {
@@ -88,6 +89,7 @@ export class LlmClient {
     abortSignal,
     outputSchema,
     telemetryFunctionId,
+    disableTools,
   }: Omit<InvokeRequest, "stream">): AsyncGenerator<LlmChunk, void, unknown> {
     const modelConfig = this.modelConfig
     let cost = 0
@@ -97,7 +99,7 @@ export class LlmClient {
         modelId: this.model,
         messages,
         abortSignal,
-        tools: this.tools,
+        tools: disableTools ? undefined : this.tools,
         outputSchema,
         maxOutputTokens: modelConfig?.maxOutputTokens,
         reasoningEffort: modelConfig?.reasoningEffort,
@@ -156,6 +158,7 @@ export class LlmClient {
     abortSignal,
     outputSchema,
     telemetryFunctionId,
+    disableTools,
   }: Omit<InvokeRequest, "stream">): AsyncGenerator<LlmChunk, void, unknown> {
     const modelConfig = this.modelConfig
     let finishReason: CompleteReason = "other"
@@ -181,7 +184,7 @@ export class LlmClient {
         modelId: this.model,
         messages,
         abortSignal,
-        tools: this.tools,
+        tools: disableTools ? undefined : this.tools,
         outputSchema,
         maxOutputTokens: modelConfig?.maxOutputTokens,
         reasoningEffort: modelConfig?.reasoningEffort,
@@ -342,6 +345,7 @@ export type BillableLlmInput<
   estimatedInputTokens: number
   estimatedOutputTokens: number
   telemetryFunctionId?: string
+  disableTools?: boolean
 }
 
 export type BillableLlmOutput<TOutput = undefined> =
@@ -433,6 +437,7 @@ export function createBillableLlmClient(
       outputSchema: input.outputSchema,
       stream: input.stream,
       telemetryFunctionId: input.telemetryFunctionId,
+      disableTools: input.disableTools,
     })
   }
 

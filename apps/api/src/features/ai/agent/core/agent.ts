@@ -47,6 +47,13 @@ import {
   formatJobUpdateNote,
   formatPendingJobReminder,
 } from "../tools/job-status"
+import {
+  formatLoopStopNote,
+  formatLoopWarningNote,
+  LoopDetector,
+  type LoopDetectorConfig,
+  type ToolCallExecutionInput,
+} from "./loop-detector"
 
 const DEFAULT_OUTPUT_TOKEN_ESTIMATE = 4096
 
@@ -65,6 +72,7 @@ type AgentConfig = {
   maxContextTokens: number
   contextThreshold?: number
   summaryModelId: string
+  loopDetectorConfig?: LoopDetectorConfig
 }
 
 type BilledLlmStream = ReturnType<
@@ -81,6 +89,7 @@ export class Agent {
   private readonly modelConfig: ModelConfig
   private readonly model: ResolvedTextModel
   private readonly contextManager: ContextManager
+  private readonly loopDetector: LoopDetector
   public artifacts: Map<string, unknown>
 
   constructor(config: AgentConfig) {
@@ -101,6 +110,7 @@ export class Agent {
       session: config.session,
       summaryModelId: config.summaryModelId,
     })
+    this.loopDetector = new LoopDetector(config.loopDetectorConfig)
     this.artifacts = new Map()
   }
 
@@ -117,6 +127,7 @@ export class Agent {
       )
 
       this.initializeState(this.agentParams.systemPrompt)
+      this.loopDetector.reset()
       this.registerMessage(ursMsg)
 
       let pendingJobReminderSent = false
@@ -137,8 +148,30 @@ export class Agent {
         }
         yield* this.drainCompletedJobs()
 
+        const loopVerdict = this.loopDetector.evaluate(step)
+        if (loopVerdict.action === "stop") {
+          if (!abortSignal.aborted && this.stateManager.status !== "error") {
+            this.stateManager.startRun()
+            this.stateManager.setFinishReason(null)
+            this.registerMessage(contextNote(formatLoopStopNote(loopVerdict)))
+            yield* this.runStep(billedLlmStream, abortSignal, step + 1, {
+              disableTools: true,
+            })
+            if (this.stateManager.isRunning) {
+              this.stateManager.finishRun()
+            }
+          }
+          break
+        } else if (
+          loopVerdict.action === "nudge" &&
+          !this.stateManager.isExitStatus
+        ) {
+          this.registerMessage(contextNote(formatLoopWarningNote(loopVerdict)))
+        }
+
         if (
           this.stateManager.isExitStatus &&
+          this.stateManager.status !== "paused" &&
           this.stateManager.hasPendingJobs() &&
           !pendingJobReminderSent &&
           !abortSignal.aborted &&
@@ -185,11 +218,13 @@ export class Agent {
   async *runStep(
     callClient: BilledLlmStream,
     abortSignal: AbortSignal,
-    _step: number,
+    step: number,
+    options?: { disableTools?: boolean },
   ): AsyncGenerator<AgentChunk, void, unknown> {
     // Future implementation: context summarization + pruning && user limit checking
     // Future persist messages to the database [checkpoints]
     this.runId = uuidv4()
+    const disableTools = options?.disableTools === true
     const tool_calls: ToolCall[] = []
     const statusUpdateToolCallIds = new Set<string>()
     let reasoning_text = ""
@@ -208,6 +243,7 @@ export class Agent {
       messages: stateMessages,
       estimatedInputTokens: estimateInputTokens(stateMessages, 1.15),
       estimatedOutputTokens: DEFAULT_OUTPUT_TOKEN_ESTIMATE,
+      ...(disableTools ? { disableTools: true } : {}),
     }
 
     // `withBillingStream` reserves up-front, settles on the terminal
@@ -278,6 +314,7 @@ export class Agent {
             break
           }
           case streamEvents.toolCallStart:
+            if (disableTools) break
             if (chunk.toolName === PROVIDE_STATUS_UPDATE_TOOL_NAME) {
               statusUpdateToolCallIds.add(chunk.toolCallId)
             } else {
@@ -285,6 +322,7 @@ export class Agent {
             }
             break
           case streamEvents.toolCallDelta:
+            if (disableTools) break
             if (statusUpdateToolCallIds.has(chunk.toolCallId)) {
               const message = extractStatusUpdateMessage(chunk.input)
               if (message !== null) {
@@ -299,11 +337,13 @@ export class Agent {
             }
             break
           case streamEvents.toolCallEnd:
+            if (disableTools) break
             if (!statusUpdateToolCallIds.has(chunk.toolCallId)) {
               yield this.buildEvent(chunk)
             }
             break
           case streamEvents.toolCall:
+            if (disableTools) break
             tool_calls.push(chunk)
             if (chunk.toolName === PROVIDE_STATUS_UPDATE_TOOL_NAME) {
               statusUpdateToolCallIds.add(chunk.toolCallId)
@@ -334,7 +374,7 @@ export class Agent {
         this.stateManager.finishRun()
       } else if (tool_calls.length > 0 && !stepError) {
         toolCallsStarted = true
-        yield* this.runToolCalls(tool_calls, abortSignal)
+        yield* this.runToolCalls(tool_calls, abortSignal, step)
       } else if (!stepError && !this.stateManager.isExitStatus) {
         this.stateManager.finishRun()
       }
@@ -410,6 +450,7 @@ export class Agent {
   private async *runToolCalls(
     tool_calls: ToolCall[],
     abortSignal: AbortSignal,
+    step: number,
   ): AsyncGenerator<AgentChunk, void, unknown> {
     const generators: AsyncGenerator<
       ToolResultComplete | AgentChunk | OperationChunk | VideoEditorChangeChunk,
@@ -419,12 +460,20 @@ export class Agent {
     const invalidTools: { toolCallId: string; toolName: string }[] = []
     const validToolCalls: ToolCall[] = []
     const completedToolCallIds = new Set<string>()
+    const resultsByCallId = new Map<
+      string,
+      { success: boolean; output: string }
+    >()
     for (const tool_call of tool_calls) {
       const tool = getTool(tool_call.toolName)
       if (!tool) {
         invalidTools.push({
           toolCallId: tool_call.toolCallId,
           toolName: tool_call.toolName,
+        })
+        resultsByCallId.set(tool_call.toolCallId, {
+          success: false,
+          output: `Invalid tool name: ${tool_call.toolName}`,
         })
         continue
       }
@@ -452,6 +501,10 @@ export class Agent {
       for await (const chunk of mergeGenerators(...generators)) {
         if (chunk.type === streamEvents.toolResultComplete) {
           completedToolCallIds.add(chunk.toolCallId)
+          resultsByCallId.set(chunk.toolCallId, {
+            success: chunk.success,
+            output: chunk.output,
+          })
           this.updateToolResults(chunk)
         }
         yield this.buildEvent(chunk)
@@ -461,9 +514,30 @@ export class Agent {
       const incompleteToolCalls = validToolCalls.filter(
         (toolCall) => !completedToolCallIds.has(toolCall.toolCallId),
       )
+      for (const toolCall of incompleteToolCalls) {
+        resultsByCallId.set(toolCall.toolCallId, {
+          success: false,
+          output: errorMessage,
+        })
+      }
       this.appendToolCallErrors(incompleteToolCalls, errorMessage)
       // throw error;
     }
+
+    const executions: ToolCallExecutionInput[] = []
+    for (const toolCall of tool_calls) {
+      const result = resultsByCallId.get(toolCall.toolCallId)
+      if (result) {
+        executions.push({
+          toolCallId: toolCall.toolCallId,
+          toolName: toolCall.toolName,
+          input: toolCall.input,
+          success: result.success,
+          output: result.output,
+        })
+      }
+    }
+    this.loopDetector.recordStep(step, executions)
   }
 
   private buildAssistantContent(

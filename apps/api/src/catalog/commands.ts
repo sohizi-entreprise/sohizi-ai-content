@@ -80,20 +80,6 @@ export const toPublicCommands = (commands: CatalogCommand[]): PublicCommand[] =>
     name: command.name,
   }))
 
-export const buildCommandPrompt = (
-  commands: CatalogCommand[],
-  commandId: string | null | undefined,
-): string => {
-  if (!commandId) {
-    return ""
-  }
-  const command = commands.find((item) => item.id === commandId)
-  if (!command) {
-    return ""
-  }
-  return `<project-command>\n${command.promptModifier.trim()}\n</project-command>`
-}
-
 export const resolveCatalogCommands = (
   commands: CatalogCommand[],
   commandIds: string[] | undefined,

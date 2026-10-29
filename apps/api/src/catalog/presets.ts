@@ -224,7 +224,7 @@ const selectionsFromSettings = (
   return selections
 }
 
-export const buildProjectSettingsPrompt = (
+export const buildProjectBriefContent = (
   presets: CatalogPreset[],
   settings: Array<PresetSelection> | Record<string, unknown> | null | undefined,
 ): string => {
@@ -238,12 +238,12 @@ export const buildProjectSettingsPrompt = (
     if (!option) {
       continue
     }
-    lines.push(`${preset.label}: ${option.promptModifier}`)
+    lines.push(`- **${preset.label}**: ${option.promptModifier}`)
   }
 
   if (lines.length === 0) {
     return ""
   }
 
-  return `<project-settings>\n${lines.join("\n")}\n</project-settings>`
+  return `# Project Brief\n\n${lines.join("\n")}\n`
 }

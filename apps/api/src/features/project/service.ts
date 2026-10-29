@@ -2,7 +2,7 @@ import * as error from "../error"
 import * as projectRepo from "./repo"
 import { z } from "zod"
 import { getCommands } from "@/catalog/commands"
-import { getPresets } from "@/catalog/presets"
+import { buildProjectBriefContent, getPresets } from "@/catalog/presets"
 import {
   createInputProjectSchema,
   createProjectSchema,
@@ -23,10 +23,16 @@ export const startProject = async (
   data: z.infer<typeof createProjectSchema>,
   organizationId: string,
 ) => {
+  let briefContent = ""
   if (isInputProject(data)) {
-    await assertInputProject(data)
+    const presets = await assertInputProject(data)
+    briefContent = buildProjectBriefContent(presets, data.presets)
   }
-  const project = await projectRepo.createProject(data, organizationId)
+  const project = await projectRepo.createProject(
+    data,
+    organizationId,
+    briefContent,
+  )
   return project
 }
 
@@ -58,6 +64,8 @@ async function assertInputProject(
   ) {
     throw new error.BadRequest("Unknown command")
   }
+
+  return presets
 }
 
 export const createTemplate = async (

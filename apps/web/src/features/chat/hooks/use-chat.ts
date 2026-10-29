@@ -94,6 +94,45 @@ export const useSendMessage = (projectId: string) => {
     })
   }
 
+  const sendCustomTextMessage = (
+    text: string,
+    options?: { onSuccess?: () => void },
+  ) => {
+    const trimmed = text.trim()
+    if (!trimmed || !modelId || isPending || isStreaming) return
+
+    const chatEditor = useEditorInputBridge.getState().chatEditor
+
+    const payload: ChatCompletionRequest = {
+      modelId,
+      reasoningEffort: resolveReasoningEffort(model, reasoningEffortByModelId),
+      userPrompt: {
+        role: "user",
+        content: [{ type: "text", text: trimmed }],
+      },
+      conversationId,
+      editorContext: buildEditorContext(chatEditor),
+      isNew: conversation?.isNew ?? true,
+    }
+
+    sendMessageMutation(payload, {
+      onSuccess: (data) => {
+        setActiveConversation({
+          ...data.conversation,
+          isStreaming: true,
+          isNew: false,
+          activeRunId: data.run.id,
+        })
+        options?.onSuccess?.()
+      },
+      onError: (error) => {
+        const rawMessage = getErrorMessage(error, "")
+        const classified = classifyRunError(rawMessage)
+        toast.error(classified.message)
+      },
+    })
+  }
+
   const cancelGeneration = () => {
     const runId = conversation?.activeRunId
     if (!conversationId || !runId || isCancelling) return
@@ -118,6 +157,7 @@ export const useSendMessage = (projectId: string) => {
 
   return {
     sendMessage,
+    sendCustomTextMessage,
     cancelGeneration,
     loadingState,
     disableSendButton,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import {
-  buildProjectSettingsPrompt,
+  buildProjectBriefContent,
   filterPresets,
   getPresets,
   resetPresetCache,
@@ -49,7 +49,7 @@ describe("presets", () => {
 
   it("resolves selected values to prompt modifiers", async () => {
     const presets = await getPresets()
-    const prompt = buildProjectSettingsPrompt(presets, {
+    const brief = buildProjectBriefContent(presets, {
       format: "storytime",
       genre: { label: "Drama", value: "drama" },
       durationMin: "< 2",
@@ -57,23 +57,23 @@ describe("presets", () => {
       missing: { label: "Nope", value: "nope" },
     })
 
-    expect(prompt).toContain("<project-settings>")
-    expect(prompt).toContain("Format: Tell it as a story.")
-    expect(prompt).toContain("Genre: Tell the story as drama.")
-    expect(prompt).not.toContain("Tone:")
-    expect(prompt).not.toContain("nope")
+    expect(brief).toContain("# Project Brief")
+    expect(brief).toContain("- **Format**: Tell it as a story.")
+    expect(brief).toContain("- **Genre**: Tell the story as drama.")
+    expect(brief).not.toContain("Tone")
+    expect(brief).not.toContain("nope")
   })
 
   it("resolves preset selections by id", async () => {
     const presets = await getPresets()
     const format = presets.find((preset) => preset.key === "format")
-    const prompt = buildProjectSettingsPrompt(presets, {
+    const brief = buildProjectBriefContent(presets, {
       presets: [{ id: format?.id ?? "", value: "explainer" }],
       commandId: "plan",
       modelId: null,
     })
 
-    expect(prompt).toContain("Format: Explain one idea.")
-    expect(prompt).not.toContain("Genre:")
+    expect(brief).toContain("- **Format**: Explain one idea.")
+    expect(brief).not.toContain("Genre")
   })
 })

@@ -35,6 +35,7 @@ const isPgError = (error: unknown) => {
 export const createProject = async (
   data: z.infer<typeof createProjectSchema>,
   organizationId: string,
+  briefContent = "",
 ) => {
   const result = await db.transaction(async (tx) => {
     const response = await tx
@@ -49,7 +50,7 @@ export const createProject = async (
     if ("presets" in data) {
       await tx.insert(projectBriefs).values({
         projectId: project.id,
-        content: "",
+        content: briefContent,
         additionalSettings: {
           presets: data.presets,
           commandId: data.commandId,
@@ -58,7 +59,7 @@ export const createProject = async (
       })
     }
 
-    await createInitialFiles(tx, project.id)
+    await createInitialFiles(tx, project.id, briefContent)
 
     return project
   })
@@ -414,7 +415,11 @@ function parsePublishedTemplateCursor(cursor?: string) {
   }
 }
 
-async function createInitialFiles(tx: DbTransaction, projectId: string) {
+async function createInitialFiles(
+  tx: DbTransaction,
+  projectId: string,
+  briefContent = "",
+) {
   const resp1 = await tx
     .insert(fileNodes)
     .values({
@@ -469,27 +474,27 @@ async function createInitialFiles(tx: DbTransaction, projectId: string) {
     path: joinLtree(coreFolder.path, "skills"),
   })
 
-  const resp4 = await tx
+  const briefName = normalizeFileNodeName("brief", false)
+  const [briefFile] = await tx
     .insert(fileNodes)
     .values({
-      name: normalizeFileNodeName("context", false),
+      name: briefName,
       directory: false,
       projectId: projectId,
       parentId: coreFolder.id,
       position: ORDER_GAP,
       editable: false,
+      contentEditable: true,
       type: "document",
       format: "markdown",
-      path: joinLtree(coreFolder.path, normalizeFileNodeName("context", false)),
+      path: joinLtree(coreFolder.path, briefName),
     })
     .returning()
 
-  const instructionFile = resp4[0]
-
   await tx.insert(fileNodeContents).values({
-    fileNodeId: instructionFile.id,
+    fileNodeId: briefFile.id,
     projectId: projectId,
-    content: getDefaultInstructionFileContent(),
+    content: briefContent,
   })
 
   // await createSecondaryFiles(tx, projectId, rootFolder.id)
@@ -535,15 +540,4 @@ async function createSecondaryFiles(
       })
     }
   }
-}
-
-function getDefaultInstructionFileContent() {
-  return `
-# What is this instruction file
----
-This file is loaded into the AI agent's context. It helps the AI agent to have a full context on how to structure and reference folder and projects
-# This is an example template for the instruction file. [Feel free to edit this file to your needs]
----
-TBD
-`
 }

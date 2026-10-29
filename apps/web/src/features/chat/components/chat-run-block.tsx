@@ -7,6 +7,11 @@ import { useBufferChunks } from "../hooks/use-buffer-chunks"
 import { classifyRunError } from "../lib/run-error"
 import { buildRunPresentation } from "../lib/tool-activity"
 import { useChatStore } from "../store/chat-store"
+import {
+  agentRunsQueryKey,
+  conversationsQueryKey,
+  updateAgentRunInCache,
+} from "../query-mutation"
 import ChatBuble from "./chat-buble"
 import { ChatRunProvider, useChatRun } from "./chat-run-context"
 import { ChatThoughtBlock } from "./chat-thought-block"
@@ -101,6 +106,12 @@ function PendingRunBlock({
     useVideoEditorStore.getState().applyServerChange(change)
   }
 
+  const onTitleUpdate = () => {
+    queryClient.invalidateQueries({
+      queryKey: conversationsQueryKey(run.projectId),
+    })
+  }
+
   const url = `/api/chats/${run.projectId}/conversations/${run.conversationId}/runs/${run.id}`
   const { messages, error: streamError } = useBufferChunks({
     url,
@@ -109,9 +120,34 @@ function PendingRunBlock({
     onFinish,
     onOperation,
     onVideoEditorChange,
+    onTitleUpdate,
   })
   const activeError = isCancelled ? null : (streamError ?? run.error)
   const isRunning = !isFinished && !isCancelled && !activeError
+
+  useEffect(() => {
+    if (!isFinished) return
+    const updatedAt = finishedAt ?? new Date().toISOString()
+    queryClient.setQueryData(
+      agentRunsQueryKey(run.projectId, run.conversationId),
+      (old: Parameters<typeof updateAgentRunInCache>[0]) =>
+        updateAgentRunInCache(old, run.id, {
+          status: activeError ? "error" : "finished",
+          messages,
+          error: activeError ?? null,
+          updatedAt,
+        }),
+    )
+  }, [
+    isFinished,
+    finishedAt,
+    activeError,
+    messages,
+    queryClient,
+    run.projectId,
+    run.conversationId,
+    run.id,
+  ])
 
   return (
     <ChatRunProvider runId={run.id} messages={messages}>

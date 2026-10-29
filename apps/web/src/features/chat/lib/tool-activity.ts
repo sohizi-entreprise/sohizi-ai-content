@@ -855,6 +855,19 @@ export function getGranularToolDescriptor(
     }
   }
 
+  if (toolName === "askQuestions") {
+    const text = isStreaming
+      ? "Asking clarifying questions"
+      : "Asked clarifying questions"
+    return {
+      icon: "wrench",
+      category: "other",
+      verb: text,
+      text,
+      inspectableInput: isRecord(input) ? input : undefined,
+    }
+  }
+
   const text = isStreaming
     ? `Calling ${humanizeToolName(toolName)}`
     : `Called ${humanizeToolName(toolName)}`
@@ -982,6 +995,7 @@ const STANDALONE_TOOL_NAMES = new Set([
   "assignTask",
   "manageTasks",
   "contextCompaction",
+  "askQuestions",
 ])
 
 const HIDDEN_CONTROL_TOOLS = new Set(["endExecutionLoop", "finish"])

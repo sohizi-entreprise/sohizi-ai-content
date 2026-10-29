@@ -35,12 +35,7 @@ import {
   writeStreamData,
 } from "../generation-request/stream-handler"
 import { getProjectBrief, getProjectById } from "../project/repo"
-import {
-  buildCommandPrompt,
-  getCommands,
-  resolveCatalogCommands,
-} from "@/catalog/commands"
-import { buildProjectSettingsPrompt, getPresets } from "@/catalog/presets"
+import { getCommands, resolveCatalogCommands } from "@/catalog/commands"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { listSkills } from "../file-system/repo"
 import {
@@ -51,6 +46,7 @@ import {
 import { durableSystemMessage } from "../ai/agent/core/system-persist"
 import { extractTextFromUserMessage } from "../ai/agent/utils/message-content"
 import { textFromAgentChunk, withAgentTrace } from "../ai/agent/utils/tracing"
+import modelsTracker from "@/catalog/models-tracker"
 
 export const listConversations = async (
   projectId: string,
@@ -231,7 +227,6 @@ async function runAgent(payload: RunAgentPayload) {
       projectSkills,
       userPromptText,
       brief,
-      presets,
       commands,
     ] = await Promise.all([
       getProjectById(projectId),
@@ -239,18 +234,19 @@ async function runAgent(payload: RunAgentPayload) {
       listSkills(projectId),
       Promise.resolve(extractTextFromUserMessage(userPrompt)),
       getProjectBrief(projectId),
-      getPresets(),
       getCommands(),
     ])
-    const projectSettingsPrompt = buildProjectSettingsPrompt(
-      presets,
-      brief?.additionalSettings,
-    )
-    const commandPrompt = buildCommandPrompt(
+    const storedCommandId = readStoredCommandId(brief?.additionalSettings)
+    const effectiveCommandIds =
+      requestedCommands && requestedCommands.length > 0
+        ? requestedCommands
+        : shouldGenerateTitle && storedCommandId
+          ? [storedCommandId]
+          : []
+    const invokedCommands = resolveCatalogCommands(
       commands,
-      readStoredCommandId(brief?.additionalSettings),
+      effectiveCommandIds,
     )
-    const invokedCommands = resolveCatalogCommands(commands, requestedCommands)
 
     const session = new Session({
       sessionId: uuidv4(),
@@ -272,8 +268,6 @@ async function runAgent(payload: RunAgentPayload) {
           baseSystemPrompt,
           projectSkills,
           definition.subAgents,
-          projectSettingsPrompt,
-          commandPrompt,
         ),
     })
 
@@ -287,6 +281,29 @@ async function runAgent(payload: RunAgentPayload) {
         input: userPromptText,
       },
       async (updateOutput) => {
+        const titleTask = shouldGenerateTitle
+          ? (async () => {
+              try {
+                const conversationTitle = await handleTitleGeneration(
+                  userPrompt,
+                  project.organizationId,
+                  runId,
+                )
+                await repo.updateConversation(conversationId, {
+                  title: conversationTitle,
+                })
+                await writeStreamData(runId, {
+                  runId,
+                  event: "title",
+                  conversationId,
+                  title: conversationTitle,
+                })
+              } catch (error) {
+                console.error("Failed to update conversation title:", error)
+              }
+            })()
+          : null
+
         const editorContextPrompt = buildEditorContextPrompt(
           editorContext,
           invokedCommands,
@@ -324,16 +341,7 @@ async function runAgent(payload: RunAgentPayload) {
           streamError = stateError
         }
 
-        if (shouldGenerateTitle && !controller.signal.aborted && !streamError) {
-          const conversationTitle = await handleTitleGeneration(
-            userPrompt,
-            project.organizationId,
-            runId,
-          )
-          await repo.updateConversation(conversationId, {
-            title: conversationTitle,
-          })
-        }
+        await titleTask
 
         updateOutput(outputText)
       },
@@ -357,7 +365,10 @@ async function runAgent(payload: RunAgentPayload) {
       })
     }
   } catch (error) {
-    if (controller.signal.aborted || isAbortedByUser(controller.signal, error)) {
+    if (
+      controller.signal.aborted ||
+      isAbortedByUser(controller.signal, error)
+    ) {
       await repo.updateConversationAgentRun(runId, {
         status: "finished",
         error: null,
@@ -384,7 +395,7 @@ async function handleTitleGeneration(
 ) {
   const { title } = await generateTitle({
     message: extractTextFromUserMessage(userPrompt),
-    modelId: "openai/gpt-5-mini",
+    modelId: modelsTracker.titleGenerator,
     organizationId,
     conversationRunId,
     abortSignal: new AbortController().signal, // This won't be aborted since the request will be done at this stage
@@ -409,8 +420,6 @@ function enrichSystemPrompt(
     instructions: string
   }[],
   subAgents: AgentName[],
-  projectSettingsPrompt = "",
-  commandPrompt = "",
   editorContext?: EditorContext,
 ) {
   let finalPrompt = systemPrompt
@@ -449,14 +458,6 @@ Sub-Agents (Name + Description):
 ${subAgentPrompts}
 </sub-agents>
 `
-  }
-
-  if (projectSettingsPrompt.length > 0) {
-    finalPrompt += `\n\n${projectSettingsPrompt}`
-  }
-
-  if (commandPrompt.length > 0) {
-    finalPrompt += `\n\n${commandPrompt}`
   }
 
   const editorContextPrompt = buildEditorContextPrompt(editorContext)

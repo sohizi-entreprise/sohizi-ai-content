@@ -18,6 +18,11 @@ import type {
 } from "../lib/tool-activity"
 import { Shimmer } from "@/components/ai-elements/shimmer"
 import { MessageResponse } from "@/components/ai-elements/message"
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ai-elements/reasoning"
 import { cn } from "@/lib/utils"
 
 const AUTO_CLOSE_DELAY_MS = 800
@@ -149,7 +154,7 @@ function ChatThoughtBlockComponent({
           {isRunning && timelineItems.length === 0 ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Spinner className="size-3.5 shrink-0" />
-              <Shimmer>Thinking...</Shimmer>
+              <Shimmer>Planning next step...</Shimmer>
             </div>
           ) : null}
         </div>
@@ -171,11 +176,10 @@ function TimelineItemRow({ item }: { item: RunTimelineItem }) {
 
     case "reasoning":
       return (
-        <div className="text-sm leading-relaxed text-muted-foreground">
-          <MessageResponse isAnimating={item.isStreaming}>
-            {item.text}
-          </MessageResponse>
-        </div>
+        <Reasoning isStreaming={item.isStreaming} className="mb-0">
+          <ReasoningTrigger />
+          <ReasoningContent>{item.text}</ReasoningContent>
+        </Reasoning>
       )
 
     case "compaction":
@@ -261,7 +265,7 @@ function ToolCallGroupView({
               ))}
             </div>
             {toolCalls.length > 6 ? (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-background to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-linear-to-t from-background to-transparent" />
             ) : null}
           </div>
         </CollapsibleContent>
