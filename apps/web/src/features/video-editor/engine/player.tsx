@@ -6,6 +6,10 @@ import { useVideoEditorUiStore } from "../store/ui-store"
 import { usePlayerRef } from "./player-ref"
 import type { CallbackListener } from "@remotion/player"
 import type { MainCompositionProps } from "@sohizi/video-composition"
+import {
+  buildOptimizeddImageUrl,
+  imageUrlTransforms,
+} from "@/utils/transform-url"
 
 interface VideoEditorPlayerProps {
   className?: string
@@ -25,7 +29,29 @@ export function VideoEditorPlayer({ className }: VideoEditorPlayerProps) {
   const setCurrentFrame = useVideoEditorStore((s) => s.setCurrentFrame)
   const setIsPlaying = useVideoEditorStore((s) => s.setIsPlaying)
 
-  const inputProps = useMemo<MainCompositionProps>(() => ({ tracks }), [tracks])
+  const inputProps = useMemo<MainCompositionProps>(
+    () => ({
+      tracks: tracks.map((track) =>
+        track.type === "image"
+          ? {
+              ...track,
+              clips: track.clips.map((clip) =>
+                clip.type === "image"
+                  ? {
+                      ...clip,
+                      url: buildOptimizeddImageUrl(
+                        clip.url,
+                        imageUrlTransforms.fullscreen.hdDesktop,
+                      ),
+                    }
+                  : clip,
+              ),
+            }
+          : track,
+      ),
+    }),
+    [tracks],
+  )
 
   useEffect(() => {
     const player = playerRef.current
