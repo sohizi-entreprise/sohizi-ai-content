@@ -1,6 +1,7 @@
 import { ImageIcon } from "lucide-react"
 import { ClipShell } from "./clip-shell"
 import type { ImageClip } from "../../store/types"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 interface ImageBlockProps {
   clip: ImageClip
@@ -17,7 +18,7 @@ export function ImageBlock({ clip, selected }: ImageBlockProps) {
       labelOverlay
     >
       <img
-        src={clip.url}
+        src={thumbnailImageUrl(clip.url)}
         alt=""
         draggable={false}
         className="h-full w-full object-cover"

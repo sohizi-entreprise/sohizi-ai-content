@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import {
   Select,
   SelectContent,
@@ -8,6 +7,7 @@ import {
 } from "@sohizi/ui/select"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { SliderWithValue } from "./slider-with-value"
+import type { ReactNode } from "react"
 import type {
   ClipAnimationIn,
   ClipAnimationOut,
@@ -15,6 +15,7 @@ import type {
   ImageMotionEffect,
   ObjectFitMode,
 } from "../../store/types"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 interface ImageSettingsProps {
   clip: ImageClip
@@ -56,7 +57,7 @@ export function ImageSettings({ clip }: ImageSettingsProps) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2.5 rounded-xl border border-border/80 bg-muted/25 p-2">
         <img
-          src={clip.url}
+          src={thumbnailImageUrl(clip.url)}
           alt=""
           className="size-12 shrink-0 rounded-lg bg-muted object-cover"
         />
@@ -256,7 +257,9 @@ export function ImageSettings({ clip }: ImageSettingsProps) {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <span className="text-xs font-medium text-muted-foreground">{children}</span>
+    <span className="text-xs font-medium text-muted-foreground">
+      {children}
+    </span>
   )
 }
 
