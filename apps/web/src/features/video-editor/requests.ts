@@ -137,16 +137,23 @@ export async function loadComposition(
   return res.data
 }
 
+export const MAX_BATCH_OPERATIONS = 50
+
 export async function batchEdit(
   projectId: string,
   compositionId: string,
   operations: Array<BatchOperation>,
 ): Promise<Array<{ op: string; id: string }>> {
-  const res = await api.post<Array<{ op: string; id: string }>>(
-    `/video-editor/${projectId}/compositions/${compositionId}/batch`,
-    { operations },
-  )
-  return res.data
+  const results: Array<{ op: string; id: string }> = []
+  for (let i = 0; i < operations.length; i += MAX_BATCH_OPERATIONS) {
+    const chunk = operations.slice(i, i + MAX_BATCH_OPERATIONS)
+    const res = await api.post<Array<{ op: string; id: string }>>(
+      `/video-editor/${projectId}/compositions/${compositionId}/batch`,
+      { operations: chunk },
+    )
+    results.push(...res.data)
+  }
+  return results
 }
 
 export async function generateCaption(

@@ -1,11 +1,51 @@
 import type { ReactNode } from "react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@sohizi/ui/select"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { SliderWithValue } from "./slider-with-value"
-import type { ImageClip } from "../../store/types"
+import type {
+  ClipAnimationIn,
+  ClipAnimationOut,
+  ImageClip,
+  ImageMotionEffect,
+  ObjectFitMode,
+} from "../../store/types"
 
 interface ImageSettingsProps {
   clip: ImageClip
 }
+
+const FIT_MODES: Array<{ id: ObjectFitMode; label: string }> = [
+  { id: "contain", label: "Contain (Fit)" },
+  { id: "cover", label: "Cover (Fill)" },
+]
+
+const MOTION_EFFECTS: Array<{ id: ImageMotionEffect; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "ken-burns-in", label: "Ken Burns (Zoom in)" },
+  { id: "ken-burns-out", label: "Ken Burns (Zoom out)" },
+  { id: "pan-left", label: "Pan left" },
+  { id: "pan-right", label: "Pan right" },
+]
+
+const ANIMATIONS_IN: Array<{ id: ClipAnimationIn; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "fade", label: "Fade in" },
+  { id: "slide-up", label: "Slide up" },
+  { id: "scale-up", label: "Scale up" },
+]
+
+const ANIMATIONS_OUT: Array<{ id: ClipAnimationOut; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "fade", label: "Fade out" },
+  { id: "slide-down", label: "Slide down" },
+  { id: "scale-down", label: "Scale down" },
+]
 
 export function ImageSettings({ clip }: ImageSettingsProps) {
   const updateClip = useVideoEditorStore((s) => s.updateClip)
@@ -72,6 +112,25 @@ export function ImageSettings({ clip }: ImageSettingsProps) {
 
       <section className="flex flex-col gap-3 border-t border-border/60 pt-4">
         <SectionLabel>Appearance</SectionLabel>
+        <SliderField label="Fit">
+          <Select
+            value={clip.fit ?? "contain"}
+            onValueChange={(v) =>
+              updateClip(clip.id, { fit: v as ObjectFitMode })
+            }
+          >
+            <SelectTrigger size="sm" className="h-9 w-full text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FIT_MODES.map((m) => (
+                <SelectItem key={m.id} value={m.id} className="text-xs">
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SliderField>
         <SliderField label="Opacity">
           <SliderWithValue
             min={0}
@@ -109,6 +168,87 @@ export function ImageSettings({ clip }: ImageSettingsProps) {
             onChange={(v) => updateClip(clip.id, { borderRadius: v })}
           />
         </SliderField>
+      </section>
+
+      <section className="flex flex-col gap-3 border-t border-border/60 pt-4">
+        <SectionLabel>Transitions & Motion</SectionLabel>
+        <SliderField label="Camera Motion">
+          <Select
+            value={clip.motionEffect ?? "none"}
+            onValueChange={(v) =>
+              updateClip(clip.id, { motionEffect: v as ImageMotionEffect })
+            }
+          >
+            <SelectTrigger size="sm" className="h-9 w-full text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MOTION_EFFECTS.map((m) => (
+                <SelectItem key={m.id} value={m.id} className="text-xs">
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SliderField>
+        <SliderField label="Fade In">
+          <SliderWithValue
+            min={0}
+            max={120}
+            value={clip.fadeInFrames ?? 0}
+            suffix="f"
+            onChange={(v) => updateClip(clip.id, { fadeInFrames: v })}
+          />
+        </SliderField>
+        <SliderField label="Fade Out">
+          <SliderWithValue
+            min={0}
+            max={120}
+            value={clip.fadeOutFrames ?? 0}
+            suffix="f"
+            onChange={(v) => updateClip(clip.id, { fadeOutFrames: v })}
+          />
+        </SliderField>
+        <div className="grid grid-cols-2 gap-2">
+          <SliderField label="Enter">
+            <Select
+              value={clip.animationIn ?? "none"}
+              onValueChange={(v) =>
+                updateClip(clip.id, { animationIn: v as ClipAnimationIn })
+              }
+            >
+              <SelectTrigger size="sm" className="h-9 w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ANIMATIONS_IN.map((a) => (
+                  <SelectItem key={a.id} value={a.id} className="text-xs">
+                    {a.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SliderField>
+          <SliderField label="Exit">
+            <Select
+              value={clip.animationOut ?? "none"}
+              onValueChange={(v) =>
+                updateClip(clip.id, { animationOut: v as ClipAnimationOut })
+              }
+            >
+              <SelectTrigger size="sm" className="h-9 w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ANIMATIONS_OUT.map((a) => (
+                  <SelectItem key={a.id} value={a.id} className="text-xs">
+                    {a.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SliderField>
+        </div>
       </section>
     </div>
   )

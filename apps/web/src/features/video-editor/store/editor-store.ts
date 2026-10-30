@@ -10,8 +10,12 @@ import {
   clampTimelineDuration,
   maxTimelineFrames,
 } from "../utils/timeline-limit"
+import {
+  isTrackType,
+  scaleClipFramesForFps,
+  serverClipToStore,
+} from "../transforms"
 import { ASPECT_RATIO_DIMENSIONS } from "./types"
-import { isTrackType, serverClipToStore } from "../transforms"
 import type { HydrationData } from "../transforms"
 import type { VideoEditorChange } from "../requests"
 import type { StateCreator } from "zustand"
@@ -183,8 +187,121 @@ function nextFreeStart(track: Track): number {
   return Math.max(...track.clips.map((c) => c.endFrame))
 }
 
+export function getClipResizeBounds(
+  track: Readonly<{
+    clips: ReadonlyArray<{ id: string; startFrame: number; endFrame: number }>
+  }>,
+  clip: { id: string; startFrame: number; endFrame: number },
+  fps: number,
+): { minStartFrame: number; maxEndFrame: number } {
+  let minStartFrame = 0
+  let maxEndFrame = maxTimelineFrames(fps)
+
+  for (const other of track.clips) {
+    if (other.id === clip.id) continue
+    if (other.endFrame <= clip.startFrame) {
+      if (other.endFrame > minStartFrame) {
+        minStartFrame = other.endFrame
+      }
+    } else if (other.startFrame >= clip.endFrame) {
+      if (other.startFrame < maxEndFrame) {
+        maxEndFrame = other.startFrame
+      }
+    }
+  }
+
+  return { minStartFrame, maxEndFrame }
+}
+
+export function hasTrackClipOverlap(
+  track: Readonly<{
+    clips: ReadonlyArray<{ id: string; startFrame: number; endFrame: number }>
+  }>,
+  startFrame: number,
+  endFrame: number,
+  excludeClipId?: string,
+): boolean {
+  for (const other of track.clips) {
+    if (other.id === excludeClipId) continue
+    if (startFrame < other.endFrame && endFrame > other.startFrame) {
+      return true
+    }
+  }
+  return false
+}
+
+export function findNonOverlappingSlot(
+  track: Readonly<{
+    clips: ReadonlyArray<{ id: string; startFrame: number; endFrame: number }>
+  }>,
+  requestedStartFrame: number,
+  length: number,
+  fps: number,
+  excludeClipId?: string,
+): { startFrame: number; endFrame: number } | null {
+  const maxFrame = maxTimelineFrames(fps)
+  const span = Math.max(1, Math.floor(length))
+  if (span > maxFrame) return null
+
+  const clampedMove = clampClipMove(requestedStartFrame, span, fps)
+  const siblings = track.clips
+    .filter((c) => c.id !== excludeClipId)
+    .slice()
+    .sort((a, b) => a.startFrame - b.startFrame)
+
+  if (siblings.length === 0) {
+    return clampedMove
+  }
+
+  const gaps: Array<{ start: number; end: number }> = []
+  let cursor = 0
+  for (const sib of siblings) {
+    if (sib.startFrame > cursor) {
+      gaps.push({ start: cursor, end: Math.min(maxFrame, sib.startFrame) })
+    }
+    if (sib.endFrame > cursor) {
+      cursor = sib.endFrame
+    }
+  }
+  if (cursor < maxFrame) {
+    gaps.push({ start: cursor, end: maxFrame })
+  }
+
+  let bestStart: number | null = null
+  let bestDist = Infinity
+
+  for (const gap of gaps) {
+    const gapLen = gap.end - gap.start
+    if (gapLen < span) continue
+    const candidateStart = Math.max(
+      gap.start,
+      Math.min(clampedMove.startFrame, gap.end - span),
+    )
+    const dist = Math.abs(candidateStart - clampedMove.startFrame)
+    if (dist < bestDist) {
+      bestDist = dist
+      bestStart = candidateStart
+    }
+  }
+
+  if (bestStart === null) return null
+  return { startFrame: bestStart, endFrame: bestStart + span }
+}
+
 function scaleFrame(frame: number, scale: number): number {
   return Math.max(0, Math.round(frame * scale))
+}
+
+function rescaleTracksForFps(tracks: Array<Track>, scale: number): void {
+  for (const track of tracks) {
+    for (const clip of track.clips) {
+      const scaled = scaleClipFramesForFps(clip, scale)
+      clip.startFrame = scaled.startFrame
+      clip.endFrame = scaled.endFrame
+      clip.sourceStartFrame = scaled.sourceStartFrame
+      clip.sourceDurationInFrames = scaled.sourceDurationInFrames
+    }
+  }
 }
 
 function notifyTimelineCap(): void {
@@ -258,10 +375,45 @@ function takeClipPlacement(
   const start = Math.max(0, Math.floor(startFrame ?? fallbackStart))
   const placed = clampClipEnd(start, start + length, state.fps)
   if (!placed) return null
+
+  if (!trackForStart || trackForStart.clips.length === 0) {
+    return {
+      startFrame: placed.startFrame,
+      endFrame: placed.endFrame,
+      trimmed: placed.endFrame < start + length,
+    }
+  }
+
+  const placedLength = placed.endFrame - placed.startFrame
+  if (!hasTrackClipOverlap(trackForStart, placed.startFrame, placed.endFrame)) {
+    return {
+      startFrame: placed.startFrame,
+      endFrame: placed.endFrame,
+      trimmed: placedLength < length,
+    }
+  }
+
+  const slot = findNonOverlappingSlot(
+    trackForStart,
+    placed.startFrame,
+    placedLength,
+    state.fps,
+  )
+  if (slot) {
+    return {
+      startFrame: slot.startFrame,
+      endFrame: slot.endFrame,
+      trimmed: slot.endFrame - slot.startFrame < length,
+    }
+  }
+
+  const tailStart = nextFreeStart(trackForStart)
+  const tailPlaced = clampClipEnd(tailStart, tailStart + length, state.fps)
+  if (!tailPlaced) return null
   return {
-    startFrame: placed.startFrame,
-    endFrame: placed.endFrame,
-    trimmed: placed.endFrame < start + length,
+    startFrame: tailPlaced.startFrame,
+    endFrame: tailPlaced.endFrame,
+    trimmed: tailPlaced.endFrame - tailPlaced.startFrame < length,
   }
 }
 
@@ -315,6 +467,13 @@ const creator: StateCreator<
         case "update_composition": {
           const { composition } = change
           if (composition.id !== state.compositionId) return
+          if (
+            composition.fps !== state.fps &&
+            state.fps > 0 &&
+            composition.fps > 0
+          ) {
+            rescaleTracksForFps(state.tracks, composition.fps / state.fps)
+          }
           state.fps = composition.fps
           state.aspectRatio = composition.aspectRatio as AspectRatio
           state.width = composition.width
@@ -604,6 +763,13 @@ const creator: StateCreator<
         opacity: 1,
         speed: 1,
         borderRadius: 0,
+        blur: 0,
+        brightness: 100,
+        fit: "contain",
+        fadeInFrames: 0,
+        fadeOutFrames: 0,
+        animationIn: "none",
+        animationOut: "none",
         xRatio: 0.5,
         yRatio: 0.5,
         widthRatio: 1,
@@ -642,6 +808,8 @@ const creator: StateCreator<
         fileName,
         volume: 1,
         speed: 1,
+        fadeInFrames: 0,
+        fadeOutFrames: 0,
       }
       track.clips.push(clip)
       recomputeDuration(state)
@@ -694,6 +862,10 @@ const creator: StateCreator<
         fontWeight: fontWeight ?? "bold",
         align: align ?? "center",
         opacity: opacity ?? 1,
+        fadeInFrames: 0,
+        fadeOutFrames: 0,
+        animationIn: "none",
+        animationOut: "none",
         xRatio: xRatio ?? 0.5,
         yRatio: yRatio ?? 0.85,
         widthRatio: widthRatio ?? 0.7,
@@ -744,6 +916,12 @@ const creator: StateCreator<
         borderRadius: 0,
         blur: 0,
         brightness: 100,
+        fit: "contain",
+        fadeInFrames: 0,
+        fadeOutFrames: 0,
+        animationIn: "none",
+        animationOut: "none",
+        motionEffect: "none",
         xRatio: 0.5,
         yRatio: 0.5,
         widthRatio: 1,
@@ -759,7 +937,12 @@ const creator: StateCreator<
     set((state) => {
       const found = findClip(state.tracks, clipId)
       if (!found) return
-      const { clip } = found
+      const { track, clip } = found
+      const prevClipRange = {
+        id: clip.id,
+        startFrame: clip.startFrame,
+        endFrame: clip.endFrame,
+      }
       const {
         id: _id,
         type: _type,
@@ -776,10 +959,16 @@ const creator: StateCreator<
       void _trackId
       Object.assign(clip, safe)
       if ("startFrame" in safe || "endFrame" in safe) {
+        const bounds = getClipResizeBounds(track, prevClipRange, state.fps)
         const placed = clampClipEnd(clip.startFrame, clip.endFrame, state.fps)
         if (placed) {
-          clip.startFrame = placed.startFrame
-          clip.endFrame = placed.endFrame
+          const clampedStart = Math.max(bounds.minStartFrame, placed.startFrame)
+          const clampedEnd = Math.min(
+            bounds.maxEndFrame,
+            Math.max(clampedStart + 1, placed.endFrame),
+          )
+          clip.startFrame = clampedStart
+          clip.endFrame = clampedEnd
         }
         recomputeDuration(state)
       }
@@ -791,12 +980,19 @@ const creator: StateCreator<
     set((state) => {
       const found = findClip(state.tracks, clipId)
       if (!found) return
-      const { clip } = found
+      const { track, clip } = found
       const length = clip.endFrame - clip.startFrame
       const requested = Math.max(0, clip.startFrame + deltaFrames)
-      const placed = clampClipMove(requested, length, state.fps)
-      clip.startFrame = placed.startFrame
-      clip.endFrame = placed.endFrame
+      const slot = findNonOverlappingSlot(
+        track,
+        requested,
+        length,
+        state.fps,
+        clip.id,
+      )
+      if (!slot) return
+      clip.startFrame = slot.startFrame
+      clip.endFrame = slot.endFrame
       recomputeDuration(state)
     })
     if (!before) return
@@ -804,8 +1000,9 @@ const creator: StateCreator<
     if (!after) return
     const length = before.clip.endFrame - before.clip.startFrame
     const requested = Math.max(0, before.clip.startFrame + deltaFrames)
+    const maxFrame = maxTimelineFrames(get().fps)
     const hitCap =
-      after.clip.startFrame !== requested ||
+      requested + length > maxFrame ||
       after.clip.endFrame - after.clip.startFrame !== length
     if (hitCap) notifyTimelineCap()
   },
@@ -820,15 +1017,24 @@ const creator: StateCreator<
       if (!target) return
       if (target.type !== clip.type) return
 
-      sourceTrack.clips.splice(clipIndex, 1)
       const length = clip.endFrame - clip.startFrame
       const requested = Math.max(0, Math.floor(newStartFrame))
-      const placed = clampClipMove(requested, length, state.fps)
+      const slot = findNonOverlappingSlot(
+        target,
+        requested,
+        length,
+        state.fps,
+        clip.id,
+      )
+      if (!slot) return
+
+      sourceTrack.clips.splice(clipIndex, 1)
+      const maxFrame = maxTimelineFrames(state.fps)
       const capped =
-        placed.startFrame !== requested ||
-        placed.endFrame - placed.startFrame !== length
-      clip.startFrame = placed.startFrame
-      clip.endFrame = placed.endFrame
+        requested + length > maxFrame ||
+        slot.endFrame - slot.startFrame !== length
+      clip.startFrame = slot.startFrame
+      clip.endFrame = slot.endFrame
       clip.trackId = target.id
       target.clips.push(clip)
       pruneEmpty(state)
@@ -881,21 +1087,32 @@ const creator: StateCreator<
     set((state) => {
       const found = findClip(state.tracks, clipId)
       if (!found) return
-      const { clip } = found
+      const { track, clip } = found
+      const { minStartFrame, maxEndFrame } = getClipResizeBounds(
+        track,
+        clip,
+        state.fps,
+      )
 
       if (side === "left") {
-        const clamped = Math.max(0, Math.min(newFrame, clip.endFrame - 1))
+        const clamped = Math.max(
+          minStartFrame,
+          Math.min(Math.floor(newFrame), clip.endFrame - 1),
+        )
         const delta = clamped - clip.startFrame
         clip.startFrame = clamped
         if (clip.type === "video" || clip.type === "audio") {
           clip.sourceStartFrame = Math.max(0, clip.sourceStartFrame + delta)
         }
       } else {
-        const requested = Math.max(clip.startFrame + 1, newFrame)
+        const requested = Math.max(clip.startFrame + 1, Math.floor(newFrame))
         const placed = clampClipEnd(clip.startFrame, requested, state.fps)
         if (placed) {
-          if (placed.endFrame !== requested) notifyTimelineCap()
-          clip.endFrame = placed.endFrame
+          if (requested > maxTimelineFrames(state.fps)) notifyTimelineCap()
+          clip.endFrame = Math.min(
+            placed.endFrame,
+            Math.max(clip.startFrame + 1, maxEndFrame),
+          )
         }
       }
       recomputeDuration(state)
@@ -1031,20 +1248,7 @@ const creator: StateCreator<
       const scale = next / state.fps
       state.fps = next
 
-      for (const track of state.tracks) {
-        for (const clip of track.clips) {
-          const startFrame = scaleFrame(clip.startFrame, scale)
-          let endFrame = scaleFrame(clip.endFrame, scale)
-          if (endFrame <= startFrame) endFrame = startFrame + 1
-          clip.startFrame = startFrame
-          clip.endFrame = endFrame
-          clip.sourceStartFrame = scaleFrame(clip.sourceStartFrame, scale)
-          clip.sourceDurationInFrames = Math.max(
-            1,
-            scaleFrame(clip.sourceDurationInFrames, scale),
-          )
-        }
-      }
+      rescaleTracksForFps(state.tracks, scale)
 
       trimClipsToTimeline(state)
 

@@ -3,7 +3,8 @@ import { z } from "zod"
 const filePath = z.string()
 const clipId = z.uuid()
 const trackId = z.uuid()
-const trackTypeEnum = z.enum(["video", "audio", "text", "image"])
+const trackTypeEnum = z.enum(["video", "audio", "text", "image", "caption"])
+const aspectRatioEnum = z.enum(["16:9", "9:16", "1:1", "4:5"])
 
 const overviewSchema = z
   .object({
@@ -95,7 +96,7 @@ const updateCompositionSchema = z
     body: z.object({
       filePath,
       fps: z.number().int().min(1).optional(),
-      aspectRatio: z.enum(["16:9", "9:16", "1:1", "4:5"]).optional(),
+      aspectRatio: aspectRatioEnum.optional(),
       durationInFrames: z.number().int().min(1).optional(),
       width: z.number().int().min(1).optional(),
       height: z.number().int().min(1).optional(),
@@ -118,7 +119,9 @@ const addTrackSchema = z
         .int()
         .min(0)
         .optional()
-        .describe("Z-order position. 0 = bottom. Omit to add on top."),
+        .describe(
+          "Z-order position. 0 = top/foreground (closest to camera). Omit to append at the back.",
+        ),
     }),
   })
   .describe("Add a new track to the composition.")
@@ -194,6 +197,156 @@ const removeClipSchema = z
   })
   .describe("Remove a clip from the timeline.")
 
+const splitClipSchema = z
+  .object({
+    endpoint: z.literal("/video-editor/clips/split"),
+    method: z.literal("POST"),
+    body: z.object({
+      clipId,
+      frame: z
+        .number()
+        .int()
+        .min(1)
+        .describe(
+          "The timeline frame at which to split the clip (must be strictly between startFrame and endFrame).",
+        ),
+    }),
+  })
+  .describe(
+    "Razor-split a clip at a specific timeline frame into two contiguous clips on the same track, automatically calculating sourceStartFrame continuity.",
+  )
+
+const rippleShiftSchema = z
+  .object({
+    endpoint: z.literal("/video-editor/clips/ripple-shift"),
+    method: z.literal("POST"),
+    body: z.object({
+      filePath,
+      fromFrame: z
+        .number()
+        .int()
+        .min(0)
+        .describe("Shift all clips whose startFrame is at or after this frame."),
+      deltaFrames: z
+        .number()
+        .int()
+        .describe(
+          "Frame offset to apply: positive shifts clips later (right), negative shifts clips earlier (left).",
+        ),
+      trackId: trackId
+        .optional()
+        .describe(
+          "Optional trackId to restrict the ripple shift to a single track. Omit to shift across all tracks in harmony.",
+        ),
+    }),
+  })
+  .describe(
+    "Ripple-shift all clips starting at or after fromFrame by deltaFrames across all tracks (or a single track) to preserve timeline synchronization.",
+  )
+
+const generateCaptionsSchema = z
+  .object({
+    endpoint: z.literal("/video-editor/captions/generate"),
+    method: z.literal("POST"),
+    body: z.object({
+      trackId: trackId.describe(
+        "The audio or video track ID to transcribe into word-by-word animated captions.",
+      ),
+      clipId: clipId
+        .optional()
+        .describe(
+          "Optional specific audio or video clip ID on the track to transcribe. Omit to transcribe all clips on the track.",
+        ),
+    }),
+  })
+  .describe(
+    "Transcribe an audio or video track (or a single clip) and automatically insert a synchronized caption track above it.",
+  )
+
+const batchOperationItemSchema = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("update_composition"),
+    patch: z.object({
+      fps: z.number().int().min(1).optional(),
+      aspectRatio: aspectRatioEnum.optional(),
+      durationInFrames: z.number().int().min(1).optional(),
+      width: z.number().int().min(1).optional(),
+      height: z.number().int().min(1).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("add_track"),
+    data: z.object({
+      type: trackTypeEnum,
+      name: z.string().max(100),
+      position: z.number().int().min(0).optional(),
+      muted: z.boolean().optional(),
+      hidden: z.boolean().optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("update_track"),
+    trackId,
+    patch: z.object({
+      name: z.string().max(100).optional(),
+      position: z.number().int().min(0).optional(),
+      muted: z.boolean().optional(),
+      hidden: z.boolean().optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("remove_track"),
+    trackId,
+  }),
+  z.object({
+    op: z.literal("add_clip"),
+    data: z.object({
+      trackId,
+      type: trackTypeEnum,
+      startFrame: z.number().int().min(0),
+      endFrame: z.number().int().min(1),
+      sourceStartFrame: z.number().int().min(0).default(0),
+      sourceDurationInFrames: z.number().int().min(1),
+      properties: z.record(z.string(), z.any()),
+    }),
+  }),
+  z.object({
+    op: z.literal("update_clip"),
+    clipId,
+    patch: z.object({
+      trackId: trackId.optional(),
+      startFrame: z.number().int().min(0).optional(),
+      endFrame: z.number().int().min(1).optional(),
+      sourceStartFrame: z.number().int().min(0).optional(),
+      sourceDurationInFrames: z.number().int().min(1).optional(),
+      properties: z.record(z.string(), z.any()).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("remove_clip"),
+    clipId,
+  }),
+])
+
+const batchSchema = z
+  .object({
+    endpoint: z.literal("/video-editor/batch"),
+    method: z.literal("POST"),
+    body: z.object({
+      filePath,
+      operations: z
+        .array(batchOperationItemSchema)
+        .min(1)
+        .max(50)
+        .describe(
+          "Ordered list of timeline operations (update_composition, add_track, update_track, remove_track, add_clip, update_clip, remove_clip) to execute in one call.",
+        ),
+    }),
+  })
+  .describe(
+    "Execute multiple composition, track, and clip operations in a single call.",
+  )
+
 export const apiVideoEditorSchema = [
   overviewSchema,
   listClipsSchema,
@@ -208,6 +361,10 @@ export const apiVideoEditorSchema = [
   addClipSchema,
   updateClipSchema,
   removeClipSchema,
+  splitClipSchema,
+  rippleShiftSchema,
+  generateCaptionsSchema,
+  batchSchema,
 ]
 
 export type ApiVideoEditorRequest = z.infer<

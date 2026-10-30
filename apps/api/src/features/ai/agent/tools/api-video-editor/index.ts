@@ -12,10 +12,14 @@ import {
   executeAddClip,
   executeAddTrack,
   executeAtFrame,
+  executeBatch,
+  executeGenerateCaptions,
   executeListClips,
   executeOverview,
   executeRemoveClip,
   executeRemoveTrack,
+  executeRippleShift,
+  executeSplitClip,
   executeUpdateClip,
   executeUpdateComposition,
   executeUpdateTrack,
@@ -69,5 +73,13 @@ function dispatchVideoEditorRequest(
       return executeUpdateClip(request, options)
     case "/video-editor/clips/remove":
       return executeRemoveClip(request, options)
+    case "/video-editor/clips/split":
+      return executeSplitClip(request, options)
+    case "/video-editor/clips/ripple-shift":
+      return executeRippleShift(request, options)
+    case "/video-editor/captions/generate":
+      return executeGenerateCaptions(request, options)
+    case "/video-editor/batch":
+      return executeBatch(request, options)
   }
 }

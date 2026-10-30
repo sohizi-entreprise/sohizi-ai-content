@@ -7,7 +7,7 @@ const modelsTracker = {
   youtubeAnalyzer: "google/gemini-3.1-flash-lite",
   memory: "openai/gpt-6-luna",
   memoryFallback: "google/gemini-3.5-flash-lite",
-  titleGenerator: "openai/gpt-5-mini",
+  titleGenerator: "openai/gpt-6-luna",
 } as const
 
 export default modelsTracker

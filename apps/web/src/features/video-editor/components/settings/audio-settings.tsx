@@ -44,6 +44,28 @@ export function AudioSettings({ clip }: AudioSettingsProps) {
           />
         </SliderField>
       </section>
+
+      <section className="flex flex-col gap-3 border-t border-border/60 pt-4">
+        <SectionLabel>Audio Fades</SectionLabel>
+        <SliderField label="Fade In">
+          <SliderWithValue
+            min={0}
+            max={120}
+            value={clip.fadeInFrames ?? 0}
+            suffix="f"
+            onChange={(v) => updateClip(clip.id, { fadeInFrames: v })}
+          />
+        </SliderField>
+        <SliderField label="Fade Out">
+          <SliderWithValue
+            min={0}
+            max={120}
+            value={clip.fadeOutFrames ?? 0}
+            suffix="f"
+            onChange={(v) => updateClip(clip.id, { fadeOutFrames: v })}
+          />
+        </SliderField>
+      </section>
     </div>
   )
 }

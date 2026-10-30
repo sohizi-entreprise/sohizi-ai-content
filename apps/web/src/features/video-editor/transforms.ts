@@ -3,7 +3,11 @@ import type {
   AudioClip,
   CaptionClip,
   Clip,
+  ClipAnimationIn,
+  ClipAnimationOut,
   ImageClip,
+  ImageMotionEffect,
+  ObjectFitMode,
   // ServerCaption,
   TextClip,
   Track,
@@ -89,6 +93,21 @@ export function serverClipToStore(
         opacity: numberProp(props, "opacity", 1),
         speed: numberProp(props, "speed", 1),
         borderRadius: numberProp(props, "borderRadius", 0),
+        blur: numberProp(props, "blur", 0),
+        brightness: numberProp(props, "brightness", 100),
+        fit: stringProp(props, "fit", "contain") as ObjectFitMode,
+        fadeInFrames: numberProp(props, "fadeInFrames", 0),
+        fadeOutFrames: numberProp(props, "fadeOutFrames", 0),
+        animationIn: stringProp(
+          props,
+          "animationIn",
+          "none",
+        ) as ClipAnimationIn,
+        animationOut: stringProp(
+          props,
+          "animationOut",
+          "none",
+        ) as ClipAnimationOut,
         xRatio: numberProp(props, "xRatio", 0.5),
         yRatio: numberProp(props, "yRatio", 0.5),
         widthRatio: numberProp(props, "widthRatio", 1),
@@ -102,6 +121,8 @@ export function serverClipToStore(
         fileName: stringProp(props, "fileName", ""),
         volume: numberProp(props, "volume", 1),
         speed: numberProp(props, "speed", 1),
+        fadeInFrames: numberProp(props, "fadeInFrames", 0),
+        fadeOutFrames: numberProp(props, "fadeOutFrames", 0),
       } satisfies AudioClip
     case "text":
       return {
@@ -118,6 +139,32 @@ export function serverClipToStore(
         ) as TextClip["fontWeight"],
         align: stringProp(props, "align", "center") as TextClip["align"],
         opacity: numberProp(props, "opacity", 1),
+        backgroundColor:
+          typeof props.backgroundColor === "string"
+            ? props.backgroundColor
+            : undefined,
+        backgroundOpacity:
+          typeof props.backgroundOpacity === "number"
+            ? props.backgroundOpacity
+            : undefined,
+        borderRadius:
+          typeof props.borderRadius === "number"
+            ? props.borderRadius
+            : undefined,
+        textShadow:
+          typeof props.textShadow === "boolean" ? props.textShadow : undefined,
+        fadeInFrames: numberProp(props, "fadeInFrames", 0),
+        fadeOutFrames: numberProp(props, "fadeOutFrames", 0),
+        animationIn: stringProp(
+          props,
+          "animationIn",
+          "none",
+        ) as ClipAnimationIn,
+        animationOut: stringProp(
+          props,
+          "animationOut",
+          "none",
+        ) as ClipAnimationOut,
         xRatio: numberProp(props, "xRatio", 0.5),
         yRatio: numberProp(props, "yRatio", 0.85),
         widthRatio: numberProp(props, "widthRatio", 0.7),
@@ -135,6 +182,24 @@ export function serverClipToStore(
         borderRadius: numberProp(props, "borderRadius", 0),
         blur: numberProp(props, "blur", 0),
         brightness: numberProp(props, "brightness", 100),
+        fit: stringProp(props, "fit", "contain") as ObjectFitMode,
+        fadeInFrames: numberProp(props, "fadeInFrames", 0),
+        fadeOutFrames: numberProp(props, "fadeOutFrames", 0),
+        animationIn: stringProp(
+          props,
+          "animationIn",
+          "none",
+        ) as ClipAnimationIn,
+        animationOut: stringProp(
+          props,
+          "animationOut",
+          "none",
+        ) as ClipAnimationOut,
+        motionEffect: stringProp(
+          props,
+          "motionEffect",
+          "none",
+        ) as ImageMotionEffect,
         xRatio: numberProp(props, "xRatio", 0.5),
         yRatio: numberProp(props, "yRatio", 0.5),
         widthRatio: numberProp(props, "widthRatio", 1),
@@ -290,11 +355,47 @@ export function diffableSnapshotsEqual(
   )
 }
 
+export function scaleClipFramesForFps(
+  clip: Pick<
+    Clip,
+    "startFrame" | "endFrame" | "sourceStartFrame" | "sourceDurationInFrames"
+  >,
+  scale: number,
+) {
+  if (scale === 1) {
+    return {
+      startFrame: clip.startFrame,
+      endFrame: clip.endFrame,
+      sourceStartFrame: clip.sourceStartFrame,
+      sourceDurationInFrames: clip.sourceDurationInFrames,
+    }
+  }
+  const scaleFrame = (frame: number) => Math.max(0, Math.round(frame * scale))
+  const startFrame = scaleFrame(clip.startFrame)
+  const rawEndFrame = scaleFrame(clip.endFrame)
+  const endFrame = rawEndFrame <= startFrame ? startFrame + 1 : rawEndFrame
+  const sourceStartFrame = scaleFrame(clip.sourceStartFrame)
+  const sourceDurationInFrames = Math.max(
+    1,
+    scaleFrame(clip.sourceDurationInFrames),
+  )
+  return {
+    startFrame,
+    endFrame,
+    sourceStartFrame,
+    sourceDurationInFrames,
+  }
+}
+
 export function diffStateToBatchOps(
   prev: DiffableState,
   next: DiffableState,
 ): Array<BatchOperation> {
   const ops: Array<BatchOperation> = []
+  const fpsScale =
+    prev.fps !== next.fps && prev.fps > 0 && next.fps > 0
+      ? next.fps / prev.fps
+      : 1
 
   // -- Composition-level changes ------------------------------------------
   const compositionPatch: Record<string, unknown> = {}
@@ -419,17 +520,18 @@ export function diffStateToBatchOps(
         continue
       }
 
-      // Clip exists in both - check for updates
+      // Clip exists in both - check for updates (comparing against FPS-scaled baseline)
       const prevClip = prevClipMap.get(clipId)!
+      const expectedFrames = scaleClipFramesForFps(prevClip, fpsScale)
       const clipPatch: Record<string, unknown> = {}
       if (prevClip.trackId !== clip.trackId) clipPatch.trackId = clip.trackId
-      if (prevClip.startFrame !== clip.startFrame)
+      if (expectedFrames.startFrame !== clip.startFrame)
         clipPatch.startFrame = clip.startFrame
-      if (prevClip.endFrame !== clip.endFrame)
+      if (expectedFrames.endFrame !== clip.endFrame)
         clipPatch.endFrame = clip.endFrame
-      if (prevClip.sourceStartFrame !== clip.sourceStartFrame)
+      if (expectedFrames.sourceStartFrame !== clip.sourceStartFrame)
         clipPatch.sourceStartFrame = clip.sourceStartFrame
-      if (prevClip.sourceDurationInFrames !== clip.sourceDurationInFrames)
+      if (expectedFrames.sourceDurationInFrames !== clip.sourceDurationInFrames)
         clipPatch.sourceDurationInFrames = clip.sourceDurationInFrames
 
       const prevProps = extractProperties(prevClip)
@@ -456,15 +558,18 @@ export function diffStateToBatchOps(
     const nextInfo = nextAllClips.get(clipId)!
     const prevClip = prevInfo.clip
     const nextClip = nextInfo.clip
+    const expectedFrames = scaleClipFramesForFps(prevClip, fpsScale)
 
     const clipPatch: Record<string, unknown> = { trackId: nextInfo.trackId }
-    if (prevClip.startFrame !== nextClip.startFrame)
+    if (expectedFrames.startFrame !== nextClip.startFrame)
       clipPatch.startFrame = nextClip.startFrame
-    if (prevClip.endFrame !== nextClip.endFrame)
+    if (expectedFrames.endFrame !== nextClip.endFrame)
       clipPatch.endFrame = nextClip.endFrame
-    if (prevClip.sourceStartFrame !== nextClip.sourceStartFrame)
+    if (expectedFrames.sourceStartFrame !== nextClip.sourceStartFrame)
       clipPatch.sourceStartFrame = nextClip.sourceStartFrame
-    if (prevClip.sourceDurationInFrames !== nextClip.sourceDurationInFrames)
+    if (
+      expectedFrames.sourceDurationInFrames !== nextClip.sourceDurationInFrames
+    )
       clipPatch.sourceDurationInFrames = nextClip.sourceDurationInFrames
 
     const prevProps = extractProperties(prevClip)

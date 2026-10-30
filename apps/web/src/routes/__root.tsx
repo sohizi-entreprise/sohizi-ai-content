@@ -15,6 +15,7 @@ import appCss from "../styles.css?url"
 
 import type { QueryClient } from "@tanstack/react-query"
 import type { PublicEnv } from "@/lib/public-env"
+import { OfflineBanner } from "@/components/layout/offline-banner"
 import { loadPublicEnv } from "@/lib/load-public-env"
 import { getPublicEnv, setPublicEnv } from "@/lib/public-env"
 
@@ -116,6 +117,7 @@ function RootComponent() {
       app="web"
     >
       <AnalyticsRouteTracker />
+      <OfflineBanner />
       <Outlet />
       <Toaster position="bottom-right" />
     </AnalyticsProvider>

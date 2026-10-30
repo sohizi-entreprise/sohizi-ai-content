@@ -1,6 +1,11 @@
 import type { VideoClip } from "@/db/schema"
 import * as repo from "@/features/video-editor/repo"
-import { clipPropertiesSchemaByType, type VideoClipProperties } from "@/type"
+import * as videoEditorService from "@/features/video-editor/service"
+import {
+  clipPropertiesSchemaByType,
+  type VideoClipProperties,
+  type VideoEditorChange,
+} from "@/type"
 import { toJSONSchema } from "zod"
 import type { ToolExecutionOptions, ToolResult } from "../tool-definition"
 import { failure, success } from "../utils"
@@ -188,7 +193,7 @@ export async function executeViewClipSchema(
   const zodSchema = clipPropertiesSchemaByType[data.params.clipType]
   if (!zodSchema) {
     return failure(
-      "Unknown clip type. Valid types are: video, audio, text, image.",
+      "Unknown clip type. Valid types are: video, audio, text, image, caption.",
     )
   }
   const schema = toJSONSchema(zodSchema)
@@ -247,7 +252,7 @@ export async function executeUpdateTrack(
   data: RequestFor<"/video-editor/tracks/update">,
   _options: ToolExecutionOptions,
 ): Promise<ToolResult> {
-  const { trackId, ...patch } = data.body
+  const { trackId, name, ...patch } = data.body
   const updated = await repo.updateTrack(trackId, patch)
   if (!updated) {
     return failure("Track not found.")
@@ -255,7 +260,7 @@ export async function executeUpdateTrack(
   return {
     ...success(`Track ${updated.id} updated.`),
     videoEditorChanges: [
-      { type: "update_track", track: updated, name: data.body.name },
+      { type: "update_track", track: updated, name },
     ],
   }
 }
@@ -336,9 +341,294 @@ export async function executeRemoveClip(
   }
 }
 
+export async function executeSplitClip(
+  data: RequestFor<"/video-editor/clips/split">,
+  _options: ToolExecutionOptions,
+): Promise<ToolResult> {
+  const { clipId, frame } = data.body
+  const clip = await repo.getClipById(clipId)
+  if (!clip) {
+    return failure("Clip not found.")
+  }
+
+  if (frame <= clip.startFrame || frame >= clip.endFrame) {
+    return failure(
+      `Split frame (${frame}) must be strictly between clip startFrame (${clip.startFrame}) and endFrame (${clip.endFrame}).`,
+    )
+  }
+
+  const leftDurationFrames = frame - clip.startFrame
+  const props = (clip.properties ?? {}) as Record<string, unknown>
+  const speed =
+    typeof props.speed === "number" && Number.isFinite(props.speed) && props.speed > 0
+      ? props.speed
+      : 1
+
+  const rightSourceStartFrame =
+    clip.type === "video" || clip.type === "audio"
+      ? clip.sourceStartFrame + Math.round(leftDurationFrames * speed)
+      : clip.sourceStartFrame
+
+  const leftProperties: Record<string, unknown> = { ...props }
+  const rightProperties: Record<string, unknown> = { ...props }
+  if ("fadeOutFrames" in leftProperties) {
+    leftProperties.fadeOutFrames = 0
+  }
+  if ("fadeInFrames" in rightProperties) {
+    rightProperties.fadeInFrames = 0
+  }
+
+  const updatedLeft = await repo.updateClip(clipId, {
+    endFrame: frame,
+    properties: leftProperties,
+  })
+  if (!updatedLeft) {
+    return failure("Failed to update left half of split clip.")
+  }
+
+  const createdRight = await repo.createClip({
+    trackId: clip.trackId,
+    compositionId: clip.compositionId,
+    type: clip.type,
+    startFrame: frame,
+    endFrame: clip.endFrame,
+    sourceStartFrame: rightSourceStartFrame,
+    sourceDurationInFrames: clip.sourceDurationInFrames,
+    properties: rightProperties as VideoClipProperties,
+  })
+
+  return {
+    ...success(
+      `Split clip ${clip.id} at frame ${frame}: left clip ${updatedLeft.id} (${updatedLeft.startFrame}–${updatedLeft.endFrame}), right clip ${createdRight.id} (${createdRight.startFrame}–${createdRight.endFrame}, sourceStartFrame: ${createdRight.sourceStartFrame}).`,
+    ),
+    videoEditorChanges: [
+      { type: "update_clip", clip: updatedLeft },
+      { type: "add_clip", clip: createdRight },
+    ],
+  }
+}
+
+export async function executeRippleShift(
+  data: RequestFor<"/video-editor/clips/ripple-shift">,
+  { session }: ToolExecutionOptions,
+): Promise<ToolResult> {
+  const { filePath, fromFrame, deltaFrames, trackId } = data.body
+  const fileNodeId = await resolveVideoFileNodeId(filePath, session)
+  if (!fileNodeId) return failure(`File ${filePath} not found`)
+
+  const composition = await repo.getCompositionByFileNodeId(fileNodeId)
+  if (!composition) {
+    return failure("Video composition not found for this file.")
+  }
+
+  if (deltaFrames === 0) {
+    return success("No shift applied (deltaFrames is 0).")
+  }
+
+  const allClips = await repo.getClipsByFilters(composition.id, {
+    trackId,
+  })
+
+  const shiftingClips = allClips.filter((c) => c.startFrame >= fromFrame)
+  if (shiftingClips.length === 0) {
+    return success(`No clips found starting at or after frame ${fromFrame}.`)
+  }
+
+  const stationaryClips = allClips.filter((c) => c.startFrame < fromFrame)
+
+  // Validate that shifting left does not push any clip before frame 0 or into a stationary clip on the same track
+  if (deltaFrames < 0) {
+    const maxStationaryEndByTrack = new Map<string, number>()
+    for (const c of stationaryClips) {
+      const prevMax = maxStationaryEndByTrack.get(c.trackId) ?? 0
+      if (c.endFrame > prevMax) {
+        maxStationaryEndByTrack.set(c.trackId, c.endFrame)
+      }
+    }
+
+    for (const c of shiftingClips) {
+      const nextStart = c.startFrame + deltaFrames
+      if (nextStart < 0) {
+        return failure(
+          `Cannot shift clip ${c.id} by ${deltaFrames} frames: new startFrame (${nextStart}) would be negative.`,
+        )
+      }
+      const stationaryEnd = maxStationaryEndByTrack.get(c.trackId)
+      if (stationaryEnd !== undefined && nextStart < stationaryEnd) {
+        return failure(
+          `Cannot shift clip ${c.id} to frame ${nextStart}: it would overlap an earlier clip ending at frame ${stationaryEnd} on track ${c.trackId}.`,
+        )
+      }
+    }
+  }
+
+  // Order updates so intermediate states never collide: right-to-left when expanding (+delta), left-to-right when contracting (-delta)
+  const ordered = [...shiftingClips].sort((a, b) =>
+    deltaFrames > 0 ? b.startFrame - a.startFrame : a.startFrame - b.startFrame,
+  )
+
+  const changes: VideoEditorChange[] = []
+  for (const clip of ordered) {
+    const updated = await repo.updateClip(clip.id, {
+      startFrame: clip.startFrame + deltaFrames,
+      endFrame: clip.endFrame + deltaFrames,
+    })
+    if (updated) {
+      changes.push({ type: "update_clip", clip: updated })
+    }
+  }
+
+  return {
+    ...success(
+      `Ripple-shifted ${changes.length} clip(s) starting from frame ${fromFrame} by ${deltaFrames > 0 ? `+${deltaFrames}` : deltaFrames} frames.`,
+    ),
+    videoEditorChanges: changes,
+  }
+}
+
+export async function executeGenerateCaptions(
+  data: RequestFor<"/video-editor/captions/generate">,
+  { session }: ToolExecutionOptions,
+): Promise<ToolResult> {
+  const { trackId, clipId } = data.body
+  const track = await repo.getTrackById(trackId)
+  if (!track) {
+    return failure("Track not found.")
+  }
+
+  const before = await repo.getFullComposition(track.compositionId)
+  const beforeTrackIds = new Set(before.tracks.map((t) => t.id))
+  const beforeTrackPositions = new Map(
+    before.tracks.map((t) => [t.id, t.position]),
+  )
+
+  try {
+    await videoEditorService.addCaption(
+      trackId,
+      session.projectId,
+      session.userId,
+      clipId,
+    )
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Failed to generate captions."
+    return failure(message)
+  }
+
+  const after = await repo.getFullComposition(track.compositionId)
+  const changes: VideoEditorChange[] = []
+
+  for (const t of after.tracks) {
+    if (!beforeTrackIds.has(t.id)) {
+      changes.push({ type: "add_track", track: t, name: "Captions" })
+      const newClips = after.clips.filter((c) => c.trackId === t.id)
+      for (const c of newClips) {
+        changes.push({ type: "add_clip", clip: c })
+      }
+    } else if (beforeTrackPositions.get(t.id) !== t.position) {
+      changes.push({ type: "update_track", track: t })
+    }
+  }
+
+  const addedClipCount = changes.filter((c) => c.type === "add_clip").length
+  return {
+    ...success(
+      `Generated caption track with ${addedClipCount} caption clip(s) from track ${trackId}.`,
+    ),
+    videoEditorChanges: changes,
+  }
+}
+
+export async function executeBatch(
+  data: RequestFor<"/video-editor/batch">,
+  { session }: ToolExecutionOptions,
+): Promise<ToolResult> {
+  const { filePath, operations } = data.body
+  const fileNodeId = await resolveVideoFileNodeId(filePath, session)
+  if (!fileNodeId) return failure(`File ${filePath} not found`)
+
+  const composition = await repo.getCompositionByFileNodeId(fileNodeId)
+  if (!composition) {
+    return failure("Video composition not found for this file.")
+  }
+
+  const changes: VideoEditorChange[] = []
+
+  for (const op of operations) {
+    switch (op.op) {
+      case "update_composition": {
+        const updated = await repo.updateComposition(composition.id, op.patch)
+        if (!updated) return failure("Failed to update composition in batch.")
+        changes.push({ type: "update_composition", composition: updated })
+        break
+      }
+      case "add_track": {
+        const position =
+          op.data.position ?? (await repo.getNextTrackPosition(composition.id))
+        const track = await repo.createTrack({
+          compositionId: composition.id,
+          type: op.data.type,
+          position,
+          muted: op.data.muted,
+          hidden: op.data.hidden,
+        })
+        changes.push({ type: "add_track", track, name: op.data.name })
+        break
+      }
+      case "update_track": {
+        const { name, ...trackPatch } = op.patch
+        const updated = await repo.updateTrack(op.trackId, trackPatch)
+        if (!updated) return failure(`Track ${op.trackId} not found in batch.`)
+        changes.push({ type: "update_track", track: updated, name })
+        break
+      }
+      case "remove_track": {
+        const deleted = await repo.deleteTrack(op.trackId)
+        if (!deleted) return failure(`Track ${op.trackId} not found in batch.`)
+        changes.push({ type: "remove_track", trackId: op.trackId })
+        break
+      }
+      case "add_clip": {
+        if (op.data.endFrame <= op.data.startFrame) {
+          return failure("endFrame must be greater than startFrame in batch add_clip.")
+        }
+        const clip = await repo.createClip({
+          trackId: op.data.trackId,
+          compositionId: composition.id,
+          type: op.data.type,
+          startFrame: op.data.startFrame,
+          endFrame: op.data.endFrame,
+          sourceStartFrame: op.data.sourceStartFrame,
+          sourceDurationInFrames: op.data.sourceDurationInFrames,
+          properties: op.data.properties as VideoClipProperties,
+        })
+        changes.push({ type: "add_clip", clip })
+        break
+      }
+      case "update_clip": {
+        const updated = await repo.updateClip(op.clipId, op.patch)
+        if (!updated) return failure(`Clip ${op.clipId} not found in batch.`)
+        changes.push({ type: "update_clip", clip: updated })
+        break
+      }
+      case "remove_clip": {
+        const deleted = await repo.deleteClip(op.clipId)
+        if (!deleted) return failure(`Clip ${op.clipId} not found in batch.`)
+        changes.push({ type: "remove_clip", clipId: op.clipId })
+        break
+      }
+    }
+  }
+
+  return {
+    ...success(`Executed ${changes.length} batch operation(s) successfully.`),
+    videoEditorChanges: changes,
+  }
+}
+
 function getClipLabel(clip: VideoClip): string {
   const props = clip.properties as Record<string, unknown>
-  if (clip.type === "text") {
+  if (clip.type === "text" || clip.type === "caption") {
     const text = String(props.text ?? "")
     return `"${text.length > 30 ? text.slice(0, 30) + "…" : text}"`
   }

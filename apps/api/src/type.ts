@@ -271,6 +271,16 @@ export type CompositionVariable =
   | BooleanVariable
   | EnumVariable
 
+export type ObjectFitMode = "contain" | "cover"
+export type ClipAnimationIn = "none" | "fade" | "slide-up" | "scale-up"
+export type ClipAnimationOut = "none" | "fade" | "slide-down" | "scale-down"
+export type ImageMotionEffect =
+  | "none"
+  | "ken-burns-in"
+  | "ken-burns-out"
+  | "pan-left"
+  | "pan-right"
+
 export type VideoMediaClipProperties = {
   url: string
   fileName: string
@@ -280,6 +290,13 @@ export type VideoMediaClipProperties = {
   opacity: number
   speed: number
   borderRadius: number
+  blur?: number
+  brightness?: number
+  fit?: ObjectFitMode
+  fadeInFrames?: number
+  fadeOutFrames?: number
+  animationIn?: ClipAnimationIn
+  animationOut?: ClipAnimationOut
   xRatio?: number
   yRatio?: number
   widthRatio?: number
@@ -291,6 +308,8 @@ export type AudioMediaClipProperties = {
   fileName: string
   volume: number
   speed: number
+  fadeInFrames?: number
+  fadeOutFrames?: number
 }
 
 export type TextClipProperties = {
@@ -301,6 +320,14 @@ export type TextClipProperties = {
   fontWeight: string | number
   align: TextAlign
   opacity: number
+  backgroundColor?: string
+  backgroundOpacity?: number
+  borderRadius?: number
+  textShadow?: boolean
+  fadeInFrames?: number
+  fadeOutFrames?: number
+  animationIn?: ClipAnimationIn
+  animationOut?: ClipAnimationOut
   xRatio: number
   yRatio: number
   widthRatio: number
@@ -316,6 +343,12 @@ export type ImageMediaClipProperties = {
   borderRadius: number
   blur: number
   brightness: number
+  fit?: ObjectFitMode
+  fadeInFrames?: number
+  fadeOutFrames?: number
+  animationIn?: ClipAnimationIn
+  animationOut?: ClipAnimationOut
+  motionEffect?: ImageMotionEffect
   xRatio: number
   yRatio: number
   widthRatio: number
@@ -376,6 +409,49 @@ export const videoClipSchema = z.object({
     .number()
     .min(0)
     .describe("Corner radius in pixels (default: 0)"),
+  blur: z
+    .number()
+    .min(0)
+    .optional()
+    .describe("Blur radius in pixels (default: 0)"),
+  brightness: z
+    .number()
+    .min(0)
+    .max(200)
+    .optional()
+    .describe(
+      "Brightness percentage from 0 to 200, where 100 is normal brightness and 0 is completely black (default: 100)",
+    ),
+  fit: z
+    .enum(["contain", "cover"])
+    .optional()
+    .describe(
+      "Object fit mode inside the clip bounding box: 'contain' or 'cover' (default: 'contain')",
+    ),
+  fadeInFrames: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Number of frames at the start of the clip to smoothly fade in opacity and audio volume (default: 0)",
+    ),
+  fadeOutFrames: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Number of frames at the end of the clip to smoothly fade out opacity and audio volume (default: 0)",
+    ),
+  animationIn: z
+    .enum(["none", "fade", "slide-up", "scale-up"])
+    .optional()
+    .describe("Entrance animation preset (default: 'none')"),
+  animationOut: z
+    .enum(["none", "fade", "slide-down", "scale-down"])
+    .optional()
+    .describe("Exit animation preset (default: 'none')"),
   xRatio: z
     .number()
     .min(0)
@@ -412,6 +488,22 @@ export const audioClipSchema = z.object({
     .number()
     .positive()
     .describe("Playback speed multiplier (default: 1)"),
+  fadeInFrames: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Number of frames at the start of the clip to smoothly fade in audio volume (default: 0)",
+    ),
+  fadeOutFrames: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Number of frames at the end of the clip to smoothly fade out audio volume (default: 0)",
+    ),
 }) satisfies z.ZodType<AudioMediaClipProperties>
 
 export const textClipSchema = z.object({
@@ -430,6 +522,55 @@ export const textClipSchema = z.object({
     .min(0)
     .max(1)
     .describe("Opacity from 0 to 1 (default: 1)"),
+  backgroundColor: z
+    .string()
+    .optional()
+    .describe(
+      "Optional background pill hex/CSS color for text legibility (e.g., '#000000')",
+    ),
+  backgroundOpacity: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe(
+      "Background pill opacity from 0 to 1 when backgroundColor is set (default: 0.75)",
+    ),
+  borderRadius: z
+    .number()
+    .min(0)
+    .optional()
+    .describe("Background pill corner radius in pixels (default: 12)"),
+  textShadow: z
+    .boolean()
+    .optional()
+    .describe(
+      "Enable drop shadow behind text for readability over video/images (default: false)",
+    ),
+  fadeInFrames: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Number of frames at the start of the clip to smoothly fade in opacity (default: 0)",
+    ),
+  fadeOutFrames: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Number of frames at the end of the clip to smoothly fade out opacity (default: 0)",
+    ),
+  animationIn: z
+    .enum(["none", "fade", "slide-up", "scale-up"])
+    .optional()
+    .describe("Entrance animation preset (default: 'none')"),
+  animationOut: z
+    .enum(["none", "fade", "slide-down", "scale-down"])
+    .optional()
+    .describe("Exit animation preset (default: 'none')"),
   xRatio: z
     .number()
     .min(0)
@@ -472,6 +613,42 @@ export const imageClipSchema = z.object({
     .describe(
       "Brightness percentage from 0 to 200, where 100 is normal brightness and 0 is completely black (default: 100)",
     ),
+  fit: z
+    .enum(["contain", "cover"])
+    .optional()
+    .describe(
+      "Object fit mode inside the clip bounding box: 'contain' or 'cover' (default: 'contain')",
+    ),
+  fadeInFrames: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Number of frames at the start of the clip to smoothly fade in opacity (default: 0)",
+    ),
+  fadeOutFrames: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Number of frames at the end of the clip to smoothly fade out opacity (default: 0)",
+    ),
+  animationIn: z
+    .enum(["none", "fade", "slide-up", "scale-up"])
+    .optional()
+    .describe("Entrance animation preset (default: 'none')"),
+  animationOut: z
+    .enum(["none", "fade", "slide-down", "scale-down"])
+    .optional()
+    .describe("Exit animation preset (default: 'none')"),
+  motionEffect: z
+    .enum(["none", "ken-burns-in", "ken-burns-out", "pan-left", "pan-right"])
+    .optional()
+    .describe(
+      "Continuous camera motion effect across the image clip duration (default: 'none')",
+    ),
   xRatio: z
     .number()
     .min(0)
@@ -492,11 +669,82 @@ export const imageClipSchema = z.object({
     .describe("Height ratio relative to canvas from 0.04 to 2 (default: 1)"),
 }) satisfies z.ZodType<ImageMediaClipProperties>
 
+export const captionClipSchema = z.object({
+  text: z.string().describe("Full transcript text for the caption clip"),
+  words: z
+    .array(
+      z.object({
+        word: z.string(),
+        start: z.number(),
+        end: z.number(),
+      }),
+    )
+    .optional()
+    .describe("Word-level timing array in seconds"),
+  fontSize: z.number().positive().describe("Font size in pixels (default: 48)"),
+  color: z
+    .string()
+    .optional()
+    .describe("Base word color hex/CSS (default: '#ffffff')"),
+  fontFamily: z
+    .string()
+    .optional()
+    .describe("Font family name (default: 'Inter')"),
+  fontWeight: z
+    .union([z.string(), z.number()])
+    .optional()
+    .describe("Font weight (default: 'bold')"),
+  align: z.enum(["left", "center", "right"]).optional(),
+  hightlightColor: z
+    .string()
+    .optional()
+    .describe("Active spoken word highlight color (default: '#FFD700')"),
+  backgroundColor: z
+    .string()
+    .optional()
+    .describe(
+      "Background pill color behind the active word (default: 'rgba(0,0,0,0.8)')",
+    ),
+  backgroundEnabled: z
+    .boolean()
+    .optional()
+    .describe("Whether the active word background pill is shown (default: true)"),
+  opacity: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe("Opacity from 0 to 1 (default: 1)"),
+  xRatio: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe("Horizontal center position ratio from 0 to 1 (default: 0.5)"),
+  yRatio: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe("Vertical center position ratio from 0 to 1 (default: 0.85)"),
+  widthRatio: z
+    .number()
+    .positive()
+    .optional()
+    .describe("Width ratio relative to canvas (default: 0.7)"),
+  heightRatio: z
+    .number()
+    .positive()
+    .optional()
+    .describe("Height ratio relative to canvas (default: 0.18)"),
+}) satisfies z.ZodType<CaptionClipProperties>
+
 export const clipPropertiesSchemaByType = {
   video: videoClipSchema,
   audio: audioClipSchema,
   text: textClipSchema,
   image: imageClipSchema,
+  caption: captionClipSchema,
 } as const
 
 export type FileOperationType = "delete" | "patch" | "refresh"

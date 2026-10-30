@@ -64,16 +64,68 @@ export type UpdateCompositionData = {
   height?: number
 }
 
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+async function applyUpdateComposition(
+  tx: DbTransaction,
+  id: string,
+  data: UpdateCompositionData,
+) {
+  const existingRows = await tx
+    .select({
+      fps: videoCompositions.fps,
+      durationInFrames: videoCompositions.durationInFrames,
+    })
+    .from(videoCompositions)
+    .where(eq(videoCompositions.id, id))
+  const existing = existingRows[0]
+  if (!existing) return null
+
+  const patch: UpdateCompositionData = { ...data }
+
+  if (
+    data.fps !== undefined &&
+    data.fps > 0 &&
+    existing.fps > 0 &&
+    data.fps !== existing.fps
+  ) {
+    const scale = data.fps / existing.fps
+    if (patch.durationInFrames === undefined) {
+      patch.durationInFrames = Math.max(
+        1,
+        Math.round(existing.durationInFrames * scale),
+      )
+    }
+
+    const scaledStart = sql<number>`GREATEST(0, FLOOR((${videoClips.startFrame}::double precision * ${scale}::double precision) + 0.5)::int)`
+    const scaledEnd = sql<number>`GREATEST(${scaledStart} + 1, FLOOR((${videoClips.endFrame}::double precision * ${scale}::double precision) + 0.5)::int)`
+    const scaledSourceStart = sql<number>`GREATEST(0, FLOOR((${videoClips.sourceStartFrame}::double precision * ${scale}::double precision) + 0.5)::int)`
+    const scaledSourceDuration = sql<number>`GREATEST(1, FLOOR((${videoClips.sourceDurationInFrames}::double precision * ${scale}::double precision) + 0.5)::int)`
+
+    await tx
+      .update(videoClips)
+      .set({
+        startFrame: scaledStart,
+        endFrame: scaledEnd,
+        sourceStartFrame: scaledSourceStart,
+        sourceDurationInFrames: scaledSourceDuration,
+      })
+      .where(eq(videoClips.compositionId, id))
+  }
+
+  const result = await tx
+    .update(videoCompositions)
+    .set({ ...patch, version: sql`${videoCompositions.version} + 1` })
+    .where(eq(videoCompositions.id, id))
+    .returning()
+  return result[0] ?? null
+}
+
 export const updateComposition = async (
   id: string,
   data: UpdateCompositionData,
 ) => {
-  const result = await db
-    .update(videoCompositions)
-    .set({ ...data, version: sql`${videoCompositions.version} + 1` })
-    .where(eq(videoCompositions.id, id))
-    .returning()
-  return result[0] ?? null
+  return db.transaction((tx) => applyUpdateComposition(tx, id, data))
 }
 
 // ============================================================================
@@ -529,13 +581,7 @@ export const executeBatch = async (operations: BatchOperation[]) => {
           break
         }
         case "update_composition": {
-          await tx
-            .update(videoCompositions)
-            .set({
-              ...operation.data,
-              version: sql`${videoCompositions.version} + 1`,
-            })
-            .where(eq(videoCompositions.id, operation.id))
+          await applyUpdateComposition(tx, operation.id, operation.data)
           results.push({ op: "update_composition", id: operation.id })
           break
         }

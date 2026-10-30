@@ -31,8 +31,7 @@ export async function generateTitle(
     const client = createBillableLlmClient({
       model,
       modelConfig: {
-        reasoningEffort: "minimal",
-        maxOutputTokens: 32,
+        reasoningEffort: "none",
       },
     })
     const billedClient = withTypedLlmOutput(client, billingService)
@@ -80,28 +79,29 @@ export async function generateTitle(
 
 function getSystemPrompt() {
   return `
-You are a specialized title-generation assistant. Your only task is to generate a concise, 3-5 word title for a conversation based on the user's first message.
+You are a conversation title generator for Sohizi Lab, an AI creative production and filmmaking workspace. Your only task is to generate a concise, 2-5 word title for a conversation based on the user's first message.
 
 ### Guidelines:
-- The title must clearly represent the main theme, intent, or subject of the message.
+- Capture the specific creative task, subject, character, scene, asset, or workflow in the message (e.g., scriptwriting, storyboarding, character design, image/video generation, timeline editing, or project brief setup).
+- Strip out workspace noise: ignore file paths (e.g., \`/root/...\`), slash commands, URLs, and attachment boilerplate, and focus on the user's core intent.
 - Write the title in the message's primary language.
-- Format the output in Title Case (e.g., Capitalize The Main Words).
-- Prioritize accuracy over excessive creativity; keep it clear and simple.
-- Handle Edge Cases: If the message is just a greeting (e.g., "hi", "hello") or unclear, use a generic title like "New Conversation" or "General Greeting".
+- Format the output in Title Case.
+- Prefer concrete nouns and action-oriented phrasing over vague labels.
+- Handle Edge Cases: If the message is just a greeting (e.g., "hi", "hello") or has no clear subject yet, generate a natural, varied starter title suited to a creative studio session rather than repeating the same fixed phrase.
 
 ### Strict Formatting Rules:
-- CRITICAL: Return ONLY the raw title text. 
+- Return ONLY the raw title text.
 - DO NOT wrap the title in quotes.
-- DO NOT use markdown, prefixes (like "Title:"), or punctuation (no periods, commas, or question marks).
-- DO NOT include any conversational text, greetings, or explanations.
+- DO NOT use markdown, prefixes (like "Title:"), or trailing punctuation.
+- DO NOT include any conversational text or explanations.
 
-### Examples of perfect outputs:
-Stock Market Trends
-Perfect Chocolate Chip Recipe
-Evolution of Music Streaming
-Remote Work Productivity Tips
-AI in Healthcare
-Video Game Development Insights
+### Examples:
+Kai Character Sheet Design
+Scene 3 Rooftop Storyboard
+Noir Thriller Opening Script
+Trim Intro Clip Timeline
+Cyberpunk Alley Reference Frames
+Product Launch Brief Setup
 `.trim()
 }
 

@@ -3,7 +3,11 @@ import { createPortal } from "react-dom"
 import { useDragLayer, useDrop } from "react-dnd"
 import { useQueryClient } from "@tanstack/react-query"
 import { Timeline } from "@xzdarcy/react-timeline-editor"
-import { useVideoEditorStore } from "../store/editor-store"
+import {
+  getClipResizeBounds,
+  hasTrackClipOverlap,
+  useVideoEditorStore,
+} from "../store/editor-store"
 import { CLIP_EFFECT_IDS, selectVisibleClips } from "../store/selectors"
 import { framesToSeconds, secondsToFrames } from "../utils/time"
 import { MAX_TIMELINE_SECONDS } from "../utils/timeline-limit"
@@ -398,8 +402,26 @@ export function VideoTimeline() {
   const handleActionMoving = useCallback<
     NonNullable<TimelineEditor["onActionMoving"]>
   >(
-    ({ start, end }) => {
+    ({ action, start, end }) => {
       if (!withinTimeline(end)) return false
+      const guide = dragGuideRef.current
+      if (
+        !guide ||
+        (guide.mode === "insert" &&
+          guide.targetIndex === dragSessionRef.current?.sourceTrackIndex)
+      ) {
+        const tracksList = tracksRef.current
+        const track = tracksList.find((t) =>
+          t.clips.some((c) => c.id === action.id),
+        )
+        if (track) {
+          const startFrame = secondsToFrames(start, fpsRef.current)
+          const endFrame = secondsToFrames(end, fpsRef.current)
+          if (hasTrackClipOverlap(track, startFrame, endFrame, action.id)) {
+            return false
+          }
+        }
+      }
       dragLiveSecRef.current = { start, end }
     },
     [withinTimeline],
@@ -408,8 +430,27 @@ export function VideoTimeline() {
   const handleActionResizing = useCallback<
     NonNullable<TimelineEditor["onActionResizing"]>
   >(
-    ({ end }) => {
+    ({ action, start, end, dir }) => {
       if (!withinTimeline(end)) return false
+      const tracksList = tracksRef.current
+      const track = tracksList.find((t) =>
+        t.clips.some((c) => c.id === action.id),
+      )
+      const clip = track?.clips.find((c) => c.id === action.id)
+      if (track && clip) {
+        const { minStartFrame, maxEndFrame } = getClipResizeBounds(
+          track,
+          clip,
+          fpsRef.current,
+        )
+        if (dir === "left") {
+          const nextStartFrame = secondsToFrames(start, fpsRef.current)
+          if (nextStartFrame < minStartFrame) return false
+        } else {
+          const nextEndFrame = secondsToFrames(end, fpsRef.current)
+          if (nextEndFrame > maxEndFrame) return false
+        }
+      }
     },
     [withinTimeline],
   )

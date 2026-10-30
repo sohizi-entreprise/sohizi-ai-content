@@ -6,6 +6,19 @@ export type TextAlign = "left" | "center" | "right"
 
 export type FontWeight = "normal" | "bold" | number
 
+export type ObjectFitMode = "contain" | "cover"
+
+export type ClipAnimationIn = "none" | "fade" | "slide-up" | "scale-up"
+
+export type ClipAnimationOut = "none" | "fade" | "slide-down" | "scale-down"
+
+export type ImageMotionEffect =
+  | "none"
+  | "ken-burns-in"
+  | "ken-burns-out"
+  | "pan-left"
+  | "pan-right"
+
 export interface BaseClip {
   id: string
   trackId: string
@@ -32,6 +45,13 @@ export interface VideoClip extends BaseClip, SpatialLayout {
   opacity: number
   speed: number
   borderRadius: number
+  blur?: number
+  brightness?: number
+  fit?: ObjectFitMode
+  fadeInFrames?: number
+  fadeOutFrames?: number
+  animationIn?: ClipAnimationIn
+  animationOut?: ClipAnimationOut
 }
 
 export interface AudioClip extends BaseClip {
@@ -40,6 +60,8 @@ export interface AudioClip extends BaseClip {
   fileName: string
   volume: number
   speed: number
+  fadeInFrames?: number
+  fadeOutFrames?: number
 }
 
 export interface TextClip extends BaseClip, SpatialLayout {
@@ -51,6 +73,14 @@ export interface TextClip extends BaseClip, SpatialLayout {
   fontWeight: FontWeight
   align: TextAlign
   opacity: number
+  backgroundColor?: string
+  backgroundOpacity?: number
+  borderRadius?: number
+  textShadow?: boolean
+  fadeInFrames?: number
+  fadeOutFrames?: number
+  animationIn?: ClipAnimationIn
+  animationOut?: ClipAnimationOut
 }
 
 export interface ImageClip extends BaseClip, SpatialLayout {
@@ -63,6 +93,12 @@ export interface ImageClip extends BaseClip, SpatialLayout {
   borderRadius: number
   blur: number
   brightness: number
+  fit?: ObjectFitMode
+  fadeInFrames?: number
+  fadeOutFrames?: number
+  animationIn?: ClipAnimationIn
+  animationOut?: ClipAnimationOut
+  motionEffect?: ImageMotionEffect
 }
 
 export type ServerCaption = {

@@ -330,3 +330,122 @@ describe("applyServerChange", () => {
     expect(useVideoEditorStore.getState().tracks).toHaveLength(0)
   })
 })
+
+describe("same-track non-overlap constraints", () => {
+  beforeEach(() => {
+    useVideoEditorStore.getState().resetStore()
+    useVideoEditorStore.setState({ fps: FPS })
+    vi.mocked(toast.error).mockClear()
+  })
+
+  it("prevents resizing a clip right past the next sibling clip on the same track", () => {
+    const store = useVideoEditorStore.getState()
+    const firstId = store.addTextClip({
+      text: "First",
+      startFrame: 0,
+      durationInFrames: 90,
+    })
+    const trackId = useVideoEditorStore.getState().tracks[0].id
+    const secondId = store.addTextClip({
+      trackId,
+      text: "Second",
+      startFrame: 120,
+      durationInFrames: 90,
+    })
+
+    expect(firstId).toBeTruthy()
+    expect(secondId).toBeTruthy()
+
+    useVideoEditorStore.getState().resizeClip(firstId!, "right", 180)
+    const clips = useVideoEditorStore.getState().tracks[0].clips
+    const first = clips.find((c) => c.id === firstId)!
+    const second = clips.find((c) => c.id === secondId)!
+
+    expect(first.endFrame).toBe(120)
+    expect(second.startFrame).toBe(120)
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it("prevents resizing a clip left into the previous sibling clip on the same track", () => {
+    const store = useVideoEditorStore.getState()
+    const firstId = store.addVideoClip({
+      url: "a.mp4",
+      fileName: "a.mp4",
+      startFrame: 0,
+      durationInFrames: 100,
+    })
+    const trackId = useVideoEditorStore.getState().tracks[0].id
+    const secondId = store.addVideoClip({
+      trackId,
+      url: "b.mp4",
+      fileName: "b.mp4",
+      startFrame: 150,
+      durationInFrames: 100,
+    })
+
+    expect(firstId).toBeTruthy()
+    expect(secondId).toBeTruthy()
+
+    useVideoEditorStore.getState().resizeClip(secondId!, "left", 50)
+    const clips = useVideoEditorStore.getState().tracks[0].clips
+    const second = clips.find((c) => c.id === secondId)!
+
+    expect(second.startFrame).toBe(100)
+    expect(second.endFrame).toBe(250)
+  })
+
+  it("clamps horizontal move on the same track so sibling clips never overlap", () => {
+    const store = useVideoEditorStore.getState()
+    const firstId = store.addTextClip({
+      text: "First",
+      startFrame: 0,
+      durationInFrames: 100,
+    })
+    const trackId = useVideoEditorStore.getState().tracks[0].id
+    const secondId = store.addTextClip({
+      trackId,
+      text: "Second",
+      startFrame: 150,
+      durationInFrames: 100,
+    })
+
+    // Nudging first clip right by +70 frames (to 70..170) should stop flush at 50..150
+    useVideoEditorStore.getState().moveClip(firstId!, 70)
+    let clips = useVideoEditorStore.getState().tracks[0].clips
+    let first = clips.find((c) => c.id === firstId)!
+    expect(first.startFrame).toBe(50)
+    expect(first.endFrame).toBe(150)
+
+    // Dragging first clip far past the second clip (delta +220 -> requested 270) lands cleanly after second clip at >= 250
+    useVideoEditorStore.getState().moveClip(firstId!, 220)
+    clips = useVideoEditorStore.getState().tracks[0].clips
+    first = clips.find((c) => c.id === firstId)!
+    const second = clips.find((c) => c.id === secondId)!
+    expect(first.startFrame).toBeGreaterThanOrEqual(second.endFrame)
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it("places newly added or cross-track moved clips into non-overlapping slots", () => {
+    const store = useVideoEditorStore.getState()
+    const firstId = store.addTextClip({
+      text: "Existing",
+      startFrame: 0,
+      durationInFrames: 100,
+    })
+    const trackId = useVideoEditorStore.getState().tracks[0].id
+
+    // Adding a clip at startFrame 40 on the same track should not overlap [0, 100)
+    const overlappingAddId = store.addTextClip({
+      trackId,
+      text: "Added on top",
+      startFrame: 40,
+      durationInFrames: 60,
+    })
+    expect(overlappingAddId).toBeTruthy()
+
+    const clips = useVideoEditorStore.getState().tracks[0].clips
+    const first = clips.find((c) => c.id === firstId)!
+    const added = clips.find((c) => c.id === overlappingAddId)!
+    expect(added.startFrame).toBeGreaterThanOrEqual(first.endFrame)
+  })
+})
