@@ -1,5 +1,6 @@
 import { AudioLines } from "lucide-react"
 import { useVideoEditorStore } from "../../store/editor-store"
+import { FadeDurationFields } from "./setting-row"
 import { SliderWithValue } from "./slider-with-value"
 import type { ReactNode } from "react"
 import type { AudioClip } from "../../store/types"
@@ -47,24 +48,13 @@ export function AudioSettings({ clip }: AudioSettingsProps) {
 
       <section className="flex flex-col gap-3 border-t border-border/60 pt-4">
         <SectionLabel>Audio Fades</SectionLabel>
-        <SliderField label="Fade In">
-          <SliderWithValue
-            min={0}
-            max={120}
-            value={clip.fadeInFrames ?? 0}
-            suffix="f"
-            onChange={(v) => updateClip(clip.id, { fadeInFrames: v })}
-          />
-        </SliderField>
-        <SliderField label="Fade Out">
-          <SliderWithValue
-            min={0}
-            max={120}
-            value={clip.fadeOutFrames ?? 0}
-            suffix="f"
-            onChange={(v) => updateClip(clip.id, { fadeOutFrames: v })}
-          />
-        </SliderField>
+        <FadeDurationFields
+          clipId={clip.id}
+          startFrame={clip.startFrame}
+          endFrame={clip.endFrame}
+          fadeInFrames={clip.fadeInFrames}
+          fadeOutFrames={clip.fadeOutFrames}
+        />
       </section>
     </div>
   )

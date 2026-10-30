@@ -1,5 +1,5 @@
 import { Type } from "lucide-react"
-import { ClipShell } from "./clip-shell"
+import { ClipShell, getClipFadeRatios } from "./clip-shell"
 import type { TextClip } from "../../store/types"
 
 interface TextBlockProps {
@@ -9,6 +9,16 @@ interface TextBlockProps {
 
 export function TextBlock({ clip, selected }: TextBlockProps) {
   const label = clip.text || "Text"
+  const { fadeInRatio, fadeOutRatio } = getClipFadeRatios(clip)
 
-  return <ClipShell type="text" selected={selected} label={label} icon={Type} />
+  return (
+    <ClipShell
+      type="text"
+      selected={selected}
+      label={label}
+      icon={Type}
+      fadeInRatio={fadeInRatio}
+      fadeOutRatio={fadeOutRatio}
+    />
+  )
 }

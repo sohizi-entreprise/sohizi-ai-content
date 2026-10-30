@@ -10,6 +10,7 @@ import {
 } from "@sohizi/ui/select"
 import { Textarea } from "@sohizi/ui/textarea"
 import { useVideoEditorStore } from "../../store/editor-store"
+import { FadeDurationFields } from "./setting-row"
 import { SliderWithValue } from "./slider-with-value"
 import type {
   ClipAnimationIn,
@@ -294,24 +295,13 @@ export function TextSettings({ clip }: TextSettingsProps) {
 
       <section className="flex flex-col gap-3 border-t border-border/60 pt-4">
         <SectionLabel>Transitions & Motion</SectionLabel>
-        <PositionControl label="Fade In">
-          <SliderWithValue
-            min={0}
-            max={120}
-            value={clip.fadeInFrames ?? 0}
-            suffix="f"
-            onChange={(v) => updateClip(clip.id, { fadeInFrames: v })}
-          />
-        </PositionControl>
-        <PositionControl label="Fade Out">
-          <SliderWithValue
-            min={0}
-            max={120}
-            value={clip.fadeOutFrames ?? 0}
-            suffix="f"
-            onChange={(v) => updateClip(clip.id, { fadeOutFrames: v })}
-          />
-        </PositionControl>
+        <FadeDurationFields
+          clipId={clip.id}
+          startFrame={clip.startFrame}
+          endFrame={clip.endFrame}
+          fadeInFrames={clip.fadeInFrames}
+          fadeOutFrames={clip.fadeOutFrames}
+        />
         <div className="grid grid-cols-2 gap-2">
           <PositionControl label="Enter">
             <Select

@@ -4,7 +4,7 @@ import { AudioLines } from "lucide-react"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { framesToSeconds } from "../../utils/time"
 import { getAudioPeaks, sliceAudioPeaks } from "../waveform"
-import { CLIP_ACCENT, ClipShell } from "./clip-shell"
+import { CLIP_ACCENT, ClipShell, getClipFadeRatios } from "./clip-shell"
 import type { AudioClip } from "../../store/types"
 
 interface AudioBlockProps {
@@ -126,6 +126,8 @@ export function AudioBlock({ clip, selected }: AudioBlockProps) {
     fps,
   ])
 
+  const { fadeInRatio, fadeOutRatio } = getClipFadeRatios(clip)
+
   return (
     <ClipShell
       type="audio"
@@ -133,6 +135,8 @@ export function AudioBlock({ clip, selected }: AudioBlockProps) {
       label={clip.fileName}
       icon={AudioLines}
       labelOverlay
+      fadeInRatio={fadeInRatio}
+      fadeOutRatio={fadeOutRatio}
     >
       <div
         ref={containerRef}

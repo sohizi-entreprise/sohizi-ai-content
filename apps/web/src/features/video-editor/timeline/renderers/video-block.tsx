@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Film } from "lucide-react"
 import { getVideoThumbnails } from "../thumbnails"
-import { ClipShell } from "./clip-shell"
+import { ClipShell, getClipFadeRatios } from "./clip-shell"
 import type { VideoClip } from "../../store/types"
 
 interface VideoBlockProps {
@@ -29,6 +29,7 @@ export function VideoBlock({ clip, selected, durationSec }: VideoBlockProps) {
   }, [clip.id, clip.url, durationSec])
 
   const hasThumbs = thumbs.length > 0
+  const { fadeInRatio, fadeOutRatio } = getClipFadeRatios(clip)
 
   return (
     <ClipShell
@@ -37,6 +38,8 @@ export function VideoBlock({ clip, selected, durationSec }: VideoBlockProps) {
       label={clip.fileName}
       icon={Film}
       labelOverlay={hasThumbs}
+      fadeInRatio={fadeInRatio}
+      fadeOutRatio={fadeOutRatio}
     >
       {hasThumbs ? (
         <div className="flex h-full w-full items-stretch">

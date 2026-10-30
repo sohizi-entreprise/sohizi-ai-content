@@ -1,5 +1,5 @@
 import { ImageIcon } from "lucide-react"
-import { ClipShell } from "./clip-shell"
+import { ClipShell, getClipFadeRatios } from "./clip-shell"
 import type { ImageClip } from "../../store/types"
 import { thumbnailImageUrl } from "@/utils/transform-url"
 
@@ -9,6 +9,8 @@ interface ImageBlockProps {
 }
 
 export function ImageBlock({ clip, selected }: ImageBlockProps) {
+  const { fadeInRatio, fadeOutRatio } = getClipFadeRatios(clip)
+
   return (
     <ClipShell
       type="image"
@@ -16,6 +18,8 @@ export function ImageBlock({ clip, selected }: ImageBlockProps) {
       label={clip.fileName}
       icon={ImageIcon}
       labelOverlay
+      fadeInRatio={fadeInRatio}
+      fadeOutRatio={fadeOutRatio}
     >
       <img
         src={thumbnailImageUrl(clip.url)}
