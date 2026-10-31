@@ -5,10 +5,10 @@ vi.mock("@cloudflare/puppeteer", () => ({
 }))
 
 import puppeteer from "@cloudflare/puppeteer"
-import worker from "../src/youtube/index"
+import worker from "../src/index"
 import { YoutubeBrowserPool } from "../src/youtube/browser-pool"
 import { parseYoutubeCaptureInput } from "../src/youtube/parse"
-import type { YoutubeEnv } from "../src/env"
+import type { WorkerEnv } from "../src/env"
 import { createTestEnv } from "./fakes"
 
 const VIDEO_ID = "M7lc1UVf-VE"
@@ -68,7 +68,7 @@ function setup(maxTabs = "10") {
     R2_PUBLIC_URL: "https://media-dev.sohizi.com",
     YOUTUBE_SCREENSHOT_MAX_TABS: maxTabs,
   })
-  const env = baseEnv as YoutubeEnv
+  const env = baseEnv as WorkerEnv
   const values = new Map<string, string>()
   const storage = {
     get: vi.fn(async (key: string) => values.get(key)),

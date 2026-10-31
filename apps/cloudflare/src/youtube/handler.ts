@@ -1,5 +1,5 @@
 import { HttpError } from "../http"
-import type { YoutubeEnv } from "../env"
+import type { WorkerEnv } from "../env"
 import { parsePlayerParams, parseYoutubeCaptureInput } from "./parse"
 import { playerHtml } from "./player"
 
@@ -20,7 +20,7 @@ export function handlePlayer(request: Request): Response {
 
 export async function handleYoutubeScreenshot(
   request: Request,
-  env: YoutubeEnv,
+  env: WorkerEnv,
 ): Promise<Response> {
   if (request.method !== "POST") {
     throw new HttpError("method_not_allowed", "Method not allowed")

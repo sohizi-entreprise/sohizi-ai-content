@@ -123,4 +123,21 @@ describe("audio trim route", () => {
     expect(response.status).toBe(405)
     expect(response.headers.get("Allow")).toBe("GET, HEAD")
   })
+
+  it("answers health check and returns 404 for unknown routes", async () => {
+    const { env } = createTestEnv()
+
+    const health = await worker.fetch(
+      new Request("https://worker.test/v1/health"),
+      env,
+    )
+    expect(health.status).toBe(200)
+    expect(await health.json()).toEqual({ ok: true })
+
+    const unknown = await worker.fetch(
+      new Request("https://worker.test/v1/unknown"),
+      env,
+    )
+    expect(unknown.status).toBe(404)
+  })
 })

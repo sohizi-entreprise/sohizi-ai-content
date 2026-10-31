@@ -3,7 +3,7 @@ import puppeteer, {
   type BrowserContext,
 } from "@cloudflare/puppeteer"
 import { errorResponse, HttpError, json } from "../http"
-import type { YoutubeEnv } from "../env"
+import type { WorkerEnv } from "../env"
 import { parsePlayerParams } from "./parse"
 
 const NAVIGATION_TIMEOUT_MS = 10_000
@@ -24,7 +24,7 @@ export function maxTabsPerBrowser(value: string | number | undefined): number {
   return max
 }
 
-function publicBaseUrl(env: YoutubeEnv): string {
+function publicBaseUrl(env: WorkerEnv): string {
   if (!env.R2_PUBLIC_URL) {
     throw new HttpError("internal_error", "R2 public URL is not configured")
   }
@@ -47,7 +47,7 @@ export class YoutubeBrowserPool {
 
   constructor(
     private readonly state: DurableObjectState,
-    private readonly env: YoutubeEnv,
+    private readonly env: WorkerEnv,
   ) {}
 
   async fetch(request: Request): Promise<Response> {

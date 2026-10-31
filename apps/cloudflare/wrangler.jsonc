@@ -1,5 +1,5 @@
 /**
- * Sohizi Cloudflare service: MP3 trimming for captioning.
+ * Sohizi Cloudflare service: MP3 trimming and YouTube iframe screenshots.
  *
  * For more details on how to configure Wrangler, refer to:
  * https://developers.cloudflare.com/workers/wrangler/configuration/
@@ -14,6 +14,28 @@
   },
   "upload_source_maps": true,
   "compatibility_flags": ["nodejs_compat"],
+  "browser": {
+    "binding": "BROWSER",
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "YOUTUBE_BROWSER_POOL",
+        "class_name": "YoutubeBrowserPool",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RemotionRenderContainer"],
+    },
+    {
+      "tag": "v2",
+      "deleted_classes": ["RemotionRenderContainer"],
+      "new_sqlite_classes": ["YoutubeBrowserPool"],
+    },
+  ],
   "r2_buckets": [
     {
       "binding": "R2_BUCKET",
@@ -22,10 +44,33 @@
   ],
   "vars": {
     "MAX_MP3_BYTES": "20971520",
+    "YOUTUBE_SCREENSHOT_MAX_TABS": "10",
   },
   "env": {
     "dev": {
       "name": "sohizi-cloudflare-dev",
+      "browser": {
+        "binding": "BROWSER",
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "YOUTUBE_BROWSER_POOL",
+            "class_name": "YoutubeBrowserPool",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": ["RemotionRenderContainer"],
+        },
+        {
+          "tag": "v2",
+          "deleted_classes": ["RemotionRenderContainer"],
+          "new_sqlite_classes": ["YoutubeBrowserPool"],
+        },
+      ],
       "r2_buckets": [
         {
           "binding": "R2_BUCKET",
@@ -34,10 +79,33 @@
       ],
       "vars": {
         "MAX_MP3_BYTES": "20971520",
+        "YOUTUBE_SCREENSHOT_MAX_TABS": "10",
       },
     },
     "prod": {
       "name": "sohizi-cloudflare-prod",
+      "browser": {
+        "binding": "BROWSER",
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "YOUTUBE_BROWSER_POOL",
+            "class_name": "YoutubeBrowserPool",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": ["RemotionRenderContainer"],
+        },
+        {
+          "tag": "v2",
+          "deleted_classes": ["RemotionRenderContainer"],
+          "new_sqlite_classes": ["YoutubeBrowserPool"],
+        },
+      ],
       "r2_buckets": [
         {
           "binding": "R2_BUCKET",
@@ -46,6 +114,7 @@
       ],
       "vars": {
         "MAX_MP3_BYTES": "20971520",
+        "YOUTUBE_SCREENSHOT_MAX_TABS": "10",
       },
     },
   },

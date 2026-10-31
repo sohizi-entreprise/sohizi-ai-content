@@ -1,35 +1,35 @@
 # Sohizi Cloudflare service
 
-MP3 frame trimming for captioning and a separate YouTube iframe screenshot Worker.
+Single Cloudflare Worker serving MP3 frame trimming for captioning and YouTube iframe screenshots.
 
 ```mermaid
 flowchart LR
   Api[Sohizi API] -->|"GET /?key&offset&duration"| Worker[Worker]
+  Api -->|"POST /v1/youtube-screenshots"| Worker
   Worker --> R2[(private R2)]
   Worker -->|"audio/mpeg"| Api
 ```
 
-Video export runs on Remotion Lambda. The Sohizi API calls the audio Worker
-through `CLOUDFLARE_WORKER_URL` and the screenshot Worker through
-`YOUTUBE_SCREENSHOT_WORKER_URL`.
+Video export runs on Remotion Lambda. The Sohizi API calls the Worker
+through `CLOUDFLARE_WORKER_URL` and `YOUTUBE_SCREENSHOT_WORKER_URL`.
 
 ## Layout
 
-| Path           | Contents                                   |
-| -------------- | ------------------------------------------ |
-| `src/index.ts` | Router: health, then audio trim fallback   |
-| `src/audio/`   | MP3 frame parsing and the `/` trim handler |
-| `src/youtube/` | Separate screenshot Worker, player page, and URL parsing |
-| `wrangler.youtube.jsonc` | Dev screenshot Worker with Browser Run and R2 bindings |
-| `test/`        | Vitest suites for the trim route           |
+| Path           | Contents                                      |
+| -------------- | --------------------------------------------- |
+| `src/index.ts` | Central router and Durable Object export      |
+| `src/audio/`   | MP3 frame parsing and the `/` / `/trim` route |
+| `src/youtube/` | Screenshot handler, player page, browser pool |
+| `test/`        | Vitest suites for the Worker routes           |
 
 ## API
 
-| Route            | Behaviour                                      |
-| ---------------- | ---------------------------------------------- |
-| `GET /`          | Trim an R2 MP3 by `key`, `offset`, `duration`. |
-| `GET /v1/health` | Liveness check.                                |
-| `POST /v1/youtube-screenshots` | Authenticated screenshot capture on the separate Worker. |
+| Route                               | Behaviour                                      |
+| ----------------------------------- | ---------------------------------------------- |
+| `GET /` or `GET /trim`              | Trim an R2 MP3 by `key`, `offset`, `duration`. |
+| `GET /v1/health`                    | Liveness check.                                |
+| `GET /v1/youtube-screenshots/player`| Temporary embedding page used by Browser Run.  |
+| `POST /v1/youtube-screenshots`      | Authenticated YouTube screenshot capture.      |
 
 The screenshot route accepts `{ "youtubeUrl": "https://youtu.be/M7lc1UVf-VE?t=90" }`.
 An optional integer `seconds` overrides the URL's `t` or `start` parameter.
@@ -40,29 +40,27 @@ the temporary embedding page used by Browser Run.
 
 ## Configuration
 
-| Variable        | Purpose                     |
-| --------------- | --------------------------- |
-| `MAX_MP3_BYTES` | Upper bound for the trim.   |
-| `R2_BUCKET`     | Binding for source MP3s.    |
-| `BROWSER` | Browser Run binding on the separate screenshot Worker. |
-| `YOUTUBE_SCREENSHOT_TOKEN` | Secret bearer token shared with the API. |
-| `R2_PUBLIC_URL` | Public HTTPS base URL of this environment's R2 bucket. |
-| `YOUTUBE_BROWSER_POOL` | Durable Object that coordinates the shared browser and tab slots. |
-| `YOUTUBE_SCREENSHOT_MAX_TABS` | Maximum active YouTube tabs in the shared browser; starts at `10`. |
+| Variable                      | Purpose                                                             |
+| ----------------------------- | ------------------------------------------------------------------- |
+| `MAX_MP3_BYTES`               | Upper bound for the trim.                                           |
+| `R2_BUCKET`                   | Binding for source MP3s and screenshot outputs.                     |
+| `BROWSER`                     | Browser Run binding for screenshot capture.                         |
+| `YOUTUBE_SCREENSHOT_TOKEN`    | Secret bearer token shared with the API.                            |
+| `R2_PUBLIC_URL`               | Public HTTPS base URL of this environment's R2 bucket.              |
+| `YOUTUBE_BROWSER_POOL`        | Durable Object that coordinates the shared browser and tab slots.   |
+| `YOUTUBE_SCREENSHOT_MAX_TABS` | Maximum active YouTube tabs in the shared browser; starts at `10`.  |
 
 The Sohizi API needs `YOUTUBE_SCREENSHOT_WORKER_URL`, the same
 `YOUTUBE_SCREENSHOT_TOKEN`, and a matching `YOUTUBE_SCREENSHOT_MAX_TABS` value.
-The screenshot Worker has its own Wrangler
-configuration so it can be deployed without replacing the existing dev Worker's
-Durable Object. Set its secrets before deploying:
+Set secrets before deploying:
 
 ```bash
-bunx wrangler secret put YOUTUBE_SCREENSHOT_TOKEN --config wrangler.youtube.jsonc
-bunx wrangler secret put R2_PUBLIC_URL --config wrangler.youtube.jsonc
-bun run deploy:youtube:dev
+bunx wrangler secret put YOUTUBE_SCREENSHOT_TOKEN --env dev
+bunx wrangler secret put R2_PUBLIC_URL --env dev
+bun run deploy:dev
 ```
 
-Use the dev R2 public domain. Keep the bearer token server-side; the app browser
+Use the environment's R2 public domain. Keep the bearer token server-side; the app browser
 calls the authenticated Sohizi API route
 `POST /media/:projectId/youtube-screenshot`.
 The API admits one active screenshot per user and up to the configured number
@@ -74,9 +72,9 @@ own isolated context and tab.
 ## Local development
 
 ```bash
-bun test
+bun run test
 bun run typecheck
-bunx wrangler types youtube-configuration.d.ts --config wrangler.youtube.jsonc --env-interface YoutubeWorkerBindings --include-runtime=false
+bun run cf-typegen
 ```
 
 ## Deploy
@@ -84,5 +82,4 @@ bunx wrangler types youtube-configuration.d.ts --config wrangler.youtube.jsonc -
 ```bash
 bun run deploy:dev
 bun run deploy:prod
-bun run deploy:youtube:dev
 ```

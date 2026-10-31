@@ -6,7 +6,6 @@
   "scripts": {
     "deploy:dev": "wrangler deploy --env dev",
     "deploy:prod": "wrangler deploy --env prod",
-    "deploy:youtube:dev": "wrangler deploy --config wrangler.youtube.jsonc",
     "dev": "wrangler dev",
     "dev:remote": "wrangler dev --remote",
     "start": "wrangler dev",
