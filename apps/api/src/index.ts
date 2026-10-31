@@ -11,6 +11,7 @@ import { auth } from "@/lib/auth"
 import { analyticsConsentRoutes } from "@/features/analytics-consent"
 import { InsufficientCreditsError } from "@/features/billing"
 import { NameConflictError } from "@/features/skill-market"
+import { waitForActiveAgentRuns } from "@/features/chat/service"
 
 const corsConfig = {
   origin: [
@@ -57,7 +58,25 @@ const inngestHandler = new Elysia().all(
   ({ request }: { request: Request }) => handler(request),
 )
 
+let isShuttingDown = false
+
 const app = new Elysia()
+  .onRequest(({ set }) => {
+    if (isShuttingDown) {
+      set.status = 503
+      set.headers["Connection"] = "close"
+      return new Response(
+        JSON.stringify({ error: "Server is shutting down, please retry." }),
+        {
+          status: 503,
+          headers: {
+            "Content-Type": "application/json",
+            Connection: "close",
+          },
+        },
+      )
+    }
+  })
   .use(cors(corsConfig))
   .use(betterAuthPlugin)
   .error({ ...errors, InsufficientCreditsError, NameConflictError })
@@ -143,3 +162,28 @@ const app = new Elysia()
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
 )
+
+const shutdown = async (signal: string) => {
+  if (isShuttingDown) return
+  isShuttingDown = true
+  console.log(
+    `[api] Received ${signal}, rejecting new requests and draining in-flight requests...`,
+  )
+  try {
+    // stop(false) closes the listening socket and idle keep-alive connections
+    // immediately while waiting for all active in-flight HTTP requests/streams
+    // and detached background agent runs to finish cleanly.
+    await Promise.all([app.stop(false), waitForActiveAgentRuns()])
+    console.log(
+      "[api] All in-flight requests and agent runs completed. Exiting.",
+    )
+    process.exit(0)
+  } catch (error) {
+    console.error("[api] Error during graceful shutdown:", error)
+    process.exit(1)
+  }
+}
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"))
+process.on("SIGINT", () => void shutdown("SIGINT"))
+

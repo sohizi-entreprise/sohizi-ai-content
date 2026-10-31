@@ -12,15 +12,84 @@ concurrency:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
-  check:
-    name: Check ${{ matrix.app }}
+  changes:
+    name: Detect changes
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app: [api, web, site]
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      deploy: ${{ steps.filter.outputs.deploy }}
+      frontend_apps: ${{ steps.matrix.outputs.frontend_apps }}
+      has_frontend: ${{ steps.matrix.outputs.has_frontend }}
+      docker_apps: ${{ steps.matrix.outputs.docker_apps }}
+      has_docker: ${{ steps.matrix.outputs.has_docker }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'packages/analytics/**'
+              - 'packages/eslint-config/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/ci.yml'
+            web:
+              - 'apps/web/**'
+              - 'packages/ui/**'
+              - 'packages/analytics/**'
+              - 'packages/video-composition/**'
+              - 'packages/eslint-config/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/ci.yml'
+            site:
+              - 'apps/site/**'
+              - 'packages/ui/**'
+              - 'packages/analytics/**'
+              - 'packages/eslint-config/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/ci.yml'
+            deploy:
+              - 'compose.prod.yaml'
+
+      - name: Build job matrices
+        id: matrix
+        run: |
+          FRONTEND_APPS=$(jq -cn \
+            --arg web "${{ steps.filter.outputs.web }}" \
+            --arg site "${{ steps.filter.outputs.site }}" \
+            '[
+              (if $web == "true" then "web" else empty end),
+              (if $site == "true" then "site" else empty end)
+            ]')
+          DOCKER_APPS=$(jq -cn \
+            --arg api "${{ steps.filter.outputs.api }}" \
+            --arg web "${{ steps.filter.outputs.web }}" \
+            --arg site "${{ steps.filter.outputs.site }}" \
+            '[
+              (if $api == "true" then "api" else empty end),
+              (if $web == "true" then "web" else empty end),
+              (if $site == "true" then "site" else empty end)
+            ]')
+          echo "frontend_apps=$FRONTEND_APPS" >> "$GITHUB_OUTPUT"
+          echo "has_frontend=$([ "$FRONTEND_APPS" != "[]" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "docker_apps=$DOCKER_APPS" >> "$GITHUB_OUTPUT"
+          echo "has_docker=$([ "$DOCKER_APPS" != "[]" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  check-api:
+    name: Check api
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
     services:
       redis:
         image: redis:7-alpine
@@ -42,6 +111,36 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Format
+        run: bun run --filter @sohizi/api format:check
+
+      - name: Lint
+        run: bun run --filter @sohizi/api lint
+
+      - name: Test
+        run: bun run --filter @sohizi/api test:ci
+        env:
+          REDIS_URL: redis://127.0.0.1:6379
+
+  check-frontend:
+    name: Check ${{ matrix.app }}
+    needs: changes
+    if: needs.changes.outputs.has_frontend == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.changes.outputs.frontend_apps) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Format
         run: bun run --filter @sohizi/${{ matrix.app }} format:check
 
       - name: Lint
@@ -51,20 +150,17 @@ jobs:
         if: matrix.app == 'web'
         run: bun run --filter @sohizi/web test
 
-      - name: Test
-        if: matrix.app == 'api'
-        run: bun run --filter @sohizi/api test:ci
-        env:
-          REDIS_URL: redis://127.0.0.1:6379
-
   docker:
     name: Docker ${{ matrix.app }}
-    needs: check
+    needs: [changes, check-api, check-frontend]
+    if: |
+      !failure() && !cancelled() &&
+      needs.changes.outputs.has_docker == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        app: [api, web, site]
+        app: ${{ fromJson(needs.changes.outputs.docker_apps) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -76,17 +172,18 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/sohizi-lab
+          images: ghcr.io/${{ github.repository_owner }}/sohizi-${{ matrix.app }}
           tags: |
-            type=raw,value=${{ matrix.app }}-${{ github.sha }}
-            type=raw,value=${{ matrix.app }}-latest,enable=${{ github.event_name == 'push' }}
+            type=raw,value=${{ github.sha }}
+            type=raw,value=rc,enable=${{ github.event_name == 'push' }}
 
-      - name: Log in to Docker Hub
+      - name: Log in to GitHub Container Registry
         if: github.event_name == 'push'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -106,10 +203,13 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
-  deploy:
-    name: Deploy
-    needs: docker
-    if: github.event_name == 'push'
+  deploy-rc:
+    name: Deploy RC
+    needs: [changes, docker]
+    if: |
+      !failure() && !cancelled() &&
+      github.event_name == 'push' &&
+      (needs.changes.outputs.has_docker == 'true' || needs.changes.outputs.deploy == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -123,28 +223,40 @@ jobs:
       - name: Add VPS to known hosts
         run: ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Stage, copy, migrate, and roll out
+      - name: Stage, migrate, and roll out RC
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           ENV_FILE: ${{ vars.ENV_FILE_RC }}
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+          GHCR_OWNER: ${{ github.repository_owner }}
+          GHCR_ACTOR: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p /tmp/sohizi-deploy
-          cp compose.prod.yaml /tmp/sohizi-deploy/compose.yml
-          cp docker/postgres/init.sql /tmp/sohizi-deploy/init.sql
-          printf '%s\n' "$ENV_FILE" > /tmp/sohizi-deploy/.env
-          printf '\nSENTRY_RELEASE=%s\nSENTRY_ENVIRONMENT=rc\n' '${{ github.sha }}' >> /tmp/sohizi-deploy/.env
+          OWNER_LOWER=$(echo "$GHCR_OWNER" | tr '[:upper:]' '[:lower:]')
+          mkdir -p /tmp/sohizi-deploy-rc
+          cp compose.prod.yaml /tmp/sohizi-deploy-rc/compose.yml
+
+          printf '%s\n' "$ENV_FILE" > /tmp/sohizi-deploy-rc/.env
+          cat <<EOF >> /tmp/sohizi-deploy-rc/.env
+
+          APP_ENV=rc
+          API_STOP_GRACE_PERIOD=10s
+          GHCR_OWNER=${OWNER_LOWER}
+          IMAGE_TAG=rc
+          POSTGRES_DB=sohizi_rc
+          REDIS_DB_INDEX=0
+          SENTRY_RELEASE=${{ github.sha }}
+          SENTRY_ENVIRONMENT=rc
+          EOF
+
           remote="${SSH_USER}@${SSH_HOST}"
-          ssh "$remote" 'mkdir -p ~/sohizi-lab'
-          scp /tmp/sohizi-deploy/compose.yml /tmp/sohizi-deploy/init.sql /tmp/sohizi-deploy/.env "$remote:~/sohizi-lab/"
-          ssh "$remote" 'cd ~/sohizi-lab && ls -la && test -s compose.yml && test -s init.sql && test -s .env && wc -l compose.yml init.sql .env'
-          printf '%s\n' "$DOCKER_ACCESS_TOKEN" | ssh "$remote" 'set -euo pipefail
-            cd ~/sohizi-lab
-            docker login -u "'"$DOCKER_USERNAME"'" --password-stdin
-            docker compose pull
-            docker compose up -d postgres --wait
-            docker compose run --rm migrate
-            docker compose up -d --remove-orphans
+          ssh "$remote" 'mkdir -p ~/sohizi-rc'
+          scp /tmp/sohizi-deploy-rc/compose.yml /tmp/sohizi-deploy-rc/.env "$remote:~/sohizi-rc/"
+
+          printf '%s\n' "$GHCR_TOKEN" | ssh "$remote" 'set -euo pipefail
+            cd ~/sohizi-rc
+            docker login ghcr.io -u "'"$GHCR_ACTOR"'" --password-stdin
+            docker compose -p sohizi-rc -f compose.yml --profile migrate pull api web site migrate
+            docker compose -p sohizi-rc -f compose.yml --profile migrate run --rm migrate
+            docker compose -p sohizi-rc -f compose.yml up -d --remove-orphans api web site
           '

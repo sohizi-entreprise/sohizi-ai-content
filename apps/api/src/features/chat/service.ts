@@ -48,6 +48,16 @@ import { extractTextFromUserMessage } from "../ai/agent/utils/message-content"
 import { textFromAgentChunk, withAgentTrace } from "../ai/agent/utils/tracing"
 import modelsTracker from "@/catalog/models-tracker"
 
+const activeAgentRuns = new Set<Promise<void>>()
+
+export async function waitForActiveAgentRuns(): Promise<void> {
+  if (activeAgentRuns.size === 0) return
+  console.log(
+    `[api] Waiting for ${activeAgentRuns.size} active agent run(s) to finish...`,
+  )
+  await Promise.allSettled(Array.from(activeAgentRuns))
+}
+
 export const listConversations = async (
   projectId: string,
   userId: string,
@@ -173,8 +183,8 @@ export const chatCompletion = async (
 
   await markStreamActive(result.run.id)
 
-  // Fire and forget the agent run
-  runAgent({
+  // Fire and forget the agent run while tracking it for graceful shutdown draining
+  const runPromise = runAgent({
     userId,
     conversationId: result.conversation.id,
     projectId,
@@ -185,7 +195,10 @@ export const chatCompletion = async (
     commands,
     shouldGenerateTitle,
     reasoningEffort: resolvedReasoningEffort,
+  }).finally(() => {
+    activeAgentRuns.delete(runPromise)
   })
+  activeAgentRuns.add(runPromise)
 
   return result
 }

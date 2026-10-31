@@ -8,9 +8,10 @@ x-logging: &default-logging
 
 services:
   api:
-    image: sohizi/sohizi-lab:api-latest
+    image: ghcr.io/${GHCR_OWNER}/sohizi-api:${IMAGE_TAG:-rc}
     pull_policy: always
     restart: unless-stopped
+    stop_grace_period: ${API_STOP_GRACE_PERIOD:-600s}
     environment:
       NODE_ENV: production
       SENTRY_DSN: ${API_SENTRY_DSN}
@@ -18,9 +19,9 @@ services:
       SENTRY_LOCAL_ENABLED: ${SENTRY_LOCAL_ENABLED:-false}
       SENTRY_RELEASE: ${SENTRY_RELEASE}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://redis:6379/${REDIS_DB_INDEX:-0}
       INNGEST_DEV: "0"
-      INNGEST_BASE_URL: http://inngest:8288
+      INNGEST_BASE_URL: http://${APP_ENV:-rc}-inngest:8288
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
       OPENAI_API_KEY: ${API_OPENAI_API_KEY}
@@ -53,23 +54,27 @@ services:
       VERCEL_GATEWAY_API_KEY: ${API_VERCEL_GATEWAY_API_KEY}
       TRAVELY_API_KEY: ${API_TRAVELY_API_KEY}
       WAVESPEED_API_KEY: ${API_WAVESPEED_API_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/api", "--healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
     logging: *default-logging
     networks:
-      - caddy
-      - private
+      caddy:
+        aliases:
+          - ${APP_ENV:-rc}-api
     labels:
       caddy: http://api.${DOMAIN}
       caddy.reverse_proxy: "{{upstreams 3030}}"
+      caddy.reverse_proxy.lb_try_duration: 5s
 
   web:
-    image: sohizi/sohizi-lab:web-latest
+    image: ghcr.io/${GHCR_OWNER}/sohizi-web:${IMAGE_TAG:-rc}
     pull_policy: always
     restart: unless-stopped
+    stop_grace_period: 30s
     environment:
       NODE_ENV: production
       SENTRY_DSN: ${WEB_SENTRY_DSN}
@@ -86,23 +91,33 @@ services:
       POSTHOG_API_VERSION: ${POSTHOG_API_VERSION}
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
     logging: *default-logging
     networks:
       - caddy
     labels:
       caddy: http://app.${DOMAIN}
       caddy.0_handle: /api/auth*
-      caddy.0_handle.0_reverse_proxy: api:3030
+      caddy.0_handle.0_reverse_proxy: ${APP_ENV:-rc}-api:3030
+      caddy.0_handle.0_reverse_proxy.lb_try_duration: 5s
       caddy.1_handle_path: /api/*
-      caddy.1_handle_path.0_reverse_proxy: api:3030
+      caddy.1_handle_path.0_reverse_proxy: ${APP_ENV:-rc}-api:3030
+      caddy.1_handle_path.0_reverse_proxy.lb_try_duration: 5s
       caddy.2_handle:
       caddy.2_handle.0_reverse_proxy: "{{upstreams 3000}}"
+      caddy.2_handle.0_reverse_proxy.lb_try_duration: 5s
 
   site:
-    image: sohizi/sohizi-lab:site-latest
+    image: ghcr.io/${GHCR_OWNER}/sohizi-site:${IMAGE_TAG:-rc}
     pull_policy: always
     restart: unless-stopped
+    stop_grace_period: 30s
     environment:
       NODE_ENV: production
       SENTRY_DSN: ${SITE_SENTRY_DSN}
@@ -115,110 +130,33 @@ services:
       POSTHOG_PROJECT: ${POSTHOG_PROJECT}
       POSTHOG_API_HOST: ${POSTHOG_API_HOST}
       POSTHOG_API_VERSION: ${POSTHOG_API_VERSION}
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:3001').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
     logging: *default-logging
     networks:
       - caddy
     labels:
       caddy: http://www.${DOMAIN}
       caddy.reverse_proxy: "{{upstreams 3001}}"
-
-  postgres:
-    image: pgvector/pgvector:pg18
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-    logging: *default-logging
-    networks:
-      - private
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    logging: *default-logging
-    networks:
-      - private
-
-  inngest:
-    image: inngest/inngest:v1.41.1
-    restart: unless-stopped
-    command:
-      - inngest
-      - start
-      - --host
-      - 0.0.0.0
-      - --sdk-url
-      - http://api:3030/api/inngest
-      - --poll-interval
-      - "60"
-      - --json
-    environment:
-      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
-      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
-      INNGEST_POSTGRES_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/inngest
-      INNGEST_REDIS_URI: redis://redis:6379
-      INNGEST_QUEUE_WORKERS: ${INNGEST_QUEUE_WORKERS:-20}
-      LOG_LEVEL: ${INNGEST_LOG_LEVEL:-info}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      api:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "inngest", "alpha", "doctor", "healthcheck"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
-    logging: *default-logging
-    networks:
-      - private
-      - caddy
-    labels:
-      caddy: http://inngest.${DOMAIN}
-      caddy.reverse_proxy: "{{upstreams 8288}}"
+      caddy.reverse_proxy.lb_try_duration: 5s
 
   migrate:
-    image: sohizi/sohizi-lab:api-latest
+    image: ghcr.io/${GHCR_OWNER}/sohizi-api:${IMAGE_TAG:-rc}
     pull_policy: always
     command: ["./migrate"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       MIGRATIONS_FOLDER: /app/migrations
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
-      - private
+      - caddy
     restart: "no"
     profiles: ["migrate"]
     logging: *default-logging
 
-volumes:
-  postgres_data:
-  redis_data:
-
 networks:
   caddy:
     external: true
-  private:

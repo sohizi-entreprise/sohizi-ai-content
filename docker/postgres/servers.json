@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Sohizi Postgres (Shared)",
+      "Group": "Sohizi",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "sohizi_prod",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}

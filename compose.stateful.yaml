@@ -1,0 +1,236 @@
+name: sohizi-stateful
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    stop_grace_period: 60s
+    shm_size: 512mb
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1536MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - wal_compression=on
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - autovacuum_vacuum_scale_factor=0.05
+      - -c
+      - autovacuum_analyze_scale_factor=0.02
+      - -c
+      - autovacuum_naptime=15s
+      - -c
+      - idle_in_transaction_session_timeout=60s
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *default-logging
+    networks:
+      caddy:
+        aliases:
+          - postgres
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    stop_grace_period: 30s
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - ${REDIS_MAXMEMORY:-1gb}
+      - --maxmemory-policy
+      - noeviction
+      - --auto-aof-rewrite-percentage
+      - "100"
+      - --auto-aof-rewrite-min-size
+      - 64mb
+      - --lazyfree-lazy-expire
+      - "yes"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *default-logging
+    networks:
+      caddy:
+        aliases:
+          - redis
+
+  rc-inngest:
+    image: inngest/inngest:v1.41.1
+    restart: unless-stopped
+    stop_grace_period: 30s
+    command:
+      - inngest
+      - start
+      - --host
+      - 0.0.0.0
+      - --sdk-url
+      - http://rc-api:3030/api/inngest
+      - --poll-interval
+      - "60"
+      - --json
+    environment:
+      INNGEST_EVENT_KEY: ${RC_INNGEST_EVENT_KEY:-${INNGEST_EVENT_KEY}}
+      INNGEST_SIGNING_KEY: ${RC_INNGEST_SIGNING_KEY:-${INNGEST_SIGNING_KEY}}
+      INNGEST_POSTGRES_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/inngest_rc
+      INNGEST_REDIS_URI: redis://redis:6379/2
+      INNGEST_QUEUE_WORKERS: ${RC_INNGEST_QUEUE_WORKERS:-${INNGEST_QUEUE_WORKERS:-10}}
+      LOG_LEVEL: ${INNGEST_LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "inngest", "alpha", "doctor", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    logging: *default-logging
+    networks:
+      caddy:
+        aliases:
+          - rc-inngest
+    labels:
+      caddy: http://rc-inngest.${INFRA_DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 8288}}"
+
+  prod-inngest:
+    image: inngest/inngest:v1.41.1
+    restart: unless-stopped
+    stop_grace_period: 30s
+    command:
+      - inngest
+      - start
+      - --host
+      - 0.0.0.0
+      - --sdk-url
+      - http://prod-api:3030/api/inngest
+      - --poll-interval
+      - "60"
+      - --json
+    environment:
+      INNGEST_EVENT_KEY: ${PROD_INNGEST_EVENT_KEY:-${INNGEST_EVENT_KEY}}
+      INNGEST_SIGNING_KEY: ${PROD_INNGEST_SIGNING_KEY:-${INNGEST_SIGNING_KEY}}
+      INNGEST_POSTGRES_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/inngest_prod
+      INNGEST_REDIS_URI: redis://redis:6379/3
+      INNGEST_QUEUE_WORKERS: ${PROD_INNGEST_QUEUE_WORKERS:-${INNGEST_QUEUE_WORKERS:-10}}
+      LOG_LEVEL: ${INNGEST_LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "inngest", "alpha", "doctor", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    logging: *default-logging
+    networks:
+      caddy:
+        aliases:
+          - prod-inngest
+    labels:
+      caddy: http://prod-inngest.${INFRA_DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 8288}}"
+
+  pgadmin:
+    image: dpage/pgadmin4:9
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@${INFRA_DOMAIN:-sohizi.net}}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-${POSTGRES_PASSWORD}}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      caddy:
+        aliases:
+          - pgadmin
+    labels:
+      caddy: http://pgadmin.${INFRA_DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 80}}"
+
+  pg-maintenance:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    stop_grace_period: 30s
+    entrypoint: ["/bin/sh", "/usr/local/bin/maintenance.sh"]
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_DB: ${BACKUP_DB:-sohizi_prod}
+      BACKUP_DIR: /backups
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-21600}
+      CLEANUP_INTERVAL_SECONDS: ${CLEANUP_INTERVAL_SECONDS:-3600}
+      BACKUP_LOCAL_RETENTION_DAYS: ${BACKUP_LOCAL_RETENTION_DAYS:-7}
+      BACKUP_R2_RETENTION_DAYS: ${BACKUP_R2_RETENTION_DAYS:-30}
+      INNGEST_DBS: "inngest_rc inngest_prod"
+      R2_ENDPOINT: ${API_R2_ENDPOINT}
+      R2_BUCKET_NAME: ${API_R2_BUCKET_NAME}
+      AWS_ACCESS_KEY_ID: ${API_R2_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${API_R2_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: auto
+    volumes:
+      - postgres_backups:/backups
+      - ./maintenance.sh:/usr/local/bin/maintenance.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - caddy
+
+volumes:
+  postgres_data:
+  postgres_backups:
+  redis_data:
+  pgadmin_data:
+
+networks:
+  caddy:
+    external: true

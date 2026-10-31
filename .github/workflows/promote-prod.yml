@@ -1,0 +1,100 @@
+name: Promote to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: "Source image tag in GHCR to promote to prod (e.g. rc or a commit SHA)"
+        required: false
+        default: "rc"
+        type: string
+
+concurrency:
+  group: promote-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  promote-and-deploy:
+    name: Promote Images & Blue-Green Deploy to Prod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout deployment configs
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            compose.prod.yaml
+            scripts/deploy-blue-green.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote images in GHCR without rebuilding
+        env:
+          GHCR_OWNER: ${{ github.repository_owner }}
+          SOURCE_TAG: ${{ inputs.source_tag || 'rc' }}
+        run: |
+          OWNER_LOWER=$(echo "$GHCR_OWNER" | tr '[:upper:]' '[:lower:]')
+          for app in api web site; do
+            echo "Promoting ghcr.io/${OWNER_LOWER}/sohizi-${app}:${SOURCE_TAG} -> :prod"
+            docker buildx imagetools create \
+              -t "ghcr.io/${OWNER_LOWER}/sohizi-${app}:prod" \
+              -t "ghcr.io/${OWNER_LOWER}/sohizi-${app}:prod-${{ github.sha }}" \
+              "ghcr.io/${OWNER_LOWER}/sohizi-${app}:${SOURCE_TAG}"
+          done
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Add VPS to known hosts
+        run: ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Stage and run Blue-Green rollout for Production
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          ENV_FILE: ${{ vars.ENV_FILE_PROD }}
+          GHCR_OWNER: ${{ github.repository_owner }}
+          GHCR_ACTOR: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER_LOWER=$(echo "$GHCR_OWNER" | tr '[:upper:]' '[:lower:]')
+          mkdir -p /tmp/sohizi-deploy-prod
+          cp compose.prod.yaml /tmp/sohizi-deploy-prod/compose.yml
+          cp scripts/deploy-blue-green.sh /tmp/sohizi-deploy-prod/deploy-blue-green.sh
+          chmod +x /tmp/sohizi-deploy-prod/deploy-blue-green.sh
+
+          printf '%s\n' "$ENV_FILE" > /tmp/sohizi-deploy-prod/.env
+          cat <<EOF >> /tmp/sohizi-deploy-prod/.env
+
+          APP_ENV=prod
+          GHCR_OWNER=${OWNER_LOWER}
+          IMAGE_TAG=prod
+          POSTGRES_DB=sohizi_prod
+          REDIS_DB_INDEX=1
+          SENTRY_RELEASE=${{ github.sha }}
+          SENTRY_ENVIRONMENT=production
+          EOF
+
+          remote="${SSH_USER}@${SSH_HOST}"
+          ssh "$remote" 'mkdir -p ~/sohizi-prod'
+          scp /tmp/sohizi-deploy-prod/compose.yml /tmp/sohizi-deploy-prod/deploy-blue-green.sh /tmp/sohizi-deploy-prod/.env "$remote:~/sohizi-prod/"
+
+          printf '%s\n' "$GHCR_TOKEN" | ssh "$remote" 'set -euo pipefail
+            cd ~/sohizi-prod
+            docker login ghcr.io -u "'"$GHCR_ACTOR"'" --password-stdin
+            APP_ENV=prod ./deploy-blue-green.sh
+          '
