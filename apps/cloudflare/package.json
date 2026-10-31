@@ -6,6 +6,8 @@
   "scripts": {
     "deploy:dev": "wrangler deploy --env dev",
     "deploy:prod": "wrangler deploy --env prod",
+    "secret:dev": "wrangler secret bulk .dev.vars --env dev",
+    "secret:prod": "wrangler secret bulk .prod.vars --env prod",
     "dev": "wrangler dev",
     "dev:remote": "wrangler dev --remote",
     "start": "wrangler dev",

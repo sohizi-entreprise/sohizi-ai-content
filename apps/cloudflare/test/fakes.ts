@@ -41,6 +41,7 @@ export function createTestEnv(
   const env = {
     R2_BUCKET: bucket,
     MAX_MP3_BYTES: "20971520",
+    R2_PUBLIC_URL: "https://media-dev.sohizi.com",
     ...overrides,
   } as unknown as WorkerEnv
 
@@ -51,5 +52,8 @@ async function toBytes(value: unknown): Promise<Uint8Array> {
   if (value instanceof Uint8Array) return value
   if (typeof value === "string") return new TextEncoder().encode(value)
   if (value instanceof ArrayBuffer) return new Uint8Array(value)
+  if (value instanceof ReadableStream) {
+    return new Uint8Array(await new Response(value).arrayBuffer())
+  }
   return new TextEncoder().encode(JSON.stringify(value))
 }

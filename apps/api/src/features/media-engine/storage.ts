@@ -443,10 +443,60 @@ export async function generateSignedDownloadUrl(
   }
 }
 
-export async function uploadFromUrl(
+type WorkerUploadFromUrlResponse = {
+  url: string
+  storageKey: string
+  size: number
+  contentType: string
+  type: AssetType
+}
+
+async function uploadFromUrlViaWorker(
   sourceUrl: string,
-  destinationPath: string,
-): Promise<{ url: string; storageKey: string; size: number }> {
+  destinationPath?: string,
+): Promise<WorkerUploadFromUrlResponse | null> {
+  const workerUrl = process.env.CLOUDFLARE_WORKER_URL
+  const token = process.env.CLOUDFLARE_WORKER_TOKEN
+  if (!workerUrl || !token) return null
+
+  const response = await fetch(
+    `${workerUrl.replace(/\/$/, "")}/v1/upload-r2-from-url`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sourceUrl, destinationPath }),
+      signal: AbortSignal.timeout(130_000),
+    },
+  )
+
+  if (!response.ok) {
+    let message = response.statusText || String(response.status)
+    try {
+      const payload = (await response.json()) as {
+        error?: { message?: string }
+      }
+      if (payload.error?.message) message = payload.error.message
+    } catch {
+      // ignore non-JSON body
+    }
+    throw new Error(
+      `Failed to upload from ${sourceUrl} via Cloudflare Worker: ${message}`,
+    )
+  }
+
+  return (await response.json()) as WorkerUploadFromUrlResponse
+}
+
+async function streamUrlToR2(
+  sourceUrl: string,
+  destinationPath?: string,
+): Promise<WorkerUploadFromUrlResponse> {
+  const viaWorker = await uploadFromUrlViaWorker(sourceUrl, destinationPath)
+  if (viaWorker) return viaWorker
+
   const response = await fetch(sourceUrl)
   if (!response.ok) {
     throw new Error(
@@ -454,11 +504,48 @@ export async function uploadFromUrl(
     )
   }
 
-  const blob = await response.blob()
-  const buffer = Buffer.from(await blob.arrayBuffer())
-  const contentType = blob.type || "application/octet-stream"
+  const contentType =
+    response.headers.get("content-type")?.split(";")[0]?.trim() ||
+    "application/octet-stream"
+  const folder = resolveAssetFolder(contentType, sourceUrl)
+  const storageKey =
+    destinationPath ??
+    buildStoragePath(folder, fileNameFromSource(sourceUrl, folder))
 
-  return uploadFromBuffer(buffer, destinationPath, contentType)
+  const writtenBytes = await getS3Client().write(storageKey, response, {
+    type: contentType,
+  })
+  const contentLengthHeader = response.headers.get("content-length")
+  const parsedLength =
+    contentLengthHeader !== null && contentLengthHeader.trim() !== ""
+      ? Number(contentLengthHeader)
+      : Number.NaN
+  const size =
+    typeof writtenBytes === "number" && writtenBytes > 0
+      ? writtenBytes
+      : Number.isSafeInteger(parsedLength) && parsedLength >= 0
+        ? parsedLength
+        : (await getS3Client().stat(storageKey)).size
+
+  return {
+    url: buildPublicUrl(storageKey),
+    storageKey,
+    size,
+    contentType,
+    type: FOLDER_TO_ASSET_TYPE[folder],
+  }
+}
+
+export async function uploadFromUrl(
+  sourceUrl: string,
+  destinationPath: string,
+): Promise<{ url: string; storageKey: string; size: number }> {
+  const uploaded = await streamUrlToR2(sourceUrl, destinationPath)
+  return {
+    url: uploaded.url,
+    storageKey: uploaded.storageKey,
+    size: uploaded.size,
+  }
 }
 
 export async function uploadGeneratedMedia(sourceUrl: string): Promise<{
@@ -483,23 +570,13 @@ export async function uploadGeneratedMedia(sourceUrl: string): Promise<{
     return { ...uploaded, type: FOLDER_TO_ASSET_TYPE[folder] }
   }
 
-  const response = await fetch(sourceUrl)
-  if (!response.ok) {
-    throw new Error(
-      `Failed to download from ${sourceUrl}: ${response.statusText}`,
-    )
+  const uploaded = await streamUrlToR2(sourceUrl)
+  return {
+    url: uploaded.url,
+    storageKey: uploaded.storageKey,
+    size: uploaded.size,
+    type: uploaded.type,
   }
-
-  const blob = await response.blob()
-  const buffer = Buffer.from(await blob.arrayBuffer())
-  const contentType = blob.type || "application/octet-stream"
-  const folder = resolveAssetFolder(contentType, sourceUrl)
-  const destPath = buildStoragePath(
-    folder,
-    fileNameFromSource(sourceUrl, folder),
-  )
-  const uploaded = await uploadFromBuffer(buffer, destPath, contentType)
-  return { ...uploaded, type: FOLDER_TO_ASSET_TYPE[folder] }
 }
 
 export async function uploadFromBuffer(

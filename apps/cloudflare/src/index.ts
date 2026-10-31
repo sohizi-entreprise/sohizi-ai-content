@@ -1,5 +1,6 @@
 import { handleAudioTrim } from "./audio/handler"
 import { errorResponse, json } from "./http"
+import { handleUploadFromUrl } from "./r2/handler"
 import { handlePlayer, handleYoutubeScreenshot } from "./youtube/handler"
 import type { WorkerEnv } from "./env"
 
@@ -22,7 +23,11 @@ export default {
         return await handleYoutubeScreenshot(request, env)
       }
 
-      if (url.pathname === "/" || url.pathname === "/trim") {
+      if (url.pathname === "/v1/upload-r2-from-url") {
+        return await handleUploadFromUrl(request, env)
+      }
+
+      if (url.pathname === "/v1/trim-audio") {
         return await handleAudioTrim(request, env)
       }
 

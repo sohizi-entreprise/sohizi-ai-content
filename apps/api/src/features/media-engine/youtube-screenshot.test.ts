@@ -4,8 +4,8 @@ import type { LeaseHandle, LeaseLimits } from "@/features/capacity/types"
 import { captureYoutubeScreenshot } from "./youtube-screenshot"
 
 const originalFetch = globalThis.fetch
-const originalWorkerUrl = process.env.YOUTUBE_SCREENSHOT_WORKER_URL
-const originalToken = process.env.YOUTUBE_SCREENSHOT_TOKEN
+const originalWorkerUrl = process.env.CLOUDFLARE_WORKER_URL
+const originalToken = process.env.CLOUDFLARE_WORKER_TOKEN
 
 function fakeStore() {
   const active = new Map<string, Set<string>>()
@@ -45,16 +45,15 @@ function fakeStore() {
 
 afterEach(() => {
   globalThis.fetch = originalFetch
-  if (originalWorkerUrl === undefined)
-    delete process.env.YOUTUBE_SCREENSHOT_WORKER_URL
-  else process.env.YOUTUBE_SCREENSHOT_WORKER_URL = originalWorkerUrl
-  if (originalToken === undefined) delete process.env.YOUTUBE_SCREENSHOT_TOKEN
-  else process.env.YOUTUBE_SCREENSHOT_TOKEN = originalToken
+  if (originalWorkerUrl === undefined) delete process.env.CLOUDFLARE_WORKER_URL
+  else process.env.CLOUDFLARE_WORKER_URL = originalWorkerUrl
+  if (originalToken === undefined) delete process.env.CLOUDFLARE_WORKER_TOKEN
+  else process.env.CLOUDFLARE_WORKER_TOKEN = originalToken
 })
 
 function configure() {
-  process.env.YOUTUBE_SCREENSHOT_WORKER_URL = "https://worker.example.com/"
-  process.env.YOUTUBE_SCREENSHOT_TOKEN = "test-token"
+  process.env.CLOUDFLARE_WORKER_URL = "https://worker.example.com/"
+  process.env.CLOUDFLARE_WORKER_TOKEN = "test-token"
 }
 
 const input = { youtubeUrl: "https://youtu.be/M7lc1UVf-VE?t=90" }

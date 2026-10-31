@@ -25,12 +25,12 @@ export async function handleYoutubeScreenshot(
   if (request.method !== "POST") {
     throw new HttpError("method_not_allowed", "Method not allowed")
   }
-  if (!env.YOUTUBE_SCREENSHOT_TOKEN) {
+  if (!env.CLOUDFLARE_WORKER_TOKEN) {
     throw new HttpError("internal_error", "Screenshot token is not configured")
   }
   if (
     request.headers.get("Authorization") !==
-    `Bearer ${env.YOUTUBE_SCREENSHOT_TOKEN}`
+    `Bearer ${env.CLOUDFLARE_WORKER_TOKEN}`
   ) {
     throw new HttpError("unauthorized", "Unauthorized")
   }

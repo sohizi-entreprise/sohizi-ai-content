@@ -23,8 +23,8 @@ export async function captureYoutubeScreenshot(
   userId: string,
   store?: CapacityLeaseStore,
 ): Promise<Response> {
-  const workerUrl = process.env.YOUTUBE_SCREENSHOT_WORKER_URL
-  const token = process.env.YOUTUBE_SCREENSHOT_TOKEN
+  const workerUrl = process.env.CLOUDFLARE_WORKER_URL
+  const token = process.env.CLOUDFLARE_WORKER_TOKEN
   if (!workerUrl || !token) {
     throw new InternalServerError(
       "YouTube screenshot service is not configured",

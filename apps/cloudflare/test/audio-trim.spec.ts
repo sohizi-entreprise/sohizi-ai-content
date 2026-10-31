@@ -20,7 +20,7 @@ function buildMp3(frameCount: number): Uint8Array {
 
 function trimRequest(params: Record<string, string>): Request {
   const search = new URLSearchParams(params).toString()
-  return new Request(`https://worker.test/?${search}`)
+  return new Request(`https://worker.test/v1/trim-audio?${search}`)
 }
 
 describe("audio trim route", () => {
@@ -48,24 +48,12 @@ describe("audio trim route", () => {
     expect(body[0]).toBe(0xff)
   })
 
-  it("keeps serving the legacy root path used by the API", async () => {
-    const { bucket, env } = createTestEnv()
-    bucket.objects.set("audio/example.mp3", buildMp3(10))
-
-    const response = await worker.fetch(
-      new Request("https://worker.test/trim?key=audio/example.mp3"),
-      env,
-    )
-
-    expect(response.status).toBe(200)
-  })
-
   it("answers HEAD without a body", async () => {
     const { bucket, env } = createTestEnv()
     bucket.objects.set("audio/example.mp3", buildMp3(10))
 
     const response = await worker.fetch(
-      new Request("https://worker.test/?key=audio/example.mp3", {
+      new Request("https://worker.test/v1/trim-audio?key=audio/example.mp3", {
         method: "HEAD",
       }),
       env,
@@ -79,7 +67,7 @@ describe("audio trim route", () => {
   it("rejects a missing key", async () => {
     const { env } = createTestEnv()
     const response = await worker.fetch(
-      new Request("https://worker.test/"),
+      new Request("https://worker.test/v1/trim-audio"),
       env,
     )
     expect(response.status).toBe(400)
@@ -117,7 +105,9 @@ describe("audio trim route", () => {
   it("rejects write methods", async () => {
     const { env } = createTestEnv()
     const response = await worker.fetch(
-      new Request("https://worker.test/?key=a.mp3", { method: "POST" }),
+      new Request("https://worker.test/v1/trim-audio?key=a.mp3", {
+        method: "POST",
+      }),
       env,
     )
     expect(response.status).toBe(405)

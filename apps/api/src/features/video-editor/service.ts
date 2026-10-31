@@ -499,7 +499,7 @@ function getOAudioUrl(
       offset: String(offset),
       duration: String(duration),
     })
-    finalUrl = `${workerUrl.replace(/\/$/, "")}/?${params.toString()}`
+    finalUrl = `${workerUrl.replace(/\/$/, "")}/v1/trim-audio?${params.toString()}`
   } else {
     const transformation = `mode=audio,time=${offset}s,duration=${duration}s`
     finalUrl = `${cdnUrl.replace(/\/$/, "")}/media/${transformation}/${key}`

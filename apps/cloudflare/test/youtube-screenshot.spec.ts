@@ -64,8 +64,7 @@ function mockBrowser(
 
 function setup(maxTabs = "10") {
   const { bucket, env: baseEnv } = createTestEnv({
-    YOUTUBE_SCREENSHOT_TOKEN: "test-token",
-    R2_PUBLIC_URL: "https://media-dev.sohizi.com",
+    CLOUDFLARE_WORKER_TOKEN: "test-token",
     YOUTUBE_SCREENSHOT_MAX_TABS: maxTabs,
   })
   const env = baseEnv as WorkerEnv

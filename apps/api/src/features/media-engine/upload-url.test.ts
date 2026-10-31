@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it, mock } from "bun:test"
 import { getUploadUrlSchema } from "./schema"
 import {
   DEFAULT_MAX_UPLOAD_BYTES,
@@ -7,6 +7,8 @@ import {
   generateSignedUploadUrl,
   getMaxUploadSizeInBytes,
   signPutObjectUrl,
+  uploadFromUrl,
+  uploadGeneratedMedia,
 } from "./storage"
 
 const R2_ENV_KEYS = [
@@ -14,6 +16,8 @@ const R2_ENV_KEYS = [
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
   "R2_BUCKET_NAME",
+  "CLOUDFLARE_WORKER_URL",
+  "CLOUDFLARE_WORKER_TOKEN",
 ] as const
 
 const originalR2Env = Object.fromEntries(
@@ -155,5 +159,63 @@ describe("getUploadUrlSchema", () => {
         }).success,
       ).toBe(false)
     }
+  })
+})
+
+describe("Cloudflare Worker URL upload delegation", () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it("delegates uploadGeneratedMedia and uploadFromUrl to the Cloudflare Worker when configured", async () => {
+    process.env.CLOUDFLARE_WORKER_URL = "https://worker.example.com/"
+    process.env.CLOUDFLARE_WORKER_TOKEN = "secret-worker-token"
+
+    const fetchMock = mock(async () =>
+      Response.json({
+        url: "https://media-dev.sohizi.com/videos/123/clip.mp4",
+        storageKey: "videos/123/clip.mp4",
+        size: 1048576,
+        contentType: "video/mp4",
+        type: "video",
+      }),
+    )
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    const generated = await uploadGeneratedMedia(
+      "https://provider.example.com/clip.mp4",
+    )
+    expect(generated).toEqual({
+      url: "https://media-dev.sohizi.com/videos/123/clip.mp4",
+      storageKey: "videos/123/clip.mp4",
+      size: 1048576,
+      type: "video",
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://worker.example.com/v1/upload-r2-from-url",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          Authorization: "Bearer secret-worker-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sourceUrl: "https://provider.example.com/clip.mp4",
+          destinationPath: undefined,
+        }),
+      }),
+    )
+
+    const fromUrl = await uploadFromUrl(
+      "https://provider.example.com/clip.mp4",
+      "videos/custom/clip.mp4",
+    )
+    expect(fromUrl).toEqual({
+      url: "https://media-dev.sohizi.com/videos/123/clip.mp4",
+      storageKey: "videos/123/clip.mp4",
+      size: 1048576,
+    })
   })
 })

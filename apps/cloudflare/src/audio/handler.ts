@@ -2,8 +2,7 @@
  * MP3 frame trimmer backed by R2.
  *
  * Example request:
- *   /?key=audio/example.mp3&offset=30&duration=15
- *   /trim?key=audio/example.mp3&offset=30&duration=15
+ *   /v1/trim-audio?key=audio/example.mp3&offset=30&duration=15
  *
  * Returns audio/mpeg containing whole MP3 frames, so the result stays
  * playable without re-encoding.

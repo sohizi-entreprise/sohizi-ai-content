@@ -1,35 +1,38 @@
 # Sohizi Cloudflare service
 
-Single Cloudflare Worker serving MP3 frame trimming for captioning and YouTube iframe screenshots.
+Single Cloudflare Worker serving MP3 frame trimming for captioning, R2 URL streaming uploads, and YouTube iframe screenshots.
 
 ```mermaid
 flowchart LR
-  Api[Sohizi API] -->|"GET /?key&offset&duration"| Worker[Worker]
+  Api[Sohizi API] -->|"GET /v1/trim-audio?key&offset&duration"| Worker[Worker]
+  Api -->|"POST /v1/upload-r2-from-url"| Worker
   Api -->|"POST /v1/youtube-screenshots"| Worker
   Worker --> R2[(private R2)]
   Worker -->|"audio/mpeg"| Api
 ```
 
 Video export runs on Remotion Lambda. The Sohizi API calls the Worker
-through `CLOUDFLARE_WORKER_URL` and `YOUTUBE_SCREENSHOT_WORKER_URL`.
+through `CLOUDFLARE_WORKER_URL`.
 
 ## Layout
 
-| Path           | Contents                                      |
-| -------------- | --------------------------------------------- |
-| `src/index.ts` | Central router and Durable Object export      |
-| `src/audio/`   | MP3 frame parsing and the `/` / `/trim` route |
-| `src/youtube/` | Screenshot handler, player page, browser pool |
-| `test/`        | Vitest suites for the Worker routes           |
+| Path           | Contents                                         |
+| -------------- | ------------------------------------------------ |
+| `src/index.ts` | Central router and Durable Object export         |
+| `src/audio/`   | MP3 frame parsing and the `/v1/trim-audio` route |
+| `src/r2/`      | Streaming URL-to-R2 upload handler               |
+| `src/youtube/` | Screenshot handler, player page, browser pool    |
+| `test/`        | Vitest suites for the Worker routes              |
 
 ## API
 
-| Route                               | Behaviour                                      |
-| ----------------------------------- | ---------------------------------------------- |
-| `GET /` or `GET /trim`              | Trim an R2 MP3 by `key`, `offset`, `duration`. |
-| `GET /v1/health`                    | Liveness check.                                |
-| `GET /v1/youtube-screenshots/player`| Temporary embedding page used by Browser Run.  |
-| `POST /v1/youtube-screenshots`      | Authenticated YouTube screenshot capture.      |
+| Route                                | Behaviour                                                  |
+| ------------------------------------ | ---------------------------------------------------------- |
+| `GET /v1/trim-audio`                 | Trim an R2 MP3 by `key`, `offset`, `duration`.             |
+| `GET /v1/health`                     | Liveness check.                                            |
+| `POST /v1/upload-r2-from-url`        | Authenticated streaming upload from an external URL to R2. |
+| `GET /v1/youtube-screenshots/player` | Temporary embedding page used by Browser Run.              |
+| `POST /v1/youtube-screenshots`       | Authenticated YouTube screenshot capture.                  |
 
 The screenshot route accepts `{ "youtubeUrl": "https://youtu.be/M7lc1UVf-VE?t=90" }`.
 An optional integer `seconds` overrides the URL's `t` or `start` parameter.
@@ -40,23 +43,22 @@ the temporary embedding page used by Browser Run.
 
 ## Configuration
 
-| Variable                      | Purpose                                                             |
-| ----------------------------- | ------------------------------------------------------------------- |
-| `MAX_MP3_BYTES`               | Upper bound for the trim.                                           |
-| `R2_BUCKET`                   | Binding for source MP3s and screenshot outputs.                     |
-| `BROWSER`                     | Browser Run binding for screenshot capture.                         |
-| `YOUTUBE_SCREENSHOT_TOKEN`    | Secret bearer token shared with the API.                            |
-| `R2_PUBLIC_URL`               | Public HTTPS base URL of this environment's R2 bucket.              |
-| `YOUTUBE_BROWSER_POOL`        | Durable Object that coordinates the shared browser and tab slots.   |
-| `YOUTUBE_SCREENSHOT_MAX_TABS` | Maximum active YouTube tabs in the shared browser; starts at `10`.  |
+| Variable                      | Purpose                                                            |
+| ----------------------------- | ------------------------------------------------------------------ |
+| `MAX_MP3_BYTES`               | Upper bound for the trim.                                          |
+| `R2_BUCKET`                   | Binding for source MP3s and screenshot outputs.                    |
+| `BROWSER`                     | Browser Run binding for screenshot capture.                        |
+| `CLOUDFLARE_WORKER_TOKEN`     | Secret bearer token shared with the API.                           |
+| `R2_PUBLIC_URL`               | Public HTTPS base URL of this environment's R2 bucket.             |
+| `YOUTUBE_BROWSER_POOL`        | Durable Object that coordinates the shared browser and tab slots.  |
+| `YOUTUBE_SCREENSHOT_MAX_TABS` | Maximum active YouTube tabs in the shared browser; starts at `10`. |
 
-The Sohizi API needs `YOUTUBE_SCREENSHOT_WORKER_URL`, the same
-`YOUTUBE_SCREENSHOT_TOKEN`, and a matching `YOUTUBE_SCREENSHOT_MAX_TABS` value.
-Set secrets before deploying:
+The Sohizi API needs `CLOUDFLARE_WORKER_URL`, the same
+`CLOUDFLARE_WORKER_TOKEN`, and a matching `YOUTUBE_SCREENSHOT_MAX_TABS` value.
+Sync secrets from `.dev.vars` or `.prod.vars` before deploying:
 
 ```bash
-bunx wrangler secret put YOUTUBE_SCREENSHOT_TOKEN --env dev
-bunx wrangler secret put R2_PUBLIC_URL --env dev
+bun run secret:dev
 bun run deploy:dev
 ```
 

@@ -1,3 +1,2 @@
-# Required for the YouTube screenshot route. Set matching values in the API.
-YOUTUBE_SCREENSHOT_TOKEN=replace-with-a-long-random-token
-R2_PUBLIC_URL=https://media-dev.sohizi.com
+# Required for authenticated Worker routes. Set matching values in the API.
+CLOUDFLARE_WORKER_TOKEN=replace-with-a-long-random-token

@@ -155,7 +155,7 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
           ...DEFAULT_CIRCUIT,
           maxConcurrency: Number(process.env.YOUTUBE_SCREENSHOT_MAX_TABS ?? 10),
         },
-        { credentialEnv: "YOUTUBE_SCREENSHOT_TOKEN" },
+        { credentialEnv: "CLOUDFLARE_WORKER_TOKEN" },
       ),
     ],
   },
