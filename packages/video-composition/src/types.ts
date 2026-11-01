@@ -13,11 +13,7 @@ export type ClipAnimationIn = "none" | "fade" | "slide-up" | "scale-up"
 export type ClipAnimationOut = "none" | "fade" | "slide-down" | "scale-down"
 
 export type ImageMotionEffect =
-  | "none"
-  | "ken-burns-in"
-  | "ken-burns-out"
-  | "pan-left"
-  | "pan-right"
+  "none" | "ken-burns-in" | "ken-burns-out" | "pan-left" | "pan-right"
 
 export interface BaseClip {
   id: string

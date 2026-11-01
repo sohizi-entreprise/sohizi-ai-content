@@ -27,14 +27,14 @@ wavespeed run bytedance/seedream-v5.0-pro \
 
 ## Recommended defaults
 
-| Use case | Model |
-|---|---|
-| Text → image | `bytedance/seedream-v5.0-pro` |
+| Use case                        | Model                                                              |
+| ------------------------------- | ------------------------------------------------------------------ |
+| Text → image                    | `bytedance/seedream-v5.0-pro`                                      |
 | Image edit (instruction-driven) | `bytedance/seedream-v5.0-pro/edit` — requires `images: [url, ...]` |
-| Text → video | `wavespeed-ai/minimax-h3/text-to-video` |
-| Image → video | `wavespeed-ai/minimax-h3/image-to-video` — requires `image: url` |
-| Video edit (instruction-driven) | `wavespeed-ai/minimax-h3/video-edit` — requires `video: url` |
-| Video extend | `wavespeed-ai/minimax-h3/video-extend` — requires `video: url` |
+| Text → video                    | `wavespeed-ai/minimax-h3/text-to-video`                            |
+| Image → video                   | `wavespeed-ai/minimax-h3/image-to-video` — requires `image: url`   |
+| Video edit (instruction-driven) | `wavespeed-ai/minimax-h3/video-edit` — requires `video: url`       |
+| Video extend                    | `wavespeed-ai/minimax-h3/video-extend` — requires `video: url`     |
 
 These are good starting points. MiniMax H3 is the open-weights default: cheap, fast, and native stereo audio — the best place to start. When you need the highest quality, switch to `bytedance/seedance-2.5/*` (text-to-video, image-to-video, video-edit, video-extend). Browse alternatives with `wavespeed models <query>`.
 

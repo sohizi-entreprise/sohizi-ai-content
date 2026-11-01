@@ -59,14 +59,8 @@ const Example = () => {
   }, [isStreaming, currentTokenIndex, tokens])
 
   return (
-    <div
-      className="w-full p-4"
-      style={{ height: "300px" }}
-    >
-      <Reasoning
-        className="w-full"
-        isStreaming={isStreaming}
-      >
+    <div className="w-full p-4" style={{ height: "300px" }}>
+      <Reasoning className="w-full" isStreaming={isStreaming}>
         <ReasoningTrigger />
         <ReasoningContent>{content}</ReasoningContent>
       </Reasoning>

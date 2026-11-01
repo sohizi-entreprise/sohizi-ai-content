@@ -67,10 +67,7 @@ const TaskDemo = () => {
       if (iconInfo) {
         const IconComponent = iconInfo.component
         return (
-          <span
-            className="inline-flex items-center gap-1"
-            key={index}
-          >
+          <span className="inline-flex items-center gap-1" key={index}>
             {item.text}
             <TaskItemFile>
               <IconComponent
@@ -105,10 +102,7 @@ const TaskDemo = () => {
           )}
 
           {object?.tasks?.map((task: any, taskIndex: number) => (
-            <Task
-              key={taskIndex}
-              defaultOpen={taskIndex === 0}
-            >
+            <Task key={taskIndex} defaultOpen={taskIndex === 0}>
               <TaskTrigger title={task.title || "Loading..."} />
               <TaskContent>
                 {task.items?.map((item: any, itemIndex: number) => (

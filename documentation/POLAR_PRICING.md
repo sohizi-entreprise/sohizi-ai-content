@@ -48,13 +48,13 @@ minimum_price = (credits × $0.003 + $0.50) ÷ 0.25
 ```
 
 | Product example | Credits | Maximum loaded usage cost | Minimum price for 70% | Price in earlier `billing.md` |
-| --- | ---: | ---: | ---: | ---: |
-| Creator monthly | 2,500 | $7.50 | $32.00 | $29 |
-| Studio monthly | 8,000 | $24.00 | $98.00 | $79 |
-| Pro monthly | 22,000 | $66.00 | $266.00 | $199 |
-| Small top-up | 1,000 | $3.00 | $14.00 | $15 |
-| Medium top-up | 5,000 | $15.00 | $62.00 | $65 |
-| Large top-up | 15,000 | $45.00 | $182.00 | $180 |
+| --------------- | ------: | ------------------------: | --------------------: | ----------------------------: |
+| Creator monthly |   2,500 |                     $7.50 |                $32.00 |                           $29 |
+| Studio monthly  |   8,000 |                    $24.00 |                $98.00 |                           $79 |
+| Pro monthly     |  22,000 |                    $66.00 |               $266.00 |                          $199 |
+| Small top-up    |   1,000 |                     $3.00 |                $14.00 |                           $15 |
+| Medium top-up   |   5,000 |                    $15.00 |                $62.00 |                           $65 |
+| Large top-up    |  15,000 |                    $45.00 |               $182.00 |                          $180 |
 
 For example, a 22,000-credit Pro plan needs `(22,000 × $0.003 + $0.50) ÷ 0.25 = $266.00` under these assumptions. At the earlier `$199` price, the maximum allowance for a modeled 70% margin is `floor((0.25 × $199 − $0.50) ÷ $0.003) = 16,416` credits. All three earlier subscription prices and the earlier `$180` large-pack price fall below the 70% target if all credits are spent.
 

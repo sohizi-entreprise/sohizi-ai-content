@@ -38,10 +38,7 @@ export function MainComposition({ tracks }: MainCompositionProps) {
                   durationInFrames={durationInFrames}
                   layout="absolute-fill"
                 >
-                  <ClipRouter
-                    clip={clip}
-                    track={track}
-                  />
+                  <ClipRouter clip={clip} track={track} />
                 </Sequence>
               )
             })}
@@ -55,19 +52,9 @@ export function MainComposition({ tracks }: MainCompositionProps) {
 function ClipRouter({ clip, track }: { clip: Clip; track: Track }) {
   switch (clip.type) {
     case "video":
-      return (
-        <VideoClipRenderer
-          clip={clip}
-          muted={track.muted}
-        />
-      )
+      return <VideoClipRenderer clip={clip} muted={track.muted} />
     case "audio":
-      return (
-        <AudioClipRenderer
-          clip={clip}
-          muted={track.muted}
-        />
-      )
+      return <AudioClipRenderer clip={clip} muted={track.muted} />
     case "image":
       return <ImageClipRenderer clip={clip} />
     case "text":

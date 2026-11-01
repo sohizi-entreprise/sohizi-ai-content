@@ -44,12 +44,12 @@ Prompts typically live in OpenAI message arrays, Anthropic system arguments, Lan
 
 **What to make a variable vs. keep hardcoded:**
 
-| Make variable | Keep hardcoded |
-|---------------|----------------|
-| User-specific (`{{user_name}}`) | Output format instructions |
-| Dynamic content (`{{context}}`) | Safety guardrails |
-| Per-request (`{{query}}`) | Persona / personality |
-| Environment-specific (`{{company_name}}`) | Static examples |
+| Make variable                             | Keep hardcoded             |
+| ----------------------------------------- | -------------------------- |
+| User-specific (`{{user_name}}`)           | Output format instructions |
+| Dynamic content (`{{context}}`)           | Safety guardrails          |
+| Per-request (`{{query}}`)                 | Persona / personality      |
+| Environment-specific (`{{company_name}}`) | Static examples            |
 
 **Naming:** lowercase-hyphenated, feature-based (`document-summarizer`), hierarchical for related prompts (`support/triage`), prefix subprompts with `_` (`_base-personality`).
 

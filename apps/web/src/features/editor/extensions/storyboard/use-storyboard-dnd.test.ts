@@ -3,10 +3,7 @@ import { sceneToNode } from "./storyboard-nodes"
 import { relocateShots } from "./use-storyboard-dnd"
 import type { JSONContent } from "@tiptap/core"
 
-function scene(
-  id: string,
-  shotIds: Array<string>,
-): JSONContent {
+function scene(id: string, shotIds: Array<string>): JSONContent {
   return sceneToNode({
     id,
     title: id,
@@ -50,10 +47,7 @@ describe("relocateShots", () => {
   })
 
   it("appends when no target shot is given", () => {
-    const scenes = [
-      scene("scene-1", ["shot-1"]),
-      scene("scene-2", ["shot-2"]),
-    ]
+    const scenes = [scene("scene-1", ["shot-1"]), scene("scene-2", ["shot-2"])]
 
     expect(relocateShots(scenes, "shot-1", "scene-2")).toBe(true)
     expect(shotIdsIn(scenes, "scene-1")).toEqual([])

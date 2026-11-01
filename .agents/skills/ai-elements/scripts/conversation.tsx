@@ -162,10 +162,7 @@ const Example = () => {
           />
         ) : (
           visibleMessages.map(({ key, content, role }) => (
-            <Message
-              from={role}
-              key={key}
-            >
+            <Message from={role} key={key}>
               <MessageContent>{content}</MessageContent>
             </Message>
           ))

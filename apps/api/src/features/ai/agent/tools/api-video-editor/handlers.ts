@@ -259,9 +259,7 @@ export async function executeUpdateTrack(
   }
   return {
     ...success(`Track ${updated.id} updated.`),
-    videoEditorChanges: [
-      { type: "update_track", track: updated, name },
-    ],
+    videoEditorChanges: [{ type: "update_track", track: updated, name }],
   }
 }
 
@@ -360,7 +358,9 @@ export async function executeSplitClip(
   const leftDurationFrames = frame - clip.startFrame
   const props = (clip.properties ?? {}) as Record<string, unknown>
   const speed =
-    typeof props.speed === "number" && Number.isFinite(props.speed) && props.speed > 0
+    typeof props.speed === "number" &&
+    Number.isFinite(props.speed) &&
+    props.speed > 0
       ? props.speed
       : 1
 
@@ -590,7 +590,9 @@ export async function executeBatch(
       }
       case "add_clip": {
         if (op.data.endFrame <= op.data.startFrame) {
-          return failure("endFrame must be greater than startFrame in batch add_clip.")
+          return failure(
+            "endFrame must be greater than startFrame in batch add_clip.",
+          )
         }
         const clip = await repo.createClip({
           trackId: op.data.trackId,

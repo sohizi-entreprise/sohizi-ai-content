@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
-import { MediaRateLimitError, MediaServiceUnavailableError, MediaSubmissionUnknownError } from "./providers/type"
+import {
+  MediaRateLimitError,
+  MediaServiceUnavailableError,
+  MediaSubmissionUnknownError,
+} from "./providers/type"
 
 const calls: string[] = []
 const releases: Array<{ outcome: string; retryAfterMs?: number }> = []

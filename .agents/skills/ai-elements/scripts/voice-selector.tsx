@@ -202,15 +202,9 @@ const Example = () => {
 
   return (
     <div className="flex size-full flex-col items-center justify-center">
-      <VoiceSelector
-        onOpenChange={setOpen}
-        open={open}
-      >
+      <VoiceSelector onOpenChange={setOpen} open={open}>
         <VoiceSelectorTrigger asChild>
-          <Button
-            className="w-full max-w-xs"
-            variant="outline"
-          >
+          <Button className="w-full max-w-xs" variant="outline">
             {selectedVoiceData ? (
               <>
                 <VoiceSelectorName>{selectedVoiceData.name}</VoiceSelectorName>

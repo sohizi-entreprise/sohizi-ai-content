@@ -291,19 +291,12 @@ const ModelItem = memo(({ model, selectedModel, onSelect }: ModelItemProps) => {
     [onSelect, model.id],
   )
   return (
-    <ModelSelectorItem
-      key={model.id}
-      onSelect={handleSelect}
-      value={model.id}
-    >
+    <ModelSelectorItem key={model.id} onSelect={handleSelect} value={model.id}>
       <ModelSelectorLogo provider={model.chefSlug} />
       <ModelSelectorName>{model.name}</ModelSelectorName>
       <ModelSelectorLogoGroup>
         {model.providers.map((provider) => (
-          <ModelSelectorLogo
-            key={provider}
-            provider={provider}
-          />
+          <ModelSelectorLogo key={provider} provider={provider} />
         ))}
       </ModelSelectorLogoGroup>
       {selectedModel === model.id ? (
@@ -333,15 +326,9 @@ const Example = () => {
 
   return (
     <div className="flex size-full items-center justify-center p-8">
-      <ModelSelector
-        onOpenChange={setOpen}
-        open={open}
-      >
+      <ModelSelector onOpenChange={setOpen} open={open}>
         <ModelSelectorTrigger asChild>
-          <Button
-            className="w-[200px] justify-between"
-            variant="outline"
-          >
+          <Button className="w-[200px] justify-between" variant="outline">
             {selectedModelData?.chefSlug && (
               <ModelSelectorLogo provider={selectedModelData.chefSlug} />
             )}
@@ -355,10 +342,7 @@ const Example = () => {
           <ModelSelectorList>
             <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
             {chefs.map((chef) => (
-              <ModelSelectorGroup
-                heading={chef}
-                key={chef}
-              >
+              <ModelSelectorGroup heading={chef} key={chef}>
                 {models
                   .filter((model) => model.chef === chef)
                   .map((model) => (

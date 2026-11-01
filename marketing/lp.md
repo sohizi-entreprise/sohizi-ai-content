@@ -147,13 +147,13 @@ Educators making training videos, musicians cutting a visual for a track, and ar
 **Headline**
 The usual stack, and the same work in Sohizi Lab.
 
-| The usual stack | In Sohizi Lab |
-| --- | --- |
-| The script lives in a document editor | The script lives in the project |
-| Each generator sees only the prompt you paste in | The assistant can use the script, scenes, and files already there |
-| You download a clip and upload it into the next app | The clip stays attached to the scene |
-| The editor has no record of the story | The timeline sits next to the script and the assets |
-| A login and a subscription for every step | Writing, generation, storyboard, and edit in one workspace |
+| The usual stack                                     | In Sohizi Lab                                                     |
+| --------------------------------------------------- | ----------------------------------------------------------------- |
+| The script lives in a document editor               | The script lives in the project                                   |
+| Each generator sees only the prompt you paste in    | The assistant can use the script, scenes, and files already there |
+| You download a clip and upload it into the next app | The clip stays attached to the scene                              |
+| The editor has no record of the story               | The timeline sits next to the script and the assets               |
+| A login and a subscription for every step           | Writing, generation, storyboard, and edit in one workspace        |
 
 ---
 

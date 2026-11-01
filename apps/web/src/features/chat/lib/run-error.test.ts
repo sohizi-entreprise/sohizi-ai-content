@@ -21,7 +21,9 @@ describe("classifyRunError", () => {
 
   it("masks internal and generic errors with a safe fallback message", () => {
     expect(
-      classifyRunError("Database connection failed: ECONNREFUSED 127.0.0.1:5432"),
+      classifyRunError(
+        "Database connection failed: ECONNREFUSED 127.0.0.1:5432",
+      ),
     ).toEqual({
       kind: "generic",
       message: GENERIC_RUN_ERROR_MESSAGE,

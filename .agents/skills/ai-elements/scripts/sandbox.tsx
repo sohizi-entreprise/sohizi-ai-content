@@ -114,10 +114,7 @@ const Example = () => {
       </div>
 
       <Sandbox>
-        <SandboxHeader
-          state={state}
-          title="primes.py"
-        />
+        <SandboxHeader state={state} title="primes.py" />
         <SandboxContent>
           <SandboxTabs defaultValue="code">
             <SandboxTabsBar>

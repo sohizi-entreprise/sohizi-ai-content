@@ -26,6 +26,7 @@ Guide the user through dataset creation as an interview, proposal, approval, imp
 7. Heavily prompt the user to review expected outputs, as AI-generated expected outputs cannot be considered ground truth. Send a link with instructions to review.
 
 ## Critical Rules
+
 - Do not create, upsert, reshape, or upload a live Langfuse dataset until the user has approved the dataset goal, source mix, item schema, and first minimal draft, unless the user already gave those details and explicitly asked for immediate mutation.
 - Design the smallest complete dataset version that can serve the goal. Prefer a minimal reviewable v0 over broad coverage. A first draft is usually 5-12 high-signal items unless the user asks for a different size.
 - Keep `input`, `expectedOutput`, and `metadata` responsibilities separate. Put additional information, notes, and comments into `metadata`, not into `input` or `expectedOutput`.

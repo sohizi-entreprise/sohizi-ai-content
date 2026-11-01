@@ -275,11 +275,7 @@ export type ObjectFitMode = "contain" | "cover"
 export type ClipAnimationIn = "none" | "fade" | "slide-up" | "scale-up"
 export type ClipAnimationOut = "none" | "fade" | "slide-down" | "scale-down"
 export type ImageMotionEffect =
-  | "none"
-  | "ken-burns-in"
-  | "ken-burns-out"
-  | "pan-left"
-  | "pan-right"
+  "none" | "ken-burns-in" | "ken-burns-out" | "pan-left" | "pan-right"
 
 export type VideoMediaClipProperties = {
   url: string
@@ -708,7 +704,9 @@ export const captionClipSchema = z.object({
   backgroundEnabled: z
     .boolean()
     .optional()
-    .describe("Whether the active word background pill is shown (default: true)"),
+    .describe(
+      "Whether the active word background pill is shown (default: true)",
+    ),
   opacity: z
     .number()
     .min(0)

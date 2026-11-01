@@ -127,7 +127,8 @@ function ModelDetailForm({
     name: model.name,
     description: model.description ?? "",
     enabled: model.enabled,
-    contextWindow: model.contextWindow != null ? String(model.contextWindow) : "",
+    contextWindow:
+      model.contextWindow != null ? String(model.contextWindow) : "",
     categoryNames: model.categories,
   })
   const [pricing, setPricing] = useState<PricingFormState>(() =>

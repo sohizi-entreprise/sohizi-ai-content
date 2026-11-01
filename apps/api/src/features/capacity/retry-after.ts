@@ -35,10 +35,7 @@ function headerValue(headers: unknown): string | undefined {
 }
 
 function ownRetryAfterMs(error: object, now: number): number | undefined {
-  if (
-    "retryAfterMs" in error &&
-    typeof error.retryAfterMs === "number"
-  ) {
+  if ("retryAfterMs" in error && typeof error.retryAfterMs === "number") {
     return positiveMs(error.retryAfterMs)
   }
 
@@ -101,7 +98,8 @@ function statusOf(error: object): number | undefined {
 export function isRateLimitError(error: unknown, depth = 0): boolean {
   if (!error || typeof error !== "object" || depth > MAX_DEPTH) return false
   if (error instanceof MediaRateLimitError) return true
-  const name = "name" in error && typeof error.name === "string" ? error.name : ""
+  const name =
+    "name" in error && typeof error.name === "string" ? error.name : ""
   if (
     name === "GatewayRateLimitError" ||
     name === "TooManyRequestsException" ||

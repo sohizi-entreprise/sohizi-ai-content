@@ -3,7 +3,7 @@
 **Target Duration:** `00:52.00` (52 seconds | `3,120 frames` @ `60fps` or `1,560 frames` @ `30fps`)  
 **Primary Audience:** Solo AI filmmakers, narrative creators, and brand video producers who make multi-shot videos  
 **Core Positioning:** The project-aware AI video production workspace  
-**Story Followed On Screen:** *"The Last Signal"* — a sci-fi thriller short featuring protagonist **Mara** (yellow rain jacket, portable radio receiver, rain-slicked rooftop at night) developed from script to final MP4 cut inside one Sohizi Lab project.  
+**Story Followed On Screen:** _"The Last Signal"_ — a sci-fi thriller short featuring protagonist **Mara** (yellow rain jacket, portable radio receiver, rain-slicked rooftop at night) developed from script to final MP4 cut inside one Sohizi Lab project.  
 **Primary CTA:** `Create your first project` (`Your files, scenes, and creative direction stay in one project.`)
 
 ---
@@ -11,16 +11,18 @@
 ## 1. Strategic Grounding: Why This Script Works
 
 ### A. Real Creator Language (Sourced from Reddit `r/aifilmmaking`, `r/StableDiffusion`, `r/aitubers`)
-AI video creators immediately tune out generic claims like *"revolutionary all-in-one AI studio"* or *"idea to video in seconds."* When creators describe their actual frustration on Reddit and forums, they talk about **production amnesia, tab chaos, and reference drift**:
 
-| Creator Pain Point | Exact Community Language (Reddit VOC) | How the Script Uses It |
-| :--- | :--- | :--- |
-| **Character & Scene Drift** | *"Same words, different face, every generation."* / *"Every new generation forgets the decisions the film has already made."* | **Scene 01 Hook (0:00–0:04):** Opens immediately on the exact same prompt producing 3 different faces across 3 shots. |
-| **Tab & Spreadsheet Juggling** | *"15 tabs open with reference frames, preview windows, and prompt docs."* / *"The people making consistent multi-minute stuff aren't using a magic tool, they're running a spreadsheet."* | **Scene 02 Problem (0:04–0:11):** Visually shows the 15-tab browser bar, a shot-list spreadsheet (`locked_prompt`, `seed`, `mara_take_v4_FINAL.mp4`), and a re-upload spinner. |
-| **Burning Credits Before Locking Refs** | *"Lock every still asset (characters, locations, coverage frames) before you spend a dollar on video. Nearly all the waste comes from paying for clips off references that weren't right yet."* | **Scene 05 Storyboard & World Bible (0:23–0:30):** Demonstrates locking canonical character sheets (`mara-ref.png`), lighting, and 3-column storyboard frames before generating video. |
-| **The Export/Re-upload Commute** | *"The tool that finally makes the sequence work is still the editor, and the editor has no record of the story."* | **Scene 06–07 Generation to Timeline (0:30–0:44):** Shows takes and audio landing directly in `/root/assets` and snapping onto the timeline in the same workspace—zero downloads or re-uploads. |
+AI video creators immediately tune out generic claims like _"revolutionary all-in-one AI studio"_ or _"idea to video in seconds."_ When creators describe their actual frustration on Reddit and forums, they talk about **production amnesia, tab chaos, and reference drift**:
+
+| Creator Pain Point                      | Exact Community Language (Reddit VOC)                                                                                                                                                           | How the Script Uses It                                                                                                                                                                          |
+| :-------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Character & Scene Drift**             | _"Same words, different face, every generation."_ / _"Every new generation forgets the decisions the film has already made."_                                                                   | **Scene 01 Hook (0:00–0:04):** Opens immediately on the exact same prompt producing 3 different faces across 3 shots.                                                                           |
+| **Tab & Spreadsheet Juggling**          | _"15 tabs open with reference frames, preview windows, and prompt docs."_ / _"The people making consistent multi-minute stuff aren't using a magic tool, they're running a spreadsheet."_       | **Scene 02 Problem (0:04–0:11):** Visually shows the 15-tab browser bar, a shot-list spreadsheet (`locked_prompt`, `seed`, `mara_take_v4_FINAL.mp4`), and a re-upload spinner.                  |
+| **Burning Credits Before Locking Refs** | _"Lock every still asset (characters, locations, coverage frames) before you spend a dollar on video. Nearly all the waste comes from paying for clips off references that weren't right yet."_ | **Scene 05 Storyboard & World Bible (0:23–0:30):** Demonstrates locking canonical character sheets (`mara-ref.png`), lighting, and 3-column storyboard frames before generating video.          |
+| **The Export/Re-upload Commute**        | _"The tool that finally makes the sequence work is still the editor, and the editor has no record of the story."_                                                                               | **Scene 06–07 Generation to Timeline (0:30–0:44):** Shows takes and audio landing directly in `/root/assets` and snapping onto the timeline in the same workspace—zero downloads or re-uploads. |
 
 ### B. Motion Benchmark Inspiration
+
 - **Descript "Underlord" Launch Film:** Uses a strict visual feedback loop with aggressive scale punch-ins connecting text input (`@script.md`, `@mara-ref.png`) directly to UI output (storyboard shot cards and timeline tracks).
 - **Linear Release Films:** Dark, atmospheric palette matching the product (`#0d0e14` background, `#d6f01a` luminous lemon-green accent). No stock footage, no talking heads, and only **three disciplined motion behaviors** repeated throughout.
 - **Framer "Skills" Launch Film:** Punches tightly into the real input box (`Use @ to reference files and / for commands`) so viewers learn the exact product mechanism visually.
@@ -33,6 +35,7 @@ AI video creators immediately tune out generic claims like *"revolutionary all-i
 A coding agent (e.g., Remotion / React / Canvas / Motion Canvas) should use these exact constants to render the video deterministically.
 
 ### A. Canvas & Frame Configuration
+
 ```typescript
 export const VIDEO_CONFIG = {
   fps: 60, // Divide all frame numbers by 2 if rendering at 30fps
@@ -43,56 +46,58 @@ export const VIDEO_CONFIG = {
   // Safe zone for 9:16 vertical crop (center 608x1080 or 1080x1920 re-layout)
   safeZoneX: [360, 1560],
   safeZoneY: [90, 990],
-} as const;
+} as const
 ```
 
 ### B. Exact Sohizi Lab Design System Tokens
+
 Pulled directly from `packages/ui/src/styles.css` and `apps/web/src/styles.css`:
 
 ```typescript
 export const SOHIZI_TOKENS = {
   colors: {
-    background: "oklch(0.18 0.01 265)",      // Hex fallback: #0d0e14 (Main editor background)
+    background: "oklch(0.18 0.01 265)", // Hex fallback: #0d0e14 (Main editor background)
     foreground: "oklch(0.8717 0.0093 258.34)", // Hex fallback: #d8dae0 (Crisp white body text)
-    card: "oklch(0.2276 0.0098 276.63)",     // Hex fallback: #181a24 (Elevated panels)
-    popover: "oklch(0.2779 0.0093 276.78)",  // Hex fallback: #242633 (Dropdowns / docks)
-    surface: "oklch(0.2819 0.0092 276.79)",  // Hex fallback: #252836 (Active editor tab surface)
-    sidebar: "oklch(0.23 0.015 265)",        // Hex fallback: #191b26 (File explorer column)
-    primary: "oklch(0.936 0.225 121.24)",    // Hex fallback: #d6f01a / rgb(212, 255, 0) (Luminous Lemon Green)
+    card: "oklch(0.2276 0.0098 276.63)", // Hex fallback: #181a24 (Elevated panels)
+    popover: "oklch(0.2779 0.0093 276.78)", // Hex fallback: #242633 (Dropdowns / docks)
+    surface: "oklch(0.2819 0.0092 276.79)", // Hex fallback: #252836 (Active editor tab surface)
+    sidebar: "oklch(0.23 0.015 265)", // Hex fallback: #191b26 (File explorer column)
+    primary: "oklch(0.936 0.225 121.24)", // Hex fallback: #d6f01a / rgb(212, 255, 0) (Luminous Lemon Green)
     primaryForeground: "oklch(0.18 0.01 265)", // Deep slate text on primary CTA buttons
-    secondary: "oklch(0.28 0.02 265)",       // Hex fallback: #242838 (Hover / active row)
-    muted: "oklch(0.23 0.015 265)",          // Hex fallback: #191c26
+    secondary: "oklch(0.28 0.02 265)", // Hex fallback: #242838 (Hover / active row)
+    muted: "oklch(0.23 0.015 265)", // Hex fallback: #191c26
     mutedForeground: "oklch(0.55 0.015 265)", // Hex fallback: #6e7385 (Placeholders, secondary labels)
-    destructive: "oklch(0.7 0.16 25)",       // Hex fallback: #e05a47 (Error / drift indicator)
-    border: "rgba(255, 255, 255, 0.10)",     // 1px structural borders
-    fileTagBg: "rgba(214, 240, 26, 0.10)",   // .file-tag-link background
-    fileTagText: "#d6f01a",                  // .file-tag-link text
+    destructive: "oklch(0.7 0.16 25)", // Hex fallback: #e05a47 (Error / drift indicator)
+    border: "rgba(255, 255, 255, 0.10)", // 1px structural borders
+    fileTagBg: "rgba(214, 240, 26, 0.10)", // .file-tag-link background
+    fileTagText: "#d6f01a", // .file-tag-link text
     // Semantic File Tree Icon Colors
-    iconDocBlue: "oklch(0.75 0.13 250)",     // #66a3ff (Markdown / Script docs)
-    iconMediaGreen: "oklch(0.77 0.22 148)",  // #3ce67a (Image / Video / Audio assets)
-    iconStoryboardPink: "#f472b6",           // Storyboard & Video Editor files
+    iconDocBlue: "oklch(0.75 0.13 250)", // #66a3ff (Markdown / Script docs)
+    iconMediaGreen: "oklch(0.77 0.22 148)", // #3ce67a (Image / Video / Audio assets)
+    iconStoryboardPink: "#f472b6", // Storyboard & Video Editor files
     iconContextYellow: "oklch(0.78 0.17 65)", // #f59e0b (Context & Skill files)
   },
   fonts: {
     display: '"Space Grotesk", -apple-system, sans-serif', // Weight 600, tracking -0.03em
-    sans: '"Geist", -apple-system, sans-serif',            // Weight 400/500, UI labels & chat
-    mono: '"JetBrains Mono", monospace',                   // Weight 400/500, timecodes, paths, seeds
-    screenplay: '"Courier Prime", monospace',              // 12pt screenplay body inside script editor
+    sans: '"Geist", -apple-system, sans-serif', // Weight 400/500, UI labels & chat
+    mono: '"JetBrains Mono", monospace', // Weight 400/500, timecodes, paths, seeds
+    screenplay: '"Courier Prime", monospace', // 12pt screenplay body inside script editor
   },
   radii: {
-    panel: "16px",    // rounded-2xl on main workspace cards
-    inner: "8px",     // --radius: 0.5rem on buttons, shot cards, inputs
-    pill: "9999px",   // .file-tag-link and floating toolbar pills
+    panel: "16px", // rounded-2xl on main workspace cards
+    inner: "8px", // --radius: 0.5rem on buttons, shot cards, inputs
+    pill: "9999px", // .file-tag-link and floating toolbar pills
   },
   shadows: {
     primaryGlow: "0 4px 24px rgba(214, 240, 26, 0.18)",
     aiPulse: "0 0 15px rgba(66, 240, 66, 0.15)",
     deepWindow: "0 24px 64px rgba(0, 0, 0, 0.65)",
   },
-} as const;
+} as const
 ```
 
 ### C. Three Allowed Motion Primitives (Linear / Descript House Style)
+
 Do **not** use random bounce effects, 3D flips, or star wipes. Restrict all animations to these three primitives:
 
 1. **`PUNCH_IN` (Camera Scale & Focus Shift):**
@@ -110,17 +115,17 @@ Do **not** use random bounce effects, 3D flips, or star wipes. Restrict all anim
 
 **Total Spoken Words:** 124 words (comfortable, deliberate 140 WPM studio read with breathing room for UI sound design).
 
-| Scene | Timecode | Frames (60fps) | On-Screen Kinetic Headline (Muted-Safe) | Voiceover (Spoken Audio) | Sound Design / SFX |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **01. Hook** | `0:00–0:04` | `0–240` | **Same prompt. Different face. Every shot.** | You type the exact same prompt. And get a different face in every shot. | 3 rapid mechanical shutter clicks -> low bass drop on frame 120. |
-| **02. Problem** | `0:04–0:11` | `240–660` | **15 tabs. A spreadsheet. Zero memory.** | Making one AI clip is easy. Making eighteen shots hold together takes fifteen browser tabs, a spreadsheet, and endless re-uploads. | Cluttered UI notification ticks, keyboard clatter, rising tension hum. |
-| **03. Reveal** | `0:11–0:17` | `660–1020` | **Sohizi Lab** — *One project that remembers the film you're making.* | Sohizi Lab puts your entire production inside one project that actually remembers the film you're making. | Clean magnetic snap (`660f`), warm sub-bass swell, crisp UI settle. |
-| **04. Write** | `0:17–0:23` | `1020–1380` | **1. Write with an assistant that read the project.** | Start in the script. Ask Koli to break Scene One into shots—using the character sheet and brief already in your files. | Tactile keystrokes, soft chime on `@script.md` and `@mara-ref.png` pills. |
-| **05. Plan** | `0:23–0:30` | `1380–1800` | **2. Lock your world and storyboard before spending credits.** | Lock your world palette, lighting, and storyboard frames first—so you stop burning video credits on guesses. | Card cascade ticks (`3x`), drawer slide whoosh, lock click on `World` pill. |
-| **06. Generate** | `0:30–0:37` | `1800–2220` | **3. Generate video, voice, and sound in context.** | Generate video takes, dialogue, and rain ambience right from the approved shot. Every take stays attached to the scene. | Digital matrix hum, 4-take reveal pop, rain + radio static audio preview. |
-| **07. Edit** | `0:37–0:44` | `2220–2640` | **4. Cut the timeline without downloading a single file.** | Open the video editor and your approved clips, voice, and captions are already there. Drop them on the timeline and cut. | Magnetic timeline clip snaps (`3x`), playhead scrub, dialogue line plays. |
-| **08. Payoff** | `0:44–0:48` | `2640–2880` | **One story. Start to final cut.** | From first line to final export, the production never leaves the room. | Cinematic synth pulse + Mara's line: *"Signal locked. Sector four."* |
-| **09. End Card** | `0:48–0:52` | `2880–3120` | **Start the video in the project you will finish it in.**<br>`Create your first project` | Start the video in the project you'll finish it in. Create your first project on Sohizi Lab. | Resonant resolving chord, subtle cursor click on CTA button. |
+| Scene            | Timecode    | Frames (60fps) | On-Screen Kinetic Headline (Muted-Safe)                                                  | Voiceover (Spoken Audio)                                                                                                           | Sound Design / SFX                                                          |
+| :--------------- | :---------- | :------------- | :--------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------- |
+| **01. Hook**     | `0:00–0:04` | `0–240`        | **Same prompt. Different face. Every shot.**                                             | You type the exact same prompt. And get a different face in every shot.                                                            | 3 rapid mechanical shutter clicks -> low bass drop on frame 120.            |
+| **02. Problem**  | `0:04–0:11` | `240–660`      | **15 tabs. A spreadsheet. Zero memory.**                                                 | Making one AI clip is easy. Making eighteen shots hold together takes fifteen browser tabs, a spreadsheet, and endless re-uploads. | Cluttered UI notification ticks, keyboard clatter, rising tension hum.      |
+| **03. Reveal**   | `0:11–0:17` | `660–1020`     | **Sohizi Lab** — _One project that remembers the film you're making._                    | Sohizi Lab puts your entire production inside one project that actually remembers the film you're making.                          | Clean magnetic snap (`660f`), warm sub-bass swell, crisp UI settle.         |
+| **04. Write**    | `0:17–0:23` | `1020–1380`    | **1. Write with an assistant that read the project.**                                    | Start in the script. Ask Koli to break Scene One into shots—using the character sheet and brief already in your files.             | Tactile keystrokes, soft chime on `@script.md` and `@mara-ref.png` pills.   |
+| **05. Plan**     | `0:23–0:30` | `1380–1800`    | **2. Lock your world and storyboard before spending credits.**                           | Lock your world palette, lighting, and storyboard frames first—so you stop burning video credits on guesses.                       | Card cascade ticks (`3x`), drawer slide whoosh, lock click on `World` pill. |
+| **06. Generate** | `0:30–0:37` | `1800–2220`    | **3. Generate video, voice, and sound in context.**                                      | Generate video takes, dialogue, and rain ambience right from the approved shot. Every take stays attached to the scene.            | Digital matrix hum, 4-take reveal pop, rain + radio static audio preview.   |
+| **07. Edit**     | `0:37–0:44` | `2220–2640`    | **4. Cut the timeline without downloading a single file.**                               | Open the video editor and your approved clips, voice, and captions are already there. Drop them on the timeline and cut.           | Magnetic timeline clip snaps (`3x`), playhead scrub, dialogue line plays.   |
+| **08. Payoff**   | `0:44–0:48` | `2640–2880`    | **One story. Start to final cut.**                                                       | From first line to final export, the production never leaves the room.                                                             | Cinematic synth pulse + Mara's line: _"Signal locked. Sector four."_        |
+| **09. End Card** | `0:48–0:52` | `2880–3120`    | **Start the video in the project you will finish it in.**<br>`Create your first project` | Start the video in the project you'll finish it in. Create your first project on Sohizi Lab.                                       | Resonant resolving chord, subtle cursor click on CTA button.                |
 
 ---
 
@@ -131,10 +136,12 @@ Below is the frame-accurate blueprint for each scene. Every UI label, layout pro
 ---
 
 ### SCENE 01: The 3-Second Hook (Character Drift)
+
 - **Timecode:** `0:00.00 – 0:04.00` (`Frames 0 – 240` @ 60fps)
 - **Narrative Goal:** Stop the scroll in the first 1.5 seconds by visualizing the #1 frustration on `r/aifilmmaking`: pasting the exact same character prompt and getting three incompatible people.
 
 #### Visual Layout & Choreography
+
 1. **Frames `0 – 30` (0.0s – 0.5s):**
    - Background is `#0d0e14`.
    - Center screen: a dark prompt input bar (`width: 1100px`, `height: 64px`, `bg: #181a24`, `border: 1px solid rgba(255,255,255,0.12)`, `borderRadius: 12px`).
@@ -156,10 +163,12 @@ Below is the frame-accurate blueprint for each scene. Every UI label, layout pro
 ---
 
 ### SCENE 02: The Problem (15 Tabs & The Spreadsheet Glue)
+
 - **Timecode:** `0:04.00 – 0:11.00` (`Frames 240 – 660` @ 60fps)
 - **Narrative Goal:** Mirror the exact workflow AI filmmakers describe on Reddit: juggling 15 browser tabs, tracking seeds and prompts in a spreadsheet, and losing file lineage across downloads.
 
 #### Visual Layout & Choreography
+
 1. **Frames `240 – 360` (4.0s – 6.0s) — The 15-Tab Browser Bar:**
    - Camera pulls back (`scale: 1.0`). At the top of the frame, a browser window header rapidly spawns **15 cramped tabs** (`stagger: 4 frames` per tab):
      `ChatGPT - Script v3` | `Image Gen - Mara Face` | `Image Gen - Rooftop` | `Shot_List_Master.xlsx` | `Video Gen - Queue (4)` | `Video Gen - Tab 2` | `Voice Clone TTS` | `Music Gen` | `Upscaler` | `Drive - Downloads`...
@@ -180,15 +189,17 @@ Below is the frame-accurate blueprint for each scene. Every UI label, layout pro
    - Center kinetic headline (`Space Grotesk`, `64px`, `#d8dae0`):
      **15 tabs. A spreadsheet. Zero memory.**
    - Sub-caption (`Geist`, `26px`, `#6e7385`):
-     *Your tools can generate clips. None of them share the production.*
+     _Your tools can generate clips. None of them share the production._
 
 ---
 
 ### SCENE 03: The Collapse & Product Reveal (Sohizi Lab Shell)
+
 - **Timecode:** `0:11.00 – 0:17.00` (`Frames 660 – 1020` @ 60fps)
 - **Narrative Goal:** Transform the scattered mess into Sohizi Lab's calm, structured, file-first project workspace (`AppHeader` + `AppNavBar` + `FILES` Explorer + Tabbed Workspace + `Koli` Assistant).
 
 #### Visual Layout & Choreography
+
 1. **Frames `660 – 750` (11.0s – 12.5s) — Magnetic Implosion:**
    - Using spring physics (`stiffness: 180, damping: 22`), the scattered windows (Script doc, Character sheet, Spreadsheet rows, Audio waveforms, Video clips) collapse inward along glowing `#d6f01a` vector lines into a single structured project tree on the left side of the screen.
 2. **Frames `750 – 900` (12.5s – 15.0s) — The Full Sohizi Workspace Shell Renders:**
@@ -217,19 +228,22 @@ Below is the frame-accurate blueprint for each scene. Every UI label, layout pro
 ---
 
 ### SCENE 04: Stage 1 — Write & Direct with Project-Aware AI (Koli)
+
 - **Timecode:** `0:17.00 – 0:23.00` (`Frames 1020 – 1380` @ 60fps)
 - **Narrative Goal:** Show how a story starts in `TextEditorView` (`script.md`) and how **Koli** reads existing project files via `@` mentions instead of requiring the user to copy-paste character descriptions.
 
 #### Visual Layout & Choreography
+
 1. **Frames `1020 – 1120` (17.0s – 18.6s) — Script Editor + Chat Input Punch-In:**
    - Camera executes `PUNCH_IN` (`scale: 1.45`, focusing on the center `script.md` editor and right `Koli` chat panel).
    - **Center (`script.md` in `TextEditorView`):** Clean screenplay formatting (`Courier Prime` / `Geist`):
      ```markdown
      # SCENE 01 — EXT. SECTOR 4 ROOFTOP - NIGHT
-     Freezing rain hammers rusted satellite dishes. 
+
+     Freezing rain hammers rusted satellite dishes.
      MARA (28, yellow high-collar rain jacket) crouches beside a portable analog receiver.
      A red frequency LED begins to pulse.
-     
+
      MARA
      Signal locked. Sector four.
      ```
@@ -243,7 +257,7 @@ Below is the frame-accurate blueprint for each scene. Every UI label, layout pro
      - `✓ Reading a file` -> `[mara-ref.png](/root/characters/mara-ref.png)`
      - `✓ Writing a file` -> `[scene-01.storyboard](/root/scene-01.storyboard)`
    - Koli replies concisely:
-     *"Created 3 coverage shots in **`@scene-01.storyboard`** with Mara's canonical yellow rain jacket and sodium-vapor rooftop lighting locked."*
+     _"Created 3 coverage shots in **`@scene-01.storyboard`** with Mara's canonical yellow rain jacket and sodium-vapor rooftop lighting locked."_
 3. **Frames `1260 – 1380` (21.0s – 23.0s) — Inline Diff Approval:**
    - At the top of the editor, the `MarkdownPendingChangesBar` appears with `Accept Changes` (`#d6f01a` button) and `Reject`.
    - Cursor clicks `Accept Changes` at `Frame 1320`.
@@ -252,10 +266,12 @@ Below is the frame-accurate blueprint for each scene. Every UI label, layout pro
 ---
 
 ### SCENE 05: Stage 2 — Storyboard & World Bible (Locking Continuity First)
+
 - **Timecode:** `0:23.00 – 0:30.00` (`Frames 1380 – 1800` @ 60fps)
-- **Narrative Goal:** Show `StoryboardEditorView` and the `World` sheet solving character/scene consistency *before* spending video credits.
+- **Narrative Goal:** Show `StoryboardEditorView` and the `World` sheet solving character/scene consistency _before_ spending video credits.
 
 #### Visual Layout & Choreography
+
 1. **Frames `1380 – 1500` (23.0s – 25.0s) — Storyboard Scene Card:**
    - `HARD_STATE_CUT` to the `scene-01.storyboard` tab in the center workspace.
    - A vertical scene container card (`bg: #181a24`, `border: 1px solid rgba(255,255,255,0.1)`, `rounded-2xl`, `padding: 24px`) fills the main stage:
@@ -282,10 +298,12 @@ Below is the frame-accurate blueprint for each scene. Every UI label, layout pro
 ---
 
 ### SCENE 06: Stage 3 — Generate Video Takes, Voice & Sound in Context
+
 - **Timecode:** `0:30.00 – 0:37.00` (`Frames 1800 – 2220` @ 60fps)
 - **Narrative Goal:** Show Shot 02 moving directly into `MediaGenerator` / `MediaComposer`—generating a 2×2 grid of video takes plus native dialogue/audio without leaving the project.
 
 #### Visual Layout & Choreography
+
 1. **Frames `1800 – 1920` (30.0s – 32.0s) — Shot-to-Generator Handoff:**
    - On `Shot 02` in the storyboard, the hover toolbar appears (`Drag | Attach shot to chat | Generate Video`).
    - Left `AppNavBar` switches active highlight to the 2nd icon (`AI media generator`).
@@ -305,10 +323,12 @@ Below is the frame-accurate blueprint for each scene. Every UI label, layout pro
 ---
 
 ### SCENE 07: Stage 4 — Assemble the Final Cut in the Built-In Video Editor
+
 - **Timecode:** `0:37.00 – 0:44.00` (`Frames 2220 – 2640` @ 60fps)
 - **Narrative Goal:** Prove that the editor is already connected to the project. Approved takes, voice lines, and captions sit in the `Assets` panel ready to drop onto the multi-track timeline—zero exporting or re-uploading.
 
 #### Visual Layout & Choreography
+
 1. **Frames `2220 – 2340` (37.0s – 39.0s) — Video Editor Workspace Layout:**
    - Left `AppNavBar` activates the 3rd icon (`Video editor`).
    - The authentic Sohizi Video Editor composition view fills the workspace:
@@ -331,25 +351,29 @@ Below is the frame-accurate blueprint for each scene. Every UI label, layout pro
 ---
 
 ### SCENE 08: The Payoff — Export & Continuous Playback
+
 - **Timecode:** `0:44.00 – 0:48.00` (`Frames 2640 – 2880` @ 60fps)
 - **Narrative Goal:** Hold the finished result long enough for the viewer to admire the continuity and see the `Export` completion state.
 
 #### Visual Layout & Choreography
+
 1. **Frames `2640 – 2720` (44.0s – 45.3s) — Export Click:**
    - Top-right `Export` button pulses (`Queued -> Rendering 100% -> Download MP4` with `#d6f01a` fill).
 2. **Frames `2720 – 2880` (45.3s – 48.0s) — Full-Bleed Cinema Preview:**
    - The surrounding UI chrome smoothly recedes (`scale: 1.0 -> 1.65` centering the `Stage` player to 80% of the viewport).
-   - The finished 3-shot sequence of *"The Last Signal"* plays at full frame rate with crisp subtitles (`"Signal locked. Sector four."`), rain audio, and zero character drift.
+   - The finished 3-shot sequence of _"The Last Signal"_ plays at full frame rate with crisp subtitles (`"Signal locked. Sector four."`), rain audio, and zero character drift.
    - Floating bottom caption (`Space Grotesk`, `36px`, `#d8dae0`):
      **One story. Start to final cut.**
 
 ---
 
 ### SCENE 09: End Card & Call to Action
+
 - **Timecode:** `0:48.00 – 0:52.00` (`Frames 2880 – 3120` @ 60fps)
 - **Narrative Goal:** Land a single, unmistakable conversion action aligned with `marketing/lp.md`.
 
 #### Visual Layout & Choreography
+
 1. **Frames `2880 – 2930` (48.0s – 48.8s):**
    - Clean transition to deep `#0d0e14` background with a subtle radial spotlight (`--animate-spotlight`, `rgba(214, 240, 26, 0.08)` at center).
 2. **Frames `2930 – 3120` (48.8s – 52.0s):**
@@ -396,18 +420,18 @@ src/launch-video/
 ### Root Sequence Wiring (`LaunchVideoComposition.tsx`)
 
 ```tsx
-import React from "react";
-import { AbsoluteFill, Sequence } from "remotion";
-import { SOHIZI_TOKENS } from "./tokens";
-import { Scene01HookDrift } from "./scenes/Scene01HookDrift";
-import { Scene02TabChaos } from "./scenes/Scene02TabChaos";
-import { Scene03WorkspaceReveal } from "./scenes/Scene03WorkspaceReveal";
-import { Scene04ScriptAndKoli } from "./scenes/Scene04ScriptAndKoli";
-import { Scene05StoryboardWorld } from "./scenes/Scene05StoryboardWorld";
-import { Scene06MediaGenerator } from "./scenes/Scene06MediaGenerator";
-import { Scene07VideoEditorCut } from "./scenes/Scene07VideoEditorCut";
-import { Scene08ExportPayoff } from "./scenes/Scene08ExportPayoff";
-import { Scene09EndCardCTA } from "./scenes/Scene09EndCardCTA";
+import React from "react"
+import { AbsoluteFill, Sequence } from "remotion"
+import { SOHIZI_TOKENS } from "./tokens"
+import { Scene01HookDrift } from "./scenes/Scene01HookDrift"
+import { Scene02TabChaos } from "./scenes/Scene02TabChaos"
+import { Scene03WorkspaceReveal } from "./scenes/Scene03WorkspaceReveal"
+import { Scene04ScriptAndKoli } from "./scenes/Scene04ScriptAndKoli"
+import { Scene05StoryboardWorld } from "./scenes/Scene05StoryboardWorld"
+import { Scene06MediaGenerator } from "./scenes/Scene06MediaGenerator"
+import { Scene07VideoEditorCut } from "./scenes/Scene07VideoEditorCut"
+import { Scene08ExportPayoff } from "./scenes/Scene08ExportPayoff"
+import { Scene09EndCardCTA } from "./scenes/Scene09EndCardCTA"
 
 export const LaunchVideoComposition: React.FC = () => {
   return (
@@ -423,34 +447,62 @@ export const LaunchVideoComposition: React.FC = () => {
         <Scene01HookDrift />
       </Sequence>
 
-      <Sequence from={240} durationInFrames={420} name="02-Problem-15-Tabs-Spreadsheet">
+      <Sequence
+        from={240}
+        durationInFrames={420}
+        name="02-Problem-15-Tabs-Spreadsheet"
+      >
         <Scene02TabChaos />
       </Sequence>
 
       {/* Act II: Collapse & Workspace Reveal */}
-      <Sequence from={660} durationInFrames={360} name="03-Reveal-Sohizi-Workspace">
+      <Sequence
+        from={660}
+        durationInFrames={360}
+        name="03-Reveal-Sohizi-Workspace"
+      >
         <Scene03WorkspaceReveal />
       </Sequence>
 
       {/* Act III: End-to-End Story ("The Last Signal") */}
-      <Sequence from={1020} durationInFrames={360} name="04-Write-Script-And-Koli">
+      <Sequence
+        from={1020}
+        durationInFrames={360}
+        name="04-Write-Script-And-Koli"
+      >
         <Scene04ScriptAndKoli />
       </Sequence>
 
-      <Sequence from={1380} durationInFrames={420} name="05-Plan-Storyboard-World-Bible">
+      <Sequence
+        from={1380}
+        durationInFrames={420}
+        name="05-Plan-Storyboard-World-Bible"
+      >
         <Scene05StoryboardWorld />
       </Sequence>
 
-      <Sequence from={1800} durationInFrames={420} name="06-Generate-Takes-And-Audio">
+      <Sequence
+        from={1800}
+        durationInFrames={420}
+        name="06-Generate-Takes-And-Audio"
+      >
         <Scene06MediaGenerator />
       </Sequence>
 
-      <Sequence from={2220} durationInFrames={420} name="07-Edit-Connected-Timeline">
+      <Sequence
+        from={2220}
+        durationInFrames={420}
+        name="07-Edit-Connected-Timeline"
+      >
         <Scene07VideoEditorCut />
       </Sequence>
 
       {/* Act IV: Payoff & CTA */}
-      <Sequence from={2640} durationInFrames={240} name="08-Payoff-Export-Playback">
+      <Sequence
+        from={2640}
+        durationInFrames={240}
+        name="08-Payoff-Export-Playback"
+      >
         <Scene08ExportPayoff />
       </Sequence>
 
@@ -458,11 +510,12 @@ export const LaunchVideoComposition: React.FC = () => {
         <Scene09EndCardCTA />
       </Sequence>
     </AbsoluteFill>
-  );
-};
+  )
+}
 ```
 
 ### Quality Guardrails for the Motion Graphics Agent
+
 1. **Visual Continuity Across Scenes 04–08:** Every visual representation of **Mara** inside Sohizi Lab (in `mara-ref.png`, `Shot 01–03` storyboard thumbnails, the `2x2` video generation grid, and the `Stage` video player) must depict the **exact same character palette** (short dark hair, high-collar `#d6f01a` yellow rain jacket, dark blue rain background, `#ff2a54` red receiver LED) to visually contrast with the mismatched faces in Scene 01.
 2. **Legible UI Scale:** Never render miniature, unreadable 8px UI text during feature scenes. When showing Koli's `@` file pills, the Storyboard cards, or the Timeline tracks, keep camera zoom between `1.35x` and `1.85x` so every pill and label is legible on a phone screen.
 3. **Zero AI Cliches:** Do not add glowing robot brains, sparkles, magic wands, or floating neon neural nets. The visual hero is the **connected file tree, the storyboard cards, the `@file` tags, and the timeline tracks**.

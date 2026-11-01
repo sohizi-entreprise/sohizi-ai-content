@@ -75,10 +75,7 @@ const Example = () => {
       style={{ height: "400px" }}
     >
       <WebPreviewNavigation>
-        <WebPreviewNavigationButton
-          onClick={handleGoBack}
-          tooltip="Go back"
-        >
+        <WebPreviewNavigationButton onClick={handleGoBack} tooltip="Go back">
           <ArrowLeftIcon className="size-4" />
         </WebPreviewNavigationButton>
         <WebPreviewNavigationButton
@@ -87,17 +84,11 @@ const Example = () => {
         >
           <ArrowRightIcon className="size-4" />
         </WebPreviewNavigationButton>
-        <WebPreviewNavigationButton
-          onClick={handleReload}
-          tooltip="Reload"
-        >
+        <WebPreviewNavigationButton onClick={handleReload} tooltip="Reload">
           <RefreshCcwIcon className="size-4" />
         </WebPreviewNavigationButton>
         <WebPreviewUrl />
-        <WebPreviewNavigationButton
-          onClick={handleSelect}
-          tooltip="Select"
-        >
+        <WebPreviewNavigationButton onClick={handleSelect} tooltip="Select">
           <MousePointerClickIcon className="size-4" />
         </WebPreviewNavigationButton>
         <WebPreviewNavigationButton

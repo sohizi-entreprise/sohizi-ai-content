@@ -160,7 +160,7 @@ describe("LoopDetector", () => {
     if (verdict3.action !== "none") {
       expect(verdict3.kind).toBe("error_streak")
       expect(verdict3.endpoint).toBe("/files/patch")
-      expect(formatLoopWarningNote(verdict3)).toContain("strategy: \"overwrite\"")
+      expect(formatLoopWarningNote(verdict3)).toContain('strategy: "overwrite"')
     }
 
     // Step 4: agent succeeds on /files/patch -> streak resets

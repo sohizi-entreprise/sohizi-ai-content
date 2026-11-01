@@ -60,11 +60,7 @@ const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
     [onRemove, attachment.id],
   )
   return (
-    <Attachment
-      data={attachment}
-      key={attachment.id}
-      onRemove={handleRemove}
-    >
+    <Attachment data={attachment} key={attachment.id} onRemove={handleRemove}>
       <AttachmentPreview />
       <AttachmentInfo showMediaType />
       <AttachmentRemove />
@@ -83,10 +79,7 @@ const Example = () => {
 
   return (
     <div className="flex items-center justify-center p-8">
-      <Attachments
-        className="w-full max-w-md"
-        variant="list"
-      >
+      <Attachments className="w-full max-w-md" variant="list">
         {attachments.map((attachment) => (
           <AttachmentItem
             attachment={attachment}

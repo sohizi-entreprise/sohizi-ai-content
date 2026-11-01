@@ -1,15 +1,8 @@
 import { describe, expect, it } from "vitest"
-import {
-  formatCaptionTimestamp,
-  groupCaptionBlocks,
-} from "./caption-blocks"
+import { formatCaptionTimestamp, groupCaptionBlocks } from "./caption-blocks"
 import type { ServerCaption } from "../../store/types"
 
-function word(
-  text: string,
-  start: number,
-  end: number,
-): ServerCaption {
+function word(text: string, start: number, end: number): ServerCaption {
   return { word: text, start, end }
 }
 
@@ -61,10 +54,7 @@ describe("groupCaptionBlocks", () => {
 
   it("starts a new block after a pause", () => {
     expect(
-      groupCaptionBlocks([
-        word(" Wait", 0, 0.4),
-        word(" now", 1.3, 1.7),
-      ]),
+      groupCaptionBlocks([word(" Wait", 0, 0.4), word(" now", 1.3, 1.7)]),
     ).toEqual([
       { start: 0, end: 0.4, text: "Wait" },
       { start: 1.3, end: 1.7, text: "now" },

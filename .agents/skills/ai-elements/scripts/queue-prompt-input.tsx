@@ -108,11 +108,7 @@ const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
     [onRemove, attachment.id],
   )
   return (
-    <Attachment
-      data={attachment}
-      key={attachment.id}
-      onRemove={handleRemove}
-    >
+    <Attachment data={attachment} key={attachment.id} onRemove={handleRemove}>
       <AttachmentPreview />
       <AttachmentRemove />
     </Attachment>
@@ -138,10 +134,7 @@ const TodoItem = memo(({ todo, onRemove }: TodoItemProps) => {
           {todo.title}
         </QueueItemContent>
         <QueueItemActions>
-          <QueueItemAction
-            aria-label="Remove todo"
-            onClick={handleRemove}
-          >
+          <QueueItemAction aria-label="Remove todo" onClick={handleRemove}>
             <Trash2 size={12} />
           </QueueItemAction>
         </QueueItemActions>
@@ -166,19 +159,12 @@ interface ModelItemProps {
 const ModelItem = memo(({ m, selectedModel, onSelect }: ModelItemProps) => {
   const handleSelect = useCallback(() => onSelect(m.id), [onSelect, m.id])
   return (
-    <ModelSelectorItem
-      key={m.id}
-      onSelect={handleSelect}
-      value={m.id}
-    >
+    <ModelSelectorItem key={m.id} onSelect={handleSelect} value={m.id}>
       <ModelSelectorLogo provider={m.chefSlug} />
       <ModelSelectorName>{m.name}</ModelSelectorName>
       <ModelSelectorLogoGroup>
         {m.providers.map((provider) => (
-          <ModelSelectorLogo
-            key={provider}
-            provider={provider}
-          />
+          <ModelSelectorLogo key={provider} provider={provider} />
         ))}
       </ModelSelectorLogoGroup>
       {selectedModel === m.id ? (
@@ -338,19 +324,12 @@ const Example = () => {
           </QueueSection>
         )}
       </Queue>
-      <PromptInput
-        globalDrop
-        multiple
-        onSubmit={handleSubmit}
-      >
+      <PromptInput globalDrop multiple onSubmit={handleSubmit}>
         <PromptInputHeader>
           <PromptInputAttachmentsDisplay />
         </PromptInputHeader>
         <PromptInputBody>
-          <PromptInputTextarea
-            onChange={handleTextChange}
-            value={text}
-          />
+          <PromptInputTextarea onChange={handleTextChange} value={text} />
         </PromptInputBody>
         <PromptInputFooter>
           <PromptInputTools>
@@ -385,10 +364,7 @@ const Example = () => {
                 <ModelSelectorList>
                   <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
                   {["OpenAI", "Anthropic", "Google"].map((chef) => (
-                    <ModelSelectorGroup
-                      heading={chef}
-                      key={chef}
-                    >
+                    <ModelSelectorGroup heading={chef} key={chef}>
                       {models
                         .filter((m) => m.chef === chef)
                         .map((m) => (

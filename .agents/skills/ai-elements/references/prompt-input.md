@@ -127,10 +127,7 @@ const InputDemo = () => {
         <Conversation>
           <ConversationContent>
             {messages.map((message) => (
-              <Message
-                from={message.role}
-                key={message.id}
-              >
+              <Message from={message.role} key={message.id}>
                 <MessageContent>
                   {message.parts.map((part, i) => {
                     switch (part.type) {
@@ -194,20 +191,14 @@ const InputDemo = () => {
                 </PromptInputSelectTrigger>
                 <PromptInputSelectContent>
                   {models.map((model) => (
-                    <PromptInputSelectItem
-                      key={model.id}
-                      value={model.id}
-                    >
+                    <PromptInputSelectItem key={model.id} value={model.id}>
                       {model.name}
                     </PromptInputSelectItem>
                   ))}
                 </PromptInputSelectContent>
               </PromptInputSelect>
             </PromptInputTools>
-            <PromptInputSubmit
-              disabled={!text && !status}
-              status={status}
-            />
+            <PromptInputSubmit disabled={!text && !status} status={status} />
           </PromptInputFooter>
         </PromptInput>
       </div>

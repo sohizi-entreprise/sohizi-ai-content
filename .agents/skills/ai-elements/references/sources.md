@@ -95,10 +95,7 @@ const SourceDemo = () => {
                       })}
                     </Sources>
                   )}
-                  <Message
-                    from={message.role}
-                    key={message.id}
-                  >
+                  <Message from={message.role} key={message.id}>
                     <MessageContent>
                       {message.parts.map((part, i) => {
                         switch (part.type) {

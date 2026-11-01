@@ -226,7 +226,9 @@ const rippleShiftSchema = z
         .number()
         .int()
         .min(0)
-        .describe("Shift all clips whose startFrame is at or after this frame."),
+        .describe(
+          "Shift all clips whose startFrame is at or after this frame.",
+        ),
       deltaFrames: z
         .number()
         .int()

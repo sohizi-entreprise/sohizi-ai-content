@@ -23,10 +23,7 @@ export type ToolResult = {
 }
 
 type AgenticToolResult =
-  | AgentChunk
-  | AgenticToolChunk
-  | OperationChunk
-  | VideoEditorChangeChunk
+  AgentChunk | AgenticToolChunk | OperationChunk | VideoEditorChangeChunk
 
 export type ToolExecutionOptions = {
   session: Session

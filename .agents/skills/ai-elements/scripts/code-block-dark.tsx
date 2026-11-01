@@ -29,20 +29,14 @@ const code = `function MyComponent(props) {
 
 const Example = () => (
   <div className="dark">
-    <CodeBlock
-      code={code}
-      language="jsx"
-    >
+    <CodeBlock code={code} language="jsx">
       <CodeBlockHeader>
         <CodeBlockTitle>
           <FileIcon size={14} />
           <CodeBlockFilename>MyComponent.jsx</CodeBlockFilename>
         </CodeBlockTitle>
         <CodeBlockActions>
-          <CodeBlockCopyButton
-            onCopy={handleCopy}
-            onError={handleCopyError}
-          />
+          <CodeBlockCopyButton onCopy={handleCopy} onError={handleCopyError} />
         </CodeBlockActions>
       </CodeBlockHeader>
     </CodeBlock>

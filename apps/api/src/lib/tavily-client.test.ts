@@ -15,9 +15,9 @@ describe("tavily retry-after", () => {
         headers: { "retry-after": "7" },
       })) as unknown as typeof fetch
 
-    await expect(tavilySearch("key", { query: "weather" })).rejects.toMatchObject(
-      { status: 429, retryAfterMs: 7_000 },
-    )
+    await expect(
+      tavilySearch("key", { query: "weather" }),
+    ).rejects.toMatchObject({ status: 429, retryAfterMs: 7_000 })
   })
 
   test("a 429 without a usable hint leaves the delay unset", async () => {

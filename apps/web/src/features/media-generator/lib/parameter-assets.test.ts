@@ -86,9 +86,9 @@ describe("getUploaderFileType", () => {
   })
 
   it("falls back to image for unknown keys", () => {
-    expect(
-      getUploaderFileType(binding({ key: "mask", type: "string" })),
-    ).toBe("image")
+    expect(getUploaderFileType(binding({ key: "mask", type: "string" }))).toBe(
+      "image",
+    )
   })
 })
 

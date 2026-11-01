@@ -1,6 +1,7 @@
 ---
 name: langfuse-error-analysis
-description: Deep-dive error analysis of an LLM pipeline or AI application using Langfuse traces.
+description:
+  Deep-dive error analysis of an LLM pipeline or AI application using Langfuse traces.
   Use this skill whenever the user wants to understand why their AI system is producing
   bad outputs, where their pipeline is failing, or how to categorise and label failures
   into a taxonomy and decide what to prioritise fixing. Also trigger for "review my
@@ -25,6 +26,7 @@ Read it in full. It defines the authoritative 5-step process (sample selection �
 You as a coding agent and the user go through this together to perform a full error analysis with their data in Langfuse. Set up the scores, representative sample, and annotation queue for the user, and provide direct UI links wherever their action is required. Be proactive and explain what is happening in plain language without reciting internal step numbers or jargon.
 
 ## Rules CRITICAL
+
 - Perform interactions with the user's Langfuse instance yourself rather than telling the user to do them.
 - The user performs the open-coding review and supplies human labels; do not do this on their behalf.
 - Where a step needs the user's judgment or input, pause and ask before acting.
@@ -50,21 +52,20 @@ Verify you can actually reach the user's project before proceeding. If access fa
 
 > **CRITICAL:** Queues cannot be updated or deleted after creation. Create score configs first, then the queue with all config IDs. To add new configs later, create a new queue.
 
-
 **Always give the user a direct link immediately after creating a queue:**
 
-| Host | URL pattern |
-|------|-------------|
-| EU cloud | `https://cloud.langfuse.com/project/<projectId>/annotation-queues/<queueId>` |
-| US cloud | `https://us.cloud.langfuse.com/project/<projectId>/annotation-queues/<queueId>` |
-| Self-hosted | `<LANGFUSE_BASE_URL>/project/<projectId>/annotation-queues/<queueId>` |
+| Host        | URL pattern                                                                     |
+| ----------- | ------------------------------------------------------------------------------- |
+| EU cloud    | `https://cloud.langfuse.com/project/<projectId>/annotation-queues/<queueId>`    |
+| US cloud    | `https://us.cloud.langfuse.com/project/<projectId>/annotation-queues/<queueId>` |
+| Self-hosted | `<LANGFUSE_BASE_URL>/project/<projectId>/annotation-queues/<queueId>`           |
 
-Instruction to give: *"Please open code the first ~50 examples. For each trace, write what you observe in the `open_coding` field (describe behaviour, don't diagnose root causes), then set `pass_fail_assessment` to Pass or Fail."*
-
+Instruction to give: _"Please open code the first ~50 examples. For each trace, write what you observe in the `open_coding` field (describe behaviour, don't diagnose root causes), then set `pass_fail_assessment` to Pass or Fail."_
 
 ### Prompt fixes
 
 When a category warrants a prompt fix, always offer the user two options:
+
 1. Create it as a versioned prompt in Langfuse (tracked, usable via the prompt API)
 2. Draft the specific text change for them to review and apply
 
@@ -72,13 +73,12 @@ When a category warrants a prompt fix, always offer the user two options:
 
 When a category warrants an evaluator, build it following `references/setting-up-evals.md`.
 
-
 ### Common gotchas
 
-| Mistake | Fix |
-|---------|-----|
-| Annotating the trace instead of the observation | Target the GENERATION observation, not the trace, when content lives there |
-| Creating a score config without checking existing ones | Check existing score configs first; they can't be deleted |
-| Queue created before score configs | Create configs → collect IDs → create queue |
-| Requesting too many traces at once | Page size is capped (max 100); paginate to get more |
-| No rate limiting on bulk queue item creation | Space out requests to avoid hitting rate limits (429) |
+| Mistake                                                | Fix                                                                        |
+| ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Annotating the trace instead of the observation        | Target the GENERATION observation, not the trace, when content lives there |
+| Creating a score config without checking existing ones | Check existing score configs first; they can't be deleted                  |
+| Queue created before score configs                     | Create configs → collect IDs → create queue                                |
+| Requesting too many traces at once                     | Page size is capped (max 100); paginate to get more                        |
+| No rate limiting on bulk queue item creation           | Space out requests to avoid hitting rate limits (429)                      |

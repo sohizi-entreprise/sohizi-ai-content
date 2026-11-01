@@ -39,11 +39,7 @@ export function groupCaptionBlocks(
     const gap = word.start - previous.end
     const duration = word.end - current[0].start
     const sentenceEnded = /[.!?]["']?$/.test(previous.word.trim())
-    if (
-      gap > PAUSE_SECONDS ||
-      sentenceEnded ||
-      duration > MAX_BLOCK_SECONDS
-    ) {
+    if (gap > PAUSE_SECONDS || sentenceEnded || duration > MAX_BLOCK_SECONDS) {
       flush()
     }
     current.push(word)

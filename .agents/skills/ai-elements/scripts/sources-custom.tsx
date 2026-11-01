@@ -26,10 +26,7 @@ const Example = () => (
       </SourcesTrigger>
       <SourcesContent>
         {sources.map((source) => (
-          <Source
-            href={source.href}
-            key={source.href}
-          >
+          <Source href={source.href} key={source.href}>
             {source.title}
             <ExternalLinkIcon className="size-4" />
           </Source>

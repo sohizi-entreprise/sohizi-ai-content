@@ -95,6 +95,7 @@ evaluator aggregates them into Precision / Recall / F1 / TPR / TNR. See section
 6 for the metric definitions and zero-denominator guardrails.
 
 Rules:
+
 - Use a Langfuse-hosted dataset when the user wants a real Langfuse experiment.
   Local SDK datasets create traces and scores, but not Langfuse dataset runs.
 - The dataset item `input` must contain everything needed to run the judge
@@ -121,6 +122,7 @@ Never silently treat unknown labels as negative.
   defines one positive class for binary metrics.
 
 Example binary labels:
+
 - Positive: `ESCALATE`
 - Negative: `RESOLVE`
 
@@ -161,11 +163,13 @@ For each row with `expected` and `actual` labels:
 - **TN**: expected = negative and actual = negative
 
 Also compute:
+
 - `exact_match = 1 if actual == expected else 0`
 
 ### Aggregate metrics
 
 From aggregate counts:
+
 - `accuracy = (TP + TN) / valid_rows`
 - `precision = TP / (TP + FP)`
 - `recall = TP / (TP + FN)`
@@ -174,6 +178,7 @@ From aggregate counts:
 - `TNR = TN / (TN + FP)`
 
 Guardrails:
+
 - if `TP + FP == 0`, precision is undefined (report null + note)
 - if `TP + FN == 0`, recall and TPR are undefined (report null + note)
 - if `TN + FP == 0`, TNR is undefined (report null + note)
@@ -198,6 +203,7 @@ Before trusting the judge on production traffic:
 ### Simple report
 
 Return only:
+
 - dataset name and dataset run URL when available
 - valid rows / total rows
 - invalid-label count
@@ -207,6 +213,7 @@ Return only:
 ### Advanced report
 
 Add:
+
 - confusion matrix: TP, FP, FN, TN
 - accuracy, precision, recall, F1, TPR, TNR
 - denominator notes for undefined metrics
@@ -229,10 +236,12 @@ capabilities from a known package version.
 Score names to emit:
 
 Simple mode:
+
 - `judge-exact-match`
 - `judge-accuracy`
 
 Advanced mode:
+
 - `judge-exact-match`
 - `judge-is-tp`
 - `judge-is-fp`
@@ -240,6 +249,7 @@ Advanced mode:
 - `judge-is-tn`
 
 Recommended metadata:
+
 - `expected_label`, `actual_label`
 - calibration mode: `simple` or `advanced`
 - positive/negative labels when binary metrics are used

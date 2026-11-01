@@ -156,7 +156,10 @@ describe("useVideoExport", () => {
   })
 
   it("refuses to export a video longer than 20 minutes", async () => {
-    useVideoEditorStore.setState({ fps: 30, durationInFrames: 30 * 60 * 20 + 1 })
+    useVideoEditorStore.setState({
+      fps: 30,
+      durationInFrames: 30 * 60 * 20 + 1,
+    })
 
     const { result } = renderHook(() => useVideoExport(), { wrapper })
     await act(() => result.current.start("My Video"))

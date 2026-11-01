@@ -5,11 +5,7 @@ import { Editor } from "@tiptap/core"
 import { Markdown, MarkdownManager } from "@tiptap/markdown"
 import StarterKit from "@tiptap/starter-kit"
 import { describe, expect, it } from "vitest"
-import {
-  ClipTag,
-  replaceClipTagsWithLinks,
-  toClipId,
-} from "./clip-tag"
+import { ClipTag, replaceClipTagsWithLinks, toClipId } from "./clip-tag"
 import { MessageResponse } from "@/components/ai-elements/message"
 
 const SAMPLE_CLIP_ID = "26a43f06-275d-4e77-9c2d-8fff2572ca91"

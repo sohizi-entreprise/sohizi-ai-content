@@ -89,8 +89,14 @@ export function FadeDurationFields({
     Math.min(maxFadeSec, Math.max(0, fadeOutFrames / safeFps)).toFixed(1),
   )
 
-  const inPercent = Math.min(50, (fadeInSec / Math.max(0.1, clipDurationSec)) * 100)
-  const outPercent = Math.min(50, (fadeOutSec / Math.max(0.1, clipDurationSec)) * 100)
+  const inPercent = Math.min(
+    50,
+    (fadeInSec / Math.max(0.1, clipDurationSec)) * 100,
+  )
+  const outPercent = Math.min(
+    50,
+    (fadeOutSec / Math.max(0.1, clipDurationSec)) * 100,
+  )
 
   return (
     <div className="flex flex-col gap-3">
@@ -123,9 +129,7 @@ export function FadeDurationFields({
             {fadeInSec > 0 ? `Start: ${fadeInSec}s` : "Start: instant"}
           </span>
           <span>{clipDurationSec.toFixed(1)}s clip</span>
-          <span>
-            {fadeOutSec > 0 ? `End: ${fadeOutSec}s` : "End: instant"}
-          </span>
+          <span>{fadeOutSec > 0 ? `End: ${fadeOutSec}s` : "End: instant"}</span>
         </div>
       </div>
 

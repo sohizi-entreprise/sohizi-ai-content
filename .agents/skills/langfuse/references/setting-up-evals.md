@@ -21,8 +21,7 @@ If the user did not supply metrics:
 - **Offline:** inspect existing datasets and experiment results, then ask questions to determine:
   1. is the user happy with their datasets, or do they want to evaluate something they don't have a dataset for?
   2. if they want to use an existing dataset, do they already manually review experiment outputs on that dataset, and if yes, what do they look for?
-  These questions should help narrow down what's important to the user and what you should focus on. Read [Choosing what to evaluate](https://langfuse.com/academy/evaluate/choosing-what-to-evaluate) to come up with high quality metrics to evaluate.
-
+     These questions should help narrow down what's important to the user and what you should focus on. Read [Choosing what to evaluate](https://langfuse.com/academy/evaluate/choosing-what-to-evaluate) to come up with high quality metrics to evaluate.
 
 Present the resulting metric set as one table with: Priority; Status (existing or new); Metric; Source or evidence; Why it matters and what decision it informs; and Measurability. Revise it with the user and do not proceed until they explicitly confirm it.
 

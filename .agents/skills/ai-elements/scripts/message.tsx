@@ -269,15 +269,9 @@ const Example = () => {
     <div className="flex flex-col gap-4">
       {/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Demo component with complex rendering logic */}
       {messages.map((message) => (
-        <Message
-          from={message.from}
-          key={message.key}
-        >
+        <Message from={message.from} key={message.key}>
           {message.versions?.length && message.versions.length > 1 ? (
-            <MessageBranch
-              defaultBranch={0}
-              key={message.key}
-            >
+            <MessageBranch defaultBranch={0} key={message.key}>
               <MessageBranchContent>
                 {message.versions?.map((version) => (
                   <MessageContent key={version.id}>
@@ -322,15 +316,9 @@ const Example = () => {
           ) : (
             <div key={message.key}>
               {message.attachments && message.attachments.length > 0 && (
-                <Attachments
-                  className="mb-2"
-                  variant="grid"
-                >
+                <Attachments className="mb-2" variant="grid">
                   {message.attachments.map((attachment) => (
-                    <Attachment
-                      data={attachment}
-                      key={attachment.id}
-                    >
+                    <Attachment data={attachment} key={attachment.id}>
                       <AttachmentPreview />
                       <AttachmentRemove />
                     </Attachment>

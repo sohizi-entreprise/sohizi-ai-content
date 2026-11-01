@@ -119,19 +119,13 @@ const Example = () => {
               <GlobeIcon size={16} />
               <span>Search</span>
             </PromptInputButton>
-            <PromptInputSelect
-              onValueChange={setModel}
-              value={model}
-            >
+            <PromptInputSelect onValueChange={setModel} value={model}>
               <PromptInputSelectTrigger>
                 <PromptInputSelectValue />
               </PromptInputSelectTrigger>
               <PromptInputSelectContent>
                 {models.map((m) => (
-                  <PromptInputSelectItem
-                    key={m.id}
-                    value={m.id}
-                  >
+                  <PromptInputSelectItem key={m.id} value={m.id}>
                     {m.name}
                   </PromptInputSelectItem>
                 ))}

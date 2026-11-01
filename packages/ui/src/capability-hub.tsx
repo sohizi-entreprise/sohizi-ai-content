@@ -205,16 +205,8 @@ function Trace({
           x2={node.hx}
           y2={node.hy}
         >
-          <stop
-            offset="0"
-            stopColor={node.color}
-            stopOpacity="0.28"
-          />
-          <stop
-            offset="1"
-            stopColor={node.color}
-            stopOpacity="1"
-          />
+          <stop offset="0" stopColor={node.color} stopOpacity="0.28" />
+          <stop offset="1" stopColor={node.color} stopOpacity="1" />
         </linearGradient>
       </defs>
 
@@ -279,12 +271,7 @@ function Trace({
         stroke={node.color}
         strokeWidth={1.75}
       />
-      <circle
-        cx={node.px}
-        cy={node.py}
-        r={1.5}
-        fill={node.color}
-      />
+      <circle cx={node.px} cy={node.py} r={1.5} fill={node.color} />
     </g>
   )
 }
@@ -334,21 +321,13 @@ export function CapabilityHub({
               height="220%"
               colorInterpolationFilters="sRGB"
             >
-              <feGaussianBlur
-                stdDeviation="4"
-                result="blur"
-              />
+              <feGaussianBlur stdDeviation="4" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-            <radialGradient
-              id={`${uid}-ambient`}
-              cx="50%"
-              cy="50%"
-              r="50%"
-            >
+            <radialGradient id={`${uid}-ambient`} cx="50%" cy="50%" r="50%">
               <stop
                 offset="0"
                 stopColor="oklch(0.77 0.22 148)"

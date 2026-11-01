@@ -24,7 +24,9 @@ const scope = {
 describe("context artifact access", () => {
   it("expires artifacts 24 hours after creation", () => {
     const now = new Date("2026-10-22T00:00:00.000Z")
-    expect(artifactExpiresAt(now).getTime() - now.getTime()).toBe(ARTIFACT_TTL_MS)
+    expect(artifactExpiresAt(now).getTime() - now.getTime()).toBe(
+      ARTIFACT_TTL_MS,
+    )
     expect(ARTIFACT_TTL_MS).toBe(24 * 60 * 60 * 1000)
   })
 

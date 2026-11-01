@@ -14,7 +14,9 @@ const now = Date.parse("2026-10-20T12:00:00.000Z")
 describe("retry-after parsing", () => {
   test("reads seconds, HTTP dates, and rejects invalid values", () => {
     expect(parseRetryAfterHeader("8", now)).toBe(8_000)
-    expect(parseRetryAfterHeader("Tue, 20 Oct 2026 12:00:05 GMT", now)).toBe(5_000)
+    expect(parseRetryAfterHeader("Tue, 20 Oct 2026 12:00:05 GMT", now)).toBe(
+      5_000,
+    )
     expect(parseRetryAfterHeader("0", now)).toBeUndefined()
     expect(parseRetryAfterHeader("-2", now)).toBeUndefined()
     expect(parseRetryAfterHeader("later", now)).toBeUndefined()
@@ -24,10 +26,7 @@ describe("retry-after parsing", () => {
   test("reads adapter fields, headers, nested causes, and AWS metadata", () => {
     expect(retryAfterMsFrom({ retryAfterMs: 2_500 }, now)).toBe(2_500)
     expect(
-      retryAfterMsFrom(
-        { responseHeaders: { "Retry-After": "3" } },
-        now,
-      ),
+      retryAfterMsFrom({ responseHeaders: { "Retry-After": "3" } }, now),
     ).toBe(3_000)
     expect(
       retryAfterMsFrom(

@@ -7,7 +7,12 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { randomUUID } from "node:crypto"
-import { BadRequest, Conflict, InternalServerError, NotFound } from "../../error"
+import {
+  BadRequest,
+  Conflict,
+  InternalServerError,
+  NotFound,
+} from "../../error"
 import { InsufficientCreditsError } from "../../billing/errors"
 import type { VideoRenderJob } from "@/db/schema"
 import type { RemoteRenderJob } from "../render-client"
@@ -442,7 +447,9 @@ describe("createRender", () => {
     })
 
     capacityReleases.length = 0
-    createRemoteRenderError = new InternalServerError("Could not start the render")
+    createRemoteRenderError = new InternalServerError(
+      "Could not start the render",
+    )
     await expect(create()).rejects.toBeInstanceOf(InternalServerError)
     expect(capacityReleases.at(-1)).toEqual({
       outcome: "rate_limited",

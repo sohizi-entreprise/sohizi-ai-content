@@ -8,18 +8,17 @@ description: Submit feedback about the Langfuse skill to its maintainers. Use wh
 Use this only for feedback about the skill itself, not Langfuse the product or a user's application data.
 
 1. Draft concise feedback using the following structure:
-  - **Describe your idea or feedback** (required)
-    A clear description of what went wrong or what could be improved. Include:
-    - What the user was trying to do (as `goal`)
-    - What the skill did vs what was expected
-    - Any specific instructions that were incorrect or missing
 
-  - **What would the ideal outcome look like?** (optional)
-    What the correct behavior or guidance should be.
+- **Describe your idea or feedback** (required)
+  A clear description of what went wrong or what could be improved. Include:
+  - What the user was trying to do (as `goal`)
+  - What the skill did vs what was expected
+  - Any specific instructions that were incorrect or missing
 
-  If feedback targets existing skill, reference in `target`.
-2. If the user wants a reply, ask them to include an email address in `feedback`; use only an address they explicitly provide.
-3. Show every submitted field exactly as it will be sent and ask for explicit permission. Do not submit without approval.
+- **What would the ideal outcome look like?** (optional)
+  What the correct behavior or guidance should be.
+
+If feedback targets existing skill, reference in `target`. 2. If the user wants a reply, ask them to include an email address in `feedback`; use only an address they explicitly provide. 3. Show every submitted field exactly as it will be sent and ask for explicit permission. Do not submit without approval.
 
 ## Submission options
 

@@ -94,12 +94,7 @@ If you still experience crashes (for example, when rendering many Persona instan
 import { Persona } from "@repo/elements/persona"
 
 export default function App() {
-  return (
-    <Persona
-      state="listening"
-      variant="opal"
-    />
-  )
+  return <Persona state="listening" variant="opal" />
 }
 ```
 
@@ -121,11 +116,7 @@ export default function App() {
 
   return (
     <div>
-      <Persona
-        state={state}
-        variant="opal"
-        className="size-32"
-      />
+      <Persona state={state} variant="opal" className="size-32" />
       <div>
         <button onClick={startListening}>Listen</button>
         <button onClick={startThinking}>Think</button>

@@ -17,16 +17,18 @@
 [ ] Design a kind of story board using the document (we'll need a skill for that)
 [ ] Test context summarizing
 
-----
+---
 
 [ ] Add copy asset link into the preview dialog
 <!-- For video rendering scale -->
+
 [ ] Add a queue in front of the video renderer so that we can control the concurrency
 [ ] Create a pool of lambda function in different regions, so we can have more concurrency quotas
 [ ] Add a cache on the video export in such way that if the composition doesn't change we resolve directly to an existing video if present
 [ ] when we click the export let's open up a dialog where user chooses the setting (fps, where to save the output and how to name the file)
 
 <!-- Design & improvement-->
+
 [ ] improve how some of the tools and sub-agent are rendered
 [ ] rename tavily tools to generic web tools
 [ ] collapse some tools so we can avoid having too much tools (ex: loading skill, etc.)
@@ -43,25 +45,30 @@
 [ ] Add a table which will track the R2 object that needs to be deleted, then a cron job will clean periodically
 
 <!-- Observability -->
+
 [ ] integrate sentry for logs
 [ ] add analytics for tracking
 
 <!-- Operations -->
+
 [ ] create professional email from google suite
 [ ] create 3 virtual bank accounts (infrastructure expenses, marketing expenses and revenue)
 
 <!-- Marketing -->
+
 [ ] improve copywriting
 [ ] create seo system
 [ ] create youtube channels
 
 <!-- Payment -->
+
 [ ] design final pricing and plan
 [ ] create product in polar.sh
 [ ] validate account with polar.sh
 [ ] connect payments
 
 <!-- Issues -->
+
 [ ] Add throttle on the inngest media generation function
 [ ] Instruct the agent to work step by step (so it doesn't directly generate all the medias at once)
 [ ] Add an error when the streaming fails, and when a run fails too (currently we display a raw message - replace it with a generic one)
@@ -69,12 +76,12 @@
 [ ] Test ai context summarization
 
 <!-- Close it today -->
+
 [ ] Add all the needed models
 [ ] Review their descriptions and optimize them where needed
 [ ] For the memory model let's try claude haiku 5.5 and then fallback to gpt 6 luna
 [ ] Add preview memory on the frontend
 [ ] Improve the system prompt
-
 
 [ ] The ask question tool (for plan mode???)
 [ ] Detect loop when the agent is stocked

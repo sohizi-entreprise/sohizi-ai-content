@@ -51,10 +51,7 @@ const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
     [onRemove, attachment.id],
   )
   return (
-    <Attachment
-      data={attachment}
-      onRemove={handleRemove}
-    >
+    <Attachment data={attachment} onRemove={handleRemove}>
       <AttachmentPreview />
       <AttachmentRemove />
     </Attachment>

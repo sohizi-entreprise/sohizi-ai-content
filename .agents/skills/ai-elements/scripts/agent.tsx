@@ -41,10 +41,7 @@ const outputSchema = `z.object({
 
 const Example = () => (
   <Agent>
-    <AgentHeader
-      model="openai/gpt-5.2-pro"
-      name="Research Assistant"
-    />
+    <AgentHeader model="openai/gpt-5.2-pro" name="Research Assistant" />
     <AgentContent>
       <AgentInstructions>
         You are a helpful research assistant. Your job is to search the web for
@@ -52,18 +49,9 @@ const Example = () => (
         sources and provide accurate, up-to-date information.
       </AgentInstructions>
       <AgentTools type="multiple">
-        <AgentTool
-          tool={webSearchTool}
-          value="web_search"
-        />
-        <AgentTool
-          tool={readUrlTool}
-          value="read_url"
-        />
-        <AgentTool
-          tool={summarizeTool}
-          value="summarize"
-        />
+        <AgentTool tool={webSearchTool} value="web_search" />
+        <AgentTool tool={readUrlTool} value="read_url" />
+        <AgentTool tool={summarizeTool} value="summarize" />
       </AgentTools>
       <AgentOutput schema={outputSchema} />
     </AgentContent>

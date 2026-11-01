@@ -34,11 +34,7 @@ const Example = () => (
       <TestResultsProgress />
     </div>
     <TestResultsContent>
-      <TestSuite
-        defaultOpen={true}
-        name="Authentication"
-        status="passed"
-      >
+      <TestSuite defaultOpen={true} name="Authentication" status="passed">
         <TestSuiteName />
         <TestSuiteContent>
           <Test
@@ -59,23 +55,11 @@ const Example = () => (
         </TestSuiteContent>
       </TestSuite>
 
-      <TestSuite
-        defaultOpen={true}
-        name="User API"
-        status="failed"
-      >
+      <TestSuite defaultOpen={true} name="User API" status="failed">
         <TestSuiteName />
         <TestSuiteContent>
-          <Test
-            duration={120}
-            name="should create new user"
-            status="passed"
-          />
-          <Test
-            duration={85}
-            name="should update user profile"
-            status="failed"
-          >
+          <Test duration={120} name="should create new user" status="passed" />
+          <Test duration={85} name="should update user profile" status="failed">
             <TestError>
               <TestErrorMessage>
                 Expected status 200 but received 500
@@ -86,17 +70,11 @@ const Example = () => (
               </TestErrorStack>
             </TestError>
           </Test>
-          <Test
-            name="should delete user"
-            status="skipped"
-          />
+          <Test name="should delete user" status="skipped" />
         </TestSuiteContent>
       </TestSuite>
 
-      <TestSuite
-        name="Database"
-        status="failed"
-      >
+      <TestSuite name="Database" status="failed">
         <TestSuiteName />
         <TestSuiteContent>
           <Test

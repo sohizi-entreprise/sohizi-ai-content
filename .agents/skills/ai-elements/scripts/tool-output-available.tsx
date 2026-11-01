@@ -58,10 +58,7 @@ const toolCall: ToolUIPart = {
 const Example = () => (
   <div style={{ height: "500px" }}>
     <Tool>
-      <ToolHeader
-        state={toolCall.state}
-        type={toolCall.type}
-      />
+      <ToolHeader state={toolCall.state} type={toolCall.type} />
       <ToolContent>
         <ToolInput input={toolCall.input} />
         {toolCall.state === "output-available" && (

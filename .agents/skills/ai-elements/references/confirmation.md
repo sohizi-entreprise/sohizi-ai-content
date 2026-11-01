@@ -68,18 +68,12 @@ const Example = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 relative size-full rounded-lg border h-[600px]">
       <div className="flex flex-col h-full space-y-4">
-        <Button
-          onClick={handleDeleteFile}
-          disabled={status !== "ready"}
-        >
+        <Button onClick={handleDeleteFile} disabled={status !== "ready"}>
           Delete Example File
         </Button>
 
         {deleteTool?.approval && (
-          <Confirmation
-            approval={deleteTool.approval}
-            state={deleteTool.state}
-          >
+          <Confirmation approval={deleteTool.approval} state={deleteTool.state}>
             <ConfirmationRequest>
               This tool wants to delete:{" "}
               <code>{deleteTool.input?.filePath}</code>

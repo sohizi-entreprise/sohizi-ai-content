@@ -45,22 +45,14 @@ export type AiGeneratedMediaRequest = {
 }
 
 export type GenerationType =
-  | "image"
-  | "video"
-  | "audio"
-  | "motion-transfer"
-  | "lip-sync"
-  | "upscaler"
+  "image" | "video" | "audio" | "motion-transfer" | "lip-sync" | "upscaler"
 
 export type ImageSubtype = "from-text" | "from-image"
 export type VideoSubtype = "create" | "edit"
 export type AudioSubtype = "tts" | "music"
 export type UpscalerSubtype = "image" | "video"
 export type GenerationSubtype =
-  | ImageSubtype
-  | VideoSubtype
-  | AudioSubtype
-  | UpscalerSubtype
+  ImageSubtype | VideoSubtype | AudioSubtype | UpscalerSubtype
 
 /** @deprecated Use GenerationType */
 export type ComposerMediaType = GenerationType

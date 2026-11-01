@@ -225,7 +225,11 @@ describe("AgentStateManager appendMessages", () => {
 
     const stored = state.getState().messages[0]
     expect(stored).not.toBe(user)
-    if (!stored || stored.role !== "user" || typeof stored.content === "string") {
+    if (
+      !stored ||
+      stored.role !== "user" ||
+      typeof stored.content === "string"
+    ) {
       throw new Error("expected user message parts")
     }
     expect(

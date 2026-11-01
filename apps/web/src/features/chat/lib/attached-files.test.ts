@@ -53,9 +53,9 @@ describe("buildUserFileParts", () => {
       ["file", "application/pdf", "https://cdn.example/notes.pdf"],
     ])
     const partitioned = partitionAttachedFiles(files)
-    expect(partitioned.loadedFiles.map((file) => file.messagePartIndex)).toEqual(
-      [1, 3],
-    )
+    expect(
+      partitioned.loadedFiles.map((file) => file.messagePartIndex),
+    ).toEqual([1, 3])
     expect(partitioned.loadedFiles.map((file) => file.userIndex)).toEqual([
       1, 3,
     ])

@@ -52,10 +52,7 @@ const Example = () => {
   return (
     <>
       {messages.map(({ role, parts }, index) => (
-        <Message
-          from={role}
-          key={index}
-        >
+        <Message from={role} key={index}>
           <MessageContent>
             {parts.map((part, i) => {
               switch (part.type) {

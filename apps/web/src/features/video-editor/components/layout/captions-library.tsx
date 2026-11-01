@@ -40,14 +40,17 @@ export function CaptionsLibrary({ projectId }: CaptionsLibraryProps) {
 
   const handleGenerate = () => {
     if (!selectedClip) return
-    generateCaption({ trackId: selectedClip.trackId }, {
-      onSuccess: () => {
-        toast.success("Captions generated. Reopen this video to load them.")
+    generateCaption(
+      { trackId: selectedClip.trackId },
+      {
+        onSuccess: () => {
+          toast.success("Captions generated. Reopen this video to load them.")
+        },
+        onError: (error) => {
+          toast.error(error.message)
+        },
       },
-      onError: (error) => {
-        toast.error(error.message)
-      },
-    })
+    )
   }
 
   return (

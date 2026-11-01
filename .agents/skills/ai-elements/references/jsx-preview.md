@@ -70,10 +70,7 @@ const customComponents = {
 }
 
 export const GeneratedUIWithComponents = ({ jsx }: { jsx: string }) => (
-  <JSXPreview
-    jsx={jsx}
-    components={customComponents}
-  >
+  <JSXPreview jsx={jsx} components={customComponents}>
     <JSXPreviewContent />
   </JSXPreview>
 )

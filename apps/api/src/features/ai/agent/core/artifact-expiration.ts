@@ -23,7 +23,9 @@ export const sweepExpiredArtifacts = inngest.createFunction(
       run,
     })
     if (artifacts.backlogPossible) {
-      console.warn("[context] artifact expiration sweep reached its batch limit")
+      console.warn(
+        "[context] artifact expiration sweep reached its batch limit",
+      )
     }
     return {
       artifactsExpired: artifacts.processed,

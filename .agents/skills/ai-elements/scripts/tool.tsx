@@ -48,10 +48,7 @@ const toolCall: ToolUIPart = {
 }
 
 const Example = () => (
-  <div
-    className="space-y-4"
-    style={{ minHeight: "1400px" }}
-  >
+  <div className="space-y-4" style={{ minHeight: "1400px" }}>
     {/* 1. input-streaming: Pending */}
     <Tool defaultOpen>
       <ToolHeader
@@ -73,10 +70,7 @@ const Example = () => (
       />
       <ToolContent>
         <ToolInput input={toolCall.input} />
-        <Confirmation
-          approval={{ id: nanoid() }}
-          state="approval-requested"
-        >
+        <Confirmation approval={{ id: nanoid() }} state="approval-requested">
           <ConfirmationTitle>
             <ConfirmationRequest>
               This tool will execute a query on the production database.
@@ -91,16 +85,10 @@ const Example = () => (
             </ConfirmationRejected>
           </ConfirmationTitle>
           <ConfirmationActions>
-            <ConfirmationAction
-              onClick={handleReject}
-              variant="outline"
-            >
+            <ConfirmationAction onClick={handleReject} variant="outline">
               Reject
             </ConfirmationAction>
-            <ConfirmationAction
-              onClick={handleAccept}
-              variant="default"
-            >
+            <ConfirmationAction onClick={handleAccept} variant="default">
               Accept
             </ConfirmationAction>
           </ConfirmationActions>
@@ -152,10 +140,7 @@ const Example = () => (
 
     {/* 5. output-available: Completed */}
     <Tool>
-      <ToolHeader
-        state={toolCall.state}
-        type={toolCall.type}
-      />
+      <ToolHeader state={toolCall.state} type={toolCall.type} />
       <ToolContent>
         <ToolInput input={toolCall.input} />
         <Confirmation
@@ -177,10 +162,7 @@ const Example = () => (
           </ConfirmationTitle>
         </Confirmation>
         {toolCall.state === "output-available" && (
-          <ToolOutput
-            errorText={toolCall.errorText}
-            output={toolCall.output}
-          />
+          <ToolOutput errorText={toolCall.errorText} output={toolCall.output} />
         )}
       </ToolContent>
     </Tool>

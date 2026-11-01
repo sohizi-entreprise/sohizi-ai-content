@@ -13,12 +13,7 @@ const Example = () => {
 
   const handleClear = useCallback(() => setOutput(""), [])
 
-  return (
-    <Terminal
-      onClear={handleClear}
-      output={output}
-    />
-  )
+  return <Terminal onClear={handleClear} output={output} />
 }
 
 export default Example

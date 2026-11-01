@@ -85,10 +85,7 @@ const Example = () => {
   }, [])
 
   return (
-    <CodeBlock
-      code={code}
-      language={language as BundledLanguage}
-    >
+    <CodeBlock code={code} language={language as BundledLanguage}>
       <CodeBlockHeader>
         <CodeBlockTitle>
           <FileIcon size={14} />
@@ -113,10 +110,7 @@ const Example = () => {
               ))}
             </CodeBlockLanguageSelectorContent>
           </CodeBlockLanguageSelector>
-          <CodeBlockCopyButton
-            onCopy={handleCopy}
-            onError={handleCopyError}
-          />
+          <CodeBlockCopyButton onCopy={handleCopy} onError={handleCopyError} />
         </CodeBlockActions>
       </CodeBlockHeader>
     </CodeBlock>

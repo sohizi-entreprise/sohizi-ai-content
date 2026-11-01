@@ -140,10 +140,7 @@ function SparklesCanvas({
   )
 
   return (
-    <motion.div
-      animate={controls}
-      className={cn("opacity-0", className)}
-    >
+    <motion.div animate={controls} className={cn("opacity-0", className)}>
       {loaded && (
         <Particles
           id={id || generatedId}

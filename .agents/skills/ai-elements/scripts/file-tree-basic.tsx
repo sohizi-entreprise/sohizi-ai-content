@@ -8,19 +8,10 @@ import {
 
 const Example = () => (
   <FileTree>
-    <FileTreeFolder
-      name="src"
-      path="src"
-    >
-      <FileTreeFile
-        name="index.ts"
-        path="src/index.ts"
-      />
+    <FileTreeFolder name="src" path="src">
+      <FileTreeFile name="index.ts" path="src/index.ts" />
     </FileTreeFolder>
-    <FileTreeFile
-      name="package.json"
-      path="package.json"
-    />
+    <FileTreeFile name="package.json" path="package.json" />
   </FileTree>
 )
 

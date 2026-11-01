@@ -39,12 +39,7 @@ function ResizablePanelGroup({
 }
 
 function ResizablePanel({ ...props }: React.ComponentProps<any>) {
-  return (
-    <PanelPrimitive
-      data-slot="resizable-panel"
-      {...props}
-    />
-  )
+  return <PanelPrimitive data-slot="resizable-panel" {...props} />
 }
 
 function ResizableHandle({

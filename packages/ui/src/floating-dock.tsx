@@ -22,14 +22,8 @@ export const FloatingDock = ({
 }) => {
   return (
     <>
-      <FloatingDockDesktop
-        items={items}
-        className={desktopClassName}
-      />
-      <FloatingDockMobile
-        items={items}
-        className={mobileClassName}
-      />
+      <FloatingDockDesktop items={items} className={desktopClassName} />
+      <FloatingDockMobile items={items} className={mobileClassName} />
     </>
   )
 }
@@ -107,11 +101,7 @@ const FloatingDockDesktop = ({
       )}
     >
       {items.map((item) => (
-        <IconContainer
-          mouseX={mouseX}
-          key={item.title}
-          {...item}
-        />
+        <IconContainer mouseX={mouseX} key={item.title} {...item} />
       ))}
     </motion.div>
   )

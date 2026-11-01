@@ -62,10 +62,7 @@ const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
   return (
     <AttachmentHoverCard key={attachment.id}>
       <AttachmentHoverCardTrigger asChild>
-        <Attachment
-          data={attachment}
-          onRemove={handleRemove}
-        >
+        <Attachment data={attachment} onRemove={handleRemove}>
           <div className="relative size-5 shrink-0">
             <div className="absolute inset-0 transition-opacity group-hover:opacity-0">
               <AttachmentPreview />

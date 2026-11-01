@@ -1,9 +1,6 @@
 import { Editor } from "@tiptap/core"
 import { afterEach, describe, expect, it } from "vitest"
-import {
-  createSkillContent,
-  skillEditorExtensions,
-} from "./skill-editor-view"
+import { createSkillContent, skillEditorExtensions } from "./skill-editor-view"
 
 const editors: Array<Editor> = []
 

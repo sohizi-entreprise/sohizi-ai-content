@@ -87,11 +87,7 @@ const Example = () => {
 
   return (
     <div className="flex size-full flex-col items-center justify-center gap-4">
-      <Persona
-        className="size-32"
-        state={currentState}
-        variant="command"
-      />
+      <Persona className="size-32" state={currentState} variant="command" />
 
       <ButtonGroup orientation="horizontal">
         {states.map((state) => (

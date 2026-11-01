@@ -40,6 +40,9 @@ describe("commands", () => {
       "unknown",
     ])
 
-    expect(resolved.map((command) => command.id)).toEqual(["plan", "storyboard"])
+    expect(resolved.map((command) => command.id)).toEqual([
+      "plan",
+      "storyboard",
+    ])
   })
 })

@@ -31,12 +31,12 @@ Limits:
 
 Release outcomes:
 
-| Outcome | Slot | Token | Circuit |
-| --- | --- | --- | --- |
-| `completed` | freed | spent token stays spent | closed if this lease held the probe |
-| `rate_limited` | freed | spent token stays spent | opened for the provider's 429 retry time, or the account cooldown when that time is missing |
-| `not_sent` | freed | one token refunded, capped at burst | probe reopened |
-| `abandoned` | freed | no success claimed | probe reopened if this lease held it |
+| Outcome        | Slot  | Token                               | Circuit                                                                                     |
+| -------------- | ----- | ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| `completed`    | freed | spent token stays spent             | closed if this lease held the probe                                                         |
+| `rate_limited` | freed | spent token stays spent             | opened for the provider's 429 retry time, or the account cooldown when that time is missing |
+| `not_sent`     | freed | one token refunded, capped at burst | probe reopened                                                                              |
+| `abandoned`    | freed | no success claimed                  | probe reopened if this lease held it                                                        |
 
 An open circuit rejects everyone except one probe. The probe belongs to one `leaseId`. Renew keeps that probe. `not_sent` gives the probe back.
 
@@ -56,14 +56,14 @@ Waiting sleeps with jitter, between 250 ms and 15 s, and can be aborted. At the 
 
 Error actions:
 
-| Action | What it means | Next step |
-| --- | --- | --- |
-| `account_failure` | This account is sick: 429, 402, 5xx | Release `rate_limited`, try the next account |
-| `route_failure` | This provider cannot do this job, such as 404 | Release `completed`, skip the rest of that provider |
-| `client_failure` | Our request is bad, such as 400 | Release `completed`, stop |
-| `not_sent` | The provider definitely did not receive it | Refund the token and try again |
-| `submission_unknown` | It might have been sent | Keep the lease, do not send it again |
-| `abort` | The caller cancelled | Refund the token, do not fail over |
+| Action               | What it means                                 | Next step                                           |
+| -------------------- | --------------------------------------------- | --------------------------------------------------- |
+| `account_failure`    | This account is sick: 429, 402, 5xx           | Release `rate_limited`, try the next account        |
+| `route_failure`      | This provider cannot do this job, such as 404 | Release `completed`, skip the rest of that provider |
+| `client_failure`     | Our request is bad, such as 400               | Release `completed`, stop                           |
+| `not_sent`           | The provider definitely did not receive it    | Refund the token and try again                      |
+| `submission_unknown` | It might have been sent                       | Keep the lease, do not send it again                |
+| `abort`              | The caller cancelled                          | Refund the token, do not fail over                  |
 
 ## The user gate
 
@@ -90,9 +90,13 @@ These two tasks share providers, but each call acquires its own ticket. The tool
 **Add another Tavily key.** In `registry.ts`, add an account on the `tavily` provider:
 
 ```ts
-account("tavily:backup", { ...DEFAULT_CIRCUIT, rpm: 60, burst: 60, maxConcurrency: 10 }, {
-  credentialEnv: "TAVILY_BACKUP_API_KEY",
-})
+account(
+  "tavily:backup",
+  { ...DEFAULT_CIRCUIT, rpm: 60, burst: 60, maxConcurrency: 10 },
+  {
+    credentialEnv: "TAVILY_BACKUP_API_KEY",
+  },
+)
 ```
 
 Set the env var. No database row. No tool change. The new account is its own lane.
@@ -128,13 +132,17 @@ There is one provider, `remotion`, strategy `spread`. Each account is one deploy
 **Add `eu-central-1`.** Deploy the function and site there. Add an account:
 
 ```ts
-account("remotion:eu-central-1", { ...DEFAULT_CIRCUIT, maxConcurrency: 2 }, {
-  remotion: () => ({
-    region: "eu-central-1",
-    functionName: process.env.REMOTION_EU_FUNCTION_NAME ?? "",
-    serveUrl: process.env.REMOTION_EU_SERVE_URL ?? "",
-  }),
-})
+account(
+  "remotion:eu-central-1",
+  { ...DEFAULT_CIRCUIT, maxConcurrency: 2 },
+  {
+    remotion: () => ({
+      region: "eu-central-1",
+      functionName: process.env.REMOTION_EU_FUNCTION_NAME ?? "",
+      serveUrl: process.env.REMOTION_EU_SERVE_URL ?? "",
+    }),
+  },
+)
 ```
 
 Give it its own env vars. Do not reuse `REMOTION_FUNCTION_NAME`; that belongs to `remotion:primary`. An empty function name or serve URL hides the account. Spread prefers the lane with more free slots. A job that lands in Frankfurt keeps polling Frankfurt.

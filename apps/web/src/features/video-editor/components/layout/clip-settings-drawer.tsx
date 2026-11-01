@@ -1,4 +1,9 @@
-import { useEffect, useState, type ReactNode, type TransitionEvent } from "react"
+import {
+  useEffect,
+  useState,
+  type ReactNode,
+  type TransitionEvent,
+} from "react"
 import { Paperclip, X } from "lucide-react"
 import { Button } from "@sohizi/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"

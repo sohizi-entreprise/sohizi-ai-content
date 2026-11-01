@@ -24,7 +24,6 @@ Follow every intermediate guide when the installed version is more than one majo
 2. Find every source of correlating attributes, including `session_id`/`sessionId`, `user_id`/`userId`, tags, metadata, version, environment, and trace name. Search for the values and surrounding application concepts, not only removed SDK method names.
 3. Apply every relevant item from the exact version-specific guides. Preserve each correlating attribute by establishing its documented propagation scope before any observation-producing call that must inherit it.
 
-
 ## Completion report
 
 Report the versions before and after, changed instrumentation paths, attribute sources and propagation scopes, validation performed, inspected trace or session, and any remaining blocked verification.

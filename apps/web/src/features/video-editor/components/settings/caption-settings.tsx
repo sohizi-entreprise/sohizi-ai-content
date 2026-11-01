@@ -4,10 +4,7 @@ import { Input } from "@sohizi/ui/input"
 import { Switch } from "@sohizi/ui/switch"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { SliderWithValue } from "./slider-with-value"
-import {
-  formatCaptionTimestamp,
-  groupCaptionBlocks,
-} from "./caption-blocks"
+import { formatCaptionTimestamp, groupCaptionBlocks } from "./caption-blocks"
 import type { CaptionClip, TextAlign } from "../../store/types"
 import { cn } from "@/lib/utils"
 
@@ -178,7 +175,9 @@ export function CaptionSettings({ clip }: { clip: CaptionClip }) {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <span className="text-xs font-medium text-muted-foreground">{children}</span>
+    <span className="text-xs font-medium text-muted-foreground">
+      {children}
+    </span>
   )
 }
 

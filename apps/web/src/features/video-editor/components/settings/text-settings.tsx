@@ -389,7 +389,9 @@ export function TextSettings({ clip }: TextSettingsProps) {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <span className="text-xs font-medium text-muted-foreground">{children}</span>
+    <span className="text-xs font-medium text-muted-foreground">
+      {children}
+    </span>
   )
 }
 

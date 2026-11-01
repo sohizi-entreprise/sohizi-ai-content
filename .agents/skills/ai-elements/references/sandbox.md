@@ -64,16 +64,10 @@ export const CodeSandbox = ({ toolPart }: CodeSandboxProps) => {
             </SandboxTabsList>
           </SandboxTabsBar>
           <SandboxTabContent value="code">
-            <CodeBlock
-              code={code}
-              language="tsx"
-            />
+            <CodeBlock code={code} language="tsx" />
           </SandboxTabContent>
           <SandboxTabContent value="output">
-            <CodeBlock
-              code={output}
-              language="log"
-            />
+            <CodeBlock code={output} language="log" />
           </SandboxTabContent>
         </SandboxTabs>
       </SandboxContent>

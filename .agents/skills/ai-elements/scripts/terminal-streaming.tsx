@@ -32,13 +32,7 @@ const Example = () => {
     return () => clearInterval(interval)
   }, [])
 
-  return (
-    <Terminal
-      autoScroll
-      isStreaming={isStreaming}
-      output={output}
-    />
-  )
+  return <Terminal autoScroll isStreaming={isStreaming} output={output} />
 }
 
 export default Example

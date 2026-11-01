@@ -68,10 +68,7 @@ const Example = () => (
         </CommitMetadata>
       </CommitInfo>
       <CommitActions>
-        <CommitCopyButton
-          hash={hash}
-          onCopy={handleCopy}
-        />
+        <CommitCopyButton hash={hash} onCopy={handleCopy} />
       </CommitActions>
     </CommitHeader>
     <CommitContent>

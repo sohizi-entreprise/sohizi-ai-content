@@ -35,10 +35,7 @@ const Example = () => (
         <MicSelectorList>
           {(devices) =>
             devices.map((device) => (
-              <MicSelectorItem
-                key={device.deviceId}
-                value={device.deviceId}
-              >
+              <MicSelectorItem key={device.deviceId} value={device.deviceId}>
                 <MicSelectorLabel device={device} />
               </MicSelectorItem>
             ))

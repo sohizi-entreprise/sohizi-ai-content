@@ -11,4 +11,3 @@ await connectCapacityRedis()
 await import("./index")
 
 export {}
-

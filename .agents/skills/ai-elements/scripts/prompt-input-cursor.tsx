@@ -113,11 +113,7 @@ const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
     [onRemove, attachment.id],
   )
   return (
-    <Attachment
-      data={attachment}
-      key={attachment.id}
-      onRemove={handleRemove}
-    >
+    <Attachment data={attachment} key={attachment.id} onRemove={handleRemove}>
       <AttachmentPreview />
       <AttachmentRemove />
     </Attachment>
@@ -137,11 +133,7 @@ const SourceItem = memo(({ source, onRemove }: SourceItemProps) => {
     [onRemove, source.id],
   )
   return (
-    <Attachment
-      data={source}
-      key={source.id}
-      onRemove={handleRemove}
-    >
+    <Attachment data={source} key={source.id} onRemove={handleRemove}>
       <AttachmentPreview />
       <AttachmentInfo />
       <AttachmentRemove />
@@ -160,19 +152,12 @@ interface ModelItemProps {
 const ModelItem = memo(({ m, selectedModel, onSelect }: ModelItemProps) => {
   const handleSelect = useCallback(() => onSelect(m.id), [onSelect, m.id])
   return (
-    <ModelSelectorItem
-      key={m.id}
-      onSelect={handleSelect}
-      value={m.id}
-    >
+    <ModelSelectorItem key={m.id} onSelect={handleSelect} value={m.id}>
       <ModelSelectorLogo provider={m.chefSlug} />
       <ModelSelectorName>{m.name}</ModelSelectorName>
       <ModelSelectorLogoGroup>
         {m.providers.map((provider) => (
-          <ModelSelectorLogo
-            key={provider}
-            provider={provider}
-          />
+          <ModelSelectorLogo key={provider} provider={provider} />
         ))}
       </ModelSelectorLogoGroup>
       {selectedModel === m.id ? (
@@ -376,11 +361,7 @@ const Example = () => {
   return (
     <div className="flex size-full flex-col justify-end">
       <PromptInputProvider>
-        <PromptInput
-          globalDrop
-          multiple
-          onSubmit={handleSubmit}
-        >
+        <PromptInput globalDrop multiple onSubmit={handleSubmit}>
           <PromptInputHeader>
             <PromptInputHoverCard>
               <PromptInputHoverCardTrigger>
@@ -389,10 +370,7 @@ const Example = () => {
                   size="icon-sm"
                   variant="outline"
                 >
-                  <AtSignIcon
-                    className="text-muted-foreground"
-                    size={12}
-                  />
+                  <AtSignIcon className="text-muted-foreground" size={12} />
                 </PromptInputButton>
               </PromptInputHoverCardTrigger>
               <PromptInputHoverCardContent className="w-[400px] p-0">
@@ -401,14 +379,8 @@ const Example = () => {
             </PromptInputHoverCard>
             <PromptInputHoverCard>
               <PromptInputHoverCardTrigger>
-                <PromptInputButton
-                  size="sm"
-                  variant="outline"
-                >
-                  <RulerIcon
-                    className="text-muted-foreground"
-                    size={12}
-                  />
+                <PromptInputButton size="sm" variant="outline">
+                  <RulerIcon className="text-muted-foreground" size={12} />
                   <span>1</span>
                 </PromptInputButton>
               </PromptInputHoverCardTrigger>
@@ -429,14 +401,8 @@ const Example = () => {
             </PromptInputHoverCard>
             <PromptInputHoverCard>
               <PromptInputHoverCardTrigger>
-                <PromptInputButton
-                  size="sm"
-                  variant="outline"
-                >
-                  <FilesIcon
-                    className="text-muted-foreground"
-                    size={12}
-                  />
+                <PromptInputButton size="sm" variant="outline">
+                  <FilesIcon className="text-muted-foreground" size={12} />
                   <span>1 Tab</span>
                 </PromptInputButton>
               </PromptInputHoverCardTrigger>
@@ -446,14 +412,8 @@ const Example = () => {
                   <PromptInputTabBody>
                     {sampleTabs.active.map((tab) => (
                       <PromptInputTabItem key={tab.path}>
-                        <GlobeIcon
-                          className="text-primary"
-                          size={16}
-                        />
-                        <span
-                          className="truncate"
-                          dir="rtl"
-                        >
+                        <GlobeIcon className="text-primary" size={16} />
+                        <span className="truncate" dir="rtl">
                           {tab.path}
                         </span>
                       </PromptInputTabItem>
@@ -465,14 +425,8 @@ const Example = () => {
                   <PromptInputTabBody>
                     {sampleTabs.recents.map((tab) => (
                       <PromptInputTabItem key={tab.path}>
-                        <GlobeIcon
-                          className="text-primary"
-                          size={16}
-                        />
-                        <span
-                          className="truncate"
-                          dir="rtl"
-                        >
+                        <GlobeIcon className="text-primary" size={16} />
+                        <span className="truncate" dir="rtl">
                           {tab.path}
                         </span>
                       </PromptInputTabItem>
@@ -515,10 +469,7 @@ const Example = () => {
                   <ModelSelectorList>
                     <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
                     {["OpenAI", "Anthropic", "Google"].map((chef) => (
-                      <ModelSelectorGroup
-                        heading={chef}
-                        key={chef}
-                      >
+                      <ModelSelectorGroup heading={chef} key={chef}>
                         {models
                           .filter((m) => m.chef === chef)
                           .map((m) => (
@@ -536,19 +487,10 @@ const Example = () => {
               </ModelSelector>
             </PromptInputTools>
             <div className="flex items-center gap-2">
-              <Button
-                size="icon-sm"
-                variant="ghost"
-              >
-                <ImageIcon
-                  className="text-muted-foreground"
-                  size={16}
-                />
+              <Button size="icon-sm" variant="ghost">
+                <ImageIcon className="text-muted-foreground" size={16} />
               </Button>
-              <PromptInputSubmit
-                className="!h-8"
-                status={status}
-              />
+              <PromptInputSubmit className="!h-8" status={status} />
             </div>
           </PromptInputFooter>
         </PromptInput>

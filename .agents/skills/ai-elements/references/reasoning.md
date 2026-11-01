@@ -73,10 +73,7 @@ const MessageParts = ({
   return (
     <>
       {hasReasoning && (
-        <Reasoning
-          className="w-full"
-          isStreaming={isReasoningStreaming}
-        >
+        <Reasoning className="w-full" isStreaming={isReasoningStreaming}>
           <ReasoningTrigger />
           <ReasoningContent>{reasoningText}</ReasoningContent>
         </Reasoning>
@@ -113,10 +110,7 @@ const ReasoningDemo = () => {
         <Conversation>
           <ConversationContent>
             {messages.map((message, index) => (
-              <Message
-                from={message.role}
-                key={message.id}
-              >
+              <Message from={message.role} key={message.id}>
                 <MessageContent>
                   <MessageParts
                     message={message}

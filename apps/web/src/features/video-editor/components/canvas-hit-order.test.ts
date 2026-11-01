@@ -32,10 +32,7 @@ function track(id: string, clips: Track["clips"], hidden = false): Track {
 describe("listCanvasHitTargets", () => {
   it("puts the top timeline track in front of tracks below it", () => {
     const targets = listCanvasHitTargets(
-      [
-        track("top", [textClip("front")]),
-        track("bottom", [textClip("back")]),
-      ],
+      [track("top", [textClip("front")]), track("bottom", [textClip("back")])],
       0,
     )
 

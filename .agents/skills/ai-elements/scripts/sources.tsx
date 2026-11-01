@@ -22,11 +22,7 @@ const Example = () => (
       <SourcesTrigger count={sources.length} />
       <SourcesContent>
         {sources.map((source) => (
-          <Source
-            href={source.href}
-            key={source.href}
-            title={source.title}
-          />
+          <Source href={source.href} key={source.href} title={source.title} />
         ))}
       </SourcesContent>
     </Sources>

@@ -117,10 +117,7 @@ const MessageActions = memo(
         >
           <Trash2 size={12} />
         </QueueItemAction>
-        <QueueItemAction
-          aria-label="Send now"
-          onClick={handleSend}
-        >
+        <QueueItemAction aria-label="Send now" onClick={handleSend}>
           <ArrowUp size={14} />
         </QueueItemAction>
       </QueueItemActions>
@@ -147,10 +144,7 @@ const TodoItem = memo(({ todo, onRemove }: TodoItemProps) => {
           {todo.title}
         </QueueItemContent>
         <QueueItemActions>
-          <QueueItemAction
-            aria-label="Remove todo"
-            onClick={handleRemove}
-          >
+          <QueueItemAction aria-label="Remove todo" onClick={handleRemove}>
             <Trash2 size={12} />
           </QueueItemAction>
         </QueueItemActions>
@@ -210,10 +204,7 @@ const Example = () => {
       {messages.length > 0 && (
         <QueueSection>
           <QueueSectionTrigger>
-            <QueueSectionLabel
-              count={messages.length}
-              label="Queued"
-            />
+            <QueueSectionLabel count={messages.length} label="Queued" />
           </QueueSectionTrigger>
           <QueueSectionContent>
             <QueueList>
@@ -279,10 +270,7 @@ const Example = () => {
       {todos.length > 0 && (
         <QueueSection>
           <QueueSectionTrigger>
-            <QueueSectionLabel
-              count={todos.length}
-              label="Todo"
-            />
+            <QueueSectionLabel count={todos.length} label="Todo" />
           </QueueSectionTrigger>
           <QueueSectionContent>
             <QueueList>

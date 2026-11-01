@@ -64,14 +64,8 @@ export default function Page() {
           analysis with sentiment classification, confidence score, and summary.
         </AgentInstructions>
         <AgentTools>
-          <AgentTool
-            tool={webSearch}
-            value="web_search"
-          />
-          <AgentTool
-            tool={readUrl}
-            value="read_url"
-          />
+          <AgentTool tool={webSearch} value="web_search" />
+          <AgentTool tool={readUrl} value="read_url" />
         </AgentTools>
         <AgentOutput schema={outputSchema} />
       </AgentContent>

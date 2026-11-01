@@ -17,16 +17,10 @@ const Example = () => {
     {
       key: nanoid(),
       value: (
-        <span
-          className="inline-flex items-center gap-1"
-          key="read-page-tsx"
-        >
+        <span className="inline-flex items-center gap-1" key="read-page-tsx">
           Read
           <TaskItemFile>
-            <SiReact
-              className="size-4"
-              color="#149ECA"
-            />
+            <SiReact className="size-4" color="#149ECA" />
             <span>page.tsx</span>
           </TaskItemFile>
         </span>
@@ -37,16 +31,10 @@ const Example = () => {
     {
       key: nanoid(),
       value: (
-        <span
-          className="inline-flex items-center gap-1"
-          key="read-layout-tsx"
-        >
+        <span className="inline-flex items-center gap-1" key="read-layout-tsx">
           Reading files
           <TaskItemFile>
-            <SiReact
-              className="size-4"
-              color="#149ECA"
-            />
+            <SiReact className="size-4" color="#149ECA" />
             <span>layout.tsx</span>
           </TaskItemFile>
         </span>

@@ -30,6 +30,7 @@ usermod -aG sudo deploy
 ## 3. Configure SSH Key Authentication
 
 ### Option A: Copy a specific local SSH public key from your machine
+
 Run this from your **local terminal**, using `-i` to point to the specific `.pub` key file (otherwise `ssh-copy-id` may copy all keys loaded in `ssh-agent`):
 
 ```bash
@@ -41,6 +42,7 @@ ssh-copy-id -i ~/.ssh/<your_key>.pub deploy@<VPS_IP>
 ```
 
 ### Option B: Copy keys already added via Hostinger hPanel from `root`
+
 If you attached an SSH key during Hostinger VPS creation, copy it from `root` to the new user on the **VPS**:
 
 ```bash
@@ -52,12 +54,14 @@ chmod 600 /home/deploy/.ssh/authorized_keys
 ```
 
 > **Important:** Open a **new local terminal window** and verify you can log in with that specific SSH key and run `sudo` **before** disabling root or password access:
+>
 > ```bash
 > ssh -i ~/.ssh/<your_key> -o IdentitiesOnly=yes deploy@<VPS_IP>
 > sudo whoami # should output: root
 > ```
 >
-> *(Optional)* Add an entry to your local `~/.ssh/config` so you don't have to pass `-i` every time:
+> _(Optional)_ Add an entry to your local `~/.ssh/config` so you don't have to pass `-i` every time:
+>
 > ```sshconfig
 > Host hostinger-vps
 >   HostName <VPS_IP>
@@ -88,6 +92,7 @@ UsePAM yes
 ```
 
 ### Check Hostinger / Cloud-Init SSH Overrides
+
 Hostinger Ubuntu/Debian templates often include override files in `/etc/ssh/sshd_config.d/` (such as `50-cloud-init.conf`) that re-enable `PasswordAuthentication yes`. Check and update them:
 
 ```bash
@@ -108,7 +113,7 @@ sudo sshd -t
 sudo systemctl restart ssh
 ```
 
-*(Note: On older Debian/Ubuntu releases the service may be named `sshd` instead of `ssh`: `sudo systemctl restart sshd`)*
+_(Note: On older Debian/Ubuntu releases the service may be named `sshd` instead of `ssh`: `sudo systemctl restart sshd`)_
 
 ---
 
@@ -169,16 +174,17 @@ sudo systemctl enable --now fail2ban
 sudo dpkg-reconfigure --priority=low unattended-upgrades
 ```
 
-
 <!-- My bersion -->
+
 adduser sagel
 usermod -aG sudo sagel
 cp -R /root/.ssh/ /home/sagel/
 chown -R sagel:sagel /home/sagel/.ssh/
 
 <!-- ssh as new user -->
-Disable: 
-password login: sudo nano /etc/ssh/sshd_config and /etc/ssh/sshd_config.d/50-cloud-init.conf 
+
+Disable:
+password login: sudo nano /etc/ssh/sshd_config and /etc/ssh/sshd_config.d/50-cloud-init.conf
 root login here: sudo nano /etc/ssh/sshd_config
 sudo service ssh restart
 

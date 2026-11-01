@@ -4,8 +4,7 @@ export const ARTIFACT_TTL_MS = 24 * 60 * 60 * 1000
 export const TOOL_RESULT_PREVIEW_LENGTH = 75
 
 export type ArtifactAccess =
-  | { ok: true }
-  | { ok: false; reason: "not-found" | "expired" }
+  { ok: true } | { ok: false; reason: "not-found" | "expired" }
 
 export function artifactExpiresAt(now = new Date()): Date {
   return new Date(now.getTime() + ARTIFACT_TTL_MS)
