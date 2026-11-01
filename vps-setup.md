@@ -175,3 +175,11 @@ adduser sagel
 usermod -aG sudo sagel
 cp -R /root/.ssh/ /home/sagel/
 chown -R sagel:sagel /home/sagel/.ssh/
+
+<!-- ssh as new user -->
+Disable: 
+password login: sudo nano /etc/ssh/sshd_config and /etc/ssh/sshd_config.d/50-cloud-init.conf 
+root login here: sudo nano /etc/ssh/sshd_config
+sudo service ssh restart
+
+<!-- Firewall and network -->
