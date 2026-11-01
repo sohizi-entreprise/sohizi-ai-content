@@ -18,14 +18,26 @@
     "check": "prettier --check . && eslint .",
     "docker:build:api": "docker build -f apps/api/Dockerfile -t sohizi-api .",
     "docker:build:web": "docker build -f apps/web/Dockerfile -t sohizi-web .",
-    "docker:build:site": "docker build -f apps/site/Dockerfile -t sohizi-site ."
+    "docker:build:site": "docker build -f apps/site/Dockerfile -t sohizi-site .",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@sohizi/eslint-config": "workspace:*",
     "eslint": "^9.37.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
     "prettier": "^3.5.3"
   },
   "overrides": {
     "@ai-sdk/otel": "1.0.154"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx}": [
+      "prettier --ignore-path .prettierignore --write",
+      "eslint --flag v10_config_lookup_from_file --fix --no-warn-ignored"
+    ],
+    "*.{json,md,yml,yaml,css,html}": [
+      "prettier --ignore-path .prettierignore --write --ignore-unknown"
+    ]
   }
 }

@@ -4,6 +4,7 @@ import react from "@sohizi/eslint-config/react"
 const reactFiles = [
   "apps/web/**/*.{js,ts,tsx}",
   "apps/site/**/*.{js,ts,tsx}",
+  "packages/analytics/**/*.{js,ts,tsx}",
   "packages/ui/**/*.{js,ts,tsx}",
   "packages/video-composition/**/*.{js,ts,tsx}",
 ]
