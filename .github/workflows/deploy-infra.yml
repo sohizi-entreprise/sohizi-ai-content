@@ -44,29 +44,30 @@ jobs:
           COMPONENT: ${{ inputs.component }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
-          INFRA_DOMAIN: ${{ vars.INFRA_DOMAIN }}
-          # Cloudflare Tunnel
-          CLOUDFLARE_TUNNEL_TOKEN: ${{ vars.CLOUDFLARE_TUNNEL_TOKEN || secrets.CLOUDFLARE_TUNNEL_TOKEN }}
-          # Arcane & Beszel
-          ARCANE_ENCRYPTION_KEY: ${{ vars.ARCANE_ENCRYPTION_KEY || secrets.ARCANE_ENCRYPTION_KEY }}
-          BESZEL_TOKEN: ${{ vars.BESZEL_TOKEN || secrets.BESZEL_TOKEN }}
-          BESZEL_PUBLIC_KEY: ${{ vars.BESZEL_PUBLIC_KEY || secrets.BESZEL_PUBLIC_KEY }}
-          STACKS_DIR: ${{ vars.STACKS_DIR }}
+          ENV_FILE_COMMON: ${{ vars.ENV_FILE_COMMON }}
         run: |
           set -euo pipefail
 
           STAGE_DIR="/tmp/infra-${COMPONENT}"
           mkdir -p "$STAGE_DIR"
 
+          if [ -n "$ENV_FILE_COMMON" ]; then
+            printf '%s\n' "$ENV_FILE_COMMON" | tr -d '\r' > "$STAGE_DIR/.env"
+            set -a
+            . "$STAGE_DIR/.env"
+            set +a
+          fi
+
           case "$COMPONENT" in
             caddy)
               cp infra/caddy-compose.yaml "$STAGE_DIR/compose.yaml"
+              rm -f "$STAGE_DIR/.env"
               ;;
 
             cloudflare-tunnel)
               cp infra/cloudfare-tunnel.yaml "$STAGE_DIR/compose.yaml"
-              if [ -z "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
-                echo "::error::Missing CLOUDFLARE_TUNNEL_TOKEN in GitHub variables/secrets"
+              if [ -z "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
+                echo "::error::Missing CLOUDFLARE_TUNNEL_TOKEN in ENV_FILE_COMMON"
                 exit 1
               fi
               printf 'CLOUDFLARE_TUNNEL_TOKEN=%s\n' "$CLOUDFLARE_TUNNEL_TOKEN" > "$STAGE_DIR/.env"
@@ -74,16 +75,16 @@ jobs:
 
             arcane-beszel)
               cp infra/arcane-beszel.yaml "$STAGE_DIR/compose.yaml"
-              if [ -z "$ARCANE_ENCRYPTION_KEY" ]; then
-                echo "::error::Missing ARCANE_ENCRYPTION_KEY in GitHub variables/secrets"
+              if [ -z "${ARCANE_ENCRYPTION_KEY:-}" ]; then
+                echo "::error::Missing ARCANE_ENCRYPTION_KEY in ENV_FILE_COMMON"
                 exit 1
               fi
               {
                 printf 'INFRA_DOMAIN=%s\n' "${INFRA_DOMAIN:-sohizi.net}"
                 printf 'ARCANE_ENCRYPTION_KEY=%s\n' "$ARCANE_ENCRYPTION_KEY"
-                printf 'BESZEL_TOKEN=%s\n' "$BESZEL_TOKEN"
-                printf 'BESZEL_PUBLIC_KEY=%s\n' "$BESZEL_PUBLIC_KEY"
-                [ -n "$STACKS_DIR" ] && printf 'STACKS_DIR=%s\n' "$STACKS_DIR"
+                printf 'BESZEL_TOKEN=%s\n' "${BESZEL_TOKEN:-}"
+                printf 'BESZEL_PUBLIC_KEY=%s\n' "${BESZEL_PUBLIC_KEY:-}"
+                [ -n "${STACKS_DIR:-}" ] && printf 'STACKS_DIR=%s\n' "$STACKS_DIR"
                 true
               } > "$STAGE_DIR/.env"
               ;;

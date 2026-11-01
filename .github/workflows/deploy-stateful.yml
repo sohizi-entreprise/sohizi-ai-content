@@ -33,9 +33,6 @@ jobs:
           ENV_FILE_COMMON: ${{ vars.ENV_FILE_COMMON }}
           ENV_FILE_RC: ${{ vars.ENV_FILE_RC }}
           ENV_FILE_PROD: ${{ vars.ENV_FILE_PROD }}
-          INFRA_DOMAIN: ${{ vars.INFRA_DOMAIN }}
-          PGADMIN_DEFAULT_EMAIL: ${{ vars.PGADMIN_DEFAULT_EMAIL }}
-          PGADMIN_DEFAULT_PASSWORD: ${{ secrets.PGADMIN_DEFAULT_PASSWORD }}
         run: |
           mkdir -p /tmp/sohizi-stateful
           cp compose.stateful.yaml /tmp/sohizi-stateful/compose.stateful.yaml
@@ -52,14 +49,8 @@ jobs:
             fi
           done
 
-          # Append explicit GitHub variables for INFRA_DOMAIN, default POSTGRES_DB, and pgAdmin
-          {
-            printf 'POSTGRES_DB=postgres\n'
-            [ -n "$INFRA_DOMAIN" ] && printf 'INFRA_DOMAIN=%s\n' "$INFRA_DOMAIN"
-            [ -n "$PGADMIN_DEFAULT_EMAIL" ] && printf 'PGADMIN_DEFAULT_EMAIL=%s\n' "$PGADMIN_DEFAULT_EMAIL"
-            [ -n "$PGADMIN_DEFAULT_PASSWORD" ] && printf 'PGADMIN_DEFAULT_PASSWORD=%s\n' "$PGADMIN_DEFAULT_PASSWORD"
-            true
-          } >> /tmp/sohizi-stateful/.env
+          # Ensure default maintenance DB is postgres for container init/healthcheck
+          printf 'POSTGRES_DB=postgres\n' >> /tmp/sohizi-stateful/.env
 
           # Generate pgAdmin servers.json with the configured POSTGRES_USER
           set -a
