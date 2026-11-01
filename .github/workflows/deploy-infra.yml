@@ -109,6 +109,7 @@ jobs:
           ssh "$remote" "set -euo pipefail
             cd ${remote_dir}
             [ -f .env ] && chmod 600 .env
+            docker logout ghcr.io >/dev/null 2>&1 || true
             docker network inspect caddy >/dev/null 2>&1 || docker network create caddy
             docker compose -p ${COMPONENT} -f compose.yaml pull
             docker compose -p ${COMPONENT} -f compose.yaml up -d --remove-orphans

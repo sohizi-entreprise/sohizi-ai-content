@@ -275,6 +275,7 @@ jobs:
 
           printf '%s\n' "$GHCR_TOKEN" | ssh "$remote" 'set -euo pipefail
             cd ~/sohizi-rc
+            trap "docker logout ghcr.io >/dev/null 2>&1 || true" EXIT
             docker login ghcr.io -u "'"$GHCR_ACTOR"'" --password-stdin
             if [ -d ~/sohizi-stateful ] && docker compose -p sohizi-stateful -f ~/sohizi-stateful/compose.stateful.yaml ps -q postgres 2>/dev/null | grep -q .; then
               set -a

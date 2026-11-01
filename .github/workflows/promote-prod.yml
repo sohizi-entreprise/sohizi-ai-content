@@ -100,6 +100,7 @@ jobs:
 
           printf '%s\n' "$GHCR_TOKEN" | ssh "$remote" 'set -euo pipefail
             cd ~/sohizi-prod
+            trap "docker logout ghcr.io >/dev/null 2>&1 || true" EXIT
             docker login ghcr.io -u "'"$GHCR_ACTOR"'" --password-stdin
             APP_ENV=prod ./deploy-blue-green.sh
           '
