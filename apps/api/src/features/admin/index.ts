@@ -311,3 +311,20 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
       body: replaceSkillCategoriesSchema,
     },
   )
+  .get(
+    "/db-stats",
+    ({ query }) =>
+      adminService.getDatabaseStats({
+        limit: query.limit,
+        sortBy: query.sortBy,
+      }),
+    {
+      query: z.object({
+        limit: z.coerce.number().int().min(1).max(100).optional(),
+        sortBy: z
+          .enum(["total_exec_time", "mean_exec_time", "max_exec_time", "calls"])
+          .optional(),
+      }),
+    },
+  )
+  .post("/db-stats/reset", () => adminService.resetDatabaseStats())

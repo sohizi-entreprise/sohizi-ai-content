@@ -36,6 +36,22 @@ services:
       - autovacuum_naptime=15s
       - -c
       - idle_in_transaction_session_timeout=60s
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - compute_query_id=on
+      - -c
+      - pg_stat_statements.max=2000
+      - -c
+      - pg_stat_statements.track=top
+      - -c
+      - pg_stat_statements.track_utility=off
+      - -c
+      - pg_stat_statements.track_planning=off
+      - -c
+      - track_io_timing=on
+      - -c
+      - log_min_duration_statement=500
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

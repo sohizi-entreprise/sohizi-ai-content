@@ -25,6 +25,17 @@ wait_for_postgres() {
   done
 }
 
+ensure_extensions() {
+  for db in sohizi_rc sohizi_prod; do
+    exists="$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${db}'" 2>/dev/null || true)"
+    if [ "$exists" = "1" ]; then
+      psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$db" -tAc "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;" >/dev/null 2>&1 && \
+        log "Ensured pg_stat_statements extension in '${db}'" || \
+        log "WARN: Could not enable pg_stat_statements in '${db}' (ensure shared_preload_libraries=pg_stat_statements is set)"
+    fi
+  done
+}
+
 run_backup() {
   mkdir -p "$BACKUP_DIR"
   ts="$(date -u '+%Y%m%dT%H%M%SZ')"
@@ -194,6 +205,7 @@ main() {
   fi
 
   wait_for_postgres
+  ensure_extensions
 
   last_backup=0
   last_cleanup=0

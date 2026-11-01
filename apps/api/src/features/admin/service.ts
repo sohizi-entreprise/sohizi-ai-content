@@ -1,3 +1,5 @@
+import { sql } from "drizzle-orm"
+import { db, pool } from "@/db"
 import { BadRequest, Conflict, NotFound } from "@/features/error"
 import {
   isRegisteredMediaAdapter,
@@ -758,4 +760,194 @@ export const replaceSkillCategories = async (
   }
   await skillsRepo.replaceSkillCategories(id, input.categoryIds)
   return getSkill(id)
+}
+
+// ======================== Database Performance Stats ========================
+
+export type DbStatsSortBy =
+  "total_exec_time" | "mean_exec_time" | "max_exec_time" | "calls"
+
+export const getDatabaseStats = async (options?: {
+  limit?: number
+  sortBy?: DbStatsSortBy
+}) => {
+  const limit = Math.min(Math.max(options?.limit ?? 25, 1), 100)
+  const sortBy: DbStatsSortBy = options?.sortBy ?? "total_exec_time"
+
+  const [dbSummaryResult, activityResult, extCheckResult] = await Promise.all([
+    db.execute<{
+      database_name: string
+      xact_commit: string
+      xact_rollback: string
+      blks_read: string
+      blks_hit: string
+      cache_hit_ratio: string | null
+      tup_returned: string
+      tup_fetched: string
+      tup_inserted: string
+      tup_updated: string
+      tup_deleted: string
+      conflicts: string
+      deadlocks: string
+      temp_files: string
+      temp_bytes: string
+      stats_reset: string | null
+    }>(sql`
+      SELECT
+        datname AS database_name,
+        xact_commit::text,
+        xact_rollback::text,
+        blks_read::text,
+        blks_hit::text,
+        ROUND(
+          100.0 * blks_hit / NULLIF(blks_hit + blks_read, 0),
+          2
+        )::text AS cache_hit_ratio,
+        tup_returned::text,
+        tup_fetched::text,
+        tup_inserted::text,
+        tup_updated::text,
+        tup_deleted::text,
+        conflicts::text,
+        deadlocks::text,
+        temp_files::text,
+        temp_bytes::text,
+        stats_reset::text
+      FROM pg_stat_database
+      WHERE datname = current_database()
+    `),
+    db.execute<{
+      state: string | null
+      wait_event_type: string | null
+      count: string
+    }>(sql`
+      SELECT
+        COALESCE(state, 'unknown') AS state,
+        wait_event_type,
+        COUNT(*)::text AS count
+      FROM pg_stat_activity
+      WHERE datname = current_database()
+      GROUP BY state, wait_event_type
+    `),
+    db.execute<{ enabled: boolean }>(sql`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements'
+      ) AS enabled
+    `),
+  ])
+
+  const pgStatStatementsEnabled = Boolean(extCheckResult.rows[0]?.enabled)
+
+  const orderColumn =
+    sortBy === "mean_exec_time"
+      ? sql`mean_exec_time`
+      : sortBy === "max_exec_time"
+        ? sql`max_exec_time`
+        : sortBy === "calls"
+          ? sql`calls`
+          : sql`total_exec_time`
+
+  let statements: Array<{
+    queryId: string | null
+    query: string
+    calls: number
+    totalExecTimeMs: number
+    meanExecTimeMs: number
+    maxExecTimeMs: number
+    stddevExecTimeMs: number
+    rows: number
+    cacheHitRatio: number | null
+  }> = []
+
+  if (pgStatStatementsEnabled) {
+    try {
+      const statementsResult = await db.execute<{
+        queryid: string | null
+        query: string
+        calls: string
+        total_exec_time: number
+        mean_exec_time: number
+        max_exec_time: number
+        stddev_exec_time: number
+        rows: string
+        cache_hit_ratio: string | null
+      }>(sql`
+        SELECT
+          queryid::text,
+          LEFT(query, 1000) AS query,
+          calls::text,
+          ROUND(total_exec_time::numeric, 2)::float8 AS total_exec_time,
+          ROUND(mean_exec_time::numeric, 2)::float8 AS mean_exec_time,
+          ROUND(max_exec_time::numeric, 2)::float8 AS max_exec_time,
+          ROUND(stddev_exec_time::numeric, 2)::float8 AS stddev_exec_time,
+          rows::text,
+          ROUND(
+            100.0 * shared_blks_hit / NULLIF(shared_blks_hit + shared_blks_read, 0),
+            2
+          )::text AS cache_hit_ratio
+        FROM pg_stat_statements
+        WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database())
+        ORDER BY ${orderColumn} DESC
+        LIMIT ${limit}
+      `)
+
+      statements = statementsResult.rows.map((row) => ({
+        queryId: row.queryid,
+        query: row.query,
+        calls: Number(row.calls),
+        totalExecTimeMs: Number(row.total_exec_time),
+        meanExecTimeMs: Number(row.mean_exec_time),
+        maxExecTimeMs: Number(row.max_exec_time),
+        stddevExecTimeMs: Number(row.stddev_exec_time),
+        rows: Number(row.rows),
+        cacheHitRatio:
+          row.cache_hit_ratio !== null ? Number(row.cache_hit_ratio) : null,
+      }))
+    } catch {
+      // pg_stat_statements may be installed but not yet preloaded in shared_preload_libraries
+    }
+  }
+
+  const dbRow = dbSummaryResult.rows[0]
+
+  return {
+    pool: {
+      totalConnections: pool.totalCount,
+      idleConnections: pool.idleCount,
+      waitingRequests: pool.waitingCount,
+    },
+    database: dbRow
+      ? {
+          name: dbRow.database_name,
+          commits: Number(dbRow.xact_commit),
+          rollbacks: Number(dbRow.xact_rollback),
+          cacheHitRatio:
+            dbRow.cache_hit_ratio !== null
+              ? Number(dbRow.cache_hit_ratio)
+              : null,
+          tuplesReturned: Number(dbRow.tup_returned),
+          tuplesFetched: Number(dbRow.tup_fetched),
+          tuplesInserted: Number(dbRow.tup_inserted),
+          tuplesUpdated: Number(dbRow.tup_updated),
+          tuplesDeleted: Number(dbRow.tup_deleted),
+          conflicts: Number(dbRow.conflicts),
+          deadlocks: Number(dbRow.deadlocks),
+          tempFiles: Number(dbRow.temp_files),
+          tempBytes: Number(dbRow.temp_bytes),
+          statsReset: dbRow.stats_reset,
+        }
+      : null,
+    connectionsByState: activityResult.rows.map((row) => ({
+      state: row.state ?? "unknown",
+      waitEventType: row.wait_event_type,
+      count: Number(row.count),
+    })),
+    pgStatStatementsEnabled,
+    statements,
+  }
+}
+
+export const resetDatabaseStats = async () => {
+  await db.execute(sql`SELECT pg_stat_statements_reset()`)
+  return { ok: true as const }
 }

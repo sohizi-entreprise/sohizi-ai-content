@@ -1,5 +1,11 @@
 import "./instrumentation"
-import { captureUnexpectedError } from "./sentry"
+import { forceFlushTracing } from "./instrumentation"
+import {
+  captureUnexpectedError,
+  flushSentry,
+  setSentryHttpErrorStatus,
+  setSentryHttpRoute,
+} from "./sentry"
 import { Elysia } from "elysia"
 import { swagger } from "@elysiajs/swagger"
 import * as routes from "./features"
@@ -79,27 +85,53 @@ const app = new Elysia()
   })
   .use(cors(corsConfig))
   .use(betterAuthPlugin)
+  .onTransform(({ request, route }) => {
+    if (route) {
+      setSentryHttpRoute(request.method, route)
+      return
+    }
+    const pathname = new URL(request.url).pathname
+    if (pathname.startsWith("/api/auth/")) {
+      setSentryHttpRoute(request.method, pathname)
+    }
+  })
   .error({ ...errors, InsufficientCreditsError, NameConflictError })
   .onError(({ code, error, request, route }) => {
     const url = new URL(request.url)
+    if (route) {
+      setSentryHttpRoute(request.method, route)
+    }
     switch (code) {
       case "BadRequest":
       case "Conflict":
       case "Forbidden":
       case "Unauthorized":
       case "NotFound":
-        return error instanceof errors.BadRequest ||
+      case "TooManyRequests":
+        if (
+          error instanceof errors.BadRequest ||
           error instanceof errors.Conflict ||
           error instanceof errors.Forbidden ||
           error instanceof errors.Unauthorized ||
-          error instanceof errors.NotFound
-          ? error.toResponse()
-          : error
-      case "InsufficientCreditsError":
-        return (error as InsufficientCreditsError).toResponse()
-      case "NameConflictError":
-        return (error as NameConflictError).toResponse()
+          error instanceof errors.NotFound ||
+          error instanceof errors.TooManyRequests
+        ) {
+          setSentryHttpErrorStatus(error.status)
+          return error.toResponse()
+        }
+        return error
+      case "InsufficientCreditsError": {
+        const res = (error as InsufficientCreditsError).toResponse()
+        setSentryHttpErrorStatus(res.status)
+        return res
+      }
+      case "NameConflictError": {
+        const res = (error as NameConflictError).toResponse()
+        setSentryHttpErrorStatus(res.status)
+        return res
+      }
       case "InternalServerError":
+        setSentryHttpErrorStatus(500)
         captureUnexpectedError(error, {
           service: "api",
           route,
@@ -111,8 +143,10 @@ const app = new Elysia()
           ? error.toResponse()
           : error
       case "VALIDATION":
+        setSentryHttpErrorStatus(400)
         return new errors.BadRequest(error.message)
       default:
+        setSentryHttpErrorStatus(500)
         captureUnexpectedError(error, {
           service: "api",
           route,
@@ -174,6 +208,7 @@ const shutdown = async (signal: string) => {
     // immediately while waiting for all active in-flight HTTP requests/streams
     // and detached background agent runs to finish cleanly.
     await Promise.all([app.stop(false), waitForActiveAgentRuns()])
+    await Promise.allSettled([flushSentry(), forceFlushTracing()])
     console.log(
       "[api] All in-flight requests and agent runs completed. Exiting.",
     )
@@ -186,4 +221,3 @@ const shutdown = async (signal: string) => {
 
 process.on("SIGTERM", () => void shutdown("SIGTERM"))
 process.on("SIGINT", () => void shutdown("SIGINT"))
-
