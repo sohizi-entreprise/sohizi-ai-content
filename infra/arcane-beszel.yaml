@@ -1,0 +1,95 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ---------------------------------------------------------------------------
+  # Arcane — Docker Compose, .env, Container, Image, Volume & Network Manager
+  # ---------------------------------------------------------------------------
+  arcane:
+    container_name: arcane
+    image: ghcr.io/getarcaneapp/arcane:latest
+    restart: unless-stopped
+    logging: *default-logging
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - arcane_data:/app/data
+      - ${STACKS_DIR:-..}:/app/data/projects
+    environment:
+      - APP_URL=https://containers.${INFRA_DOMAIN:-sohizi.net}
+      - PUID=1000
+      - PGID=1000
+      # Generate with: openssl rand -base64 32
+      - ENCRYPTION_KEY=${ARCANE_ENCRYPTION_KEY}
+      # SQLite DB with WAL size cap (64MB) and auto_vacuum to prevent DB bloat
+      - DATABASE_URL=file:data/arcane.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)&_pragma=journal_size_limit(67108864)&_pragma=auto_vacuum(FULL)&_txlock=immediate
+      # DB & history retention overrides (enforced when UI_CONFIGURATION_DISABLED=true,
+      # otherwise configurable in Arcane -> Settings):
+      - UI_CONFIGURATION_DISABLED=false
+      - ACTIVITY_HISTORY_RETENTION_DAYS=14
+      - ACTIVITY_HISTORY_MAX_ENTRIES=500
+      - BUILD_HISTORY_RETENTION_DAYS=14
+      - UPGRADE_LOG_RETENTION_DAYS=3
+      - EVENT_CLEANUP_INTERVAL=0 */6 * * *
+      - EXPIRED_SESSIONS_CLEANUP_INTERVAL=0 */12 * * *
+    networks:
+      - caddy
+    labels:
+      caddy: http://containers.${INFRA_DOMAIN:-sohizi.net}
+      caddy.reverse_proxy: "{{upstreams 3552}}"
+
+  # ---------------------------------------------------------------------------
+  # Beszel Hub — Historical CPU, Memory, Disk & Network Monitoring UI
+  # Note: Beszel automatically downsamples metrics (1m -> 10m -> 20m -> 2h -> 8h)
+  # and deletes records older than 30 days (~800 rows per host, a few MB max).
+  # ---------------------------------------------------------------------------
+  beszel:
+    container_name: beszel
+    image: henrygd/beszel:latest
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      - APP_URL=https://monitor.${INFRA_DOMAIN:-sohizi.net}
+    volumes:
+      - beszel_data:/beszel_data
+      - beszel_socket:/beszel_socket
+    networks:
+      - caddy
+    labels:
+      caddy: http://monitor.${INFRA_DOMAIN:-sohizi.net}
+      caddy.reverse_proxy: "{{upstreams 8090}}"
+
+  # ---------------------------------------------------------------------------
+  # Beszel Agent — Host & Per-Container Metrics Collector (via Unix Socket)
+  # ---------------------------------------------------------------------------
+  beszel-agent:
+    container_name: beszel-agent
+    image: henrygd/beszel-agent:latest
+    restart: unless-stopped
+    logging: *default-logging
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - beszel_agent_data:/var/lib/beszel-agent
+      - beszel_socket:/beszel_socket
+    environment:
+      - LISTEN=/beszel_socket/beszel.sock
+      - HUB_URL=http://localhost:8090
+      - TOKEN=${BESZEL_TOKEN}
+      - KEY=${BESZEL_PUBLIC_KEY}
+
+volumes:
+  arcane_data:
+    name: arcane_data
+  beszel_data:
+    name: beszel_data
+  beszel_agent_data:
+    name: beszel_agent_data
+  beszel_socket:
+    name: beszel_socket
+
+networks:
+  caddy:
+    external: true
