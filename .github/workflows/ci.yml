@@ -227,6 +227,7 @@ jobs:
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
+          ENV_FILE_COMMON: ${{ vars.ENV_FILE_COMMON }}
           ENV_FILE: ${{ vars.ENV_FILE_RC }}
           GHCR_OWNER: ${{ github.repository_owner }}
           GHCR_ACTOR: ${{ github.actor }}
@@ -236,7 +237,11 @@ jobs:
           mkdir -p /tmp/sohizi-deploy-rc
           cp compose.prod.yaml /tmp/sohizi-deploy-rc/compose.yml
 
-          printf '%s\n' "$ENV_FILE" > /tmp/sohizi-deploy-rc/.env
+          : > /tmp/sohizi-deploy-rc/.env
+          if [ -n "$ENV_FILE_COMMON" ]; then
+            printf '%s\n\n' "$ENV_FILE_COMMON" >> /tmp/sohizi-deploy-rc/.env
+          fi
+          printf '%s\n' "$ENV_FILE" >> /tmp/sohizi-deploy-rc/.env
           cat <<EOF >> /tmp/sohizi-deploy-rc/.env
 
           APP_ENV=rc

@@ -66,6 +66,7 @@ jobs:
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
+          ENV_FILE_COMMON: ${{ vars.ENV_FILE_COMMON }}
           ENV_FILE: ${{ vars.ENV_FILE_PROD }}
           GHCR_OWNER: ${{ github.repository_owner }}
           GHCR_ACTOR: ${{ github.actor }}
@@ -77,7 +78,11 @@ jobs:
           cp scripts/deploy-blue-green.sh /tmp/sohizi-deploy-prod/deploy-blue-green.sh
           chmod +x /tmp/sohizi-deploy-prod/deploy-blue-green.sh
 
-          printf '%s\n' "$ENV_FILE" > /tmp/sohizi-deploy-prod/.env
+          : > /tmp/sohizi-deploy-prod/.env
+          if [ -n "$ENV_FILE_COMMON" ]; then
+            printf '%s\n\n' "$ENV_FILE_COMMON" >> /tmp/sohizi-deploy-prod/.env
+          fi
+          printf '%s\n' "$ENV_FILE" >> /tmp/sohizi-deploy-prod/.env
           cat <<EOF >> /tmp/sohizi-deploy-prod/.env
 
           APP_ENV=prod
