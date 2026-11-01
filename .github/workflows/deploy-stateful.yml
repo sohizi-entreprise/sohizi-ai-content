@@ -42,10 +42,11 @@ jobs:
           cp docker/postgres/maintenance.sh /tmp/sohizi-stateful/maintenance.sh
           chmod +x /tmp/sohizi-stateful/maintenance.sh
 
-          # Merge stateful credentials and optional per-env overrides
+          # Merge stateful credentials and optional per-env overrides (ignoring empty placeholders)
           printf '%s\n' "$ENV_FILE_RC" > /tmp/sohizi-stateful/.env
           if [ -n "$ENV_FILE_PROD" ]; then
-            printf '\n%s\n' "$ENV_FILE_PROD" >> /tmp/sohizi-stateful/.env
+            printf '\n' >> /tmp/sohizi-stateful/.env
+            printf '%s\n' "$ENV_FILE_PROD" | grep -E '^[A-Za-z_][A-Za-z0-9_]*=.+$' >> /tmp/sohizi-stateful/.env || true
           fi
 
           # Append explicit GitHub variables for INFRA_DOMAIN and pgAdmin if provided

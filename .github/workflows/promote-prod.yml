@@ -86,7 +86,7 @@ jobs:
           POSTGRES_DB=sohizi_prod
           REDIS_DB_INDEX=1
           SENTRY_RELEASE=${{ github.sha }}
-          SENTRY_ENVIRONMENT=production
+          SENTRY_ENVIRONMENT=prod
           EOF
 
           remote="${SSH_USER}@${SSH_HOST}"
