@@ -80,9 +80,9 @@ jobs:
 
           : > /tmp/sohizi-deploy-prod/.env
           if [ -n "$ENV_FILE_COMMON" ]; then
-            printf '%s\n\n' "$ENV_FILE_COMMON" >> /tmp/sohizi-deploy-prod/.env
+            printf '%s\n\n' "$ENV_FILE_COMMON" | tr -d '\r' >> /tmp/sohizi-deploy-prod/.env
           fi
-          printf '%s\n' "$ENV_FILE" >> /tmp/sohizi-deploy-prod/.env
+          printf '%s\n' "$ENV_FILE" | tr -d '\r' >> /tmp/sohizi-deploy-prod/.env
           cat <<EOF >> /tmp/sohizi-deploy-prod/.env
 
           APP_ENV=prod

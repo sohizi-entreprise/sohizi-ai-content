@@ -19,7 +19,10 @@ try {
   await pool.end()
   process.exit(0)
 } catch (error) {
-  console.error(error instanceof Error ? error.message : error)
+  console.error("Migration failed:", error)
+  if (error instanceof Error && error.cause) {
+    console.error("Cause:", error.cause)
+  }
   await pool.end().catch(() => undefined)
   process.exit(1)
 }

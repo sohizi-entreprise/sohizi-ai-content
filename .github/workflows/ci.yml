@@ -254,9 +254,9 @@ jobs:
 
           : > /tmp/sohizi-deploy-rc/.env
           if [ -n "$ENV_FILE_COMMON" ]; then
-            printf '%s\n\n' "$ENV_FILE_COMMON" >> /tmp/sohizi-deploy-rc/.env
+            printf '%s\n\n' "$ENV_FILE_COMMON" | tr -d '\r' >> /tmp/sohizi-deploy-rc/.env
           fi
-          printf '%s\n' "$ENV_FILE" >> /tmp/sohizi-deploy-rc/.env
+          printf '%s\n' "$ENV_FILE" | tr -d '\r' >> /tmp/sohizi-deploy-rc/.env
           cat <<EOF >> /tmp/sohizi-deploy-rc/.env
 
           APP_ENV=rc
@@ -276,6 +276,15 @@ jobs:
           printf '%s\n' "$GHCR_TOKEN" | ssh "$remote" 'set -euo pipefail
             cd ~/sohizi-rc
             docker login ghcr.io -u "'"$GHCR_ACTOR"'" --password-stdin
+            if [ -d ~/sohizi-stateful ] && docker compose -p sohizi-stateful -f ~/sohizi-stateful/compose.stateful.yaml ps -q postgres 2>/dev/null | grep -q .; then
+              set -a
+              . ./.env
+              set +a
+              docker compose -p sohizi-stateful -f ~/sohizi-stateful/compose.stateful.yaml exec -T postgres \
+                psql -U "${POSTGRES_USER}" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '\''sohizi_rc'\''" | grep -q 1 || \
+              docker compose -p sohizi-stateful -f ~/sohizi-stateful/compose.stateful.yaml exec -T postgres \
+                psql -U "${POSTGRES_USER}" -d postgres -c "CREATE DATABASE sohizi_rc;"
+            fi
             docker compose -p sohizi-rc -f compose.yml --profile migrate pull api web site migrate
             docker compose -p sohizi-rc -f compose.yml --profile migrate run --rm migrate
             docker compose -p sohizi-rc -f compose.yml up -d --remove-orphans api web site
