@@ -14,8 +14,18 @@ export function isConsentCurrent(
   return record.policyVersion === POLICY_VERSION && record.expiresAt > now
 }
 
+const SHARED_COOKIE_DOMAINS = ["sohizi.net", "sohizi.com"] as const
+
+function resolveCookieDomain(hostname: string): string | null {
+  for (const domain of SHARED_COOKIE_DOMAINS) {
+    if (hostname === domain || hostname.endsWith(`.${domain}`)) {
+      return `.${domain}`
+    }
+  }
+  return null
+}
+
 export function buildConsentCookie(id: string, hostname: string): string {
-  const production =
-    hostname === "sohizi.net" || hostname.endsWith(".sohizi.net")
-  return `${CONSENT_COOKIE}=${id}; Path=/; Max-Age=${SIX_MONTHS_SECONDS}; SameSite=Lax; HttpOnly${production ? "; Domain=.sohizi.net; Secure" : ""}`
+  const cookieDomain = resolveCookieDomain(hostname)
+  return `${CONSENT_COOKIE}=${id}; Path=/; Max-Age=${SIX_MONTHS_SECONDS}; SameSite=Lax; HttpOnly${cookieDomain ? `; Domain=${cookieDomain}; Secure` : ""}`
 }

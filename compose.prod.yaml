@@ -145,6 +145,9 @@ services:
       POSTHOG_PROJECT: ${POSTHOG_PROJECT}
       POSTHOG_API_HOST: ${POSTHOG_API_HOST}
       POSTHOG_API_VERSION: ${POSTHOG_API_VERSION}
+    depends_on:
+      api:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -162,8 +165,12 @@ services:
       - caddy
     labels:
       caddy: http://www.${DOMAIN}
-      caddy.reverse_proxy: "{{upstreams 3001}}"
-      caddy.reverse_proxy.lb_try_duration: 5s
+      caddy.0_handle_path: /api/*
+      caddy.0_handle_path.0_reverse_proxy: ${APP_ENV:-rc}-api:3030
+      caddy.0_handle_path.0_reverse_proxy.lb_try_duration: 5s
+      caddy.1_handle:
+      caddy.1_handle.0_reverse_proxy: "{{upstreams 3001}}"
+      caddy.1_handle.0_reverse_proxy.lb_try_duration: 5s
 
   migrate:
     image: ghcr.io/${GHCR_OWNER}/sohizi-api:${IMAGE_TAG:-rc}

@@ -51,12 +51,16 @@ jobs:
           STAGE_DIR="/tmp/infra-${COMPONENT}"
           mkdir -p "$STAGE_DIR"
 
-          if [ -n "$ENV_FILE_COMMON" ]; then
-            printf '%s\n' "$ENV_FILE_COMMON" | tr -d '\r' > "$STAGE_DIR/.env"
-            set -a
-            . "$STAGE_DIR/.env"
-            set +a
-          fi
+          get_env() {
+            printf '%s\n' "${ENV_FILE_COMMON:-}" | tr -d '\r' | sed -n "s/^$1=//p" | tail -n 1 | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
+          }
+
+          CLOUDFLARE_TUNNEL_TOKEN="$(get_env CLOUDFLARE_TUNNEL_TOKEN)"
+          ARCANE_ENCRYPTION_KEY="$(get_env ARCANE_ENCRYPTION_KEY)"
+          INFRA_DOMAIN="$(get_env INFRA_DOMAIN)"
+          BESZEL_TOKEN="$(get_env BESZEL_TOKEN)"
+          BESZEL_PUBLIC_KEY="$(get_env BESZEL_PUBLIC_KEY)"
+          STACKS_DIR="$(get_env STACKS_DIR)"
 
           case "$COMPONENT" in
             caddy)

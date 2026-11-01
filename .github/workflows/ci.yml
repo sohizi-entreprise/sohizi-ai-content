@@ -278,9 +278,7 @@ jobs:
             trap "docker logout ghcr.io >/dev/null 2>&1 || true" EXIT
             docker login ghcr.io -u "'"$GHCR_ACTOR"'" --password-stdin
             if [ -d ~/sohizi-stateful ] && docker compose -p sohizi-stateful -f ~/sohizi-stateful/compose.stateful.yaml ps -q postgres 2>/dev/null | grep -q .; then
-              set -a
-              . ./.env
-              set +a
+              POSTGRES_USER="$(sed -n '\''s/^POSTGRES_USER=//p'\'' ./.env | tail -n 1 | sed -e '\''s/^"//'\'' -e '\''s/"$//'\'' -e "s/^'\''//" -e "s/'\''$//")"
               docker compose -p sohizi-stateful -f ~/sohizi-stateful/compose.stateful.yaml exec -T postgres \
                 psql -U "${POSTGRES_USER}" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '\''sohizi_rc'\''" | grep -q 1 || \
               docker compose -p sohizi-stateful -f ~/sohizi-stateful/compose.stateful.yaml exec -T postgres \

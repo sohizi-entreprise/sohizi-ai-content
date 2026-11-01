@@ -53,9 +53,7 @@ jobs:
           printf 'POSTGRES_DB=postgres\n' >> /tmp/sohizi-stateful/.env
 
           # Generate pgAdmin servers.json with the configured POSTGRES_USER
-          set -a
-          . /tmp/sohizi-stateful/.env
-          set +a
+          POSTGRES_USER="$(sed -n 's/^POSTGRES_USER=//p' /tmp/sohizi-stateful/.env | tail -n 1 | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")"
           jq --arg user "${POSTGRES_USER:-postgres}" \
             '.Servers["1"].Username = $user' \
             docker/postgres/servers.json > /tmp/sohizi-stateful/servers.json
@@ -77,9 +75,7 @@ jobs:
             docker compose -p sohizi-stateful -f compose.stateful.yaml up -d postgres redis --wait
 
             # Idempotently ensure dedicated RC and Prod databases exist even on pre-existing volumes
-            set -a
-            . ./.env
-            set +a
+            POSTGRES_USER="$(sed -n '\''s/^POSTGRES_USER=//p'\'' ./.env | tail -n 1 | sed -e '\''s/^"//'\'' -e '\''s/"$//'\'' -e "s/^'\''//" -e "s/'\''$//")"
             for db in sohizi_rc sohizi_prod inngest_rc inngest_prod; do
               docker compose -p sohizi-stateful -f compose.stateful.yaml exec -T postgres \
                 psql -U "${POSTGRES_USER}" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '\''${db}'\''" | grep -q 1 || \

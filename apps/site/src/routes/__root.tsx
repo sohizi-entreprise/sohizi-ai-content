@@ -12,7 +12,6 @@ import {
 } from "@sohizi/analytics/consent"
 import appCss from "../styles.css?url"
 import type { PublicEnv } from "@/lib/public-env"
-import { appUrl } from "@/lib/app-url"
 import { loadPublicEnv } from "@/lib/load-public-env"
 import { getPublicEnv, setPublicEnv } from "@/lib/public-env"
 
@@ -107,7 +106,7 @@ function RootComponent() {
         apiHost: publicEnv.posthogApiHost,
         apiVersion: publicEnv.posthogApiVersion,
       }}
-      consentEndpoint={appUrl("/api/analytics/consent")}
+      consentEndpoint="/api/analytics/consent"
       privacyHref="/privacy"
       app="site"
     >

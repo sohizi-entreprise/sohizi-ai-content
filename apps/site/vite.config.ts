@@ -15,6 +15,7 @@ const uiDir = path.resolve(repoRoot, "packages/ui")
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, rootDir, "")
   process.env.APP_URL ??= env.APP_URL
+  const apiUrl = env.API_URL || process.env.API_URL || "http://localhost:3030"
 
   return {
     resolve: {
@@ -26,6 +27,17 @@ export default defineConfig(({ mode }) => {
     server: {
       fs: {
         allow: [repoRoot, rootDir, uiDir],
+      },
+      proxy: {
+        "/api": {
+          target: apiUrl,
+          changeOrigin: true,
+          rewrite: (proxyPath) =>
+            proxyPath.startsWith("/api/auth") ||
+            proxyPath.startsWith("/api/inngest")
+              ? proxyPath
+              : proxyPath.replace(/^\/api/, "") || "/",
+        },
       },
     },
     plugins: [

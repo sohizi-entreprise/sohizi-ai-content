@@ -10,6 +10,13 @@ describe("shared analytics consent", () => {
       expect(cookie).toContain("HttpOnly")
       expect(cookie).toContain("Secure")
     }
+    for (const host of ["www.sohizi.com", "app.sohizi.com"]) {
+      const cookie = buildConsentCookie("consent-id", host)
+      expect(cookie).toContain("Domain=.sohizi.com")
+      expect(cookie).toContain("SameSite=Lax")
+      expect(cookie).toContain("HttpOnly")
+      expect(cookie).toContain("Secure")
+    }
     expect(buildConsentCookie("consent-id", "localhost")).not.toContain(
       "Domain=",
     )
