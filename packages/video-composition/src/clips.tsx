@@ -61,7 +61,7 @@ function computeAnimationTransformAndOpacity(
     Math.max(1, Math.floor(durationInFrames / 2)),
   )
 
-  if (animationIn && animationIn !== "none") {
+  if (animationIn !== "none") {
     const progressIn = interpolate(frame, [0, animFrames], [0, 1], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -71,13 +71,13 @@ function computeAnimationTransformAndOpacity(
     } else if (animationIn === "slide-up") {
       opacityMultiplier *= progressIn
       translateYPercent += (1 - progressIn) * 18
-    } else if (animationIn === "scale-up") {
+    } else {
       opacityMultiplier *= progressIn
       scale *= 0.85 + 0.15 * progressIn
     }
   }
 
-  if (animationOut && animationOut !== "none" && durationInFrames > 0) {
+  if (animationOut !== "none" && durationInFrames > 0) {
     const outStart = Math.max(0, durationInFrames - animFrames)
     const progressOut = interpolate(
       frame,
@@ -93,7 +93,7 @@ function computeAnimationTransformAndOpacity(
     } else if (animationOut === "slide-down") {
       opacityMultiplier *= 1 - progressOut
       translateYPercent += progressOut * 18
-    } else if (animationOut === "scale-down") {
+    } else {
       opacityMultiplier *= 1 - progressOut
       scale *= 1 - 0.15 * progressOut
     }
@@ -107,7 +107,7 @@ function computeImageMotionTransform(
   durationInFrames: number,
   motionEffect: ImageMotionEffect = "none",
 ): string {
-  if (!motionEffect || motionEffect === "none" || durationInFrames <= 1) {
+  if (motionEffect === "none" || durationInFrames <= 1) {
     return "scale(1) translate(0%, 0%)"
   }
 

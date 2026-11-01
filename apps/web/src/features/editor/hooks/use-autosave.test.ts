@@ -88,12 +88,12 @@ describe("useAutoSave", () => {
     act(() => result.current({ content: "hello" }))
     expect(savingStatusFor(FILE_A)).toBe("saving")
 
-    await act(async () => {
+    await act(() => {
       vi.advanceTimersByTime(DURATION - 1)
     })
     expect(requests.saveFileContent).not.toHaveBeenCalled()
 
-    await act(async () => {
+    await act(() => {
       vi.advanceTimersByTime(1)
     })
     expect(requests.saveFileContent).toHaveBeenCalledTimes(1)
@@ -120,7 +120,7 @@ describe("useAutoSave", () => {
     act(() => result.current({ content: "unsaved edit" }))
     expect(requests.saveFileContent).not.toHaveBeenCalled()
 
-    await act(async () => {
+    await act(() => {
       unmount()
     })
 
@@ -166,7 +166,7 @@ describe("useAutoSave", () => {
     const next =
       "---\ndescription: |\n  Use this skill.\n---\nFollow the steps."
     act(() => result.current({ content: next }))
-    await act(async () => {
+    await act(() => {
       vi.advanceTimersByTime(DURATION)
     })
 
@@ -192,7 +192,7 @@ describe("useAutoSave", () => {
 
     act(() => result.current({ content: "content for A" }))
 
-    await act(async () => {
+    await act(() => {
       rerender({ fileId: FILE_B })
     })
 
@@ -205,7 +205,7 @@ describe("useAutoSave", () => {
     )
 
     act(() => result.current({ content: "content for B" }))
-    await act(async () => {
+    await act(() => {
       vi.advanceTimersByTime(DURATION)
     })
 
@@ -239,21 +239,21 @@ describe("useAutoSave", () => {
 
     // First save starts and stays in flight (deferred unresolved).
     act(() => result.current({ content: "first" }))
-    await act(async () => {
+    await act(() => {
       vi.advanceTimersByTime(DURATION)
     })
     expect(requests.saveFileContent).toHaveBeenCalledTimes(1)
 
     // A newer edit lands while the first request is still pending.
     act(() => result.current({ content: "second" }))
-    await act(async () => {
+    await act(() => {
       vi.advanceTimersByTime(DURATION)
     })
     // Still in flight, so the second payload is queued, not sent yet.
     expect(requests.saveFileContent).toHaveBeenCalledTimes(1)
 
     // Resolve the first request; the queued payload should now be sent.
-    await act(async () => {
+    await act(() => {
       first.resolve({ content: "first", revision: 2 })
     })
 
@@ -282,7 +282,7 @@ describe("useAutoSave", () => {
     )
 
     act(() => result.current({ content: "keep me" }))
-    await act(async () => {
+    await act(() => {
       vi.advanceTimersByTime(DURATION)
     })
 

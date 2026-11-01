@@ -132,7 +132,7 @@ export function coerceParameterSettings(
       continue
     }
     if (parameter.type === "number") {
-      if (raw == null || raw === "") continue
+      if (!raw) continue
       const numeric = Number(raw)
       if (Number.isFinite(numeric)) {
         next[parameter.key] = numeric

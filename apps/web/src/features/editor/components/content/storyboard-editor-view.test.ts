@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest"
+import {
+  DEFAULT_STORYBOARD_SETTINGS,
+  serializeFrontMatter,
+} from "../../extensions/storyboard"
 import { toStoryboardContent } from "./storyboard-editor-view"
-import { serializeFrontMatter } from "../../extensions/storyboard"
-import { DEFAULT_STORYBOARD_SETTINGS } from "../../extensions/storyboard"
 
 describe("toStoryboardContent", () => {
   it("seeds world bible and an empty scene when markdown is blank", () => {

@@ -30,7 +30,7 @@ export function groupCaptionBlocks(
   }
 
   for (const word of sorted) {
-    const previous = current[current.length - 1]
+    const previous = current.at(-1)
     if (!previous) {
       current.push(word)
       continue

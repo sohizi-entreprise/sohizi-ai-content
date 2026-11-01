@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import {
   Select,
   SelectContent,
@@ -9,6 +8,7 @@ import {
 import { useVideoEditorStore } from "../../store/editor-store"
 import { FadeDurationFields } from "./setting-row"
 import { SliderWithValue } from "./slider-with-value"
+import type { ReactNode } from "react"
 import type {
   ClipAnimationIn,
   ClipAnimationOut,

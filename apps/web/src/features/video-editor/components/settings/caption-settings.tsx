@@ -1,10 +1,10 @@
-import type { ReactNode } from "react"
 import { AlignCenter, AlignLeft, AlignRight } from "lucide-react"
 import { Input } from "@sohizi/ui/input"
 import { Switch } from "@sohizi/ui/switch"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { SliderWithValue } from "./slider-with-value"
 import { formatCaptionTimestamp, groupCaptionBlocks } from "./caption-blocks"
+import type { ReactNode } from "react"
 import type { CaptionClip, TextAlign } from "../../store/types"
 import { cn } from "@/lib/utils"
 

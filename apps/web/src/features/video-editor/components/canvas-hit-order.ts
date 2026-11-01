@@ -24,7 +24,7 @@ export function listCanvasHitTargets(
 
   for (let i = tracks.length - 1; i >= 0; i--) {
     const track = tracks[i]
-    if (!track || track.hidden) continue
+    if (track.hidden) continue
     for (const clip of track.clips) {
       if (!isCanvasEditableClip(clip)) continue
       if (currentFrame < clip.startFrame || currentFrame >= clip.endFrame) {

@@ -10,10 +10,10 @@
     "test": "vitest run",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src",
-    "format": "prettier --write src",
-    "format:check": "prettier --check src",
-    "check": "prettier --check src && eslint src",
-    "fix": "prettier --write src && eslint --fix src",
+    "format": "prettier --ignore-path ../../.prettierignore --write src",
+    "format:check": "prettier --ignore-path ../../.prettierignore --check src",
+    "check": "prettier --ignore-path ../../.prettierignore --check src && eslint src",
+    "fix": "prettier --ignore-path ../../.prettierignore --write src && eslint --fix src",
     "knip": "knip"
   },
   "dependencies": {

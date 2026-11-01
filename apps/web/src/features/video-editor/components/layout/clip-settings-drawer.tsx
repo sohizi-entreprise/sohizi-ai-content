@@ -1,17 +1,13 @@
-import {
-  useEffect,
-  useState,
-  type ReactNode,
-  type TransitionEvent,
-} from "react"
+import { useEffect, useState } from "react"
 import { Paperclip, X } from "lucide-react"
 import { Button } from "@sohizi/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"
-import { attachFileToChat } from "@/features/editor/bridge/attach-file-to-chat"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { useSelectedClip } from "../../hooks/use-selected-clip"
 import { CLIP_TYPE_LABEL, ClipSettings } from "../settings/settings-panel"
+import type { ReactNode, TransitionEvent } from "react"
 import type { Clip } from "../../store/types"
+import { attachFileToChat } from "@/features/editor/bridge/attach-file-to-chat"
 
 interface EditorFile {
   name: string
@@ -81,31 +77,15 @@ function ClipSettingsHeader({
   file: EditorFile
   onClose: () => void
 }) {
-  const usesInspectorHeader =
-    clip.type === "text" ||
-    clip.type === "image" ||
-    clip.type === "audio" ||
-    clip.type === "video" ||
-    clip.type === "caption"
-
   return (
     <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3.5 py-3">
-      {usesInspectorHeader ? (
-        <span className="size-2 shrink-0 rounded-full bg-primary" aria-hidden />
-      ) : null}
+      <span className="size-2 shrink-0 rounded-full bg-primary" aria-hidden />
       <div className="min-w-0 flex-1">
         <h2 className="truncate text-sm font-medium text-foreground">
           {CLIP_TYPE_LABEL[clip.type]}
         </h2>
-        {usesInspectorHeader ? null : (
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Clip settings
-          </p>
-        )}
       </div>
-      {usesInspectorHeader ? (
-        <AttachClipButton file={file} clipId={clip.id} />
-      ) : null}
+      <AttachClipButton file={file} clipId={clip.id} />
       <Button
         type="button"
         variant="ghost"

@@ -10,16 +10,14 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react"
+import { ARBORIST_NODE_DRAG_TYPE } from "../../utils/arborist-dnd"
+import { useFileTreeStore } from "../../stores/file-tree-store"
 import { getShotPosition } from "./storyboard-sequence"
 import { useStoryboardContext } from "./storyboard-context"
 import { fetchImageAssetUrl, findDraggedImageNode } from "./shot-image-drop"
 import { updateShot } from "./use-storyboard-dnd"
+import type { ArboristNodeDragItem } from "../../utils/arborist-dnd"
 import type { ReactNodeViewProps } from "@tiptap/react"
-import {
-  ARBORIST_NODE_DRAG_TYPE,
-  type ArboristNodeDragItem,
-} from "../../utils/arborist-dnd"
-import { useFileTreeStore } from "../../stores/file-tree-store"
 import { cn } from "@/lib/utils"
 import { thumbnailImageUrl } from "@/utils/transform-url"
 

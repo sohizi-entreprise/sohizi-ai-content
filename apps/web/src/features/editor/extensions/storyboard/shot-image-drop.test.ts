@@ -7,7 +7,7 @@ const requests = vi.hoisted(() => ({
 }))
 
 vi.mock("../../requests", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../requests")>()
+  const actual: Record<string, unknown> = await importOriginal()
   return {
     ...actual,
     getFileContent: requests.getFileContent,

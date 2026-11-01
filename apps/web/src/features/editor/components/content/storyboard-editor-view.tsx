@@ -4,14 +4,7 @@ import { CharacterCount } from "@tiptap/extension-character-count"
 import Placeholder from "@tiptap/extension-placeholder"
 import { Markdown } from "@tiptap/markdown"
 import { useParams } from "@tanstack/react-router"
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   DndContext,
   PointerSensor,
@@ -26,6 +19,7 @@ import { usePendingMarkdownChanges } from "../../hooks/use-pending-markdown-chan
 import { attachFileToChat } from "../../bridge/attach-file-to-chat"
 import { useEditorInputBridge } from "../../bridge/use-editor-input-bridge"
 import {
+  DEFAULT_STORYBOARD_SETTINGS,
   StoryboardProvider,
   aspectRatioToCss,
   collectSequenceShots,
@@ -46,7 +40,6 @@ import {
   storyboardEditorExtensions,
   updateShot,
   updateStoryboardSettings,
-  DEFAULT_STORYBOARD_SETTINGS,
 } from "../../extensions/storyboard"
 import { EditorTopChrome } from "./editor-top-chrome"
 import { MarkdownDiffChangesPanel } from "./markdown-diff-changes-panel"
@@ -56,6 +49,7 @@ import { StoryboardSequenceDialog } from "./storyboard-sequence-dialog"
 import { StoryboardSettingsSheet } from "./storyboard-settings-sheet"
 import { StoryboardShotSheet } from "./storyboard-shot-sheet"
 import { StoryboardToolbar } from "./storyboard-toolbar"
+import type { CSSProperties } from "react"
 import "./storyboard.css"
 import type { SettingsFormValues } from "./storyboard-settings-sheet"
 import type { ShotFormValues } from "./storyboard-shot-sheet"

@@ -42,9 +42,7 @@ describe("ClipTag extension", () => {
 
     editor.chain().insertContent(`Edit ${SAMPLE_CLIP_TAG} now`).run()
 
-    const badgeEl = editor.view.dom.querySelector(
-      'span[data-type="clipTag"]',
-    ) as HTMLElement | null
+    const badgeEl = editor.view.dom.querySelector('span[data-type="clipTag"]')
     expect(badgeEl).not.toBeNull()
     expect(badgeEl?.textContent).toBe("clip")
     expect(badgeEl?.getAttribute("data-clip-id")).toBe(SAMPLE_CLIP_ID)
@@ -69,9 +67,7 @@ describe("ClipTag extension", () => {
 
     editor.view.dispatch(editor.state.tr.insertText(SAMPLE_CLIP_TAG))
 
-    const badgeEl = editor.view.dom.querySelector(
-      'span[data-type="clipTag"]',
-    ) as HTMLElement | null
+    const badgeEl = editor.view.dom.querySelector('span[data-type="clipTag"]')
     expect(badgeEl).not.toBeNull()
     expect(badgeEl?.textContent).toBe("clip")
     expect(badgeEl?.className).toContain("rounded-full")
@@ -102,9 +98,7 @@ describe("ClipTag extension", () => {
     const { container } = render(
       createElement(MessageResponse, null, `Check ${SAMPLE_CLIP_TAG} here`),
     )
-    const badgeEl = container.querySelector(
-      'span[data-type="clipTag"]',
-    ) as HTMLElement | null
+    const badgeEl = container.querySelector('span[data-type="clipTag"]')
     expect(badgeEl).not.toBeNull()
     expect(badgeEl?.textContent).toBe("clip")
     expect(badgeEl?.getAttribute("data-clip-id")).toBe(SAMPLE_CLIP_ID)

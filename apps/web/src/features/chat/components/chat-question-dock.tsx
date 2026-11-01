@@ -49,7 +49,7 @@ function ChatQuestionDockInner({
   )
   const { sendCustomTextMessage, loadingState } = useSendMessage(projectId)
   const [dismissedToolCallIds, setDismissedToolCallIds] = useState<
-    Record<string, true>
+    Record<string, boolean | undefined>
   >({})
 
   const activePrompt = extractLatestActiveAskQuestions(runs)
@@ -110,7 +110,7 @@ function QuestionCard({
     }
   }, [currentIndex, total])
 
-  const currentQuestion = questions[currentIndex]
+  const currentQuestion = questions.at(currentIndex)
   if (!currentQuestion) return null
 
   const isFirst = currentIndex === 0

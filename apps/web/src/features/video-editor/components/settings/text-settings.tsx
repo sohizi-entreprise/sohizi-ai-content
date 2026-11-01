@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import { AlignCenter, AlignLeft, AlignRight } from "lucide-react"
 import { Input } from "@sohizi/ui/input"
 import {
@@ -12,6 +11,7 @@ import { Textarea } from "@sohizi/ui/textarea"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { FadeDurationFields } from "./setting-row"
 import { SliderWithValue } from "./slider-with-value"
+import type { ReactNode } from "react"
 import type {
   ClipAnimationIn,
   ClipAnimationOut,

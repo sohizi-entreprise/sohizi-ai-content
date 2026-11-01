@@ -1,19 +1,7 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Player } from "@remotion/player"
 import { ChevronLeft, ChevronRight, ImageIcon, Pause, Play } from "lucide-react"
 import { MainComposition } from "@sohizi/video-composition"
-import {
-  aspectRatioToCss,
-  aspectRatioToDimensions,
-} from "../../extensions/storyboard"
-import type { StoryboardAspectRatio } from "../../extensions/storyboard"
 import {
   Dialog,
   DialogContent,
@@ -21,10 +9,16 @@ import {
   DialogTitle,
 } from "@sohizi/ui/dialog"
 import {
+  aspectRatioToCss,
+  aspectRatioToDimensions,
+} from "../../extensions/storyboard"
+import {
   SEQUENCE_FRAMES_PER_SHOT,
   buildStoryboardSequence,
   shotIndexFromFrame,
 } from "../../extensions/storyboard/storyboard-sequence"
+import type { CSSProperties } from "react"
+import type { StoryboardAspectRatio } from "../../extensions/storyboard"
 import type { SequenceShot } from "../../extensions/storyboard/storyboard-sequence"
 import type { CallbackListener, PlayerRef } from "@remotion/player"
 import type { MainCompositionProps } from "@sohizi/video-composition"

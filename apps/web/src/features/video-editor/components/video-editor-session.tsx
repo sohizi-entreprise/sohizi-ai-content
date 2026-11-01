@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react"
+import { useEffect, useRef } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import "@xzdarcy/react-timeline-editor/dist/react-timeline-editor.css"
@@ -11,6 +11,7 @@ import { PlayerRefProvider } from "../engine/player-ref"
 import { useVideoEditorAutosave } from "../hooks/use-video-autosave"
 import { useVideoEditorHotkeys } from "../hooks/use-video-editor-hotkeys"
 import { useProjectFileTreeInit } from "../hooks/use-project-file-tree-init"
+import type { ReactNode } from "react"
 
 interface VideoEditorSessionProps {
   projectId: string

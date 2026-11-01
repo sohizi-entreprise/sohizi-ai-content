@@ -144,8 +144,8 @@ const PlaceholderDocTracker = Extension.create({
 })
 
 function resolveSkillPos(editor: Editor, pos: number) {
-  const doc = docsForPlaceholder.get(editor) ?? editor.state?.doc
-  if (!doc || pos < 0 || pos > doc.content.size) return null
+  const doc = docsForPlaceholder.get(editor) ?? editor.state.doc
+  if (pos < 0 || pos > doc.content.size) return null
   return doc.resolve(pos)
 }
 

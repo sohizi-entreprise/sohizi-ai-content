@@ -1,6 +1,6 @@
-import type { ReactNode } from "react"
 import { useVideoEditorStore } from "../../store/editor-store"
 import { SliderWithValue } from "./slider-with-value"
+import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 interface SettingRowProps {

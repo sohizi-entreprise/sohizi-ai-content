@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
+  RejectMergeConflictError,
   createMarkdownDiff,
   getMarkdownChangeHunks,
   getMarkdownChangeParts,
-  RejectMergeConflictError,
   rejectPendingMarkdown,
 } from "./diff-markdown"
 

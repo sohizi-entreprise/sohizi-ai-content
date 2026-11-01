@@ -346,9 +346,9 @@ export function settingsToNode(settings: StoryboardSettings): JSONContent {
     type: "storyboardMeta",
     attrs: {
       aspectRatio: parseAspectRatio(settings.aspectRatio),
-      visualStyle: settings.visualStyle ?? "",
+      visualStyle: settings.visualStyle,
       colorPalette: normalizeColorPalette(settings.colorPalette),
-      temporalContext: settings.temporalContext ?? "",
+      temporalContext: settings.temporalContext,
     },
   }
 }

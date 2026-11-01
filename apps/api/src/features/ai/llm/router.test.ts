@@ -124,6 +124,7 @@ function hungStream(): LlmStream {
   return {
     stream: (async function* () {
       await new Promise(() => {})
+      yield { type: "start" }
     })(),
     usage: Promise.resolve(usage),
     finishReason: Promise.resolve("stop" as FinishReason),

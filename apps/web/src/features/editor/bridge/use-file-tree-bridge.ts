@@ -1,8 +1,8 @@
 import { z } from "zod"
 import { create } from "zustand"
 import { insertNodeAt as insertNodeInCache } from "../stores/file-tree-cache"
-import type { FileNodeType, FileTreeNode } from "../types"
 import { defaultFormatForType } from "../utils/file-kind"
+import type { FileNodeType, FileTreeNode } from "../types"
 import type { TreeApi } from "react-arborist"
 import type { QueryClient } from "@tanstack/react-query"
 

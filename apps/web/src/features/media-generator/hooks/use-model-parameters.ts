@@ -89,7 +89,7 @@ export function useValidateParameterValues() {
                   .length === 0
               : parameterType === "boolean"
                 ? !isStoredBoolean(value)
-                : value == null || value === ""
+                : !value
           if (missing) {
             errorMsg = "This field is required"
             assignError(parameter.key, errorMsg)
@@ -113,7 +113,7 @@ export function useValidateParameterValues() {
         }
 
         if (parameterType === "boolean") {
-          if (value != null && value !== "" && !isStoredBoolean(value)) {
+          if (value && !isStoredBoolean(value)) {
             errorMsg = "This field must be a boolean"
             assignError(parameter.key, errorMsg)
           }
