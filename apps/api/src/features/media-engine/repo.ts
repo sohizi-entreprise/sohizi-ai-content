@@ -389,7 +389,12 @@ export const updateAssetRequest = async (
 
 export const patchRequestRouting = async (
   requestId: string,
-  routing: { vendorName: string; apiName: string; providerRequestId: string },
+  routing: {
+    vendorName: string
+    apiName: string
+    providerRequestId: string
+    providerCostUsd?: number
+  },
 ) => {
   await db
     .update(generationRequests)

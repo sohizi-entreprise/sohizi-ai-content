@@ -23,12 +23,13 @@ import {
   BillingService,
   withBilling,
   withBillingAsync,
+  withBillingStream,
   InsufficientCreditsError,
   ReservationExpiredError,
   BillingTimeoutError,
   BillableConfigError,
 } from "../index"
-import type { Billable, BillableAsync } from "../types"
+import type { Billable, BillableAsync, BillableStream } from "../types"
 import { billingContext } from "../index"
 import {
   catalogEntry,
@@ -802,6 +803,109 @@ describe("BillingService.settle", () => {
     ).rejects.toBeInstanceOf(ReservationExpiredError)
     expect(await billing.getBalance(org)).toBe(balanceAfter)
   })
+
+  test("persists providerCostUsd, chargedCredits, and chargedCostUsd in reservation and ledger metadata across under-spend, exact-spend, and overage", async () => {
+    const org = await newOrg()
+    await seedBalance(org, 300n)
+
+    // 1. Under-spend with defined providerCostUsd
+    const underRes = await billing.reserve({
+      organizationId: org,
+      operation: "test.meta.under",
+      estimatedCredits: 100n,
+      ttlMs: 60_000,
+      idempotencyKey: `r:${randomUUID()}`,
+      metadata: { requestId: "req-1" },
+    })
+    const settledUnder = await billing.settle({
+      reservationId: underRes.id,
+      actualCredits: 60n,
+      providerCostUsd: 0.144,
+      metadata: { vendor: "wavespeed" },
+    })
+    expect(settledUnder.metadata).toEqual({
+      requestId: "req-1",
+      vendor: "wavespeed",
+      providerCostUsd: 0.144,
+      chargedCredits: 60,
+      chargedCostUsd: 0.18,
+    })
+    const [underLedger] = await db
+      .select()
+      .from(billingLedger)
+      .where(
+        and(
+          eq(billingLedger.reservationId, underRes.id),
+          eq(billingLedger.kind, "settle_diff"),
+        ),
+      )
+    expect(underLedger.metadata).toEqual({
+      vendor: "wavespeed",
+      providerCostUsd: 0.144,
+      chargedCredits: 60,
+      chargedCostUsd: 0.18,
+    })
+
+    // 2. Exact-spend (diff === 0n) with undefined providerCostUsd
+    const exactRes = await billing.reserve({
+      organizationId: org,
+      operation: "test.meta.exact",
+      estimatedCredits: 50n,
+      ttlMs: 60_000,
+      idempotencyKey: `r:${randomUUID()}`,
+      metadata: { requestId: "req-2" },
+    })
+    const settledExact = await billing.settle({
+      reservationId: exactRes.id,
+      actualCredits: 50n,
+      providerCostUsd: undefined,
+      metadata: { vendor: "replicate" },
+    })
+    expect(settledExact.metadata).toEqual({
+      requestId: "req-2",
+      vendor: "replicate",
+      chargedCredits: 50,
+      chargedCostUsd: 0.15,
+    })
+    expect("providerCostUsd" in (settledExact.metadata ?? {})).toBe(false)
+
+    // 3. Uncovered overage (wallet has 300 - 60 - 50 = 190 left; reserve 100 -> 90 left; settle 250 -> debits 90, uncovered 60 -> chargedCredits = 190)
+    const overageRes = await billing.reserve({
+      organizationId: org,
+      operation: "test.meta.overage",
+      estimatedCredits: 100n,
+      ttlMs: 60_000,
+      idempotencyKey: `r:${randomUUID()}`,
+    })
+    const settledOverage = await billing.settle({
+      reservationId: overageRes.id,
+      actualCredits: 250n,
+      providerCostUsd: 0.6,
+      metadata: { vendor: "openrouter" },
+    })
+    expect(settledOverage.metadata).toEqual({
+      vendor: "openrouter",
+      providerCostUsd: 0.6,
+      chargedCredits: 190,
+      chargedCostUsd: 0.57,
+    })
+    const [overageLedger] = await db
+      .select()
+      .from(billingLedger)
+      .where(
+        and(
+          eq(billingLedger.reservationId, overageRes.id),
+          eq(billingLedger.kind, "overage_uncovered"),
+        ),
+      )
+    expect(overageLedger.metadata).toEqual({
+      vendor: "openrouter",
+      providerCostUsd: 0.6,
+      chargedCredits: 190,
+      chargedCostUsd: 0.57,
+      uncovered: "60",
+    })
+  })
 })
 
 // ----------------------------------------------------------------------------
@@ -877,6 +981,86 @@ describe("withBilling", () => {
     expect(result).toBe("hello-42")
     // 500 - 100 (reserve) + 20 (refund diff on settle) = 420
     expect(await billing.getBalance(org)).toBe(420n)
+  })
+
+  test("forwards providerCostUsd and execution metadata from withBilling and withBillingStream", async () => {
+    const org = await newOrg()
+    await seedBalance(org, 500n)
+
+    let syncReservationId = ""
+    const syncBillable = makeBillable<void, string>({
+      operation: "test.sync.meta",
+      estimateCost: () => 50n,
+      execute: async (_input, ctx) => {
+        syncReservationId = ctx.reservationId
+        return {
+          output: "done",
+          actualCredits: 40n,
+          providerCostUsd: 0.096,
+          metadata: { vendor: "openrouter", modelId: "gpt-test" },
+        }
+      },
+    })
+    const runSync = withBilling(syncBillable, billing)
+    await runSync(undefined as void, {
+      organizationId: org,
+      metadata: { runId: "run-sync" },
+    })
+    const syncRes = await billing.getReservation(syncReservationId)
+    expect(syncRes?.metadata).toEqual({
+      runId: "run-sync",
+      vendor: "openrouter",
+      modelId: "gpt-test",
+      providerCostUsd: 0.096,
+      chargedCredits: 40,
+      chargedCostUsd: 0.12,
+    })
+
+    const streamBillable: BillableStream<void, { done: boolean }> = {
+      operation: "test.stream.meta",
+      timeoutMs: 5_000,
+      ttlMs: 60_000,
+      estimateCost: () => 30n,
+      idempotencyKey: () => `stream:${randomUUID()}`,
+      async *stream() {
+        yield { done: false }
+        yield { done: true }
+      },
+      terminalCredits: (chunk) => (chunk.done ? 20n : null),
+      terminalSettlement: (chunk) =>
+        chunk.done
+          ? {
+              actualCredits: 20n,
+              providerCostUsd: undefined,
+              metadata: { vendor: "vercel-gateway" },
+            }
+          : null,
+    }
+    const runStream = withBillingStream(streamBillable, billing)
+    const chunks: Array<{ done: boolean }> = []
+    for await (const chunk of runStream(undefined as void, {
+      organizationId: org,
+      metadata: { sessionId: "sess-1" },
+    })) {
+      chunks.push(chunk)
+    }
+    expect(chunks).toHaveLength(2)
+    const [streamRes] = await db
+      .select()
+      .from(billingReservations)
+      .where(
+        and(
+          eq(billingReservations.organizationId, org),
+          eq(billingReservations.operation, "test.stream.meta"),
+        ),
+      )
+    expect(streamRes.metadata).toEqual({
+      sessionId: "sess-1",
+      vendor: "vercel-gateway",
+      chargedCredits: 20,
+      chargedCostUsd: 0.06,
+    })
+    expect("providerCostUsd" in (streamRes.metadata ?? {})).toBe(false)
   })
 
   test("refunds and rethrows on execute error", async () => {

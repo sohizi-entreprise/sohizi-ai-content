@@ -7,7 +7,6 @@ import {
   SubmitResponse,
 } from "./type"
 import { replicateFuncs } from "@/lib/replicate"
-import { estimateCatalogMediaCostUsd } from "../catalog-cost"
 
 const TERMINAL_JOB_STATUSES = new Set(["failed", "cancelled", "timeout"])
 
@@ -84,23 +83,12 @@ export class ReplicateProvider implements MediaEngineProvider {
   }
 
   async estimateRequestPrice(
-    modelId: string,
-    payload: SubmitPayload,
+    _modelId: string,
+    _payload: SubmitPayload,
   ): Promise<EstimateRequestPriceResponse> {
-    try {
-      const priceUSD = await estimateCatalogMediaCostUsd(modelId, payload)
-      return {
-        ok: true,
-        priceUSD,
-      }
-    } catch (error) {
-      return {
-        ok: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to estimate Replicate request price",
-      }
+    return {
+      ok: false,
+      error: "Replicate does not support cost estimation",
     }
   }
 }

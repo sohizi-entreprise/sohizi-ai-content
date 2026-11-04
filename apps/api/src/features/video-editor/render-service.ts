@@ -538,18 +538,22 @@ async function settleRender(
   if (!reservation || reservation.status !== "reserved") return
 
   const estimatedCostUsd = Number(reservation.metadata?.estimatedCostUsd)
-  const costUsd =
+  const providerCostUsd =
     typeof accruedCostUsd === "number" && Number.isFinite(accruedCostUsd)
       ? accruedCostUsd
       : Number.isFinite(estimatedCostUsd)
         ? estimatedCostUsd
-        : 0
+        : undefined
+  const costUsd = providerCostUsd ?? 0
 
   await billingService.settle({
     reservationId: job.billingReservationId,
     actualCredits: lambdaUsdToCredits(costUsd, { overbook: false }),
+    providerCostUsd,
     metadata: {
       renderJobId: job.id,
+      vendor: "remotion",
+      ...(providerCostUsd !== undefined ? { providerCostUsd } : {}),
       accruedCostUsd,
       estimatedCostUsd,
     },

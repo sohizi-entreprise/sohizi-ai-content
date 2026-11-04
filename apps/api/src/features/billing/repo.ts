@@ -16,6 +16,7 @@ import {
   ReservationExpiredError,
   ReservationNotFoundError,
 } from "./errors"
+import { LOADED_COST_USD_PER_CREDIT } from "./constants"
 import type { Credits } from "./types"
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
@@ -481,14 +482,66 @@ function debitAvailable(
 export async function settle(input: {
   reservationId: string
   actualCredits: Credits
+  providerCostUsd?: number
   metadata?: Record<string, unknown>
 }): Promise<BillingReservation> {
   if (input.actualCredits < 0n) throw new Error("actualCredits must be >= 0")
   return db.transaction(async (tx) => {
-    const { wallet } = await lockReservationWallet(tx, input.reservationId)
+    const { reservation: currentReservation, wallet } =
+      await lockReservationWallet(tx, input.reservationId)
+    if (currentReservation.status !== "reserved") {
+      throw new ReservationExpiredError(
+        input.reservationId,
+        currentReservation.status,
+      )
+    }
+
+    const diff = currentReservation.estimatedCredits - input.actualCredits
+    let balanceDelta = 0n
+    let paygDelta = 0n
+    let uncovered = 0n
+
+    if (diff > 0n) {
+      const refunded = returnReserved(wallet, currentReservation, diff)
+      balanceDelta = refunded.balanceDelta
+      paygDelta = refunded.paygDelta
+      await saveWallet(wallet, tx)
+    } else if (diff < 0n) {
+      const debited = debitAvailable(wallet, -diff)
+      balanceDelta = debited.balanceDelta
+      paygDelta = debited.paygDelta
+      uncovered = debited.uncovered
+      await saveWallet(wallet, tx)
+    }
+
+    const chargedCredits =
+      currentReservation.estimatedCredits - (balanceDelta + paygDelta)
+    const chargedCostUsd = Number(
+      (Number(chargedCredits) * LOADED_COST_USD_PER_CREDIT).toFixed(6),
+    )
+    const providerCostUsd =
+      input.providerCostUsd ??
+      (typeof input.metadata?.providerCostUsd === "number"
+        ? input.metadata.providerCostUsd
+        : undefined)
+
+    const settlementMetadata: Record<string, unknown> = {
+      ...input.metadata,
+      ...(providerCostUsd !== undefined ? { providerCostUsd } : {}),
+      chargedCredits: Number(chargedCredits),
+      chargedCostUsd,
+    }
+
     const [reservation] = await tx
       .update(billingReservations)
-      .set({ status: "settled", actualCredits: input.actualCredits })
+      .set({
+        status: "settled",
+        actualCredits: input.actualCredits,
+        metadata: {
+          ...(currentReservation.metadata ?? {}),
+          ...settlementMetadata,
+        },
+      })
       .where(
         and(
           eq(billingReservations.id, input.reservationId),
@@ -504,14 +557,8 @@ export async function settle(input: {
         .limit(1)
       throw new ReservationExpiredError(input.reservationId, current.status)
     }
-    const diff = reservation.estimatedCredits - input.actualCredits
+
     if (diff > 0n) {
-      const { balanceDelta, paygDelta } = returnReserved(
-        wallet,
-        reservation,
-        diff,
-      )
-      await saveWallet(wallet, tx)
       if (balanceDelta + paygDelta > 0n)
         await writeLedger(tx, {
           reservationId: reservation.id,
@@ -521,14 +568,9 @@ export async function settle(input: {
           paygDelta,
           balanceAfter: total(wallet),
           idempotencyKey: ledgerKey(reservation.id, "settle_diff"),
-          metadata: input.metadata,
+          metadata: settlementMetadata,
         })
     } else if (diff < 0n) {
-      const { balanceDelta, paygDelta, uncovered } = debitAvailable(
-        wallet,
-        -diff,
-      )
-      await saveWallet(wallet, tx)
       if (balanceDelta + paygDelta < 0n)
         await writeLedger(tx, {
           reservationId: reservation.id,
@@ -538,7 +580,7 @@ export async function settle(input: {
           paygDelta,
           balanceAfter: total(wallet),
           idempotencyKey: ledgerKey(reservation.id, "settle_diff"),
-          metadata: input.metadata,
+          metadata: settlementMetadata,
         })
       if (uncovered > 0n)
         await writeLedger(tx, {
@@ -549,7 +591,7 @@ export async function settle(input: {
           paygDelta: 0n,
           balanceAfter: total(wallet),
           idempotencyKey: ledgerKey(reservation.id, "overage_uncovered"),
-          metadata: { ...input.metadata, uncovered: uncovered.toString() },
+          metadata: { ...settlementMetadata, uncovered: uncovered.toString() },
         })
     }
     return reservation

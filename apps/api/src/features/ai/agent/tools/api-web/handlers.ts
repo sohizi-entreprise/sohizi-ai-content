@@ -30,7 +30,12 @@ function createWebToolBillable(
     estimateCost: () => WEB_TOOL_CREDITS,
     async execute(input, ctx) {
       const output = await input.run(ctx.signal)
-      return { output, actualCredits: WEB_TOOL_CREDITS }
+      return {
+        output,
+        actualCredits: WEB_TOOL_CREDITS,
+        providerCostUsd: undefined,
+        metadata: { vendor: "tavily" },
+      }
     },
     idempotencyKey: (input) => `${operation}:${input.toolCallId}`,
   }

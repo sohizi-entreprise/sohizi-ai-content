@@ -334,19 +334,22 @@ export const handleMediaGeneration = inngest.createFunction(
         return uploaded
       })
 
-      await step.run("settle-credits", () =>
-        billingService.settle({
+      await step.run("settle-credits", () => {
+        const providerCostUsd = sticky?.providerCostUsd
+        const actualCostUsd = providerCostUsd ?? reservation.priceUSD
+        return billingService.settle({
           reservationId: reservation.id,
-          actualCredits: providerCostToActualCredits(reservation.priceUSD, {
+          actualCredits: providerCostToActualCredits(actualCostUsd, {
             overheadRate,
           }),
+          providerCostUsd,
           metadata: {
             requestId,
-            providerCostUsd: reservation.priceUSD,
+            ...(providerCostUsd !== undefined ? { providerCostUsd } : {}),
             vendor: sticky?.vendorName,
           },
-        }),
-      )
+        })
+      })
 
       const assets = await step.run("save-assets", async () => {
         const newAssets: Asset[] = []

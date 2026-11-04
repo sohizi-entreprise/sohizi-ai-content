@@ -172,6 +172,17 @@ describe("ReplicateProvider lifecycle", () => {
     expect(res).toEqual({ requestId: "pred_123", ok: true })
   })
 
+  it("returns ok: false for estimateRequestPrice since Replicate does not expose a vendor cost endpoint", async () => {
+    const provider = new ReplicateProvider("r8_secret")
+    const res = await provider.estimateRequestPrice("openai/gpt-image-2", {
+      prompt: "hi",
+    })
+    expect(res).toEqual({
+      ok: false,
+      error: "Replicate does not support cost estimation",
+    })
+  })
+
   it("maps HTTP errors and network failures onto shared MediaError classes", async () => {
     const provider = new ReplicateProvider("r8_secret")
 

@@ -21,6 +21,7 @@ export type MediaSticky = {
   vendorName: string
   apiName: string
   providerRequestId: string
+  providerCostUsd?: number
   lease: LeaseHandle
 }
 
@@ -33,7 +34,12 @@ function stickyFrom(row: {
   request: Record<string, unknown> | null
 }): MediaSticky | null {
   const routing = row.request?.routing as
-    { apiName?: string; vendorName?: string } | undefined
+    | {
+        apiName?: string
+        vendorName?: string
+        providerCostUsd?: number
+      }
+    | undefined
   const account = row.capacityAccountId
     ? resolveAccount(row.capacityAccountId)
     : undefined
@@ -51,6 +57,9 @@ function stickyFrom(row: {
     vendorName: account.providerName,
     apiName: routing.apiName,
     providerRequestId: row.providerRequestId,
+    ...(typeof routing.providerCostUsd === "number"
+      ? { providerCostUsd: routing.providerCostUsd }
+      : {}),
     lease: row.capacityLease,
   }
 }
@@ -134,10 +143,24 @@ export async function submitMediaWithCapacity(input: {
         input.payload,
       )
       const submitted = await provider.submitRequest(apiName, mapped)
+      let providerCostUsd: number | undefined
+      try {
+        const estimate = await provider.estimateRequestPrice(apiName, mapped)
+        if (
+          estimate.ok &&
+          typeof estimate.priceUSD === "number" &&
+          Number.isFinite(estimate.priceUSD)
+        ) {
+          providerCostUsd = estimate.priceUSD
+        }
+      } catch {
+        // Vendor cost estimation is optional and must not fail a submitted job.
+      }
       await repo.patchRequestRouting(input.requestId, {
         vendorName: account.providerName,
         apiName,
         providerRequestId: submitted.requestId,
+        ...(providerCostUsd !== undefined ? { providerCostUsd } : {}),
       })
       return {
         accountId: account.id,
@@ -145,6 +168,7 @@ export async function submitMediaWithCapacity(input: {
         vendorName: account.providerName,
         apiName,
         providerRequestId: submitted.requestId,
+        ...(providerCostUsd !== undefined ? { providerCostUsd } : {}),
         lease,
       }
     } catch (error) {

@@ -94,3 +94,4 @@
 [ ] Manage audio consistency
 [ ] The agent can generate a submit request that will appear to the user so they can click it and submit themselves. [maybe add a setting that controls that]
 [ ] Add remove background models
+[ ] Caption is not working, move it to media generation

@@ -12,6 +12,7 @@ import type {
   BillableContext,
   BillableResult,
   BillableStream,
+  BillableStreamSettlement,
   Credits,
 } from "./types"
 import { BillingService } from "./service"
@@ -165,10 +166,15 @@ export function withBilling<TInput, TOutput>(
     clearTimeout(timeout)
     combined.cleanup()
 
+    const settleMetadata =
+      ctx.metadata || result.metadata
+        ? { ...ctx.metadata, ...result.metadata }
+        : undefined
     await billing.settle({
       reservationId: reservation.id,
       actualCredits: BigInt(result.actualCredits),
-      metadata: ctx.metadata,
+      providerCostUsd: result.providerCostUsd,
+      metadata: settleMetadata,
     })
     return result.output
   }
@@ -314,12 +320,23 @@ export function withBillingStream<TInput, TChunk>(
     let settled = false
     try {
       for await (const chunk of billable.stream(input, combined.signal)) {
-        const actual = billable.terminalCredits(chunk)
-        if (actual !== null && !settled) {
+        const settlement: BillableStreamSettlement | null =
+          billable.terminalSettlement
+            ? billable.terminalSettlement(chunk)
+            : (() => {
+                const actual = billable.terminalCredits(chunk)
+                return actual !== null ? { actualCredits: actual } : null
+              })()
+        if (settlement !== null && !settled) {
+          const settleMetadata =
+            ctx.metadata || settlement.metadata
+              ? { ...ctx.metadata, ...settlement.metadata }
+              : undefined
           await billing.settle({
             reservationId: reservation.id,
-            actualCredits: BigInt(actual),
-            metadata: ctx.metadata,
+            actualCredits: BigInt(settlement.actualCredits),
+            providerCostUsd: settlement.providerCostUsd,
+            metadata: settleMetadata,
           })
           settled = true
         }

@@ -25,6 +25,14 @@ export interface BillableContext {
 export interface BillableResult<TOutput> {
   output: TOutput
   actualCredits: Credits
+  providerCostUsd?: number
+  metadata?: Record<string, unknown>
+}
+
+export interface BillableStreamSettlement {
+  actualCredits: Credits
+  providerCostUsd?: number
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -72,6 +80,12 @@ export interface BillableStream<TInput, TChunk> {
    * the actual credits to settle. Return `null` for non-terminal chunks.
    */
   terminalCredits(chunk: TChunk): Credits | null
+  /**
+   * Optional richer settlement hook that can also provide `providerCostUsd`
+   * and settlement `metadata` alongside `actualCredits`. When implemented,
+   * `withBillingStream` uses this instead of `terminalCredits`.
+   */
+  terminalSettlement?(chunk: TChunk): BillableStreamSettlement | null
   idempotencyKey(
     input: TInput,
     ctx: {
@@ -118,5 +132,6 @@ export interface ReserveInput {
 export interface SettleInput {
   reservationId: string
   actualCredits: Credits
+  providerCostUsd?: number
   metadata?: Record<string, unknown>
 }

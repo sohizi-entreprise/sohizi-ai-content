@@ -11,6 +11,7 @@ import type {
   BillableContext,
   BillableResult,
   BillableStream,
+  BillableStreamSettlement,
   Credits,
 } from "@/features/billing/types"
 import type { ResolvedTextModel } from "@/features/models/repo"
@@ -455,6 +456,20 @@ export function createBillableLlmClient(
       return null
     },
 
+    terminalSettlement(chunk: LlmChunk): BillableStreamSettlement | null {
+      if (chunk.type === streamEvents.complete) {
+        return {
+          actualCredits: creditsFromUsage(chunk.usage),
+          providerCostUsd: chunk.usage.cost > 0 ? chunk.usage.cost : undefined,
+          metadata: {
+            modelId: model.id,
+            ...(chunk.vendor ? { vendor: chunk.vendor } : {}),
+          },
+        }
+      }
+      return null
+    },
+
     estimateCost(input: WideLlmInput): Credits {
       const estimatedUsage = {
         inputTokens: input.estimatedInputTokens,
@@ -486,6 +501,12 @@ export function createBillableLlmClient(
       return {
         output: toBillableLlmOutput(finalChunk),
         actualCredits: creditsFromUsage(finalChunk.usage),
+        providerCostUsd:
+          finalChunk.usage.cost > 0 ? finalChunk.usage.cost : undefined,
+        metadata: {
+          modelId: model.id,
+          ...(finalChunk.vendor ? { vendor: finalChunk.vendor } : {}),
+        },
       }
     },
 

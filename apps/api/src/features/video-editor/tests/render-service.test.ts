@@ -51,6 +51,11 @@ const createdRemoteRenders: string[] = []
 const cancelledRemoteRenders: string[] = []
 const reservedKeys: string[] = []
 const settledReservations: string[] = []
+const settledInputs: Array<{
+  reservationId: string
+  providerCostUsd?: number
+  metadata?: Record<string, unknown>
+}> = []
 const refundedReservations: string[] = []
 
 function buildJob(overrides: Partial<VideoRenderJob> = {}): VideoRenderJob {
@@ -180,8 +185,13 @@ mock.module("@/features/billing", () => ({
         metadata: { estimatedCostUsd: 0.05 },
       }
     },
-    settle: async (input: { reservationId: string }) => {
+    settle: async (input: {
+      reservationId: string
+      providerCostUsd?: number
+      metadata?: Record<string, unknown>
+    }) => {
       settledReservations.push(input.reservationId)
+      settledInputs.push(input)
       return { id: input.reservationId, status: "settled" }
     },
     refund: async (reservationId: string) => {
@@ -321,6 +331,7 @@ beforeEach(() => {
   cancelledRemoteRenders.length = 0
   reservedKeys.length = 0
   settledReservations.length = 0
+  settledInputs.length = 0
   refundedReservations.length = 0
   capacityReleases.length = 0
   composition = { id: COMPOSITION_ID, projectId: PROJECT_ID, version: 7 }
@@ -494,6 +505,20 @@ describe("getRender", () => {
       `renders/${PROJECT_ID}/${job.id}.mp4`,
     )
     expect(settledReservations).toEqual([job.id])
+    expect(settledInputs).toEqual([
+      {
+        reservationId: job.id,
+        actualCredits: expect.any(BigInt),
+        providerCostUsd: 0.05,
+        metadata: {
+          renderJobId: job.id,
+          vendor: "remotion",
+          providerCostUsd: 0.05,
+          accruedCostUsd: undefined,
+          estimatedCostUsd: 0.05,
+        },
+      },
+    ])
   })
 
   test("surfaces a sanitized failure", async () => {
