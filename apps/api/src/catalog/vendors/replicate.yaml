@@ -1,0 +1,333 @@
+id: vendor_replicate
+name: replicate
+adapter: replicate
+url: https://replicate.com/
+kind: media
+rateLimit: { rpm: 600, burst: 100, maxConcurrency: 20 }
+circuitConfig: { cooldownMs: 15000, probeTtlMs: 30000 }
+models:
+  - {
+      id: openai/gpt-image-2.5-sunburst/text-to-image,
+      apiName: openai/gpt-image-2.5-sunburst,
+      priority: 120,
+    }
+  - {
+      id: openai/gpt-image-2.5-flare/text-to-image,
+      apiName: openai/gpt-image-2.5-flare,
+      priority: 110,
+    }
+  - {
+      id: openai/gpt-image-2/text-to-image,
+      apiName: openai/gpt-image-2,
+      priority: 100,
+    }
+  - {
+      id: openai/gpt-image-2.5-sunburst/edit,
+      apiName: openai/gpt-image-2.5-sunburst,
+      priority: 120,
+    }
+  - {
+      id: openai/gpt-image-2.5-flare/edit,
+      apiName: openai/gpt-image-2.5-flare,
+      priority: 110,
+    }
+  - { id: openai/gpt-image-2/edit, apiName: openai/gpt-image-2, priority: 100 }
+  - {
+      id: google/nano-banana-pro/text-to-image,
+      apiName: google/nano-banana-pro,
+      priority: 120,
+    }
+  - {
+      id: google/nano-banana-2/text-to-image,
+      apiName: google/nano-banana-2,
+      priority: 100,
+    }
+  - {
+      id: google/nano-banana-2/text-to-image-fast,
+      apiName: google/nano-banana-2-lite,
+      priority: 90,
+    }
+  - {
+      id: google/nano-banana-pro/edit,
+      apiName: google/nano-banana-pro,
+      priority: 120,
+    }
+  - {
+      id: google/nano-banana-2/edit,
+      apiName: google/nano-banana-2,
+      priority: 100,
+    }
+  - {
+      id: google/nano-banana-2/edit-fast,
+      apiName: google/nano-banana-2-lite,
+      priority: 90,
+    }
+  - {
+      id: bytedance/seedance-2.5/text-to-video,
+      apiName: bytedance/seedance-2.5,
+      priority: 120,
+    }
+  - {
+      id: bytedance/seedance-2.0/text-to-video,
+      apiName: bytedance/seedance-2.0,
+      priority: 100,
+    }
+  - {
+      id: bytedance/seedance-2.0-fast/text-to-video,
+      apiName: bytedance/seedance-2.0-fast,
+      priority: 90,
+    }
+  - {
+      id: bytedance/seedance-2.5/image-to-video,
+      apiName: bytedance/seedance-2.5,
+      priority: 120,
+    }
+  - {
+      id: bytedance/seedance-2.0/image-to-video,
+      apiName: bytedance/seedance-2.0,
+      priority: 100,
+    }
+  - {
+      id: bytedance/seedance-2.0-fast/image-to-video,
+      apiName: bytedance/seedance-2.0-fast,
+      priority: 90,
+    }
+  - {
+      id: bytedance/seedance-2.5/video-edit,
+      apiName: bytedance/seedance-2.5,
+      priority: 120,
+    }
+  - {
+      id: bytedance/seedance-2.0/video-edit,
+      apiName: bytedance/seedance-2.0,
+      priority: 100,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-pro/text-to-video,
+      apiName: kwaivgi/kling-v3-omni-video,
+      priority: 110,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-std/text-to-video,
+      apiName: kwaivgi/kling-v3-omni-video,
+      priority: 90,
+    }
+  - {
+      id: kwaivgi/kling-v3.0-pro/text-to-video,
+      apiName: kwaivgi/kling-v3-video,
+      priority: 100,
+    }
+  - {
+      id: kwaivgi/kling-v3.0-std/text-to-video,
+      apiName: kwaivgi/kling-v3-video,
+      priority: 80,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-pro/image-to-video,
+      apiName: kwaivgi/kling-v3-omni-video,
+      priority: 110,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-std/image-to-video,
+      apiName: kwaivgi/kling-v3-omni-video,
+      priority: 90,
+    }
+  - {
+      id: kwaivgi/kling-v3.0-pro/image-to-video,
+      apiName: kwaivgi/kling-v3-video,
+      priority: 100,
+    }
+  - {
+      id: kwaivgi/kling-v3.0-std/image-to-video,
+      apiName: kwaivgi/kling-v3-video,
+      priority: 80,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-pro/video-edit,
+      apiName: kwaivgi/kling-v3-omni-video,
+      priority: 110,
+    }
+  - {
+      id: kwaivgi/kling-video-o3-std/video-edit,
+      apiName: kwaivgi/kling-v3-omni-video,
+      priority: 90,
+    }
+  - {
+      id: google/gemini-omni-1.1-flash/text-to-video,
+      apiName: google/gemini-omni-1.1,
+      priority: 110,
+    }
+  - {
+      id: google/gemini-omni-1.1-flash/image-to-video,
+      apiName: google/gemini-omni-1.1,
+      priority: 110,
+    }
+  - {
+      id: google/gemini-omni-1.1-flash/video-edit,
+      apiName: google/gemini-omni-1.1,
+      priority: 110,
+    }
+  - {
+      id: kwaivgi/kling-v3.0-pro/motion-control,
+      apiName: kwaivgi/kling-v3-motion-control,
+      priority: 120,
+    }
+  - {
+      id: google/gemini-3.8-flash/text-to-speech,
+      apiName: google/gemini-3.8-flash-tts,
+      priority: 120,
+    }
+  - { id: minimax/music-cover, apiName: minimax/music-cover, priority: 80 }
+  - {
+      id: clarity-ai/pro-upscaler,
+      apiName: philz1337x/clarity-pro-upscaler,
+      priority: 120,
+    }
+  - {
+      id: bytedance/video-upscaler,
+      apiName: bytedance/video-upscaler,
+      priority: 100,
+    }
+parametersMapping:
+  parameter_prompt: { vendorParamName: prompt }
+  parameter_negative_prompt: { vendorParamName: negative_prompt }
+  parameter_aspect_ratio:
+    vendorParamName: aspect_ratio
+    optionMapping:
+      option_aspect_ratio_auto: { value: auto, mappedValue: match_input_image }
+      option_aspect_ratio_1_1: { value: "1:1", mappedValue: "1:1" }
+      option_aspect_ratio_16_9: { value: "16:9", mappedValue: "16:9" }
+      option_aspect_ratio_9_16: { value: "9:16", mappedValue: "9:16" }
+      option_aspect_ratio_4_3: { value: "4:3", mappedValue: "4:3" }
+      option_aspect_ratio_3_4: { value: "3:4", mappedValue: "3:4" }
+      option_aspect_ratio_3_2: { value: "3:2", mappedValue: "3:2" }
+      option_aspect_ratio_2_3: { value: "2:3", mappedValue: "2:3" }
+      option_aspect_ratio_4_5: { value: "4:5", mappedValue: "4:5" }
+      option_aspect_ratio_5_4: { value: "5:4", mappedValue: "5:4" }
+      option_aspect_ratio_21_9: { value: "21:9", mappedValue: "21:9" }
+      option_aspect_ratio_9_21: { value: "9:21", mappedValue: "9:21" }
+      option_aspect_ratio_2_1: { value: "2:1", mappedValue: "2:1" }
+      option_aspect_ratio_1_2: { value: "1:2", mappedValue: "1:2" }
+      option_aspect_ratio_3_1: { value: "3:1", mappedValue: "3:1" }
+      option_aspect_ratio_1_3: { value: "1:3", mappedValue: "1:3" }
+      option_aspect_ratio_4_1: { value: "4:1", mappedValue: "4:1" }
+      option_aspect_ratio_1_4: { value: "1:4", mappedValue: "1:4" }
+      option_aspect_ratio_8_1: { value: "8:1", mappedValue: "8:1" }
+      option_aspect_ratio_1_8: { value: "1:8", mappedValue: "1:8" }
+  parameter_resolution:
+    vendorParamName: resolution
+    optionMapping:
+      option_resolution_360p: { value: 360p, mappedValue: 360p }
+      option_resolution_480p: { value: 480p, mappedValue: 480p }
+      option_resolution_720p: { value: 720p, mappedValue: 720p }
+      option_resolution_1080p: { value: 1080p, mappedValue: 1080p }
+      option_resolution_0_5k: { value: 0.5k, mappedValue: 512px }
+      option_resolution_1k: { value: 1k, mappedValue: 1K }
+      option_resolution_2k: { value: 2k, mappedValue: 2K }
+      option_resolution_4k: { value: 4k, mappedValue: 4K }
+  parameter_quality:
+    vendorParamName: quality
+    optionMapping:
+      option_quality_low: { value: low, mappedValue: low }
+      option_quality_medium: { value: medium, mappedValue: medium }
+      option_quality_high: { value: high, mappedValue: high }
+      option_quality_xhigh: { value: xhigh, mappedValue: xhigh }
+      option_quality_max: { value: max, mappedValue: max }
+  parameter_duration: { vendorParamName: duration }
+  parameter_output_format:
+    vendorParamName: output_format
+    optionMapping:
+      option_output_format_png: { value: png, mappedValue: png }
+      option_output_format_jpeg: { value: jpeg, mappedValue: jpg }
+      option_output_format_webp: { value: webp, mappedValue: webp }
+  parameter_generate_audio: { vendorParamName: generate_audio }
+  parameter_background:
+    vendorParamName: background
+    optionMapping:
+      option_background_auto: { value: auto, mappedValue: auto }
+      option_background_opaque: { value: opaque, mappedValue: opaque }
+      option_background_transparent:
+        { value: transparent, mappedValue: transparent }
+  parameter_image: { vendorParamName: image }
+  parameter_images: { vendorParamName: images }
+  parameter_last_image: { vendorParamName: last_frame_image }
+  parameter_video: { vendorParamName: video }
+  parameter_reference_images: { vendorParamName: reference_images }
+  parameter_reference_videos: { vendorParamName: reference_videos }
+  parameter_reference_audios: { vendorParamName: reference_audios }
+  parameter_audio: { vendorParamName: audio }
+  parameter_voice: { vendorParamName: voice }
+  parameter_stability: { vendorParamName: stability }
+  parameter_similarity: { vendorParamName: similarity_boost }
+  parameter_style_instructions: { vendorParamName: style }
+  parameter_character_orientation:
+    vendorParamName: character_orientation
+    optionMapping:
+      option_character_orientation_image: { value: image, mappedValue: image }
+      option_character_orientation_video: { value: video, mappedValue: video }
+  parameter_keep_original_sound: { vendorParamName: keep_original_sound }
+  parameter_sync_mode:
+    vendorParamName: sync_mode
+    optionMapping:
+      option_sync_mode_bounce: { value: bounce, mappedValue: bounce }
+      option_sync_mode_loop: { value: loop, mappedValue: loop }
+      option_sync_mode_cut_off: { value: cut_off, mappedValue: cut_off }
+      option_sync_mode_silence: { value: silence, mappedValue: silence }
+      option_sync_mode_remap: { value: remap, mappedValue: remap }
+  parameter_creativity: { vendorParamName: creativity }
+  parameter_target_megapixels: { vendorParamName: scale_factor }
+  parameter_lyrics: { vendorParamName: lyrics }
+  parameter_is_instrumental: { vendorParamName: is_instrumental }
+  parameter_lyrics_optimizer: { vendorParamName: lyrics_optimizer }
+  parameter_number_of_songs: { vendorParamName: number_of_songs }
+  parameter_audio_format:
+    vendorParamName: audio_format
+    optionMapping:
+      option_audio_format_mp3: { value: mp3, mappedValue: mp3 }
+      option_audio_format_wav: { value: wav, mappedValue: wav }
+      option_audio_format_flac: { value: flac, mappedValue: flac }
+      option_audio_format_aac: { value: aac, mappedValue: aac }
+modelParameterOverrides:
+  openai/gpt-image-2.5-sunburst/edit:
+    parameter_images: { vendorParamName: input_images }
+  openai/gpt-image-2.5-flare/edit:
+    parameter_images: { vendorParamName: input_images }
+  openai/gpt-image-2/edit:
+    parameter_images: { vendorParamName: input_images }
+  google/nano-banana-pro/edit:
+    parameter_images: { vendorParamName: image_input }
+  google/nano-banana-2/edit:
+    parameter_images: { vendorParamName: image_input }
+  google/nano-banana-2/edit-fast:
+    parameter_images: { vendorParamName: image_input }
+  bytedance/seedance-2.5/video-edit:
+    parameter_video: { vendorParamName: reference_videos }
+  bytedance/seedance-2.0/video-edit:
+    parameter_video: { vendorParamName: reference_videos }
+  kwaivgi/kling-video-o3-pro/image-to-video:
+    parameter_image: { vendorParamName: start_image }
+    parameter_last_image: { vendorParamName: end_image }
+  kwaivgi/kling-video-o3-std/image-to-video:
+    parameter_image: { vendorParamName: start_image }
+    parameter_last_image: { vendorParamName: end_image }
+  kwaivgi/kling-v3.0-pro/image-to-video:
+    parameter_image: { vendorParamName: start_image }
+    parameter_last_image: { vendorParamName: end_image }
+  kwaivgi/kling-v3.0-std/image-to-video:
+    parameter_image: { vendorParamName: start_image }
+    parameter_last_image: { vendorParamName: end_image }
+  kwaivgi/kling-video-o3-pro/video-edit:
+    parameter_video: { vendorParamName: reference_video }
+    parameter_images: { vendorParamName: reference_images }
+  kwaivgi/kling-video-o3-std/video-edit:
+    parameter_video: { vendorParamName: reference_video }
+    parameter_images: { vendorParamName: reference_images }
+  google/gemini-omni-1.1-flash/image-to-video:
+    parameter_last_image: { vendorParamName: last_frame }
+  google/gemini-3.8-flash/text-to-speech:
+    parameter_prompt: { vendorParamName: text }
+    parameter_style_instructions: { vendorParamName: style }
+  minimax/music-cover:
+    parameter_audio: { vendorParamName: audio_url }
+  bytedance/video-upscaler:
+    parameter_resolution: { vendorParamName: target_resolution }

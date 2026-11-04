@@ -1,17 +1,24 @@
 import { MediaConfigurationError } from "../errors"
 import type { MediaEngineProvider } from "./type"
+import { ReplicateProvider } from "./replicate"
 import { WaveSpeedProvider } from "./wave-speed"
 
 export const WAVESPEED_ADAPTER = "wavespeed"
+export const REPLICATE_ADAPTER = "replicate"
 
 type MediaProviderConstructor = new (apiKey: string) => MediaEngineProvider
 
 const PROVIDER_CLASSES: Record<string, MediaProviderConstructor> = {
   [WAVESPEED_ADAPTER]: WaveSpeedProvider,
+  [REPLICATE_ADAPTER]: ReplicateProvider,
 }
 
 function apiKeyEnvName(vendorName: string): string {
   return `${vendorName.toUpperCase().replace(/-/g, "_")}_API_KEY`
+}
+
+function apiTokenEnvName(vendorName: string): string {
+  return `${vendorName.toUpperCase().replace(/-/g, "_")}_API_TOKEN`
 }
 
 export function listRegisteredMediaAdapters(): string[] {
@@ -23,7 +30,10 @@ export function isRegisteredMediaAdapter(name: string): boolean {
 }
 
 export function hasProviderApiKey(vendorName: string): boolean {
-  return Boolean(process.env[apiKeyEnvName(vendorName)])
+  return Boolean(
+    process.env[apiKeyEnvName(vendorName)] ||
+    process.env[apiTokenEnvName(vendorName)],
+  )
 }
 
 export function registerMediaAdapter(

@@ -105,6 +105,22 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
     ],
   },
   {
+    name: "replicate",
+    adapter: "replicate",
+    tasks: ["media"],
+    strategy: "priority",
+    accounts: [
+      account(
+        "replicate:primary",
+        { ...DEFAULT_CIRCUIT, rpm: 600, burst: 100, maxConcurrency: 20 },
+        {
+          credentialEnv: "REPLICATE_API_TOKEN",
+          credentialFallbackEnv: "REPLICATE_API_KEY",
+        },
+      ),
+    ],
+  },
+  {
     name: "openrouter",
     adapter: "openrouter",
     tasks: ["llm"],

@@ -190,7 +190,7 @@ export interface MediaEngineProvider {
   getRequestData: (requestId: string) => Promise<GetRequestDataResponse>
   cancelRequest: (requestId: string) => Promise<CancelResponse>
   estimateRequestPrice: (
-    model: string,
+    modelId: string,
     payload: SubmitPayload,
   ) => Promise<EstimateRequestPriceResponse>
 }
