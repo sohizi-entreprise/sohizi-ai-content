@@ -88,3 +88,9 @@
 [ ] Add the ability to create asset file
 [ ] Error for /system level files
 [ ] Handle caption generation / for the agent as well
+
+<!--  -->
+
+[ ] Manage audio consistency
+[ ] The agent can generate a submit request that will appear to the user so they can click it and submit themselves. [maybe add a setting that controls that]
+[ ] Add remove background models
