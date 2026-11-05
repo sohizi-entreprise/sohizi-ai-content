@@ -205,6 +205,7 @@ export class Agent {
       }
     } finally {
       this.stateManager.dropNotifiedTerminalJobs()
+      this.stateManager.clearDoneTodos()
       // Persist optionally based on the agent config
       await this.persistence?.persist(
         this.stateManager.getState(),

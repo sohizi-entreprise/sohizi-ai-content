@@ -1,5 +1,5 @@
 import { createHash } from "crypto"
-import { PROVIDE_STATUS_UPDATE_TOOL_NAME } from "../tools/progress-update"
+// import { PROVIDE_STATUS_UPDATE_TOOL_NAME } from "../tools/progress-update"
 
 export type ActionCategory = "write" | "read" | "meta" | "job-poll"
 
@@ -86,12 +86,12 @@ const DEFAULT_CONFIG: Required<LoopDetectorConfig> = {
   maxNudgesBeforeStop: 2,
 }
 
-const META_TOOLS = new Set([
-  PROVIDE_STATUS_UPDATE_TOOL_NAME,
-  "manageTasks",
-  "manageTodoList",
-  "apiDocRead",
-])
+// const META_TOOLS = new Set([
+//   PROVIDE_STATUS_UPDATE_TOOL_NAME,
+//   "manageTasks",
+//   "manageTodoList",
+//   "apiDocRead",
+// ])
 
 const STANDALONE_WRITE_TOOLS = new Set(["saveMemory", "submitHtmlComposition"])
 
@@ -170,9 +170,9 @@ export function classifyActionCategory(
   method: string | undefined,
   success: boolean,
 ): ActionCategory {
-  if (META_TOOLS.has(toolName)) {
-    return "meta"
-  }
+  // if (META_TOOLS.has(toolName)) {
+  //   return "meta"
+  // }
 
   if (
     toolName === "mediaOperationsAPI" &&

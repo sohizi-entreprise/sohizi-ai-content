@@ -2,7 +2,12 @@ import { ChevronDown } from "lucide-react"
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { Suspense, useMemo, useState } from "react"
 import { Link, useParams, useRouterState } from "@tanstack/react-router"
-import { IconCheck, IconFocus2, IconLayoutSidebar } from "@tabler/icons-react"
+import {
+  IconCheck,
+  IconFocus2,
+  IconLayoutSidebar,
+  IconLayoutSidebarRight,
+} from "@tabler/icons-react"
 import { Button } from "@sohizi/ui/button"
 import {
   Dialog,
@@ -32,6 +37,8 @@ export function AppHeader() {
   const sidebarCollapsed = useEditorStore((s) => s.sidebarCollapsed)
   const isEditorPage =
     pathname.includes("/editor") && !pathname.includes("/video-editor")
+  const isMediaPage = pathname.includes("/generate")
+  const isSkillMarket = pathname.includes("/skill-market")
 
   return (
     <header className="flex h-11 shrink-0 items-center justify-between border-border  px-3">
@@ -79,7 +86,7 @@ export function AppHeader() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className={cn("flex items-center gap-4", isSkillMarket && "hidden")}>
         <button
           onClick={() => activateFocusMode(chatContext)}
           className="cursor-pointer"
@@ -87,12 +94,24 @@ export function AppHeader() {
           <IconFocus2 className="size-5 text-foreground" />
         </button>
 
-        <button
-          onClick={() => toggleChatPanel(chatContext)}
-          className="cursor-pointer"
-        >
-          <ColibriMascot state="idle" size={24} />
-        </button>
+        {isMediaPage && (
+          <button
+            onClick={() => toggleChatPanel(chatContext)}
+            className="cursor-pointer"
+          >
+            <IconLayoutSidebarRight className="size-5 text-foreground" />
+          </button>
+        )}
+
+        {isEditorPage && (
+          <button
+            onClick={() => toggleChatPanel(chatContext)}
+            className="cursor-pointer flex items-center gap-2 border rounded-xl px-2 py-1"
+          >
+            <ColibriMascot state="idle" size={24} />
+            <span className="text-sm font-medium">Ask Koli</span>
+          </button>
+        )}
       </div>
     </header>
   )

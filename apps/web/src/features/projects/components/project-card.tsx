@@ -28,19 +28,21 @@ import { Button } from "@sohizi/ui/button"
 import { Input } from "@sohizi/ui/input"
 import { Label } from "@sohizi/ui/label"
 import { Spinner } from "@sohizi/ui/spinner"
-import { updateProjectMutationOptions } from "../query-mutation"
+import {
+  deleteProjectMutationOptions,
+  updateProjectMutationOptions,
+} from "../query-mutation"
 import { renameProjectSchema } from "../schema"
 import type { FormEvent } from "react"
 import type { ProjectListItem } from "../type"
 import { timeFromNow } from "@/lib/utils"
 
 type ProjectCardProps = ProjectListItem & {
-  onDelete?: () => void
   display?: "list" | "grid"
 }
 
 export default function ProjectCard(props: ProjectCardProps) {
-  const { id, title, onDelete, createdAt, display = "grid" } = props
+  const { id, title, createdAt, display = "grid" } = props
 
   if (display === "list") {
     return <ProjectCardList {...props} />
@@ -58,7 +60,7 @@ export default function ProjectCard(props: ProjectCardProps) {
                             {genre}
                         </p> */}
           </div>
-          <ProjectCardAction projectId={id} title={title} onDelete={onDelete} />
+          <ProjectCardAction projectId={id} title={title} />
         </div>
       </CardHeader>
 
@@ -83,7 +85,7 @@ export default function ProjectCard(props: ProjectCardProps) {
 }
 
 function ProjectCardList(props: ProjectCardProps) {
-  const { id, title, onDelete, createdAt } = props
+  const { id, title, createdAt } = props
 
   return (
     <div className="glass-panel py-4 px-6 rounded-2xl transition-all duration-400 hover:border-primary/30! group cursor-pointer flex gap-4 items-center">
@@ -109,7 +111,7 @@ function ProjectCardList(props: ProjectCardProps) {
       </div>
 
       <div>
-        <ProjectCardAction projectId={id} title={title} onDelete={onDelete} />
+        <ProjectCardAction projectId={id} title={title} />
       </div>
     </div>
   )
@@ -118,13 +120,12 @@ function ProjectCardList(props: ProjectCardProps) {
 function ProjectCardAction({
   projectId,
   title,
-  onDelete,
 }: {
   projectId: string
   title: string
-  onDelete?: () => void
 }) {
   const [renameOpen, setRenameOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   return (
     <div
@@ -157,7 +158,7 @@ function ProjectCardAction({
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              onDelete?.()
+              setDeleteOpen(true)
             }}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -170,6 +171,12 @@ function ProjectCardAction({
         title={title}
         projectId={projectId}
         onOpenChange={setRenameOpen}
+      />
+      <DeleteProjectDialog
+        open={deleteOpen}
+        title={title}
+        projectId={projectId}
+        onOpenChange={setDeleteOpen}
       />
     </div>
   )
@@ -274,6 +281,119 @@ function RenameProjectDialog({
             <Button type="submit" disabled={isPending || !name.trim()}>
               {isPending ? <Spinner /> : null}
               {isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function DeleteProjectDialog({
+  open,
+  title,
+  projectId,
+  onOpenChange,
+}: {
+  open: boolean
+  title: string
+  projectId: string
+  onOpenChange: (open: boolean) => void
+}) {
+  const [confirmTitle, setConfirmTitle] = useState("")
+  const [error, setError] = useState("")
+  const { mutate: deleteProject, isPending } = useMutation(
+    deleteProjectMutationOptions,
+  )
+
+  useEffect(() => {
+    if (!open) return
+    setConfirmTitle("")
+    setError("")
+  }, [open])
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setError("")
+
+    if (confirmTitle !== title) {
+      setError("Title does not match")
+      return
+    }
+
+    deleteProject(
+      { id: projectId, title: confirmTitle },
+      {
+        onSuccess: () => {
+          toast.success("Project deleted")
+          onOpenChange(false)
+        },
+        onError: (deleteError) => {
+          if (
+            isAxiosError(deleteError) &&
+            typeof deleteError.response?.data?.error === "string"
+          ) {
+            setError(deleteError.response.data.error)
+            return
+          }
+          setError(
+            deleteError instanceof Error
+              ? deleteError.message
+              : "Failed to delete project",
+          )
+        },
+      },
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <DialogHeader>
+          <DialogTitle>Delete project</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone. Enter{" "}
+            <span className="font-semibold text-foreground">{title}</span> to
+            confirm.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor={`delete-project-${projectId}`}>Project title</Label>
+            <Input
+              id={`delete-project-${projectId}`}
+              type="text"
+              value={confirmTitle}
+              placeholder={title}
+              onChange={(event) => {
+                setConfirmTitle(event.target.value)
+                setError("")
+              }}
+              required
+              autoFocus
+            />
+          </div>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={isPending || confirmTitle !== title}
+            >
+              {isPending ? <Spinner /> : null}
+              {isPending ? "Deleting..." : "Confirm"}
             </Button>
           </DialogFooter>
         </form>

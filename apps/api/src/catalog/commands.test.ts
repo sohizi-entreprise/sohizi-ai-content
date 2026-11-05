@@ -17,6 +17,8 @@ describe("commands", () => {
       "script",
       "storyboard",
       "end-to-end",
+      "brainstorm",
+      "remix",
     ])
     expect(second).toBe(first)
   })

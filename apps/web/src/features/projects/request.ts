@@ -40,8 +40,10 @@ export const getProject = async (
   }
 }
 
-export const deleteProject = async (id: string) => {
-  const response = await api.delete(`/projects/${id}`)
+export const deleteProject = async (id: string, title: string) => {
+  const response = await api.delete(`/projects/${id}`, {
+    params: { title },
+  })
   return response.data
 }
 

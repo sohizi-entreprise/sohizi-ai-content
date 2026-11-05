@@ -5,7 +5,7 @@ import {
   IconFilesFilled,
   IconPhotoFilled,
   IconUserFilled,
-  IconVideoPlusFilled,
+  // IconVideoPlusFilled,
 } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
 
@@ -22,12 +22,12 @@ const ITEMS = [
     label: "AI media generator",
     link: "/projects/$projectId/generate",
   },
-  {
-    id: "video-editor",
-    icon: IconVideoPlusFilled,
-    label: "Video editor",
-    link: "/projects/$projectId/video-editor",
-  },
+  // {
+  //   id: "video-editor",
+  //   icon: IconVideoPlusFilled,
+  //   label: "Video editor",
+  //   link: "/projects/$projectId/video-editor",
+  // },
   {
     id: "skill-market",
     icon: IconCategoryFilled,

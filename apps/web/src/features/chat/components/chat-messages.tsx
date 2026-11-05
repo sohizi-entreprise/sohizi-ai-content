@@ -2,15 +2,14 @@ import { useCallback, useEffect, useRef } from "react"
 import { IconLoader2 } from "@tabler/icons-react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useShallow } from "zustand/shallow"
-import { ColibriMascot } from "@sohizi/ui/colibri-mascot"
 import { useChatStore } from "../store/chat-store"
 import { listAgentRunsInfiniteQueryOptions } from "../query-mutation"
+import { ChatEmptyState } from "./chat-empty-state"
 import { ChatRunBlock } from "./chat-run-block"
 import type { StoreConversation } from "../store/chat-store"
 import {
   Conversation,
   ConversationContent,
-  ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation"
 
@@ -26,7 +25,7 @@ export function ChatMessages({
   )
 
   if (!conversation) {
-    return <RenderEmpty />
+    return <RenderEmpty conversationKey="no-conversation" />
   }
 
   return (
@@ -91,7 +90,7 @@ function RenderAgentRuns(props: {
   }
 
   if (runs.length === 0) {
-    return <RenderEmpty />
+    return <RenderEmpty conversationKey={conversation.id} />
   }
 
   return (
@@ -112,14 +111,6 @@ function RenderAgentRuns(props: {
   )
 }
 
-function RenderEmpty() {
-  return (
-    <div className="flex flex-1 items-center justify-center p-8">
-      <ConversationEmptyState
-        icon={<ColibriMascot state="loading" size={60} />}
-        title="Start a conversation"
-        description="Ask anything about your project, reference files with @, and let the agent help you create."
-      />
-    </div>
-  )
+function RenderEmpty({ conversationKey }: { conversationKey: string }) {
+  return <ChatEmptyState conversationKey={conversationKey} />
 }

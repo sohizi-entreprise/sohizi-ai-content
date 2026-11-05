@@ -96,6 +96,10 @@ export class AgentStateManager {
   setTodos(todos: TodoItem[]): void {
     this.state.todos = todos
   }
+
+  clearDoneTodos(): void {
+    this.state.todos = this.state.todos.filter((todo) => todo.status !== "done")
+  }
   finishRun(): void {
     this.state.status = "finished"
   }

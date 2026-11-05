@@ -85,7 +85,8 @@ export const createProjectMutationOptions = mutationOptions({
 })
 
 export const deleteProjectMutationOptions = mutationOptions({
-  mutationFn: (id: string) => requests.deleteProject(id),
+  mutationFn: (data: { id: string; title: string }) =>
+    requests.deleteProject(data.id, data.title),
   meta: {
     invalidateQueries: [keysFactory.projects()],
   },

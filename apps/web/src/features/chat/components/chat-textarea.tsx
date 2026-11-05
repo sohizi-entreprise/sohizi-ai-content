@@ -124,8 +124,7 @@ export default function ChatTextarea(props: ChatTextareaProps) {
       }),
       CommandMention.configure({
         HTMLAttributes: {
-          class:
-            "inline-flex rounded bg-white/10 px-1 py-0 text-zinc-100 ring-1 ring-white/10",
+          class: "font-medium text-primary",
         },
         suggestion: commandMentionSuggestion,
       }),

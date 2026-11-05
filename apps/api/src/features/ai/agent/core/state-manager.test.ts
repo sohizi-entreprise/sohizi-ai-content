@@ -268,3 +268,22 @@ describe("AgentStateManager fulfilled vendor", () => {
     expect(state.fulfilledVendor).toBe("vercel-gateway, openrouter")
   })
 })
+
+describe("AgentStateManager todos", () => {
+  it("clearDoneTodos removes only tasks with status done", () => {
+    const state = new AgentStateManager()
+    state.setTodos([
+      { id: "task_1", task: "First task", status: "done" },
+      { id: "task_2", task: "Second task", status: "in_progress" },
+      { id: "task_3", task: "Third task", status: "pending" },
+      { id: "task_4", task: "Fourth task", status: "done" },
+    ])
+
+    state.clearDoneTodos()
+
+    expect(state.todos).toEqual([
+      { id: "task_2", task: "Second task", status: "in_progress" },
+      { id: "task_3", task: "Third task", status: "pending" },
+    ])
+  })
+})

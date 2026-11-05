@@ -1,4 +1,4 @@
-import { useMutation, useSuspenseInfiniteQuery } from "@tanstack/react-query"
+import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { Link, useSearch } from "@tanstack/react-router"
 import { Skeleton } from "@sohizi/ui/skeleton"
 import {
@@ -8,10 +8,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@sohizi/ui/empty"
-import {
-  deleteProjectMutationOptions,
-  getListProjectsQueryOptions,
-} from "../query-mutation"
+import { getListProjectsQueryOptions } from "../query-mutation"
 import CreateProject from "./create-project"
 import ProjectCard from "./project-card"
 import { cn } from "@/lib/utils"
@@ -36,7 +33,6 @@ function ListProjectsContent({ organizationId }: { organizationId: string }) {
       organizationId,
     }),
   )
-  const { mutate: deleteProject } = useMutation(deleteProjectMutationOptions)
   const { display } = useSearch({ from: "/_authenticated/_sidebar/" })
 
   if (projects.length === 0) {
@@ -57,11 +53,7 @@ function ListProjectsContent({ organizationId }: { organizationId: string }) {
           className="block"
           preload={false}
         >
-          <ProjectCard
-            {...project}
-            onDelete={() => deleteProject(project.id)}
-            display={display}
-          />
+          <ProjectCard {...project} display={display} />
         </Link>
       ))}
     </div>

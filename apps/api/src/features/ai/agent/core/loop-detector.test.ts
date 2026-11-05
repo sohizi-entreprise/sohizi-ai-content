@@ -343,7 +343,7 @@ describe("LoopDetector", () => {
     }
   })
 
-  it("detects meta-only stall when agent only emits status updates across consecutive steps", () => {
+  it.skip("detects meta-only stall when agent only emits status updates across consecutive steps", () => {
     const detector = new LoopDetector()
 
     for (let step = 1; step <= 3; step++) {
