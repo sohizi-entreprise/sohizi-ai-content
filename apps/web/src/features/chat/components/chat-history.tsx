@@ -1,6 +1,14 @@
-import { IconHistory, IconLoader2, IconTrash, IconX } from "@tabler/icons-react"
+import {
+  IconCheck,
+  IconFingerprint,
+  IconHistory,
+  IconLoader2,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react"
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query"
 import { useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@sohizi/ui/button"
 import {
   Sheet,
@@ -98,10 +106,26 @@ function ConversationItem({
   const { mutate: deleteConversation, isPending } = useMutation(
     deleteConversationMutationOptions(projectId),
   )
+  const [copied, setCopied] = useState(false)
   const activeConversationId = useChatStore(
     (state) => state.activeConversation?.id,
   )
   const resetChatStore = useChatStore((state) => state.reset)
+
+  const handleCopyConversationId = async (
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    e.stopPropagation()
+    e.preventDefault()
+    try {
+      await navigator.clipboard.writeText(conversation.id)
+      setCopied(true)
+      toast.success("Conversation ID copied")
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error("Failed to copy conversation ID")
+    }
+  }
 
   const handleDeleteConversation = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation()
@@ -133,20 +157,36 @@ function ConversationItem({
           {timeFromNow(conversation.createdAt)}
         </div>
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        aria-label="Delete"
-        onClick={handleDeleteConversation}
-        disabled={isPending}
-      >
-        {isPending ? (
-          <IconLoader2 className="size-4 animate-spin" />
-        ) : (
-          <IconTrash className="size-4" />
-        )}
-      </Button>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Copy conversation ID"
+          title="Copy conversation ID"
+          onClick={handleCopyConversationId}
+        >
+          {copied ? (
+            <IconCheck className="size-4" />
+          ) : (
+            <IconFingerprint className="size-4" />
+          )}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Delete"
+          onClick={handleDeleteConversation}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <IconLoader2 className="size-4 animate-spin" />
+          ) : (
+            <IconTrash className="size-4" />
+          )}
+        </Button>
+      </div>
     </div>
   )
 }

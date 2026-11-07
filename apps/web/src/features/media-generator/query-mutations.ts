@@ -243,6 +243,7 @@ function toAiGeneratedMediaRequest(
     status: run.status,
     request: run.request,
     error: run.error,
+    credits: null,
     createdAt: run.createdAt,
     updatedAt: run.updatedAt,
     assets: [],

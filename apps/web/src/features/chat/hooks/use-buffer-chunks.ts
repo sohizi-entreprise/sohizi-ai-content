@@ -124,10 +124,22 @@ export function useBufferChunks({
           onTitleUpdate?.(conversationId, title)
         }
       },
-      done: (_, { closeEventSource }) => {
+      done: (data, { closeEventSource }) => {
         finishedRef.current = true
         setMessages((prev) => stopStreamingParts(prev))
-        const finalError = abortedRef.current ? null : streamErrorRef.current
+        const doneError =
+          data &&
+          typeof data === "object" &&
+          "error" in data &&
+          typeof (data as { error?: unknown }).error === "string"
+            ? (data as { error: string }).error
+            : null
+        if (doneError) {
+          recordStreamError(doneError)
+        }
+        const finalError = abortedRef.current
+          ? null
+          : (doneError ?? streamErrorRef.current)
         const finalStatus = finalError ? "error" : "finished"
         onFinish(finalStatus, finalError)
         closeEventSource()

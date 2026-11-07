@@ -26,7 +26,12 @@ import { getErrorMessage } from "@/utils/get-error-message"
 import { ZipArchive } from "archiver"
 import { PassThrough, Readable } from "node:stream"
 import { inngest } from "@/lib/inngest/client"
-import { estimateCatalogMediaCredits } from "./catalog-cost"
+import {
+  estimateCatalogMediaCostUsd,
+  estimateCatalogMediaCredits,
+  mediaOverheadRate,
+} from "./catalog-cost"
+import { providerCostToCredits } from "./generators/cost-utils"
 import {
   acquireUserSlot,
   releaseUserSlot,
@@ -209,8 +214,18 @@ export const generateAsset = async (payload: RunAgentPayload) => {
     context: payload.context,
   }
   const requestId = uuidv4()
+  const reservationId = uuidv4()
   const mediaType = toProviderMediaType(payload.context)
   const leaseTtlMs = mediaType === "video" ? 60 * 60 * 1000 : 30 * 60 * 1000
+  const overheadRate = mediaOverheadRate(mediaType)
+  const priceUSD = await estimateCatalogMediaCostUsd(
+    payload.model,
+    payload.settings,
+  )
+  const estimatedCredits = providerCostToCredits(priceUSD, {
+    overheadRate,
+  })
+
   let userLease = null as Awaited<ReturnType<typeof acquireUserSlot>>
   try {
     userLease = await acquireUserSlot({
@@ -224,8 +239,27 @@ export const generateAsset = async (payload: RunAgentPayload) => {
     throw error
   }
 
+  let reservedReservationId: string | null = null
   let created = false
   try {
+    const reservation = await billingService.reserve({
+      organizationId: payload.organizationId,
+      userId: payload.userId,
+      operation: `media:${mediaType}`,
+      estimatedCredits,
+      ttlMs: leaseTtlMs,
+      id: reservationId,
+      idempotencyKey: `media:${requestId}:${payload.model}`,
+      metadata: {
+        requestId,
+        projectId: payload.projectId,
+        kind: mediaType,
+        model: payload.model,
+        estimatedCostUsd: priceUSD,
+      },
+    })
+    reservedReservationId = reservation.id
+
     const run = await repo.createAssetRequest(
       payload.projectId,
       payload.userId,
@@ -233,6 +267,7 @@ export const generateAsset = async (payload: RunAgentPayload) => {
       payload.analyticsConsentId,
       requestId,
       userLease,
+      reservation.id,
     )
     created = true
     await markStreamActive(run.id)
@@ -248,7 +283,8 @@ export const generateAsset = async (payload: RunAgentPayload) => {
         payload: payload.settings,
         referenceFiles: payload.context.referenceFiles || [],
         mediaType,
-        _reservationId: uuidv4(),
+        _reservationId: reservation.id,
+        priceUSD,
         analyticsConsentId: payload.analyticsConsentId,
       },
     })
@@ -265,6 +301,13 @@ export const generateAsset = async (payload: RunAgentPayload) => {
     )
     return run
   } catch (error) {
+    if (reservedReservationId) {
+      await safeRefund(
+        billingService,
+        reservedReservationId,
+        "media-enqueue-failed",
+      )
+    }
     await releaseUserSlot(userLease).catch((releaseError) => {
       console.error("[media] failed to release user slot", releaseError)
     })

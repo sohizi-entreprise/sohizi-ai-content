@@ -1,8 +1,11 @@
 import { useMutation } from "@tanstack/react-query"
+import { toast } from "sonner"
 import { startGenerationMutationOptions } from "../query-mutations"
 import { buildGenerationPayload } from "../lib/generation-payload"
 import { useMediaGeneratorStore } from "../store/media-generator-store"
 import type { ModelParameterBinding } from "@/features/admin/types"
+import { classifyRunError } from "@/features/chat/lib/run-error"
+import { getErrorMessage } from "@/lib/errors"
 
 export const useSendRequest = (projectId: string) => {
   const { mutate: handleSendRequest, isPending } = useMutation(
@@ -42,7 +45,11 @@ export const useSendRequest = (projectId: string) => {
         updateParameterValue("prompt", "")
       },
       onError: (error) => {
-        console.error(error)
+        const rawMessage = getErrorMessage(error, "Failed to start generation")
+        const classified = classifyRunError(rawMessage)
+        toast.error(
+          classified.kind === "billing" ? classified.message : rawMessage,
+        )
       },
     })
   }

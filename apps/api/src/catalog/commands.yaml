@@ -2,79 +2,14 @@ commands:
   - id: plan
     name: Plan
     promptModifier: |
-      Plan the idea or concept the user provided, and do nothing else. Do not
-      write the final script, storyboard, or scenes, and do not generate the
-      finished video or audio. The only deliverable is a plan document.
-
-      The plan must capture every detail another agent would need to execute
-      the project later with highly consistent results, so no creative decision
-      is left to guesswork.
-
-      File handling:
-      - Create a new document file named plan_<name>.md, where <name> is a short
-        lowercase slug of the project (for example plan_summer-sale-promo.md).
-      - If the user asks to edit or refine an existing plan, update that file in
-        place. Do not create a new file.
-
-      Reference images:
-      - A plan with reference images is preferred over one without. Link each
-        reference image in the relevant section of the plan, with a note on
-        what it locks in (look, shape, color, mood, and so on).
-      - Only add references for the most important details of the story:
-        - main characters
-        - key props that repeat across multiple shots
-        - the main visual style and world (the primary environment, overall
-          look, and palette)
-      - Budget: 6 reference images maximum for the whole plan, regardless of
-        source. Spend them wisely. Fewer is fine. Do not overgenerate: skip
-        minor characters, one-off props, background details, and individual
-        shots or moments. Only add an image when it will keep multiple scenes
-        consistent.
-
-      Reference image sources. For each reference, pick the first source that
-      fits:
-      1. Project files or assets: use it when the subject already exists in the
-         project. Reuse the existing file rather than recreating it.
-      2. Web: use it when the user mentions real-world or historic subjects
-         (real people, places, products, landmarks, events, periods). Find an
-         accurate image online.
-      3. Generate: use it when no existing reference is available, or when a
-         web-found image must be adapted to a specific style the user
-         imposed (for example turning a photo into an illustration or
-         a given art style).
-      4. YouTube frame: use it when the user provides or references a YouTube
-         video. Extract a frame that clearly shows the character, prop, or
-         look to capture.
-
-      Follow this file structure, in order, and omit a section only if it truly
-      does not apply:
-      1. Title and one-line summary
-      2. Goal and audience: purpose, viewer, platform, desired outcome
-      3. Format and specs: duration, aspect ratio, resolution, frame rate, language
-      4. Story and structure: hook, beats or acts, pacing, ending/call to action
-      5. Tone and style: mood, visual style, camera language, editing rhythm,
-         music and sound direction
-      6. Characters or subjects: appearance, wardrobe, voice, personality, reference images
-      7. Locations and props: description, lighting, time of day, reference images
-      8. Visual identity: color palette, typography, branding, do and don't list
-      9. Scene breakdown: numbered scenes with purpose, duration, setting, who is
-         in it, action, and which references apply (outline only, not final shots)
-      10. Audio plan: narration or dialogue approach, voice, music, sound effects
-      11. Assets and references: full index of reference images and source
-          material, with file paths
-      12. Production steps: ordered tasks for the executing agent, with the
-          tools or skills to use and what each step produces
-      13. Consistency rules: fixed attributes that must never change across
-          scenes (names, looks, colors, voice, framing conventions)
-      14. Open questions and assumptions: anything unconfirmed with the user
-
-      Be specific and concrete. Prefer exact values and descriptions over vague
-      wording. When done, tell the user where the plan file is and stop.
+      Plan the idea or concept provided by the user. Follow the rules in `/system/skills/generate-plan`.
   - id: script
     name: Script
     promptModifier: >
       Write the script. Turn the idea into spoken lines, scene beats, and
-      narration that the video can be produced from.
+      narration that the video can be produced from. When writing to a document
+      file, follow `/system/syntax/document` for any structured cards, narrative
+      timelines, or inline badges.
   - id: storyboard
     name: Storyboard
     promptModifier: >
@@ -90,8 +25,11 @@ commands:
     promptModifier: >
       Brainstorm fresh creative angles, hooks, and concepts with the user.
       Explore distinct directions and trade-offs before committing to a script or generating media.
+      When saving brainstorm concepts to a document file, follow `/system/syntax/document`
+      (such as `:::card`, `:::moodboard`, `:::palette`, `:::sources`, and `:badge[]`).
   - id: remix
     name: Remix
     promptModifier: >
       Remix and reimagine the referenced or described content into new formats,
       angles, or variations while preserving what makes the original work.
+      When writing to a document file, follow `/system/syntax/document`.

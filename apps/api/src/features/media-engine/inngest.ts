@@ -17,10 +17,7 @@ import type { GenerationRequestAsset } from "@/type"
 import { estimateCatalogMediaCostUsd, mediaOverheadRate } from "./catalog-cost"
 import { extractOutputUrls } from "./providers/utils"
 import type { SubmitPayload } from "./providers/type"
-import {
-  providerCostToActualCredits,
-  providerCostToCredits,
-} from "./generators/cost-utils"
+import { providerCostToActualCredits } from "./generators/cost-utils"
 import { getErrorMessage } from "@/utils/get-error-message"
 import {
   pollMediaRequest,
@@ -52,6 +49,7 @@ type ProviderMediaEventData = {
   referenceFiles: ReferenceFile[]
   mediaType: ProviderMediaType
   _reservationId: string
+  priceUSD?: number
   analyticsConsentId?: string | null
 }
 
@@ -133,7 +131,11 @@ export const handleMediaGeneration = inngest.createFunction(
         await releaseMediaLeases(data.requestId).catch((error) => {
           console.error("[media] failure release failed", data.requestId, error)
         })
-        await finalizeGenerationRequest(data.requestId, "failed")
+        await finalizeGenerationRequest(
+          data.requestId,
+          "failed",
+          getErrorMessage(event.data.error, "Media generation failed"),
+        )
         await captureConsentedEvent(
           data.analyticsConsentId,
           data.userId,
@@ -153,11 +155,11 @@ export const handleMediaGeneration = inngest.createFunction(
     const {
       requestId,
       projectId,
-      organizationId,
       userId,
       model,
       payload,
       mediaType,
+      _reservationId: reservationId,
     } = data
     const overheadRate = mediaOverheadRate(mediaType)
     const reservationTtlMs = mediaReservationTtlMs(mediaType)
@@ -195,41 +197,6 @@ export const handleMediaGeneration = inngest.createFunction(
     }
 
     try {
-      const reservation = await step.run("reserve-credits", async () => {
-        try {
-          const priceUSD = await estimateCatalogMediaCostUsd(
-            model,
-            requestPayload,
-          )
-          const estimatedCredits = providerCostToCredits(priceUSD, {
-            overheadRate,
-          })
-          const res = await billingService.reserve({
-            organizationId,
-            userId,
-            operation: `media:${mediaType}`,
-            estimatedCredits,
-            ttlMs: reservationTtlMs,
-            id: data._reservationId,
-            idempotencyKey: `media:${requestId}:${model}`,
-            metadata: {
-              requestId,
-              projectId,
-              kind: mediaType,
-              model,
-            },
-          })
-          await repo.setMediaBillingReservation(requestId, res.id)
-          return {
-            id: res.id,
-            estimatedCredits: estimatedCredits.toString(),
-            priceUSD,
-          }
-        } catch (error) {
-          wrapNonRetryable(error)
-        }
-      })
-
       try {
         sticky = await step.run("submit-job", async () => {
           const { modelId, ...payload } = requestPayload
@@ -251,7 +218,7 @@ export const handleMediaGeneration = inngest.createFunction(
 
         await step.run(`renew-reservation-${attempt}`, async () => {
           await billingService.renewIfNearExpiry(
-            reservation.id,
+            reservationId,
             reservationTtlMs,
           )
           await renewMediaLeases(requestId, reservationTtlMs)
@@ -279,11 +246,17 @@ export const handleMediaGeneration = inngest.createFunction(
         }
 
         if (isTerminalFailureStatus(String(pollResult.status))) {
+          const providerError =
+            "error" in pollResult &&
+            typeof pollResult.error === "string" &&
+            pollResult.error.trim().length > 0
+              ? pollResult.error
+              : `Provider generation ${String(pollResult.status)}`
           await step.run("refund-on-provider-failure", () =>
-            safeRefund(billingService, reservation.id, "media-provider-failed"),
+            safeRefund(billingService, reservationId, "media-provider-failed"),
           )
           await step.run("mark-error-on-provider-failure", () =>
-            finalizeGenerationRequest(requestId, "failed"),
+            finalizeGenerationRequest(requestId, "failed", providerError),
           )
           await captureConsentedEvent(
             data.analyticsConsentId,
@@ -302,15 +275,18 @@ export const handleMediaGeneration = inngest.createFunction(
 
       const outputUrls = extractOutputUrls(resultData)
       if (outputUrls.length === 0) {
+        const emptyOrTimeoutError = resultData
+          ? "Provider returned no valid media output"
+          : "Media generation timed out"
         await step.run("refund-on-timeout-or-empty", () =>
           safeRefund(
             billingService,
-            reservation.id,
+            reservationId,
             resultData ? "media-no-valid-urls" : "media-poll-timeout",
           ),
         )
         await step.run("mark-error-on-timeout-or-empty", () =>
-          finalizeGenerationRequest(requestId, "failed"),
+          finalizeGenerationRequest(requestId, "failed", emptyOrTimeoutError),
         )
         await captureConsentedEvent(
           data.analyticsConsentId,
@@ -334,11 +310,14 @@ export const handleMediaGeneration = inngest.createFunction(
         return uploaded
       })
 
-      await step.run("settle-credits", () => {
+      await step.run("settle-credits", async () => {
         const providerCostUsd = sticky?.providerCostUsd
-        const actualCostUsd = providerCostUsd ?? reservation.priceUSD
+        const actualCostUsd =
+          providerCostUsd ??
+          data.priceUSD ??
+          (await estimateCatalogMediaCostUsd(model, requestPayload))
         return billingService.settle({
-          reservationId: reservation.id,
+          reservationId,
           actualCredits: providerCostToActualCredits(actualCostUsd, {
             overheadRate,
           }),
@@ -397,7 +376,7 @@ export const handleMediaGeneration = inngest.createFunction(
         return newAssets
       })
 
-      return { requestId, assets, reservationId: reservation.id }
+      return { requestId, assets, reservationId }
     } finally {
       await step.run("release-slot", async () => {
         await releaseMediaLeases(requestId)

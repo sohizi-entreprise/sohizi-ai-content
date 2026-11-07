@@ -24,6 +24,7 @@ type GetJobResultResponse = {
   status:
     "completed" | "failed" | "cancelled" | "timeout" | "processing" | "created"
   outputs: unknown
+  error?: unknown
 }
 
 const KNOWN_JOB_STATUSES = new Set([
@@ -89,6 +90,7 @@ export const getJobResult = async (apiKey: string, jobId: string) => {
   return {
     status,
     outputs: result.data.outputs,
+    error: result.data.error,
   }
 }
 
@@ -129,6 +131,39 @@ function retryAfterMsFrom(response: Response): number | undefined {
   return parseRetryAfterHeader(response.headers.get("retry-after") ?? "")
 }
 
+function extractErrorDetail(errorText: string, fallback: string): string {
+  if (!errorText) return fallback
+  try {
+    const parsed = JSON.parse(errorText) as {
+      message?: unknown
+      detail?: unknown
+      error?: unknown
+      data?: { error?: unknown; message?: unknown }
+    }
+    if (typeof parsed.data?.error === "string" && parsed.data.error.trim()) {
+      return parsed.data.error
+    }
+    if (
+      typeof parsed.data?.message === "string" &&
+      parsed.data.message.trim()
+    ) {
+      return parsed.data.message
+    }
+    if (typeof parsed.error === "string" && parsed.error.trim()) {
+      return parsed.error
+    }
+    if (typeof parsed.detail === "string" && parsed.detail.trim()) {
+      return parsed.detail
+    }
+    if (typeof parsed.message === "string" && parsed.message.trim()) {
+      return parsed.message
+    }
+  } catch {
+    // fall through
+  }
+  return errorText
+}
+
 async function requestJson(
   url: string,
   options: RequestInit = {},
@@ -149,28 +184,29 @@ async function requestJson(
   if (!response.ok) {
     const status = response.status
     const error = await response.text()
+    const detail = extractErrorDetail(error, response.statusText)
     if (status === 401) {
-      throw MediaAccountError.fromResponse(status, "Invalid API Key")
+      throw MediaAccountError.fromResponse(status, detail || "Invalid API Key")
     }
-    if (status === 400) {
-      throw new MediaValidationError("Invalid Parameters")
+    if (status === 400 || status === 422) {
+      throw new MediaValidationError(detail || "Invalid Parameters")
     }
     if (status === 429) {
       throw MediaRateLimitError.fromResponse(
         status,
-        "Too Many Requests",
+        detail || "Too Many Requests",
         undefined,
         retryAfterMsFrom(response),
       )
     }
-    if (status === 500) {
+    if (status >= 500) {
       console.error("WaveSpeed API Error:", error)
       throw MediaServiceUnavailableError.fromResponse(
         status,
-        "Internal Server Error",
+        detail || "Internal Server Error",
       )
     }
-    throw MediaProviderError.fromResponse(status, error)
+    throw MediaProviderError.fromResponse(status, detail)
   }
   return response.json()
 }

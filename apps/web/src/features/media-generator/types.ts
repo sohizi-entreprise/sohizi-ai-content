@@ -7,6 +7,7 @@ export type MediaAssetGenerationRequest = {
   status: "pending" | "processing" | "completed" | "failed" | "aborted"
   request: Record<string, unknown> | null
   error: string | null
+  credits?: number | null
 }
 
 export type MediaAsset = {
@@ -39,6 +40,7 @@ export type AiGeneratedMediaRequest = {
   status: MediaAssetGenerationRequest["status"]
   request: Record<string, unknown> | null
   error: string | null
+  credits?: number | null
   createdAt: string
   updatedAt: string
   assets: Array<AiGeneratedRequestAsset>

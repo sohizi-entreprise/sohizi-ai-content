@@ -14,6 +14,7 @@ type CreateGenerationRequestPayload = {
   analyticsConsentId?: string | null
   type: GenerationRequestType
   request: Record<string, unknown>
+  billingReservationId?: string | null
   userLease?: {
     poolId: string
     holderId: string
@@ -126,6 +127,7 @@ export const listMediaJobsMissingPoller = async (
       projectId: generationRequests.projectId,
       userId: generationRequests.userId,
       request: generationRequests.request,
+      billingReservationId: generationRequests.billingReservationId,
     })
     .from(generationRequests)
     .where(

@@ -363,35 +363,74 @@
 
 .tiptap-editor-content .tableWrapper {
   margin: 1.5rem 0;
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  overflow-x: auto;
 }
 
 .tiptap-editor-content table {
   width: 100%;
   border-collapse: collapse;
-  border-style: hidden;
-  font-size: 0.9rem;
+  font-size: 0.925rem;
+  line-height: 1.45;
 }
 
 .tiptap-editor-content th,
 .tiptap-editor-content td {
   position: relative;
-  border: 1px solid var(--border);
-  padding: 0.65rem 0.8rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0.9rem 0.85rem;
   text-align: left;
   vertical-align: top;
 }
 
+.tiptap-editor-content th:first-child,
+.tiptap-editor-content td:first-child {
+  padding-left: 0;
+}
+
+.tiptap-editor-content th:last-child,
+.tiptap-editor-content td:last-child {
+  padding-right: 0;
+}
+
 .tiptap-editor-content th {
-  background: color-mix(in oklch, var(--muted) 55%, transparent);
+  background: transparent;
   color: var(--foreground);
-  font-weight: 600;
+  font-weight: 650;
+  vertical-align: bottom;
+  padding-top: 0.5rem;
+  padding-bottom: 0.75rem;
 }
 
 .tiptap-editor-content td {
+  background: transparent;
   color: var(--foreground);
+}
+
+.tiptap-editor-content tr:last-child td {
+  border-bottom: 0;
+}
+
+.tiptap-editor-content th > p,
+.tiptap-editor-content td > p {
+  margin: 0;
+}
+
+.tiptap-editor-content th > * + *,
+.tiptap-editor-content td > * + * {
+  margin-top: 0.35rem;
+}
+
+.tiptap-editor-content table a:not(.file-tag-link) {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: color-mix(
+    in oklch,
+    var(--foreground) 55%,
+    transparent
+  );
+  text-underline-offset: 0.22em;
 }
 
 .tiptap-editor-content .selectedCell::after {
@@ -441,25 +480,6 @@
   float: left;
   height: 0;
   pointer-events: none;
-}
-
-/* Patch diff marks used by aligned-markdown HTML serialization */
-.tiptap-editor-content .patch-diff-addition {
-  background: oklch(0.92 0.12 145 / 0.5);
-  color: oklch(0.35 0.15 145);
-  text-decoration: none;
-  border-radius: 3px;
-  padding: 0.125em 0.25em;
-}
-
-.tiptap-editor-content .patch-diff-deletion {
-  background: oklch(0.92 0.1 25 / 0.4);
-  color: oklch(0.5 0.15 25);
-  text-decoration: line-through;
-  text-decoration-color: oklch(0.55 0.2 25);
-  text-decoration-thickness: 2px;
-  border-radius: 3px;
-  padding: 0.125em 0.25em;
 }
 
 .tiptap-editor-content a.file-tag-link {

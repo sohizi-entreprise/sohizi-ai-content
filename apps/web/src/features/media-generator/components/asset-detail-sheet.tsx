@@ -1,4 +1,12 @@
-import { Copy, Download, Folder, Link2, RotateCcw, X } from "lucide-react"
+import {
+  Copy,
+  Download,
+  Folder,
+  Link2,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@sohizi/ui/button"
 import {
@@ -20,10 +28,14 @@ import {
 type AssetDetailSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  asset: MediaAsset
-  onMove: () => void
-  onDownload: () => void
-  onCopyLink: () => void
+  asset?: MediaAsset
+  request?: Record<string, unknown> | null
+  credits?: number | null
+  error?: string | null
+  onMove?: () => void
+  onDownload?: () => void
+  onCopyLink?: () => void
+  onDelete?: () => void
   onReuse: () => void
   children?: ReactNode
 }
@@ -32,13 +44,29 @@ export function AssetDetailSheet({
   open,
   onOpenChange,
   asset,
+  request,
+  credits,
+  error,
   onMove,
   onDownload,
   onCopyLink,
+  onDelete,
   onReuse,
   children,
 }: AssetDetailSheetProps) {
-  const details = getGenerationDetails(asset.generationRequest?.request ?? null)
+  const resolvedRequest = request ?? asset?.generationRequest?.request ?? null
+  const resolvedCredits = credits ?? asset?.generationRequest?.credits ?? null
+  const resolvedError = error ?? asset?.generationRequest?.error ?? null
+  const normalizedError =
+    typeof resolvedError === "string" && resolvedError.trim().length > 0
+      ? resolvedError.trim()
+      : null
+  const details = getGenerationDetails(resolvedRequest, {
+    credits: resolvedCredits,
+    error: normalizedError,
+  })
+  const showMediaStage =
+    asset != null && (asset.type === "image" || asset.type === "video")
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -52,21 +80,39 @@ export function AssetDetailSheet({
           <SheetDescription className="sr-only">
             Preview this generated asset and the settings used to create it.
           </SheetDescription>
-          <HeaderAction icon={Folder} label="Move" onClick={onMove} />
-          <HeaderAction icon={Download} label="Download" onClick={onDownload} />
-          <HeaderAction icon={Link2} label="Copy link" onClick={onCopyLink} />
+          {onMove ? (
+            <HeaderAction icon={Folder} label="Move" onClick={onMove} />
+          ) : null}
+          {onDownload ? (
+            <HeaderAction
+              icon={Download}
+              label="Download"
+              onClick={onDownload}
+            />
+          ) : null}
+          {onCopyLink ? (
+            <HeaderAction icon={Link2} label="Copy link" onClick={onCopyLink} />
+          ) : null}
           <HeaderAction icon={RotateCcw} label="Reuse" onClick={onReuse} />
+          {onDelete ? (
+            <HeaderAction icon={Trash2} label="Delete" onClick={onDelete} />
+          ) : null}
         </SheetHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <AssetMediaStage asset={asset} />
+          {showMediaStage ? <AssetMediaStage asset={asset} /> : null}
           <div className="mx-auto w-full max-w-5xl space-y-8 px-5 py-8 sm:px-8">
             {details ? (
               <GenerationDetails details={details} />
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No settings were stored for this request.
-              </p>
+              <>
+                <p className="text-sm text-muted-foreground">
+                  No settings were stored for this request.
+                </p>
+                {normalizedError ? (
+                  <GenerationErrorSection error={normalizedError} />
+                ) : null}
+              </>
             )}
           </div>
         </div>
@@ -210,7 +256,22 @@ function GenerationDetails({
           </div>
         </section>
       ) : null}
+
+      {details.error ? <GenerationErrorSection error={details.error} /> : null}
     </div>
+  )
+}
+
+function GenerationErrorSection({ error }: { error: string }) {
+  return (
+    <section className="space-y-3">
+      <SectionLabel>Error</SectionLabel>
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3">
+        <p className="whitespace-pre-wrap wrap-break-word text-sm text-destructive">
+          {error}
+        </p>
+      </div>
+    </section>
   )
 }
 

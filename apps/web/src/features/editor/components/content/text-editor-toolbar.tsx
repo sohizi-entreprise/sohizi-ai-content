@@ -2,20 +2,28 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
+  BadgeCheck,
   Bold,
+  Clock,
+  FileText,
+  FolderTree,
+  Globe,
   Heading1,
   Heading2,
   Heading3,
   Highlighter,
   ImageIcon,
   Italic,
+  LayoutDashboard,
   Link2,
   List,
   ListOrdered,
   ListTodo,
   Minus,
-  Play,
+  Palette,
   Plus,
+  SlidersHorizontal,
+  Sparkles,
   Strikethrough,
   Table2,
   TextAlignJustify,
@@ -35,7 +43,6 @@ import {
 import { Separator } from "@sohizi/ui/separator"
 import { Button } from "@sohizi/ui/button"
 import { LinkInsertDialog } from "./link-insert-dialog"
-import { YoutubeEmbedDialog } from "./youtube-embed-dialog"
 import type { Editor } from "@tiptap/core"
 import type { LucideProps } from "lucide-react"
 import type { ClassValue } from "clsx"
@@ -123,7 +130,6 @@ export default function TextEditorToolbar({
   portalContainer?: HTMLElement | null
 }) {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
-  const [youtubeDialogOpen, setYoutubeDialogOpen] = useState(false)
   const dropdownContentProps = getToolbarDropdownContentProps(portalContainer)
 
   const editorState = useEditorState({
@@ -275,13 +281,59 @@ export default function TextEditorToolbar({
       onClick: () => {},
       children: [
         {
-          label: "Image",
+          label: "Media",
           icon: ImageIcon,
+          onClick: () =>
+            editor.chain().focus().insertMediaBlock({ type: "image" }).run(),
+        },
+        {
+          label: "Card",
+          icon: Sparkles,
+          onClick: () => editor.chain().focus().insertCardBlock().run(),
+        },
+        {
+          label: "Moodboard",
+          icon: LayoutDashboard,
+          onClick: () => editor.chain().focus().insertMoodboardBlock().run(),
+        },
+        {
+          label: "Palette",
+          icon: Palette,
+          onClick: () => editor.chain().focus().insertPaletteBlock().run(),
+        },
+        {
+          label: "Timeline",
+          icon: Clock,
+          onClick: () => editor.chain().focus().insertTimelineBlock().run(),
+        },
+        {
+          label: "Properties",
+          icon: SlidersHorizontal,
+          onClick: () => editor.chain().focus().insertPropertiesBlock().run(),
+        },
+        {
+          label: "Attributes",
+          icon: FileText,
+          onClick: () => editor.chain().focus().insertAttributesBlock().run(),
+        },
+        {
+          label: "Tree",
+          icon: FolderTree,
+          onClick: () => editor.chain().focus().insertTreeBlock().run(),
+        },
+        {
+          label: "Sources",
+          icon: Globe,
+          onClick: () => editor.chain().focus().insertSourcesBlock().run(),
+        },
+        {
+          label: "Badge",
+          icon: BadgeCheck,
           onClick: () =>
             editor
               .chain()
               .focus()
-              .insertImageLayout({ layout: "single" })
+              .insertInlineBadge({ label: "Approved", color: "highlight" })
               .run(),
         },
         {
@@ -299,12 +351,6 @@ export default function TextEditorToolbar({
           },
           disabled: editorState.isSelectionEmpty,
           isActive: !editorState.isSelectionEmpty && editorState.isLink,
-          restoreFocus: false,
-        },
-        {
-          label: "YouTube",
-          icon: Play,
-          onClick: () => setYoutubeDialogOpen(true),
           restoreFocus: false,
         },
         {
@@ -365,11 +411,6 @@ export default function TextEditorToolbar({
         onOpenChange={setLinkDialogOpen}
         initialHref={editorState.linkHref}
         hasLink={editorState.isLink}
-      />
-      <YoutubeEmbedDialog
-        editor={editor}
-        open={youtubeDialogOpen}
-        onOpenChange={setYoutubeDialogOpen}
       />
     </div>
   )

@@ -47,4 +47,14 @@ describe("commands", () => {
       "storyboard",
     ])
   })
+
+  it("instructs document-producing commands to use /system/syntax/document", async () => {
+    resetCommandCache()
+    const commands = await getCommands()
+    const plan = commands.find((command) => command.id === "plan")
+    const brainstorm = commands.find((command) => command.id === "brainstorm")
+
+    expect(plan?.promptModifier).toContain("/system/syntax/document")
+    expect(brainstorm?.promptModifier).toContain("/system/syntax/document")
+  })
 })

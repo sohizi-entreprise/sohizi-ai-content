@@ -31,7 +31,8 @@ function terminalErrorMessage(outputs: unknown, status: string): string {
   if (typeof outputs === "string" && outputs.trim() !== "") return outputs
   if (outputs != null) {
     try {
-      return JSON.stringify(outputs)
+      const serialized = JSON.stringify(outputs)
+      if (serialized !== "[]" && serialized !== "{}") return serialized
     } catch {
       return status
     }

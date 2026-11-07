@@ -26,11 +26,17 @@ function toRequestData(
   return []
 }
 
-function terminalErrorMessage(outputs: unknown, status: string): string {
+function terminalErrorMessage(
+  error: unknown,
+  outputs: unknown,
+  status: string,
+): string {
+  if (typeof error === "string" && error.trim() !== "") return error
   if (typeof outputs === "string" && outputs.trim() !== "") return outputs
   if (outputs != null) {
     try {
-      return JSON.stringify(outputs)
+      const serialized = JSON.stringify(outputs)
+      if (serialized !== "[]" && serialized !== "{}") return serialized
     } catch {
       return status
     }
@@ -67,7 +73,11 @@ export class WaveSpeedProvider implements MediaEngineProvider {
     if (TERMINAL_JOB_STATUSES.has(response.status)) {
       return {
         status: "error",
-        error: terminalErrorMessage(response.outputs, response.status),
+        error: terminalErrorMessage(
+          response.error,
+          response.outputs,
+          response.status,
+        ),
       }
     }
     return { status: response.status }

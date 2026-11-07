@@ -20,6 +20,7 @@ import {
   textFromAgentChunk,
   withAgentTrace,
 } from "@/features/ai/agent/utils/tracing"
+import { getErrorMessage } from "@/utils/get-error-message"
 
 type HtmlVideoEventData = {
   requestId: string
@@ -56,7 +57,11 @@ export const handleHtmlVideoGeneration = inngest.createFunction(
         request_id: data.requestId,
       })
       if (data.requestId) {
-        await finalizeGenerationRequest(data.requestId, "failed")
+        await finalizeGenerationRequest(
+          data.requestId,
+          "failed",
+          getErrorMessage(event.data.error, "Media generation failed"),
+        )
       }
     },
   },

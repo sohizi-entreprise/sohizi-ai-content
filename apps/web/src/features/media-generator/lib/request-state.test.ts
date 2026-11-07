@@ -150,4 +150,44 @@ describe("getGenerationDetails", () => {
     )
     expect(details?.meta.some((tile) => tile.label === "Run mode")).toBe(false)
   })
+
+  it("includes credits spent and error details when provided", () => {
+    const details = getGenerationDetails(
+      {
+        model: "flux-pro",
+        prompt: "portrait at sunset",
+        context: {
+          generationType: "image",
+          subtype: "from-text",
+        },
+      },
+      {
+        credits: 12,
+        error: "NSFW content detected",
+      },
+    )
+
+    expect(details?.meta).toContainEqual({
+      label: "Credits",
+      value: "12",
+    })
+    expect(details?.error).toBe("NSFW content detected")
+
+    const singleCredit = getGenerationDetails(
+      {
+        model: "flux-pro",
+        prompt: "icon",
+        context: {
+          generationType: "image",
+          subtype: "from-text",
+        },
+      },
+      { credits: 1 },
+    )
+    expect(singleCredit?.meta).toContainEqual({
+      label: "Credits",
+      value: "1",
+    })
+    expect(singleCredit?.error).toBeNull()
+  })
 })

@@ -61,17 +61,22 @@ export async function decrementKey(key: string): Promise<number | null> {
 export async function finalizeGenerationRequest(
   requestId: string,
   status: "completed" | "failed",
+  error?: string | null,
 ): Promise<void> {
   const remaining = await decrementKey(requestId)
   // Missing counter (null) still needs a terminal status — otherwise the UI
   // stays on the loading card after Inngest has already finished.
   if (remaining !== null && remaining > 0) return
 
-  await updateGenerationRequest(requestId, { status })
+  await updateGenerationRequest(requestId, {
+    status,
+    ...(error !== undefined ? { error: error ?? undefined } : {}),
+  })
   try {
     await writeStreamData(requestId, {
       runId: requestId,
       event: "done",
+      ...(error ? { error } : {}),
     })
   } finally {
     await removeStreamActive(requestId)

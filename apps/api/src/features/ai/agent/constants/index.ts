@@ -1,3 +1,4 @@
+import documentMdSyntaxPrompt from "../prompts/document-md-syntax"
 import skillMdSyntaxPrompt from "../prompts/skill-md-syntax"
 import storyboardMdSyntaxPrompt from "../prompts/storyboard-md-syntax"
 import imageVideoGenerationSkill from "../skills/image-video-generation"
@@ -10,6 +11,11 @@ export const supportedAgents = [
 ] as const
 
 export const SYSTEM_LEVEL_FILES = {
+  "/system/syntax/document": {
+    description:
+      "Describes the UI block and inline badge markdown syntax to follow for document files.",
+    content: documentMdSyntaxPrompt,
+  },
   "/system/syntax/skill": {
     description:
       "Describes the syntax and instructions to follow for a skill file.",

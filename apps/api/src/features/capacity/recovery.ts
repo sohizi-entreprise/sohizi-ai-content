@@ -36,7 +36,7 @@ export const recoverStuckJobs = inngest.createFunction(
             mediaType === "video" || mediaType === "audio"
               ? mediaType
               : "image",
-          _reservationId: job.id,
+          _reservationId: job.billingReservationId ?? job.id,
         },
       })
       mediaSent += 1

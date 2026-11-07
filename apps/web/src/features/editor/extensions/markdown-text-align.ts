@@ -1,39 +1,127 @@
-import { Extension, Node, mergeAttributes } from "@tiptap/core"
-import { MarkdownManager } from "@tiptap/markdown"
-import type { AnyExtension } from "@tiptap/core"
+import { Extension } from "@tiptap/core"
+import {
+  TEXT_ALIGN_FENCES,
+  coalesceAlignedFences,
+  findAlignBlockStart,
+  matchAlignBlock,
+} from "./ui-blocks/markdown-utils"
+import type { TextAlignFence } from "./ui-blocks/markdown-utils"
 import type { JSONContent, RenderContext } from "@tiptap/react"
 
-const TEXT_ALIGN_VALUES = new Set(["left", "center", "right", "justify"])
 const EMPTY_PARAGRAPH_MARKDOWN = "&nbsp;"
-
-type MarkdownTextAlignOptions = {
-  headingLevels: Array<1 | 2 | 3 | 4 | 5 | 6>
-}
+const NBSP_CHAR = "\u00A0"
 
 type MarkdownRenderHelpers = {
-  renderChildren: (nodes: Array<JSONContent> | JSONContent) => string
+  renderChildren: (
+    nodes: Array<JSONContent> | JSONContent,
+    separator?: string,
+  ) => string
 }
 
-const MarkdownAlignedParagraph = Node.create({
-  name: "paragraph",
-  // Outrank StarterKit's paragraph so text-align markdown wins during serialize.
+function getFenceAlign(node: JSONContent): TextAlignFence | null {
+  const textAlign = node.attrs?.textAlign
+  if (
+    typeof textAlign === "string" &&
+    (TEXT_ALIGN_FENCES as ReadonlyArray<string>).includes(textAlign)
+  ) {
+    return textAlign as TextAlignFence
+  }
+  return null
+}
+
+function applyTextAlignToNodes(
+  nodes: Array<JSONContent>,
+  align: TextAlignFence,
+): Array<JSONContent> {
+  return nodes.map((node) => {
+    if (node.type === "paragraph" || node.type === "heading") {
+      return {
+        ...node,
+        attrs: {
+          ...node.attrs,
+          textAlign: align,
+        },
+      }
+    }
+    return node
+  })
+}
+
+const AlignContainerMarkdown = Extension.create({
+  name: "alignContainerMarkdown",
+
+  markdownTokenizer: {
+    name: "alignContainerMarkdown",
+    level: "block",
+    start: (src: string) => findAlignBlockStart(src),
+    tokenize: (
+      src: string,
+      _tokens: unknown,
+      helper: { blockTokens: (src: string) => Array<unknown> },
+    ) => {
+      const matched = matchAlignBlock(src)
+      if (!matched) return undefined
+      const childTokens = matched.bodyMarkdown
+        ? helper.blockTokens(matched.bodyMarkdown)
+        : []
+      return {
+        type: "alignContainerMarkdown",
+        raw: matched.raw,
+        align: matched.align,
+        tokens: childTokens,
+      }
+    },
+  },
+
+  parseMarkdown: (token, helpers) => {
+    const rawAlign = typeof token.align === "string" ? token.align : ""
+    const align: TextAlignFence = rawAlign === "right" ? "right" : "center"
+
+    const helperWithBlockChildren = helpers as typeof helpers & {
+      parseBlockChildren?: (tokens: Array<unknown>) => Array<JSONContent>
+    }
+    const rawChildren = token.tokens
+      ? helperWithBlockChildren.parseBlockChildren
+        ? helperWithBlockChildren.parseBlockChildren(token.tokens)
+        : helpers.parseChildren(token.tokens)
+      : []
+
+    const children =
+      Array.isArray(rawChildren) && rawChildren.length > 0
+        ? rawChildren
+        : [{ type: "paragraph" }]
+
+    return applyTextAlignToNodes(children, align)
+  },
+})
+
+const AlignedParagraphMarkdown = Extension.create({
+  name: "alignedParagraphMarkdown",
+  // Outrank StarterKit's paragraph so text-align fence serialization wins.
   priority: 1001,
-  group: "block",
-  content: "inline*",
-
-  parseHTML() {
-    return [{ tag: "p" }]
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return ["p", mergeAttributes(HTMLAttributes), 0]
-  },
+  markdownTokenName: "paragraph",
 
   parseMarkdown(token, helpers) {
-    return {
-      type: "paragraph",
-      content: helpers.parseInline(token.tokens ?? []),
+    const tokens = token.tokens ?? []
+    if (tokens.length === 1 && tokens[0]?.type === "image") {
+      return helpers.parseChildren([tokens[0]])
     }
+    const content = helpers.parseInline(tokens)
+    if (
+      tokens.length === 1 &&
+      tokens[0]?.type === "text" &&
+      (tokens[0].raw === EMPTY_PARAGRAPH_MARKDOWN ||
+        tokens[0].text === EMPTY_PARAGRAPH_MARKDOWN ||
+        tokens[0].raw === NBSP_CHAR ||
+        tokens[0].text === NBSP_CHAR) &&
+      content.length === 1 &&
+      content[0]?.type === "text" &&
+      (content[0].text === EMPTY_PARAGRAPH_MARKDOWN ||
+        content[0].text === NBSP_CHAR)
+    ) {
+      return helpers.createNode("paragraph", undefined, [])
+    }
+    return helpers.createNode("paragraph", undefined, content)
   },
 
   // TipTap's Document joins blocks with `\n\n` — do not append extra blank lines here.
@@ -49,68 +137,27 @@ const MarkdownAlignedParagraph = Node.create({
       return previousNodeIsEmptyParagraph ? EMPTY_PARAGRAPH_MARKDOWN : ""
     }
 
-    const textAlign = getTextAlign(node)
-    if (!textAlign) {
-      return helpers.renderChildren(content)
+    const body = helpers.renderChildren(content)
+    const align = getFenceAlign(node)
+    if (!align) {
+      return body
     }
 
-    return `<p style="text-align: ${textAlign}">${inlineContentToHtml(content)}</p>`
-  },
-
-  addCommands() {
-    return {
-      setParagraph:
-        () =>
-        ({ commands }) => {
-          return commands.setNode(this.name)
-        },
-    }
+    return `:::${align}\n${body}\n:::`
   },
 })
 
-const MarkdownAlignedHeading = Node.create<MarkdownTextAlignOptions>({
-  name: "heading",
+const AlignedHeadingMarkdown = Extension.create({
+  name: "alignedHeadingMarkdown",
   priority: 1001,
-  group: "block",
-  content: "inline*",
-  defining: true,
-
-  addOptions() {
-    return {
-      headingLevels: [1, 2, 3, 4, 5, 6],
-    }
-  },
-
-  addAttributes() {
-    return {
-      level: {
-        default: 1,
-        rendered: false,
-      },
-    }
-  },
-
-  parseHTML() {
-    return this.options.headingLevels.map((level) => ({
-      tag: `h${level}`,
-      attrs: { level },
-    }))
-  },
-
-  renderHTML({ node, HTMLAttributes }) {
-    const level = this.options.headingLevels.includes(node.attrs.level)
-      ? node.attrs.level
-      : this.options.headingLevels[0]
-
-    return [`h${level}`, mergeAttributes(HTMLAttributes), 0]
-  },
+  markdownTokenName: "heading",
 
   parseMarkdown(token, helpers) {
-    return {
-      type: "heading",
-      attrs: { level: token.depth },
-      content: helpers.parseInline(token.tokens ?? []),
-    }
+    return helpers.createNode(
+      "heading",
+      { level: token.depth || 1 },
+      helpers.parseInline(token.tokens ?? []),
+    )
   },
 
   renderMarkdown(node, helpers: MarkdownRenderHelpers) {
@@ -118,147 +165,38 @@ const MarkdownAlignedHeading = Node.create<MarkdownTextAlignOptions>({
     const content = Array.isArray(node.content) ? node.content : []
     if (content.length === 0) return ""
 
-    const textAlign = getTextAlign(node)
-    if (!textAlign) {
-      return `${"#".repeat(level)} ${helpers.renderChildren(content)}`
+    const body = `${"#".repeat(level)} ${helpers.renderChildren(content)}`
+    const align = getFenceAlign(node)
+    if (!align) {
+      return body
     }
 
-    const tagName = `h${Math.min(Math.max(level, 1), 6)}`
-    return `<${tagName} style="text-align: ${textAlign}">${inlineContentToHtml(content)}</${tagName}>`
-  },
-
-  addCommands() {
-    return {
-      setHeading:
-        (attributes: { level: 1 | 2 | 3 | 4 | 5 | 6 }) =>
-        ({ commands }) => {
-          if (!this.options.headingLevels.includes(attributes.level)) {
-            return false
-          }
-
-          return commands.setNode(this.name, attributes)
-        },
-      toggleHeading:
-        (attributes: { level: 1 | 2 | 3 | 4 | 5 | 6 }) =>
-        ({ commands }) => {
-          if (!this.options.headingLevels.includes(attributes.level)) {
-            return false
-          }
-
-          return commands.toggleNode(this.name, "paragraph", attributes)
-        },
-    }
+    return `:::${align}\n${body}\n:::`
   },
 })
 
-export const MarkdownTextAlign = Extension.create<MarkdownTextAlignOptions>({
-  name: "markdownTextAlign",
+const AlignedDocMarkdown = Extension.create({
+  name: "alignedDocMarkdown",
+  priority: 1001,
+  markdownTokenName: "doc",
 
-  addOptions() {
-    return {
-      headingLevels: [1, 2, 3, 4, 5, 6],
-    }
+  parseMarkdown: () => null,
+
+  renderMarkdown(node, helpers: MarkdownRenderHelpers) {
+    if (!node.content) return ""
+    return coalesceAlignedFences(helpers.renderChildren(node.content, "\n\n"))
   },
+})
+
+export const MarkdownTextAlign = Extension.create({
+  name: "markdownTextAlign",
 
   addExtensions() {
     return [
-      MarkdownAlignedParagraph,
-      MarkdownAlignedHeading.configure({
-        headingLevels: this.options.headingLevels,
-      }),
+      AlignContainerMarkdown,
+      AlignedParagraphMarkdown,
+      AlignedHeadingMarkdown,
+      AlignedDocMarkdown,
     ]
   },
 })
-
-export function serializeMarkdownWithTextAlign(
-  content: JSONContent,
-  extensions: Array<AnyExtension>,
-) {
-  const manager = new MarkdownManager({
-    extensions: [MarkdownTextAlign, ...extensions],
-    markedOptions: {
-      gfm: true,
-    },
-  })
-
-  return manager.serialize(content)
-}
-
-function getTextAlign(node: JSONContent) {
-  const textAlign = node.attrs?.textAlign
-
-  if (typeof textAlign !== "string" || !TEXT_ALIGN_VALUES.has(textAlign)) {
-    return null
-  }
-
-  return textAlign
-}
-
-function inlineContentToHtml(content: Array<JSONContent>) {
-  return content.map((node) => inlineNodeToHtml(node)).join("")
-}
-
-function inlineNodeToHtml(node: JSONContent): string {
-  if (node.type === "text") {
-    return applyMarks(escapeHtml(node.text ?? ""), node.marks ?? [])
-  }
-
-  if (node.type === "hardBreak") {
-    return "<br>"
-  }
-
-  return inlineContentToHtml(node.content ?? [])
-}
-
-function applyMarks(html: string, marks: NonNullable<JSONContent["marks"]>) {
-  return marks.reduce((value, mark) => {
-    switch (mark.type) {
-      case "bold":
-        return `<strong>${value}</strong>`
-      case "italic":
-        return `<em>${value}</em>`
-      case "strike":
-        return `<s>${value}</s>`
-      case "code":
-        return `<code>${value}</code>`
-      case "underline":
-        return `<u>${value}</u>`
-      case "link":
-        return renderLink(value, mark.attrs)
-      case "highlight":
-        return `<mark>${value}</mark>`
-      case "patchAddition":
-        return `<ins class="patch-diff-addition" data-patch-diff="addition">${value}</ins>`
-      case "patchDeletion":
-        return `<del class="patch-diff-deletion" data-patch-diff="deletion">${value}</del>`
-      default:
-        return value
-    }
-  }, html)
-}
-
-function renderLink(html: string, attrs?: Record<string, unknown>) {
-  const href = typeof attrs?.href === "string" ? attrs.href : ""
-
-  if (!href) {
-    return html
-  }
-
-  const title =
-    typeof attrs?.title === "string"
-      ? ` title="${escapeAttribute(attrs.title)}"`
-      : ""
-
-  return `<a href="${escapeAttribute(href)}"${title}>${html}</a>`
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-}
-
-function escapeAttribute(value: string) {
-  return escapeHtml(value).replaceAll('"', "&quot;")
-}

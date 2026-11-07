@@ -13,7 +13,6 @@ import { useMemo, useRef, useState } from "react"
 import TextEditorBubbleMenu from "../text-editor-extensions/bubble-menu"
 import { useAutoSave } from "../../hooks/use-autosave"
 import { usePendingMarkdownChanges } from "../../hooks/use-pending-markdown-changes"
-import { serializeMarkdownWithTextAlign } from "../../extensions/markdown-text-align"
 import {
   parseSkillDocument,
   serializeSkillDocument,
@@ -23,7 +22,7 @@ import {
   createFileLinkSuggestion,
 } from "../../extensions/file-link-suggestion"
 import { EditorLink } from "../../extensions/editor-link"
-import { ImageLayout } from "../../extensions/image-layout"
+import { uiBlockExtensions } from "../../extensions/ui-blocks"
 import { MarkdownHighlight } from "../../extensions/markdown-highlight"
 import { SlashCommandExtension } from "../../extensions/slash-command"
 import { NestedTrailingNode } from "../../extensions/nested-trailing-node"
@@ -189,7 +188,7 @@ const markdownContentExtensions = [
     types: ["heading", "paragraph"],
   }),
   EditorLink,
-  ImageLayout,
+  ...uiBlockExtensions,
   MarkdownHighlight,
 ]
 
@@ -237,7 +236,7 @@ export const skillEditorExtensions = [
   TextAlign.configure({
     types: ["heading", "paragraph"],
   }),
-  ImageLayout,
+  ...uiBlockExtensions,
   MarkdownHighlight,
   Markdown.configure({
     markedOptions: {
@@ -337,13 +336,12 @@ function getNodeMarkdown(doc: JSONContent, nodeType: string) {
 function blocksToMarkdown(blocks: Array<JSONContent>) {
   if (blocks.length === 0) return ""
 
-  return serializeMarkdownWithTextAlign(
-    {
+  return markdownManager
+    .serialize({
       type: "doc",
       content: blocks,
-    },
-    markdownContentExtensions,
-  ).trim()
+    })
+    .trim()
 }
 
 function fieldsFromSkillMarkdown(content: string) {

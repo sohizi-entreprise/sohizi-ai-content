@@ -8,7 +8,6 @@ import AudioPlayer from "./audio-player"
 import { RenderHtml } from "./html-asset-preview"
 import { MediaCardMenu } from "./media-card-menu"
 import { MoveAssetDialog } from "./move-asset-dialog"
-import { RequestSettingsDialog } from "./request-settings-dialog"
 import type { MediaAsset } from "../requests"
 import { cn } from "@/lib/utils"
 import {
@@ -36,7 +35,6 @@ export function MediaCard({
 }: MediaCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
-  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   const { onDelete, onReuseSettings, onDownload, onMoveToFolder } =
     useAssetMenu(projectId, item)
   const previewInSheet = canPreviewInSheet(item)
@@ -65,11 +63,7 @@ export function MediaCard({
   }
 
   const handleViewSettings = () => {
-    if (previewInSheet) {
-      openSheet()
-      return
-    }
-    setSettingsDialogOpen(true)
+    openSheet()
   }
 
   return (
@@ -103,33 +97,25 @@ export function MediaCard({
         onDownload={handleDownload}
         onDelete={onDelete}
       />
-      {previewInSheet ? (
-        <AssetDetailSheet
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          asset={item}
-          onMove={() => setMoveDialogOpen(true)}
-          onDownload={handleDownload}
-          onCopyLink={handleCopyLink}
-          onReuse={handleReuse}
-        >
-          {sheetOpen ? (
-            <MoveAssetDialog
-              open={moveDialogOpen}
-              onOpenChange={setMoveDialogOpen}
-              projectId={projectId}
-              assetName={item.name}
-              onMoveToFolder={onMoveToFolder}
-            />
-          ) : null}
-        </AssetDetailSheet>
-      ) : (
-        <RequestSettingsDialog
-          open={settingsDialogOpen}
-          onOpenChange={setSettingsDialogOpen}
-          request={item.generationRequest?.request ?? null}
-        />
-      )}
+      <AssetDetailSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        asset={item}
+        onMove={() => setMoveDialogOpen(true)}
+        onDownload={handleDownload}
+        onCopyLink={handleCopyLink}
+        onReuse={handleReuse}
+      >
+        {sheetOpen ? (
+          <MoveAssetDialog
+            open={moveDialogOpen}
+            onOpenChange={setMoveDialogOpen}
+            projectId={projectId}
+            assetName={item.name}
+            onMoveToFolder={onMoveToFolder}
+          />
+        ) : null}
+      </AssetDetailSheet>
       {!sheetOpen ? (
         <MoveAssetDialog
           open={moveDialogOpen}

@@ -10,14 +10,23 @@ import {
 } from "react"
 import { computePosition, flip, shift } from "@floating-ui/dom"
 import {
+  BadgeCheck,
+  Clock,
+  FileText,
+  FolderTree,
+  Globe,
   Heading1,
   Heading2,
   Heading3,
   ImageIcon,
+  LayoutDashboard,
   List,
   ListOrdered,
   ListTodo,
   Minus,
+  Palette,
+  SlidersHorizontal,
+  Sparkles,
   Table,
   TextQuote,
 } from "lucide-react"
@@ -96,21 +105,106 @@ const BASIC_BLOCKS: Array<BlockItem> = [
     },
   },
   {
+    title: "Media",
+    description: "Insert image, video, YouTube, or audio",
+    icon: <ImageIcon className="size-4" />,
+    command: (editor, range) => {
+      deleteSlashQuery(editor, range)
+      editor.chain().focus().insertMediaBlock({ type: "image" }).run()
+    },
+  },
+  {
+    title: "Card",
+    description: "Structured concept or reference card",
+    icon: <Sparkles className="size-4" />,
+    command: (editor, range) => {
+      deleteSlashQuery(editor, range)
+      editor.chain().focus().insertCardBlock().run()
+    },
+  },
+  {
+    title: "Moodboard",
+    description: "Visual reference grid board",
+    icon: <LayoutDashboard className="size-4" />,
+    command: (editor, range) => {
+      deleteSlashQuery(editor, range)
+      editor.chain().focus().insertMoodboardBlock().run()
+    },
+  },
+  {
+    title: "Palette",
+    description: "Color swatches with hex and role",
+    icon: <Palette className="size-4" />,
+    command: (editor, range) => {
+      deleteSlashQuery(editor, range)
+      editor.chain().focus().insertPaletteBlock().run()
+    },
+  },
+  {
+    title: "Timeline",
+    description: "Narrative beats and scene pacing",
+    icon: <Clock className="size-4" />,
+    command: (editor, range) => {
+      deleteSlashQuery(editor, range)
+      editor.chain().focus().insertTimelineBlock().run()
+    },
+  },
+  {
+    title: "Properties",
+    description: "Compact key-value metadata",
+    icon: <SlidersHorizontal className="size-4" />,
+    command: (editor, range) => {
+      deleteSlashQuery(editor, range)
+      editor.chain().focus().insertPropertiesBlock().run()
+    },
+  },
+  {
+    title: "Attributes",
+    description: "Detailed attribute explanations",
+    icon: <FileText className="size-4" />,
+    command: (editor, range) => {
+      deleteSlashQuery(editor, range)
+      editor.chain().focus().insertAttributesBlock().run()
+    },
+  },
+  {
+    title: "Tree",
+    description: "Hierarchy structure and dependencies",
+    icon: <FolderTree className="size-4" />,
+    command: (editor, range) => {
+      deleteSlashQuery(editor, range)
+      editor.chain().focus().insertTreeBlock().run()
+    },
+  },
+  {
+    title: "Sources",
+    description: "Web links and research references",
+    icon: <Globe className="size-4" />,
+    command: (editor, range) => {
+      deleteSlashQuery(editor, range)
+      editor.chain().focus().insertSourcesBlock().run()
+    },
+  },
+  {
+    title: "Badge",
+    description: "Inline status badge pill",
+    icon: <BadgeCheck className="size-4" />,
+    command: (editor, range) => {
+      deleteSlashQuery(editor, range)
+      editor
+        .chain()
+        .focus()
+        .insertInlineBadge({ label: "Approved", color: "highlight" })
+        .run()
+    },
+  },
+  {
     title: "Table",
     description: "Table of data",
     icon: <Table className="size-4" />,
     command: (editor, range) => {
       deleteSlashQuery(editor, range)
       editor.chain().focus().insertTable().run()
-    },
-  },
-  {
-    title: "Image",
-    description: "Insert image",
-    icon: <ImageIcon className="size-4" />,
-    command: (editor, range) => {
-      deleteSlashQuery(editor, range)
-      editor.chain().focus().insertImageLayout({ layout: "single" }).run()
     },
   },
   {

@@ -7,7 +7,7 @@ import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import type { JSONContent } from "@tiptap/react"
 import { EditorLink } from "@/features/editor/extensions/editor-link"
-import { ImageLayout } from "@/features/editor/extensions/image-layout"
+import { uiBlockExtensions } from "@/features/editor/extensions/ui-blocks"
 import { MarkdownHighlight } from "@/features/editor/extensions/markdown-highlight"
 import "@/features/editor/components/content/text-editor.css"
 
@@ -105,7 +105,7 @@ const markdownContentExtensions = [
     types: ["heading", "paragraph"],
   }),
   EditorLink,
-  ImageLayout,
+  ...uiBlockExtensions,
   MarkdownHighlight,
 ]
 
@@ -140,7 +140,7 @@ const skillViewerExtensions = [
   TextAlign.configure({
     types: ["heading", "paragraph"],
   }),
-  ImageLayout,
+  ...uiBlockExtensions,
   MarkdownHighlight,
   EditorLink,
   Markdown.configure({

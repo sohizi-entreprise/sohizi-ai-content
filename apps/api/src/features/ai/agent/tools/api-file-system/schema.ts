@@ -102,7 +102,7 @@ const fileSyntaxSchema = z.object({
   method: z.literal("GET"),
   params: z
     .object({
-      fileType: z.enum(["skill", "storyboard"]),
+      fileType: z.enum(["document", "skill", "storyboard"]),
     })
     .describe(
       "Check the expected markdown syntax before editing certain file types.",

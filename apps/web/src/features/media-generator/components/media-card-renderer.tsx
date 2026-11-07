@@ -9,9 +9,9 @@ import {
   usePatchAiGeneratedRequest,
   useUpdateAssetsList,
 } from "../query-mutations"
+import { AssetDetailSheet } from "./asset-detail-sheet"
 import { MediaCard } from "./media-card"
 import { MediaCardMenu } from "./media-card-menu"
-import { RequestSettingsDialog } from "./request-settings-dialog"
 import { DotGridLoader } from "./dot-grid-loader"
 import type { LucideIcon } from "lucide-react"
 import type {
@@ -73,10 +73,15 @@ function PendingMediaCard({ item }: { item: AiGeneratedMediaRequest }) {
       assetsRef.current = mergeRequestAssets(assetsRef.current, [nextAsset])
       updateAssetsList([asset], item.id)
     },
-    onFinish: () => {
+    onFinish: (_status, streamError) => {
+      const succeeded = assetsRef.current.length > 0
       patchRequest(item.id, {
-        status: assetsRef.current.length > 0 ? "completed" : "failed",
+        status: succeeded ? "completed" : "failed",
         assets: assetsRef.current,
+        ...(succeeded ? {} : { error: streamError ?? item.error }),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: ["media", item.projectId, "ai-assets"],
       })
     },
     onError: () => {
@@ -104,12 +109,22 @@ function FailedMediaCard({
   item: AiGeneratedMediaRequest
   projectId: string
 }) {
-  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const { onDelete, onReuseSettings } = useRequestActions(
     projectId,
     item.id,
     item.request,
   )
+
+  const handleReuse = () => {
+    onReuseSettings()
+    setSheetOpen(false)
+  }
+
+  const handleDelete = () => {
+    setSheetOpen(false)
+    onDelete()
+  }
 
   const options = [
     {
@@ -120,7 +135,7 @@ function FailedMediaCard({
     {
       label: "View",
       icon: Eye,
-      onClick: () => setSettingsDialogOpen(true),
+      onClick: () => setSheetOpen(true),
     },
     {
       label: "Reuse settings",
@@ -131,20 +146,28 @@ function FailedMediaCard({
 
   return (
     <div className="group relative flex aspect-4/3 items-center justify-center overflow-hidden rounded-md border bg-background p-2">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <IconAlertTriangle className="size-6 text-destructive" />
-        <span className="text-xs tracking-wide text-destructive">
-          {item.error || "An error occured"}
+      <button
+        type="button"
+        onClick={() => setSheetOpen(true)}
+        className="flex size-full cursor-pointer flex-col items-center justify-center gap-2 text-center"
+      >
+        <IconAlertTriangle className="size-6 shrink-0 text-destructive" />
+        <span className="line-clamp-3 text-xs tracking-wide text-destructive">
+          {item.error || "An error occurred"}
         </span>
-      </div>
+      </button>
       <MediaCardMenu
         className="absolute top-1 right-1 z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100"
         options={options}
       />
-      <RequestSettingsDialog
-        open={settingsDialogOpen}
-        onOpenChange={setSettingsDialogOpen}
+      <AssetDetailSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
         request={item.request}
+        credits={item.credits ?? 0}
+        error={item.error || "An error occurred"}
+        onReuse={handleReuse}
+        onDelete={handleDelete}
       />
     </div>
   )
@@ -221,6 +244,7 @@ function toMediaAsset(
       status: request.status,
       request: request.request,
       error: request.error,
+      credits: request.credits ?? null,
     },
   }
 }

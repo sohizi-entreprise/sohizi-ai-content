@@ -41,6 +41,12 @@ export type GenerationDetails = {
   meta: Array<GenerationDetailTile>
   parameters: Array<GenerationDetailTile>
   references: Array<GenerationDetailReference>
+  error: string | null
+}
+
+export type GenerationDetailsOptions = {
+  credits?: number | null
+  error?: string | null
 }
 
 const SUBTYPE_LABELS = [
@@ -197,6 +203,7 @@ function isPresentSettingValue(value: string): boolean {
 
 export function getGenerationDetails(
   request: Record<string, unknown> | null,
+  options: GenerationDetailsOptions = {},
 ): GenerationDetails | null {
   const parsed = parseStoredRequest(request)
   if (!parsed) return null
@@ -220,6 +227,12 @@ export function getGenerationDetails(
   }
   if (parsed.voice) {
     meta.push({ label: "Voice", value: parsed.voice })
+  }
+  if (options.credits != null && Number.isFinite(options.credits)) {
+    meta.push({
+      label: "Credits",
+      value: String(options.credits),
+    })
   }
 
   const parameters: Array<GenerationDetailTile> = []
@@ -249,11 +262,17 @@ export function getGenerationDetails(
     })
   })
 
+  const normalizedError =
+    typeof options.error === "string" && options.error.trim().length > 0
+      ? options.error.trim()
+      : null
+
   return {
     prompt: parsed.prompt,
     meta,
     parameters,
     references: dedupeReferences(references),
+    error: normalizedError,
   }
 }
 

@@ -1,6 +1,7 @@
 import { db } from "@/db"
 import {
   assets,
+  billingReservations,
   fileNodes,
   generationRequests,
   llmVendorsAndParameters,
@@ -248,9 +249,38 @@ type AiGeneratedMediaRequest = {
   status: GenerationRequestStatus
   request: Record<string, unknown> | null
   error: string | null
+  credits: number | null
   createdAt: Date
   updatedAt: Date
   assets: AiGeneratedRequestAsset[]
+}
+
+function resolveRequestCredits(row: {
+  status: GenerationRequestStatus
+  reservationStatus: string | null
+  actualCredits: bigint | null
+  estimatedCredits: bigint | null
+  reservationMetadata: Record<string, unknown> | null
+}): number | null {
+  if (
+    row.reservationStatus === "refunded" ||
+    row.reservationStatus === "expired" ||
+    row.status === "failed" ||
+    row.status === "aborted"
+  ) {
+    return 0
+  }
+  const chargedCredits = row.reservationMetadata?.chargedCredits
+  if (typeof chargedCredits === "number" && Number.isFinite(chargedCredits)) {
+    return chargedCredits
+  }
+  if (row.actualCredits != null) {
+    return Number(row.actualCredits)
+  }
+  if (row.estimatedCredits != null && row.reservationStatus === "reserved") {
+    return Number(row.estimatedCredits)
+  }
+  return null
 }
 
 type ListAiGeneratedAssetsOptions = CursorPaginationOptions & {
@@ -307,6 +337,10 @@ export const listAiGeneratedAssets = async (
       status: generationRequests.status,
       request: generationRequests.request,
       error: generationRequests.error,
+      reservationStatus: billingReservations.status,
+      actualCredits: billingReservations.actualCredits,
+      estimatedCredits: billingReservations.estimatedCredits,
+      reservationMetadata: billingReservations.metadata,
       createdAt: generationRequests.createdAt,
       updatedAt: generationRequests.updatedAt,
       assets: sql<AiGeneratedRequestAsset[]>`
@@ -327,15 +361,26 @@ export const listAiGeneratedAssets = async (
     })
     .from(generationRequests)
     .leftJoin(assets, and(...joinConditions))
+    .leftJoin(
+      billingReservations,
+      eq(billingReservations.id, generationRequests.billingReservationId),
+    )
     .where(and(...conditions))
-    .groupBy(generationRequests.id)
+    .groupBy(generationRequests.id, billingReservations.id)
     .having(havingClause)
     .orderBy(desc(generationRequests.createdAt))
     .limit(pageSize + 1)
 
   const hasMore = rows.length > pageSize
   const data = rows.slice(0, pageSize).map((row) => ({
-    ...row,
+    id: row.id,
+    projectId: row.projectId,
+    status: row.status,
+    request: row.request,
+    error: row.error,
+    credits: resolveRequestCredits(row),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
     assets: Array.isArray(row.assets) ? row.assets : [],
   }))
   const nextCursor =
@@ -359,6 +404,7 @@ export const createAssetRequest = async (
     epoch: number
     expiresAtMs: number
   } | null,
+  billingReservationId?: string | null,
 ) => {
   const result = await createGenerationRequest({
     id,
@@ -368,6 +414,7 @@ export const createAssetRequest = async (
     type: "media-generation",
     request: requestPayload,
     userLease,
+    billingReservationId,
   })
 
   return { ...result, assets: result.assets ?? [] }

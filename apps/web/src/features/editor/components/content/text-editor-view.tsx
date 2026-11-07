@@ -17,11 +17,10 @@ import {
   FileLinkSuggestion,
   createFileLinkSuggestion,
 } from "../../extensions/file-link-suggestion"
-import { ImageLayout } from "../../extensions/image-layout"
+import { uiBlockExtensions } from "../../extensions/ui-blocks"
 import { MAX_CHARACTER_COUNT } from "../../constants"
 import { MarkdownHighlight } from "../../extensions/markdown-highlight"
 import { SlashCommandExtension } from "../../extensions/slash-command"
-import { YoutubeEmbed } from "../../extensions/youtube-embed"
 import { EditorLink } from "../../extensions/editor-link"
 import { EditorTopChrome } from "./editor-top-chrome"
 import { MarkdownDiffChangesPanel } from "./markdown-diff-changes-panel"
@@ -73,9 +72,8 @@ const editorExtensions = [
   TextAlign.configure({
     types: ["heading", "paragraph"],
   }),
-  ImageLayout,
+  ...uiBlockExtensions,
   EditorLink,
-  YoutubeEmbed,
   CharacterCount.configure({
     limit: MAX_CHARACTER_COUNT,
   }),
