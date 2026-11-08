@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Copy, FileCode2, Paperclip, Sparkles, Upload } from "lucide-react"
+import { Copy, FileCode2, Paperclip } from "lucide-react"
 import ReactPlayer from "react-player"
 import { toast } from "sonner"
 import { Badge } from "@sohizi/ui/badge"
@@ -56,6 +56,7 @@ export default function AssetViewer(props: Props) {
       id: assetId ?? id,
       status: "uploaded",
       url,
+
       type: metadata?.contentType || type,
       ...(optimizedPreview ? { preview: optimizedPreview } : {}),
     })
