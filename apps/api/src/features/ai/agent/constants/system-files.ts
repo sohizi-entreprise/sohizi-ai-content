@@ -3,6 +3,7 @@ import { default as skillMdSyntaxPrompt } from "../prompts/skill-md-syntax"
 import { default as storyboardMdSyntaxPrompt } from "../prompts/storyboard-md-syntax"
 import { default as imageVideoGenerationSkill } from "../skills/image-video-generation"
 import { default as planGenerationSkill } from "../skills/plan-generation"
+import { default as storyboardSkill } from "../skills/storyboard"
 
 export const SYSTEM_LEVEL_FILES = {
   "/system/syntax/document": {
@@ -24,6 +25,11 @@ export const SYSTEM_LEVEL_FILES = {
     description:
       "Read BEFORE generating any image or video. Covers choosing text vs. image inputs, picking project references, grounding real-world people/places/products, and keeping characters consistent across shots.",
     content: imageVideoGenerationSkill,
+  },
+  "/system/skills/storyboard": {
+    description:
+      "Read BEFORE creating or building out a storyboard. Defines the working order (world first, full text before any image), how to cover narration and dialogue, how to attach each generated image to its shot as it finishes, and how to keep the whole board consistent.",
+    content: storyboardSkill,
   },
   "/system/skills/generate-plan": {
     description:

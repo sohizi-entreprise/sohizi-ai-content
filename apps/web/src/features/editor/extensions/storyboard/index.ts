@@ -86,11 +86,13 @@ export {
 export {
   DEFAULT_STORYBOARD_SETTINGS,
   STORYBOARD_ASPECT_RATIOS,
+  STORYBOARD_SHOT_TYPES,
   aspectRatioToCss,
   aspectRatioToDimensions,
   ensureStoryboardFrontMatter,
   generateStoryboardId,
   parseAspectRatio,
+  parseShotType,
   serializeFrontMatter,
 } from "./storyboard-markdown"
 export type {
@@ -100,6 +102,7 @@ export type {
   ShotDialogueLine,
   StoryboardAspectRatio,
   StoryboardSettings,
+  StoryboardShotType,
 } from "./storyboard-markdown"
 export {
   findSceneIdOfShot,

@@ -160,8 +160,11 @@ export async function generateCaption(
   projectId: string,
   trackId: string,
   clipId?: string,
-): Promise<{ ok: boolean }> {
-  const res = await api.post(
+): Promise<{ ok: boolean; changes?: Array<VideoEditorChange> }> {
+  const res = await api.post<{
+    ok: boolean
+    changes?: Array<VideoEditorChange>
+  }>(
     `/video-editor/${projectId}/tracks/${trackId}/captions`,
     clipId ? { clipId } : {},
   )

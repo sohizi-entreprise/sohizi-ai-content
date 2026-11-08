@@ -23,9 +23,21 @@ const SCENE_KEYS = [
   "lighting",
 ] as const
 
+const SHOT_TYPES = [
+  "Extreme Close-Up",
+  "Close-Up",
+  "Medium Close-Up",
+  "Medium Shot",
+  "Medium Long Shot",
+  "Long Shot",
+  "Wide Shot",
+  "Extreme Wide Shot",
+] as const
+
 const SHOT_SCALAR_KEYS = [
   "id",
   "number",
+  "shotType",
   "image",
   "action",
   "narration",
@@ -427,7 +439,7 @@ function parseShotLine(
   const match = line.match(/^([A-Za-z_]+):(.*)$/)
   if (!match) {
     problems.push(
-      `Line ${lineNo}: expected a shot key (\`id\`, \`number\`, \`action\`, and optional \`image\`, \`dialogue\`, \`narration\`, \`camera\`).`,
+      `Line ${lineNo}: expected a shot key (\`id\`, \`number\`, \`action\`, and optional \`shotType\`, \`image\`, \`dialogue\`, \`narration\`, \`camera\`).`,
     )
     return
   }
@@ -445,6 +457,7 @@ function parseShotLine(
 
   noteKey(state.seen, key, lineNo, problems)
   if (key === "number") validateShotNumber(match[2], lineNo, problems)
+  if (key === "shotType") validateShotType(match[2], lineNo, problems)
 }
 
 function parseIndentedShotLine(
@@ -560,6 +573,16 @@ function validateShotNumber(
   if (!/^[1-9]\d*$/.test(text)) {
     problems.push(
       `Line ${lineNo}: \`number\` must be a 1-based integer, or empty.`,
+    )
+  }
+}
+
+function validateShotType(raw: string, lineNo: number, problems: ProblemList) {
+  const parsed = unquote(raw.trim())
+  if (parsed.text === "") return
+  if (!(SHOT_TYPES as readonly string[]).includes(parsed.text)) {
+    problems.push(
+      `Line ${lineNo}: \`shotType\` must be one of ${SHOT_TYPES.join(", ")}, or empty.`,
     )
   }
 }

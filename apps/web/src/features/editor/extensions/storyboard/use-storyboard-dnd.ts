@@ -241,7 +241,7 @@ export function insertShot(editor: Editor, sceneId: string): string | null {
 export function updateShot(
   editor: Editor,
   shotId: string,
-  patch: Partial<ShotData>,
+  patch: Omit<Partial<ShotData>, "shotType"> & { shotType?: string },
 ): boolean {
   const { state, view } = editor
   let pos = -1
@@ -265,6 +265,7 @@ export function updateShot(
   const nextAttrs = {
     ...currentAttrs,
     ...(patch.number !== undefined ? { number: patch.number } : {}),
+    ...(patch.shotType !== undefined ? { shotType: patch.shotType } : {}),
     ...(patch.image !== undefined ? { image: patch.image } : {}),
     ...(patch.action !== undefined ? { action: patch.action } : {}),
     ...(patch.dialogue !== undefined ? { dialogue: patch.dialogue } : {}),

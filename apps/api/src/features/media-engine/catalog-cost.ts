@@ -54,6 +54,7 @@ export const estimateCatalogMediaCredits = async (
   return Number(
     providerCostToCredits(priceUsd, {
       overheadRate: mediaOverheadRate(mediaType),
+      overbookingFactor: 1,
     }),
   )
 }

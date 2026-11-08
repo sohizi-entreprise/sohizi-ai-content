@@ -13,6 +13,7 @@ import {
 } from "@sohizi/ui/dialog"
 import { useSelectedClip } from "../../hooks/use-selected-clip"
 import { generateCaptionMutationOptions } from "../../query-mutations"
+import { useVideoEditorStore } from "../../store/editor-store"
 
 interface CaptionScopeDialogProps {
   projectId: string
@@ -42,8 +43,14 @@ export function CaptionScopeDialog({
         clipId: scope === "clip" ? selectedClip.id : undefined,
       },
       {
-        onSuccess: () => {
-          toast.success("Captions generated. Reopen this video to load them.")
+        onSuccess: (data) => {
+          if (data.changes) {
+            const { applyServerChange } = useVideoEditorStore.getState()
+            for (const change of data.changes) {
+              applyServerChange(change)
+            }
+          }
+          toast.success("Captions generated.")
           onOpenChange(false)
         },
         onError: (error) => {

@@ -11,12 +11,32 @@ import { Button } from "@sohizi/ui/button"
 import { Input } from "@sohizi/ui/input"
 import { Textarea } from "@sohizi/ui/textarea"
 import { Label } from "@sohizi/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@sohizi/ui/select"
 import { Plus, Trash2 } from "lucide-react"
-import type { ShotData, ShotDialogueLine } from "../../extensions/storyboard"
-import { thumbnailImageUrl } from "@/utils/transform-url"
+import {
+  STORYBOARD_SHOT_TYPES,
+  parseShotType,
+} from "../../extensions/storyboard"
+import type {
+  ShotData,
+  ShotDialogueLine,
+  StoryboardShotType,
+} from "../../extensions/storyboard"
+import {
+  buildOptimizeddImageUrl,
+  imageUrlTransforms,
+  thumbnailImageUrl,
+} from "@/utils/transform-url"
 
 export type ShotFormValues = {
   image: string
+  shotType: StoryboardShotType | ""
   action: string
   narration: string
   dialogue: Array<ShotDialogueLine>
@@ -33,12 +53,15 @@ interface StoryboardShotSheetProps {
 
 const EMPTY_VALUES: ShotFormValues = {
   image: "",
+  shotType: "",
   action: "",
   narration: "",
   dialogue: [],
   cameraAngle: "",
   cameraMovement: "",
 }
+
+const UNSET_SHOT_TYPE_VALUE = "__none__"
 
 export function StoryboardShotSheet({
   open,
@@ -57,6 +80,7 @@ export function StoryboardShotSheet({
     }
     setValues({
       image: shot.image ?? "",
+      shotType: parseShotType(shot.shotType ?? ""),
       action: shot.action ?? "",
       narration: shot.narration ?? "",
       dialogue: shot.dialogue ? shot.dialogue.map((line) => ({ ...line })) : [],
@@ -118,11 +142,19 @@ export function StoryboardShotSheet({
 
         <div className="flex-1 space-y-5 overflow-y-auto px-4">
           {values.image ? (
-            <div className="overflow-hidden rounded-lg border bg-muted">
+            <div
+              className="overflow-hidden rounded-lg border bg-muted bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${buildOptimizeddImageUrl(
+                  values.image,
+                  imageUrlTransforms.blurryPlaceholder,
+                )})`,
+              }}
+            >
               <img
                 src={thumbnailImageUrl(values.image)}
                 alt="Shot preview"
-                className="aspect-video w-full object-cover"
+                className="aspect-video w-full object-contain"
               />
             </div>
           ) : null}
@@ -135,6 +167,31 @@ export function StoryboardShotSheet({
               placeholder="/images/shot.jpg"
               onChange={(event) => updateField("image", event.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="shot-type">Shot type</Label>
+            <Select
+              value={values.shotType || UNSET_SHOT_TYPE_VALUE}
+              onValueChange={(value) =>
+                updateField(
+                  "shotType",
+                  value === UNSET_SHOT_TYPE_VALUE ? "" : parseShotType(value),
+                )
+              }
+            >
+              <SelectTrigger id="shot-type" className="w-full">
+                <SelectValue placeholder="Select shot type…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNSET_SHOT_TYPE_VALUE}>None</SelectItem>
+                {STORYBOARD_SHOT_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

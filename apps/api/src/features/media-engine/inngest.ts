@@ -313,7 +313,6 @@ export const handleMediaGeneration = inngest.createFunction(
       await step.run("settle-credits", async () => {
         const providerCostUsd = sticky?.providerCostUsd
         const actualCostUsd =
-          providerCostUsd ??
           data.priceUSD ??
           (await estimateCatalogMediaCostUsd(model, requestPayload))
         return billingService.settle({

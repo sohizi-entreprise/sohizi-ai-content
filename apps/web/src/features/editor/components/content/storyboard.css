@@ -335,6 +335,15 @@
   background: color-mix(in oklab, var(--card) 85%, var(--background));
 }
 
+.storyboard-shot-type {
+  align-self: flex-start;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
 .storyboard-shot-desc {
   font-size: 0.8125rem;
   line-height: 1.45;

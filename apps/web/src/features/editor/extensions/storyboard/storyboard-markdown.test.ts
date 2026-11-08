@@ -49,6 +49,7 @@ lighting: One practical bulb overhead, hard shadows.
 :::shot
 id: shot-1
 number: 1
+shotType: Wide Shot
 image: /images/shot-1.jpg
 action: Wide establishing shot of the warehouse.
 camera:
@@ -118,6 +119,7 @@ describe("storyboard scene parsing", () => {
     expect(scene.shots[0]).toMatchObject({
       id: "shot-1",
       number: 1,
+      shotType: "Wide Shot",
       image: "/images/shot-1.jpg",
       action: "Wide establishing shot of the warehouse.",
       camera: { angle: "low angle", movement: "slow push in" },
@@ -194,6 +196,7 @@ describe("storyboard markdown round-trip via MarkdownManager", () => {
     expect(grid.type).toBe("shotGrid")
     expect(grid.content).toHaveLength(3)
     expect(grid.content?.[0]?.attrs).toMatchObject({
+      shotType: "Wide Shot",
       cameraAngle: "low angle",
       cameraMovement: "slow push in",
     })

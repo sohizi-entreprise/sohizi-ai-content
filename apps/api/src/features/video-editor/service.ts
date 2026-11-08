@@ -10,8 +10,20 @@ import type {
   UpdateTrackInput,
 } from "./schema"
 import { BadRequest, NotFound } from "../error"
-import type { VideoClipProperties } from "@/type"
+import type {
+  AudioMediaClipProperties,
+  VideoClipProperties,
+  VideoEditorChange,
+  VideoMediaClipProperties,
+} from "@/type"
 import type { VideoComposition, VideoTrack, VideoClip } from "@/db/schema"
+import {
+  getOAudioUrl,
+  transcribeAudioWithBilling,
+  type TranscribeWord,
+} from "../ai/llm/transcribe"
+import { v4 as uuidv4 } from "uuid"
+import { getProjectById } from "../project/repo"
 
 // ============================================================================
 // TYPES
@@ -283,14 +295,176 @@ export const batchEdit = async (
 
 // Generate a caption
 export const addCaption = async (
-  _trackId: string,
-  _projectId: string,
-  _userId: string,
-  _clipId?: string,
-): Promise<{ ok: true }> => {
-  throw new BadRequest(
-    "Caption generation is being migrated to the media generation service and is temporarily unavailable.",
+  trackId: string,
+  projectId: string,
+  userId: string,
+  clipId?: string,
+): Promise<{ ok: true; changes: VideoEditorChange[] }> => {
+  const track = await repo.getTrackById(trackId)
+  if (!track) {
+    throw new NotFound("Track not found")
+  }
+  if (!["audio", "video"].includes(track.type)) {
+    throw new BadRequest(
+      "Caption can only be generated for audio and video tracks",
+    )
+  }
+
+  const project = await getProjectById(projectId)
+  if (!project) {
+    throw new NotFound("Project not found")
+  }
+
+  const composition = await assertCompositionAccess(
+    track.compositionId,
+    projectId,
   )
+
+  const payload: (Pick<
+    VideoClip,
+    "startFrame" | "endFrame" | "sourceStartFrame" | "sourceDurationInFrames"
+  > & { url: string })[] = []
+
+  const clips = await repo.getClipsByTrackId(trackId)
+  const sourceClips = clipId
+    ? clips.filter((clip) => clip.id === clipId)
+    : clips
+
+  if (clipId && sourceClips.length === 0) {
+    throw new BadRequest("Clip not found on this track")
+  }
+
+  for (const clip of sourceClips) {
+    if (clip.type === "audio" || clip.type === "video") {
+      let url = (
+        clip.properties as AudioMediaClipProperties | VideoMediaClipProperties
+      ).url
+      const offsetSeconds = clip.sourceStartFrame / composition.fps
+      const clipDurationSeconds =
+        (clip.endFrame - clip.startFrame) / composition.fps
+      url = getOAudioUrl(url, clip.type, offsetSeconds, clipDurationSeconds)
+      payload.push({
+        url,
+        startFrame: clip.startFrame,
+        endFrame: clip.endFrame,
+        sourceStartFrame: clip.sourceStartFrame,
+        sourceDurationInFrames: clip.sourceDurationInFrames,
+      })
+    }
+  }
+
+  if (payload.length === 0) {
+    throw new BadRequest(
+      clipId
+        ? "Caption can only be generated for a video or audio clip"
+        : "No clips found to generate caption for",
+    )
+  }
+
+  const promises = payload.map((p) => {
+    return (async () => {
+      const transcription = await transcribeAudioWithBilling(
+        {
+          audio: p.url,
+          estimatedDurationSeconds:
+            (p.endFrame - p.startFrame) / composition.fps,
+        },
+        {
+          organizationId: project.organizationId,
+          userId,
+          metadata: {
+            runId: uuidv4(),
+            projectId,
+            trackId,
+          },
+        },
+      )
+
+      return {
+        transcriptions: {
+          text: transcription.text,
+          words: transcription.words,
+        } satisfies { text: string; words: TranscribeWord[] },
+        startFrame: p.startFrame,
+        endFrame: p.endFrame,
+        sourceStartFrame: p.sourceStartFrame,
+        sourceDurationInFrames: p.sourceDurationInFrames,
+      }
+    })()
+  })
+
+  const transcriptions = await Promise.all(promises)
+
+  // Build a new track with the transcriptions and insert the clips
+  // Update all the track position below the current track
+  const tracksToUpdate = await repo.getTracksByCompositionId(
+    track.compositionId,
+    { min: track.position },
+  )
+  const newTrackId = uuidv4()
+  await repo.executeBatch([
+    {
+      op: "create_track",
+      data: {
+        id: newTrackId,
+        compositionId: track.compositionId,
+        type: "caption",
+        position: track.position,
+        muted: false,
+        hidden: false,
+      },
+    },
+    ...transcriptions.map((t) => {
+      return {
+        op: "create_clip" as const,
+        data: {
+          trackId: newTrackId,
+          compositionId: track.compositionId,
+          type: "caption" as const,
+          startFrame: t.startFrame,
+          endFrame: t.endFrame,
+          sourceStartFrame: t.sourceStartFrame,
+          sourceDurationInFrames: t.sourceDurationInFrames,
+          properties: {
+            text: t.transcriptions.text,
+            words: t.transcriptions.words,
+            fontSize: 48,
+          },
+        },
+      }
+    }),
+    ...tracksToUpdate.map((t) => {
+      return {
+        op: "update_track" as const,
+        id: t.id,
+        data: { position: t.position + 1 },
+      }
+    }),
+  ])
+
+  const [createdTrack, createdClips, updatedTracks] = await Promise.all([
+    repo.getTrackById(newTrackId),
+    repo.getClipsByTrackId(newTrackId),
+    repo.getTracksByCompositionId(track.compositionId, {
+      min: track.position + 1,
+    }),
+  ])
+
+  const updatedTrackIds = new Set(tracksToUpdate.map((t) => t.id))
+  const changes: VideoEditorChange[] = []
+  if (createdTrack) {
+    changes.push({ type: "add_track", track: createdTrack, name: "Captions" })
+  }
+  for (const clip of createdClips) {
+    changes.push({ type: "add_clip", clip })
+  }
+  for (const t of updatedTracks) {
+    if (updatedTrackIds.has(t.id)) {
+      changes.push({ type: "update_track", track: t })
+    }
+  }
+
+  return { ok: true, changes }
 }
 
 // ============================================================================

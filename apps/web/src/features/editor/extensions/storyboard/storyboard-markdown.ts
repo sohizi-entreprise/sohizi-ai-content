@@ -43,6 +43,40 @@ export const STORYBOARD_ASPECT_RATIOS = [
 
 export type StoryboardAspectRatio = (typeof STORYBOARD_ASPECT_RATIOS)[number]
 
+export const STORYBOARD_SHOT_TYPES = [
+  "Extreme Close-Up",
+  "Close-Up",
+  "Medium Close-Up",
+  "Medium Shot",
+  "Medium Long Shot",
+  "Long Shot",
+  "Wide Shot",
+  "Extreme Wide Shot",
+] as const
+
+export type StoryboardShotType = (typeof STORYBOARD_SHOT_TYPES)[number]
+
+const SHOT_TYPE_ABBREVIATIONS: Record<string, StoryboardShotType> = {
+  ecu: "Extreme Close-Up",
+  cu: "Close-Up",
+  mcu: "Medium Close-Up",
+  ms: "Medium Shot",
+  mls: "Medium Long Shot",
+  ls: "Long Shot",
+  ws: "Wide Shot",
+  ews: "Extreme Wide Shot",
+}
+
+export function parseShotType(value: string): StoryboardShotType | "" {
+  const trimmed = value.trim()
+  if (!trimmed) return ""
+  const match = STORYBOARD_SHOT_TYPES.find(
+    (type) => type.toLowerCase() === trimmed.toLowerCase(),
+  )
+  if (match) return match
+  return SHOT_TYPE_ABBREVIATIONS[trimmed.toLowerCase()] ?? ""
+}
+
 export type ShotDialogueLine = {
   speaker: string
   text: string
@@ -56,6 +90,7 @@ export type ShotCamera = {
 export type ShotData = {
   id: string
   number?: number
+  shotType?: StoryboardShotType
   image?: string
   action?: string
   dialogue?: Array<ShotDialogueLine>
@@ -395,6 +430,11 @@ function parseShotLines(lines: Array<string>): ShotData {
         case "image":
           shot.image = value
           break
+        case "shotType": {
+          const parsedShotType = parseShotType(unquoteYaml(value))
+          if (parsedShotType) shot.shotType = parsedShotType
+          break
+        }
         case "action":
           shot.action = value
           break
@@ -417,6 +457,7 @@ export function serializeShot(shot: ShotData): string {
   const lines: Array<string> = [":::shot"]
   lines.push(`id: ${shot.id}`)
   lines.push(`number: ${shot.number ?? ""}`)
+  if (shot.shotType) lines.push(`shotType: ${shot.shotType}`)
   if (shot.image) lines.push(`image: ${shot.image}`)
   lines.push(`action: ${shot.action ?? ""}`)
   if (shot.dialogue && shot.dialogue.length > 0) {

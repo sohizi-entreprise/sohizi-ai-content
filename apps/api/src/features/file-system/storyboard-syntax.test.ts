@@ -21,6 +21,7 @@ lighting: One practical bulb overhead, hard shadows.
 :::shot
 id: shot-1
 number: 1
+shotType: Wide Shot
 image: https://example.com/shot-1.jpg
 action: Wide establishing shot of the warehouse.
 camera:
@@ -149,6 +150,7 @@ lighting:
 :::shot
 id: shot-1
 number: 0
+shotType: Extreme Medium
 action: Wide.
 dialogue:
   - speaker: DETECTIVE
@@ -160,6 +162,7 @@ dialogue:
     expect(result.error).toContain("`aspectRatio` must be one of")
     expect(result.error).toContain("quoted hex color")
     expect(result.error).toContain("1-based integer")
+    expect(result.error).toContain("`shotType` must be one of")
     expect(result.error).toContain("missing its indented `text` line")
   })
 })

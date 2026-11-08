@@ -2,6 +2,7 @@ import documentMdSyntaxPrompt from "../prompts/document-md-syntax"
 import skillMdSyntaxPrompt from "../prompts/skill-md-syntax"
 import storyboardMdSyntaxPrompt from "../prompts/storyboard-md-syntax"
 import imageVideoGenerationSkill from "../skills/image-video-generation"
+import storyboardSkill from "../skills/storyboard"
 
 export const supportedAgents = [
   "main-agent",
@@ -29,5 +30,10 @@ export const SYSTEM_LEVEL_FILES = {
   "/system/skills/image-video-generation": {
     description: "Rules to follow before generating images and videos.",
     content: imageVideoGenerationSkill,
+  },
+  "/system/skills/storyboard": {
+    description:
+      "Rules to follow when building a storyboard: world first, text before images, narration/dialogue, attach images as they land, and consistency.",
+    content: storyboardSkill,
   },
 } as const

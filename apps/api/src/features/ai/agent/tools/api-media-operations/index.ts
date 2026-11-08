@@ -13,6 +13,7 @@ import {
   executeGetJobStatus,
   executeImageAnalysis,
   executeListModels,
+  executeMediaTranscription,
   executeSaveAsset,
   executeSubmitGeneration,
   executeVideoAnalysis,
@@ -27,7 +28,7 @@ import {
 
 export const apiMediaOperationsTool = buildBaseTool({
   name: "mediaOperationsAPI",
-  description: `API for analyzing media, capturing YouTube screenshots, and submitting or monitoring media-generation jobs.`,
+  description: `API for analyzing and transcribing media, capturing YouTube screenshots, and submitting or monitoring media-generation jobs.`,
   inputSchema: apiGenericApiSchema,
   execute: async (input, options) => {
     const parsed = parseApiToolRequest(input, apiMediaOperationsSchema)
@@ -55,6 +56,8 @@ function dispatchMediaOperationsRequest(
       return executeYoutubeAnalysis(request, options)
     case "/media/extract-frame/youtube":
       return executeYoutubeScreenshot(request, options)
+    case "/media/transcribe":
+      return executeMediaTranscription(request, options)
     case "/media/assets/generate":
       return executeSubmitGeneration(request, options)
     case "/media/assets/save":

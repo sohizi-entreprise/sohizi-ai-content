@@ -12,6 +12,12 @@ import {
   listGenerationModels,
 } from "@/features/media-engine/repo"
 import { normalizeFileNodeName, toApiPath } from "@/features/file-system/utils"
+import {
+  getOAudioUrl,
+  MAX_TRANSCRIPTION_AUDIO_SECONDS,
+  transcribeAudioWithBilling,
+  type TranscribeOutput,
+} from "@/features/ai/llm/transcribe"
 import { getErrorMessage } from "@/utils/get-error-message"
 import type { ModelMessage } from "ai"
 import type { AgentStateManager } from "../../core/state-manager"
@@ -141,6 +147,91 @@ export async function executeYoutubeScreenshot(
       getErrorMessage(error, "Failed to capture the YouTube screenshot"),
     )
   }
+}
+
+export async function executeMediaTranscription(
+  data: RequestFor<"/media/transcribe">,
+  { session, abortSignal, toolCallId }: ToolExecutionOptions,
+): Promise<ToolResult> {
+  const { url, type, startSeconds, endSeconds } = data.body
+  try {
+    const mediaType = type ?? inferMediaTypeFromUrl(url)
+    if (!mediaType) {
+      return failure(
+        "Could not determine whether the URL is an audio or video file. Please specify type as 'audio' or 'video'.",
+      )
+    }
+
+    const offsetSeconds = startSeconds ?? 0
+    if (endSeconds !== undefined && endSeconds <= offsetSeconds) {
+      return failure("endSeconds must be greater than startSeconds.")
+    }
+
+    const requestedDuration =
+      endSeconds !== undefined
+        ? endSeconds - offsetSeconds
+        : MAX_TRANSCRIPTION_AUDIO_SECONDS
+    const durationSeconds = Math.min(
+      Math.max(0.1, requestedDuration),
+      MAX_TRANSCRIPTION_AUDIO_SECONDS,
+    )
+
+    const audioUrl = getOAudioUrl(
+      url,
+      mediaType,
+      offsetSeconds,
+      durationSeconds,
+    )
+
+    const transcription = await transcribeAudioWithBilling(
+      {
+        audio: audioUrl,
+        estimatedDurationSeconds: durationSeconds,
+      },
+      {
+        organizationId: session.organizationId,
+        userId: session.userId,
+        signal: abortSignal,
+        metadata: {
+          sessionId: session.id,
+          conversationId: session.conversationId,
+          conversationRunId: session.runId,
+          runId: toolCallId || session.runId,
+          projectId: session.projectId,
+        },
+      },
+    )
+
+    return success(formatTranscriptionOutput(transcription))
+  } catch (error) {
+    return failure(
+      getErrorMessage(error, "An error occurred while transcribing media"),
+    )
+  }
+}
+
+function formatTranscriptionOutput(transcription: TranscribeOutput): string {
+  const entries =
+    transcription.segments.length > 0
+      ? transcription.segments.map((segment) => ({
+          start: segment.startSecond,
+          end: segment.endSecond,
+          text: segment.text.trim(),
+        }))
+      : transcription.words.map((word) => ({
+          start: word.start,
+          end: word.end,
+          text: word.word.trim(),
+        }))
+
+  const filtered = entries.filter((entry) => entry.text.length > 0)
+  if (filtered.length === 0) {
+    return transcription.text.trim()
+  }
+
+  return filtered
+    .map((entry) => `[${entry.start}-${entry.end}]\n${entry.text}`)
+    .join("\n")
 }
 
 export async function executeSubmitGeneration(
@@ -563,4 +654,33 @@ function extractReferenceFiles(
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms))
+}
+
+const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "m4v", "avi", "mkv"])
+const AUDIO_EXTENSIONS = new Set([
+  "mp3",
+  "wav",
+  "ogg",
+  "m4a",
+  "aac",
+  "flac",
+  "weba",
+])
+
+export function inferMediaTypeFromUrl(url: string): "audio" | "video" | null {
+  try {
+    const pathname = new URL(url).pathname.toLowerCase()
+    if (pathname.startsWith("/videos/") || pathname.includes("/videos/")) {
+      return "video"
+    }
+    if (pathname.startsWith("/audios/") || pathname.includes("/audios/")) {
+      return "audio"
+    }
+    const ext = pathname.split(".").pop()
+    if (ext && VIDEO_EXTENSIONS.has(ext)) return "video"
+    if (ext && AUDIO_EXTENSIONS.has(ext)) return "audio"
+    return null
+  } catch {
+    return null
+  }
 }

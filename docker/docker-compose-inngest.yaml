@@ -2,13 +2,15 @@ name: sohizi-inngest
 
 services:
   inngest:
-    image: inngest/inngest:v1.17.7
+    image: inngest/inngest:v1.41.1
     command: "inngest dev -u http://host.docker.internal:3030/api/inngest"
+    restart: unless-stopped
     ports:
       - "8288:8288"
       - "8289:8289"
 
   redis:
     image: redis:latest
+    restart: unless-stopped
     ports:
       - "6379:6379"

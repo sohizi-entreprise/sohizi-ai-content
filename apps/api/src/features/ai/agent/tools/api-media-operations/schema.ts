@@ -106,6 +106,36 @@ const youtubeScreenshotSchema = z
   })
   .describe("Extract a frame from a YouTube video at the requested time.")
 
+const transcribeMediaSchema = z
+  .object({
+    endpoint: z.literal("/media/transcribe"),
+    method: z.literal("POST"),
+    body: z.object({
+      url: z
+        .url()
+        .describe("The URL of the audio or video file to transcribe."),
+      type: z
+        .enum(["audio", "video"])
+        .optional()
+        .describe(
+          "Whether the media URL points to an audio or video file. Inferred from the URL when omitted.",
+        ),
+      startSeconds: z
+        .number()
+        .min(0)
+        .optional()
+        .describe("Optional start time in seconds."),
+      endSeconds: z
+        .number()
+        .positive()
+        .optional()
+        .describe("Optional end time in seconds."),
+    }),
+  })
+  .describe(
+    "Transcribe speech from an audio or video file by URL into text with word-level and segment-level timestamps.",
+  )
+
 const submitGenerationSchema = z
   .object({
     endpoint: z.literal("/media/assets/generate"),
@@ -170,6 +200,7 @@ export const apiMediaOperationsSchema = [
   videoAnalysisSchema,
   youtubeAnalysisSchema,
   youtubeScreenshotSchema,
+  transcribeMediaSchema,
   submitGenerationSchema,
   saveAssetSchema,
   waitForJobSchema,

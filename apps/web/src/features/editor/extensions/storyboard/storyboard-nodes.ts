@@ -7,6 +7,7 @@ import {
   parseAspectRatio,
   parseFrontMatter,
   parseSceneBlock,
+  parseShotType,
   serializeFrontMatter,
   serializeScene,
 } from "./storyboard-markdown"
@@ -229,6 +230,15 @@ export const Shot = Node.create({
         renderHTML: (attrs) =>
           attrs.number != null ? { "data-number": String(attrs.number) } : {},
       },
+      shotType: {
+        default: "",
+        parseHTML: (el) =>
+          parseShotType(el.getAttribute("data-shot-type") ?? ""),
+        renderHTML: (attrs) => {
+          const shotType = parseShotType(String(attrs.shotType ?? ""))
+          return shotType ? { "data-shot-type": shotType } : {}
+        },
+      },
       image: {
         default: "",
         parseHTML: (el) => el.getAttribute("data-image") ?? "",
@@ -399,6 +409,7 @@ export function shotToNode(shot: ShotData): JSONContent {
     attrs: {
       shotId: shot.id || generateStoryboardId("shot"),
       number: shot.number ?? null,
+      shotType: parseShotType(shot.shotType ?? ""),
       image: shot.image ?? "",
       action: shot.action ?? "",
       dialogue: normalizeDialogue(shot.dialogue),
@@ -436,6 +447,10 @@ export function nodeToShot(node: JSONContent): ShotData {
     id: attrs.shotId ?? generateStoryboardId("shot"),
   }
   if (attrs.number != null) shot.number = attrs.number
+  const shotType = parseShotType(
+    typeof attrs.shotType === "string" ? attrs.shotType : "",
+  )
+  if (shotType) shot.shotType = shotType
   if (attrs.image) shot.image = attrs.image
   if (attrs.action) shot.action = attrs.action
   if (dialogue.length > 0) shot.dialogue = dialogue

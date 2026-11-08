@@ -286,6 +286,7 @@ export function StoryboardEditorView({
       if (shotId) {
         updateShot(editor, shotId, {
           image: values.image,
+          shotType: values.shotType,
           action: values.action,
           narration: values.narration,
           dialogue: values.dialogue,

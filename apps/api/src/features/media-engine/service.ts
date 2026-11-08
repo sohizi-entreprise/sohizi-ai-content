@@ -224,6 +224,7 @@ export const generateAsset = async (payload: RunAgentPayload) => {
   )
   const estimatedCredits = providerCostToCredits(priceUSD, {
     overheadRate,
+    overbookingFactor: 1,
   })
 
   let userLease = null as Awaited<ReturnType<typeof acquireUserSlot>>

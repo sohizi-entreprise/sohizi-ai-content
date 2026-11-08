@@ -27,8 +27,9 @@ describe("catalog media credit conversion", () => {
       Number(
         providerCostToCredits(0.03, {
           overheadRate: mediaOverheadRate("image"),
+          overbookingFactor: 1,
         }),
       ),
-    ).toBe(15)
+    ).toBe(13)
   })
 })

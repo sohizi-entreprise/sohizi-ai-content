@@ -25,6 +25,7 @@ lighting: One practical bulb overhead, hard shadows.
 :::shot
 id: shot-1
 number: 1
+shotType: Wide Shot
 image: https://example.com/shot-1.jpg
 action: Wide establishing shot of the warehouse.
 camera:
@@ -35,6 +36,7 @@ camera:
 :::shot
 id: shot-2
 number: 2
+shotType: Medium Shot
 action: The detective opens the door.
 dialogue:
   - speaker: DETECTIVE
@@ -58,7 +60,7 @@ narration: Wind moves through the rafters.
 - Put shots inside the scene, after the scene fields.
 
 ### Fields
-Keys start at column 0. Each value stays on that same line. Do not wrap a value, and do not indent \`id\`, \`title\`, \`description\`, \`environment\`, \`lighting\`, \`number\`, \`image\`, \`action\`, or \`narration\`.
+Keys start at column 0. Each value stays on that same line. Do not wrap a value, and do not indent \`id\`, \`title\`, \`description\`, \`environment\`, \`lighting\`, \`number\`, \`shotType\`, \`image\`, \`action\`, or \`narration\`.
 
 Scene, in this order:
 - \`id\`: stable id, unique in the file. Keep an existing id when you edit that scene.
@@ -67,9 +69,10 @@ Scene, in this order:
 - \`environment\`: location and time of day.
 - \`lighting\`: how the scene is lit.
 
-Shot, in this order. Omit \`image\`, \`dialogue\`, \`narration\`, and \`camera\` when they are empty:
+Shot, in this order. Omit \`shotType\`, \`image\`, \`dialogue\`, \`narration\`, and \`camera\` when they are empty:
 - \`id\`: stable id, unique in the file. Keep an existing id when you edit that shot.
 - \`number\`: 1-based position of the shot inside its scene. After inserting, deleting, or reordering, renumber that scene from 1.
+- \`shotType\`: one of \`Extreme Close-Up\`, \`Close-Up\`, \`Medium Close-Up\`, \`Medium Shot\`, \`Medium Long Shot\`, \`Long Shot\`, \`Wide Shot\`, \`Extreme Wide Shot\`.
 - \`image\`: a real image URL only. Never invent a path.
 - \`action\`: one line describing what the shot shows. This is the shot description on the card.
 - \`dialogue\`: spoken lines. The key is alone on its line. Each line is an indented speaker plus a \`text\` line indented under it:
