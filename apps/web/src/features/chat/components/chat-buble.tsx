@@ -18,6 +18,7 @@ import {
   AttachmentPreview,
   Attachments,
 } from "@/components/ai-elements/attachments"
+import { thumbnailImageUrl } from "@/utils/transform-url"
 
 type AggregatedAssistant = {
   content: string
@@ -84,14 +85,16 @@ function RenderUserMessage({ message }: { message: Message }) {
           return {
             id: `${message.id}-img-${i}`,
             type: "file" as const,
-            url: String(part.image),
+            url: thumbnailImageUrl(String(part.image)),
             mediaType: "image/*",
           }
         }
+        const rawUrl = String(part.data)
+        const isImage = part.mediaType.startsWith("image/")
         return {
           id: `${message.id}-file-${i}`,
           type: "file" as const,
-          url: String(part.data),
+          url: isImage ? thumbnailImageUrl(rawUrl) : rawUrl,
           mediaType: part.mediaType,
         }
       })

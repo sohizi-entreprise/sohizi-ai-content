@@ -109,7 +109,7 @@ export function AppHeader() {
             className="cursor-pointer flex items-center gap-2 border rounded-xl px-2 py-1"
           >
             <ColibriMascot state="idle" size={24} />
-            <span className="text-sm font-medium">Ask Koli</span>
+            <span className="text-sm font-medium text-primary">Ask Koli</span>
           </button>
         )}
       </div>

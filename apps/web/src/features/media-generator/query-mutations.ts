@@ -35,6 +35,8 @@ export const mediaGeneratorKeys = {
     projectId: string,
     options?: requests.ListAssetsOptions,
   ) => ["media", projectId, "ai-assets", options],
+  aiGeneratedRequest: (projectId: string, requestId: string) =>
+    ["media", projectId, "ai-requests", requestId] as const,
   uploadedAssets: (projectId: string, options?: requests.ListAssetsOptions) => [
     "media",
     projectId,
@@ -91,6 +93,16 @@ export const listAiGeneratedAssetsQueryOptions = (
     initialPageParam: undefined as string | undefined,
     placeholderData: keepPreviousData,
     select: (data) => data.pages.flatMap((page) => page.data),
+  })
+
+export const getAiGeneratedRequestQueryOptions = (
+  projectId: string,
+  requestId: string | null | undefined,
+) =>
+  queryOptions({
+    queryKey: mediaGeneratorKeys.aiGeneratedRequest(projectId, requestId ?? ""),
+    queryFn: () => requests.getAiGeneratedRequest(projectId, requestId!),
+    enabled: Boolean(projectId && requestId),
   })
 
 export const listUploadedAssetsQueryOptions = (

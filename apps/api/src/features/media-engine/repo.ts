@@ -391,6 +391,76 @@ export const listAiGeneratedAssets = async (
   return { data, nextCursor, hasMore }
 }
 
+export const getAiGeneratedRequestById = async (
+  projectId: string,
+  requestId: string,
+): Promise<AiGeneratedMediaRequest | null> => {
+  const rows = await db
+    .select({
+      id: generationRequests.id,
+      projectId: generationRequests.projectId,
+      status: generationRequests.status,
+      request: generationRequests.request,
+      error: generationRequests.error,
+      reservationStatus: billingReservations.status,
+      actualCredits: billingReservations.actualCredits,
+      estimatedCredits: billingReservations.estimatedCredits,
+      reservationMetadata: billingReservations.metadata,
+      createdAt: generationRequests.createdAt,
+      updatedAt: generationRequests.updatedAt,
+      assets: sql<AiGeneratedRequestAsset[]>`
+        coalesce(
+          jsonb_agg(
+            jsonb_build_object(
+              'id', ${assets.id},
+              'name', ${assets.name},
+              'url', ${assets.url},
+              'type', ${assets.type},
+              'metadata', ${assets.metadata},
+              'storageKey', ${assets.storageKey}
+            )
+          ) FILTER (WHERE ${assets.id} IS NOT NULL),
+          '[]'::jsonb
+        )
+      `,
+    })
+    .from(generationRequests)
+    .leftJoin(
+      assets,
+      and(
+        eq(assets.generationRequestId, generationRequests.id),
+        isNull(assets.expireAt),
+      ),
+    )
+    .leftJoin(
+      billingReservations,
+      eq(billingReservations.id, generationRequests.billingReservationId),
+    )
+    .where(
+      and(
+        eq(generationRequests.id, requestId),
+        eq(generationRequests.projectId, projectId),
+        eq(generationRequests.type, "media-generation"),
+      ),
+    )
+    .groupBy(generationRequests.id, billingReservations.id)
+
+  const row = rows[0]
+  if (!row) return null
+
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    status: row.status,
+    request: row.request,
+    error: row.error,
+    credits: resolveRequestCredits(row),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    assets: Array.isArray(row.assets) ? row.assets : [],
+  }
+}
+
 export const createAssetRequest = async (
   projectId: string,
   userId: string,

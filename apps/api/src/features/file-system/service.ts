@@ -331,10 +331,13 @@ export const getFileContent = async (
         return {
           type: asset.type,
           ...fileMeta,
+          assetId: asset.id,
           url: asset.url,
           name: asset.name,
           metadata: asset.metadata,
           storageKey: asset.storageKey,
+          source: asset.source,
+          generationRequestId: asset.generationRequestId,
         }
       }
       const textContent = await fileSystemRepo.getFileContentById(
@@ -371,10 +374,13 @@ export const getFileContent = async (
       return {
         type: asset.type,
         ...fileMeta,
+        assetId: asset.id,
         url: asset.url,
         name: asset.name,
         metadata: asset.metadata,
         storageKey: asset.storageKey,
+        source: asset.source,
+        generationRequestId: asset.generationRequestId,
       }
     }
     case fileType.SKILL: {

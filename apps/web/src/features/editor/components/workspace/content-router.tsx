@@ -124,7 +124,7 @@ function ServerRenderedContent({
     case "video":
     case "image":
     case "document":
-      return <AssetViewer {...data} />
+      return <AssetViewer {...data} projectId={projectId} />
     default:
       return null
   }

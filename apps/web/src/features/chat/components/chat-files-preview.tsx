@@ -23,7 +23,7 @@ export default function ChatFilesPreview({ className, onRemoveFile }: Props) {
   return (
     <div className={cn("grid grid-cols-5 gap-4 w-full", className)}>
       {attachedFiles.map((file) => (
-        <div key={file.id} className="aspect-3/4 rounded relative">
+        <div key={file.id} className="aspect-3/4 rounded relative bg-card">
           <RenderFileType file={file} />
           {file.status === "pending" && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -46,7 +46,7 @@ export default function ChatFilesPreview({ className, onRemoveFile }: Props) {
 
 const RenderFileType = ({ file }: { file: AttachedFile }) => {
   switch (true) {
-    case file.type.startsWith("image/"):
+    case file.type.startsWith("image/") || file.type === "image":
       return (
         <img
           src={file.preview || (file.status === "uploaded" && file.url) || ""}
@@ -54,25 +54,27 @@ const RenderFileType = ({ file }: { file: AttachedFile }) => {
           className="w-full h-full object-contain"
         />
       )
-    case file.type.startsWith("video/"):
+    case file.type.startsWith("video/") || file.type === "video":
       return (
         <div className="w-full h-full flex items-center justify-center">
           <IconMovie className="size-4" />
         </div>
       )
-    case file.type.startsWith("audio/"):
+    case file.type.startsWith("audio/") || file.type === "audio":
       return (
         <div className="w-full h-full flex items-center justify-center">
           <IconFileMusic className="size-4" />
         </div>
       )
-    case file.type.startsWith("application/pdf"):
+    case file.type.startsWith("application/pdf") ||
+      file.type === "pdf" ||
+      file.type === "document":
       return (
         <div className="w-full h-full flex items-center justify-center">
           <IconFileTypePdf className="size-4" />
         </div>
       )
-    case file.type.startsWith("text/plain"):
+    case file.type.startsWith("text/plain") || file.type === "text":
       return (
         <div className="w-full h-full flex items-center justify-center">
           <IconFileTypeTxt className="size-4" />

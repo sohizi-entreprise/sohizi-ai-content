@@ -403,6 +403,17 @@ export const listAiGeneratedAssets = async (
   return await repo.listAiGeneratedAssets(projectId, options)
 }
 
+export const getAiGeneratedRequest = async (
+  projectId: string,
+  requestId: string,
+) => {
+  const request = await repo.getAiGeneratedRequestById(projectId, requestId)
+  if (!request) {
+    throw new NotFound("Generation request not found")
+  }
+  return request
+}
+
 export const listUploadedAssets = async (
   projectId: string,
   options?: CursorPaginationOptions & { type?: AssetType },

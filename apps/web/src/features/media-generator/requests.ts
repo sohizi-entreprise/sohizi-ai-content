@@ -78,6 +78,16 @@ export const listAiGeneratedAssets = async (
   return response.data
 }
 
+export const getAiGeneratedRequest = async (
+  projectId: string,
+  requestId: string,
+): Promise<AiGeneratedMediaRequest> => {
+  const response = await api.get(
+    `/media/${projectId}/ai-requests/${encodeURIComponent(requestId)}`,
+  )
+  return response.data
+}
+
 export type UploadedAsset = {
   id: string
   projectId: string

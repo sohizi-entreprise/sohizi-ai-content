@@ -42,9 +42,11 @@ export function MediaRequestPreviewDialog({
 }: MediaRequestPreviewDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl px-0" showCloseButton={true}>
         {item ? (
-          <MediaRequestPreviewBody projectId={projectId} item={item} />
+          <div className="max-h-[75vh] overflow-y-auto px-4">
+            <MediaRequestPreviewBody projectId={projectId} item={item} />
+          </div>
         ) : null}
       </DialogContent>
     </Dialog>

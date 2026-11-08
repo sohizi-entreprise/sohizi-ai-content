@@ -55,13 +55,16 @@ export type StoryboardContent = FileContentBase & {
 
 export type AssetContent = FileContentBase & {
   type: "document" | "video" | "audio" | "image"
+  assetId?: string
   url: string
   name: string
   metadata: {
     size: number
     contentType: string
-  }
+  } | null
   storageKey: string
+  source?: "user-uploaded" | "ai-generated"
+  generationRequestId?: string | null
 }
 
 export type AssetType = "document" | "video" | "audio" | "image"

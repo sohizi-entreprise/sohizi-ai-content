@@ -194,6 +194,13 @@ export const mediaEngineRoutes = new Elysia({ prefix: "/media/:projectId" })
       user.id,
     )
   })
+  .get("/ai-requests/:requestId", async ({ params, user }) => {
+    await assertProjectAccess(user.id, params.projectId)
+    return mediaService.getAiGeneratedRequest(
+      params.projectId,
+      params.requestId,
+    )
+  })
   .delete("/ai-requests/:requestId", async ({ params, user }) => {
     await assertProjectAccess(user.id, params.projectId)
     return mediaService.deleteGenerationRequest(
