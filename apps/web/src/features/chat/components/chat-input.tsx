@@ -8,6 +8,7 @@ import ChatSelectModel from "./chat-select-model"
 import { ContextWindowDonut } from "./context-window-donut"
 import ChatTextarea from "./chat-textarea"
 import ChatFilesPreview from "./chat-files-preview"
+import { ChatRunActivityDock } from "./chat-run-activity-dock"
 import type { Editor } from "@tiptap/core"
 import { cn } from "@/lib/utils"
 import {
@@ -86,7 +87,8 @@ export function ChatInput({
 
   return (
     <div className="p-3">
-      <div ref={suggestionAnchorRef} className="relative">
+      <ChatRunActivityDock projectId={projectId} />
+      <div ref={suggestionAnchorRef} className="relative z-10">
         <PromptInput
           onSubmit={handleSubmit}
           className={cn(

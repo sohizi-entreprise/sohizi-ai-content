@@ -27,8 +27,14 @@ interface EditorState {
   setSavingStatus: (tabId: string, status: "saving" | "saved" | "error") => void
   initLastSavedAt: (tabId: string, updatedAt: string) => void
   openFile: (node: FileTreeNode) => void
-  openFileByPath: (path: string) => Promise<void>
-  openFileById: (fileId: string) => Promise<void>
+  openFileByPath: (
+    path: string,
+    options?: { ignoreDirectory?: boolean },
+  ) => Promise<void>
+  openFileById: (
+    fileId: string,
+    options?: { ignoreDirectory?: boolean },
+  ) => Promise<void>
   updateTab: (
     fileId: string,
     patch: { name?: string; path?: string; oldPath?: string },
@@ -105,7 +111,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })
   },
 
-  openFileByPath: async (path) => {
+  openFileByPath: async (path, options) => {
     const normalized = toProjectFilePath(path) ?? path.trim()
     if (!normalized) {
       toast.error("Invalid file path")
@@ -130,7 +136,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     try {
       const node = await getFileNodeByPath(projectId, normalized)
       if (node.directory) {
-        set({ selectedFileId: node.id })
+        if (!options?.ignoreDirectory) {
+          set({ selectedFileId: node.id })
+        }
         return
       }
       get().openFile(node)
@@ -139,7 +147,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
   },
 
-  openFileById: async (fileId) => {
+  openFileById: async (fileId, options) => {
     const existing = get().openTabs.find((tab) => tab.id === fileId)
     if (existing) {
       set({
@@ -158,7 +166,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     try {
       const node = await getFileNodeById(projectId, fileId)
       if (node.directory) {
-        set({ selectedFileId: node.id })
+        if (!options?.ignoreDirectory) {
+          set({ selectedFileId: node.id })
+        }
         return
       }
       get().openFile(node)

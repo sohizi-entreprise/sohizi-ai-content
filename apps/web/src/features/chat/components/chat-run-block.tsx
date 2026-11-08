@@ -124,6 +124,11 @@ function PendingRunBlock({
   })
   const activeError = isCancelled ? null : (streamError ?? run.error)
   const isRunning = !isFinished && !isCancelled && !activeError
+  const setLiveRunMessages = useChatStore((state) => state.setLiveRunMessages)
+
+  useEffect(() => {
+    setLiveRunMessages({ runId: run.id, messages })
+  }, [run.id, messages, setLiveRunMessages])
 
   useEffect(() => {
     if (!isFinished) return
@@ -138,6 +143,9 @@ function PendingRunBlock({
           updatedAt,
         }),
     )
+    void queryClient.invalidateQueries({
+      queryKey: ["media", run.projectId, "ai-assets"],
+    })
   }, [
     isFinished,
     finishedAt,

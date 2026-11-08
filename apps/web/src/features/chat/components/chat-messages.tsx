@@ -24,7 +24,7 @@ export function ChatMessages({
     useShallow((state) => state.activeConversation),
   )
 
-  if (!conversation) {
+  if (!conversation || conversation.projectId !== projectId) {
     return <RenderEmpty conversationKey="no-conversation" />
   }
 

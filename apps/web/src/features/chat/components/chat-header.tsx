@@ -19,16 +19,18 @@ export function ChatHeader({ projectId, className }: ChatHeaderProps) {
 
   const title = conversation?.title ?? "New Chat"
   const isNew = conversation ? conversation.isNew : true
+  const isDifferentProject =
+    Boolean(conversation) && conversation.projectId !== projectId
 
   const handleNewConversation = () => {
     initChatStore(projectId)
   }
 
   useEffect(() => {
-    if (isNew) {
+    if (isNew || isDifferentProject) {
       initChatStore(projectId)
     }
-  }, [projectId, isNew])
+  }, [projectId, isNew, isDifferentProject, initChatStore])
 
   return (
     <div

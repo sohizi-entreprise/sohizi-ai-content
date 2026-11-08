@@ -22,7 +22,11 @@ export function ChatQuestionDock({ projectId }: { projectId: string }) {
     useShallow((state) => state.activeConversation),
   )
 
-  if (!conversation || conversation.isNew) {
+  if (
+    !conversation ||
+    conversation.isNew ||
+    conversation.projectId !== projectId
+  ) {
     return null
   }
 

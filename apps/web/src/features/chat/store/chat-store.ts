@@ -32,6 +32,7 @@ type ChatState = {
   reasoningEffortByModelId: Record<string, string>
   attachedFiles: Array<AttachedFile>
   cancelledRunIds: Record<string, true>
+  liveRunMessages: { runId: string; messages: Array<Message> } | null
 }
 
 type ChatActions = {
@@ -41,6 +42,9 @@ type ChatActions = {
   setReasoningEffort: (modelId: string, reasoningEffort: string) => void
   setActiveConversation: (conversation: StoreConversation) => void
   patchActiveConversation: (conversation: Partial<StoreConversation>) => void
+  setLiveRunMessages: (
+    liveRunMessages: { runId: string; messages: Array<Message> } | null,
+  ) => void
   markRunCancelled: (runId: string) => void
   unmarkRunCancelled: (runId: string) => void
   clearInput: () => void
@@ -58,6 +62,7 @@ const initialState: ChatState = {
   reasoningEffortByModelId: {},
   attachedFiles: [],
   cancelledRunIds: {},
+  liveRunMessages: null,
 }
 
 // ============================================================================
@@ -71,6 +76,7 @@ function applyChatState(state: ChatState, next: ChatState) {
   state.reasoningEffortByModelId = { ...next.reasoningEffortByModelId }
   state.attachedFiles = next.attachedFiles
   state.cancelledRunIds = { ...next.cancelledRunIds }
+  state.liveRunMessages = next.liveRunMessages
 }
 
 export const useChatStore = create<ChatState & ChatActions>()(
@@ -88,7 +94,7 @@ export const useChatStore = create<ChatState & ChatActions>()(
         }
       }),
     setActiveConversation: (conversation) =>
-      set({ activeConversation: conversation }),
+      set({ activeConversation: conversation, liveRunMessages: null }),
     patchActiveConversation: (conversation) =>
       set((state) => {
         if (state.activeConversation) {
@@ -98,6 +104,7 @@ export const useChatStore = create<ChatState & ChatActions>()(
           }
         }
       }),
+    setLiveRunMessages: (liveRunMessages) => set({ liveRunMessages }),
     markRunCancelled: (runId) =>
       set((state) => {
         state.cancelledRunIds[runId] = true
