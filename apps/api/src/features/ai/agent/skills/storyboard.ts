@@ -15,7 +15,7 @@ Execute strictly in this order: **1. World -> 2. Full Text -> 3. References -> 4
 ### 2. Write All Text Before Any Image Generation
 - Write the complete storyboard file (all scenes and shots) before generating any images.
 - Every shot must include \`action\`, \`shotType\`, and \`camera\` (\`angle\` + \`movement\`).
-- **Sound:** Decide from the brief whether the project uses \`narration\`, \`dialogue\`, or both, and write short, natural lines sized to each shot. If intentionally silent, state that in the scene \`description\`.
+- **Sound:** Decide from the brief whether the project uses \`narration\`, \`dialogue\`, or both, and write short, natural lines sized to each shot. If intentionally silent, state that in the scene \`action\`.
 - Read through once to verify story arc, pacing, and sound coverage before moving on.
 
 **Shot Types (\`shotType\`)**

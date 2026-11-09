@@ -1,30 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Player } from "@remotion/player"
 import { ChevronLeft, ChevronRight, ImageIcon, Pause, Play } from "lucide-react"
-import { MainComposition } from "@sohizi/video-composition"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@sohizi/ui/dialog"
-import {
-  aspectRatioToCss,
-  aspectRatioToDimensions,
-} from "../../extensions/storyboard"
-import {
-  SEQUENCE_FRAMES_PER_SHOT,
-  buildStoryboardSequence,
-  shotIndexFromFrame,
-} from "../../extensions/storyboard/storyboard-sequence"
+import { aspectRatioToCss } from "../../extensions/storyboard"
+import { SEQUENCE_SHOT_SECONDS } from "../../extensions/storyboard/storyboard-sequence"
 import type { CSSProperties } from "react"
 import type { StoryboardAspectRatio } from "../../extensions/storyboard"
 import type { SequenceShot } from "../../extensions/storyboard/storyboard-sequence"
-import type { CallbackListener, PlayerRef } from "@remotion/player"
-import type { MainCompositionProps } from "@sohizi/video-composition"
+import { cn } from "@/lib/utils"
 import { thumbnailImageUrl } from "@/utils/transform-url"
-
-type SequenceMode = "slides" | "video"
 
 type StoryboardSequenceDialogProps = {
   open: boolean
@@ -33,279 +21,331 @@ type StoryboardSequenceDialogProps = {
   aspectRatio: StoryboardAspectRatio
 }
 
+function formatTimecode(totalSeconds: number): string {
+  const whole = Math.max(0, Math.floor(totalSeconds))
+  const minutes = Math.floor(whole / 60)
+  const seconds = whole % 60
+  const tenths = Math.floor((Math.max(0, totalSeconds) - whole) * 10)
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${tenths}`
+}
+
 export function StoryboardSequenceDialog({
   open,
   onOpenChange,
   shots,
   aspectRatio,
 }: StoryboardSequenceDialogProps) {
-  const { width, height } = aspectRatioToDimensions(aspectRatio)
   const aspectCss = aspectRatioToCss(aspectRatio)
-  const playerRef = useRef<PlayerRef>(null)
-  const [mode, setMode] = useState<SequenceMode>("slides")
-  const [slideIndex, setSlideIndex] = useState(0)
-  const [frame, setFrame] = useState(0)
+  const [activeIndex, setActiveIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const [shotProgress, setShotProgress] = useState(0)
+  const timelineRef = useRef<HTMLDivElement | null>(null)
+  const thumbRefs = useRef<Array<HTMLButtonElement | null>>([])
 
-  const composition = useMemo(() => buildStoryboardSequence(shots), [shots])
-  const inputProps = useMemo<MainCompositionProps>(
-    () => ({ tracks: composition.tracks }),
-    [composition.tracks],
-  )
-
-  const videoIndex = shotIndexFromFrame(frame, shots.length)
-  const activeIndex = mode === "slides" ? slideIndex : videoIndex
-  const current = shots.length > 0 ? shots[activeIndex] : undefined
-  const counter = current
-    ? `Scene ${current.sceneNumber} · Shot ${current.shotNumber}`
-    : "No shots"
   const lastIndex = Math.max(shots.length - 1, 0)
+  const safeIndex = Math.min(Math.max(activeIndex, 0), lastIndex)
+  const current = shots.length > 0 ? shots[safeIndex] : undefined
 
-  const goToSlide = useCallback(
-    (index: number) => {
-      setSlideIndex(Math.min(Math.max(index, 0), lastIndex))
-    },
-    [lastIndex],
-  )
+  // Cumulative start time for each shot on the timeline
+  const shotStartTimes = useMemo(() => {
+    const starts: Array<number> = []
+    let acc = 0
+    for (const shot of shots) {
+      starts.push(acc)
+      acc += shot.durationSeconds || SEQUENCE_SHOT_SECONDS
+    }
+    return starts
+  }, [shots])
 
-  const seekToShot = useCallback(
-    (index: number) => {
-      const next = Math.min(Math.max(index, 0), lastIndex)
-      playerRef.current?.seekTo(next * SEQUENCE_FRAMES_PER_SHOT)
+  const stepToShot = useCallback(
+    (nextIndex: number) => {
+      setPlaying(false)
+      setShotProgress(0)
+      setActiveIndex(Math.min(Math.max(nextIndex, 0), lastIndex))
     },
     [lastIndex],
   )
 
   const togglePlayback = useCallback(() => {
-    const player = playerRef.current
-    if (!player) return
-    if (player.isPlaying()) player.pause()
-    else player.play()
-  }, [])
-
-  const selectMode = useCallback(
-    (nextMode: SequenceMode) => {
-      if (nextMode === mode) return
-      if (mode === "video") {
-        playerRef.current?.pause()
-        setSlideIndex(videoIndex)
+    if (shots.length === 0) return
+    setPlaying((wasPlaying) => {
+      if (!wasPlaying && safeIndex >= lastIndex && shotProgress >= 0.99) {
+        setActiveIndex(0)
+        setShotProgress(0)
+      } else if (!wasPlaying && safeIndex >= lastIndex) {
+        // If at the last slide and user clicks play, restart from beginning
+        setActiveIndex(0)
+        setShotProgress(0)
       }
-      setMode(nextMode)
-    },
-    [mode, videoIndex],
-  )
+      return !wasPlaying
+    })
+  }, [shots.length, safeIndex, lastIndex, shotProgress])
 
+  // Reset state when dialog closes
   useEffect(() => {
     if (open) return
-    setMode("slides")
-    setSlideIndex(0)
-    setFrame(0)
+    setActiveIndex(0)
     setPlaying(false)
+    setShotProgress(0)
   }, [open])
 
+  // Autoplay timer with smooth progress updates
   useEffect(() => {
-    if (!open || mode !== "video") return
+    if (!open || !playing || shots.length === 0) return
 
-    const player = playerRef.current
-    if (!player) return
+    const durationMs =
+      (shots[safeIndex]?.durationSeconds ?? SEQUENCE_SHOT_SECONDS) * 1000
+    const startedAt = performance.now()
+    let rafId = 0
 
-    const onFrame: CallbackListener<"frameupdate"> = (event) => {
-      setFrame(event.detail.frame)
+    const tick = (now: number) => {
+      const elapsed = now - startedAt
+      const ratio = Math.min(1, elapsed / durationMs)
+      setShotProgress(ratio)
+
+      if (elapsed >= durationMs) {
+        if (safeIndex < lastIndex) {
+          setShotProgress(0)
+          setActiveIndex((prev) => Math.min(prev + 1, lastIndex))
+        } else {
+          setPlaying(false)
+          setShotProgress(1)
+        }
+        return
+      }
+      rafId = window.requestAnimationFrame(tick)
     }
-    const onPlay: CallbackListener<"play"> = () => setPlaying(true)
-    const onPause: CallbackListener<"pause"> = () => setPlaying(false)
-    const onEnded: CallbackListener<"ended"> = () => setPlaying(false)
 
-    player.addEventListener("frameupdate", onFrame)
-    player.addEventListener("play", onPlay)
-    player.addEventListener("pause", onPause)
-    player.addEventListener("ended", onEnded)
-    player.seekTo(slideIndex * SEQUENCE_FRAMES_PER_SHOT)
+    rafId = window.requestAnimationFrame(tick)
+    return () => window.cancelAnimationFrame(rafId)
+  }, [open, playing, safeIndex, lastIndex, shots])
 
-    return () => {
-      player.removeEventListener("frameupdate", onFrame)
-      player.removeEventListener("play", onPlay)
-      player.removeEventListener("pause", onPause)
-      player.removeEventListener("ended", onEnded)
-      player.pause()
-    }
-  }, [open, mode, composition.durationInFrames])
+  // Scroll active thumbnail into view smoothly
+  useEffect(() => {
+    if (!open) return
+    const thumb = thumbRefs.current[safeIndex]
+    if (!thumb) return
+    thumb.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    })
+  }, [open, safeIndex])
 
+  // Keyboard navigation
   useEffect(() => {
     if (!open) return
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === " " || event.code === "Space") {
         event.preventDefault()
-        if (mode === "video") togglePlayback()
-        else goToSlide(slideIndex + 1)
+        togglePlayback()
         return
       }
       if (event.key === "ArrowRight") {
         event.preventDefault()
-        if (mode === "video") seekToShot(videoIndex + 1)
-        else goToSlide(slideIndex + 1)
+        stepToShot(safeIndex + 1)
         return
       }
       if (event.key === "ArrowLeft") {
         event.preventDefault()
-        if (mode === "video") seekToShot(videoIndex - 1)
-        else goToSlide(slideIndex - 1)
+        stepToShot(safeIndex - 1)
       }
     }
 
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [
-    goToSlide,
-    mode,
-    open,
-    seekToShot,
-    slideIndex,
-    togglePlayback,
-    videoIndex,
-  ])
+  }, [open, safeIndex, stepToShot, togglePlayback])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex h-[90vh] max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col bg-surface/30 p-4 backdrop-blur-sm sm:max-w-5xl md:max-w-6xl"
+        className="storyboard-sequence-dialog flex h-[90vh] max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 sm:max-w-5xl md:max-w-6xl"
         style={{ "--storyboard-aspect": aspectCss } as CSSProperties}
       >
         <DialogTitle className="sr-only">Storyboard sequence</DialogTitle>
         <DialogDescription className="sr-only">
-          Review shots as slides or play them as a video with subtitles.
+          Preview and autoplay storyboard shots along a timeline.
         </DialogDescription>
 
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-black">
-          <div className="storyboard-sequence-modes" role="tablist">
+        {/* Main Viewport Stage */}
+        <div className="storyboard-sequence-stage">
+          {current ? (
+            <div
+              className="storyboard-sequence-frame"
+              onClick={togglePlayback}
+              role="button"
+              tabIndex={-1}
+              aria-label={playing ? "Pause autoplay" : "Start autoplay"}
+            >
+              {current.image ? (
+                <img
+                  key={`${current.sceneNumber}-${current.shotNumber}-${current.image}`}
+                  src={thumbnailImageUrl(current.image, "large")}
+                  alt={`Scene ${current.sceneNumber}, Shot ${current.shotNumber}`}
+                />
+              ) : (
+                <div className="storyboard-sequence-frame-empty">
+                  <ImageIcon className="size-9 opacity-40" />
+                </div>
+              )}
+
+              {current.subtitle ? (
+                <div
+                  className="storyboard-sequence-caption-wrap"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <p className="storyboard-sequence-caption">
+                    {current.subtitle}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="storyboard-sequence-frame-empty">
+              <ImageIcon className="size-8 opacity-40" />
+              <span>No shots to preview</span>
+            </div>
+          )}
+        </div>
+
+        {/* Transport Control Bar */}
+        <div className="storyboard-sequence-controls">
+          <div className="storyboard-sequence-controls-left">
             <button
               type="button"
-              role="tab"
-              aria-selected={mode === "slides"}
-              className={
-                mode === "slides"
-                  ? "storyboard-sequence-mode storyboard-sequence-mode-active"
-                  : "storyboard-sequence-mode"
-              }
-              onClick={() => selectMode("slides")}
+              className={cn(
+                "storyboard-sequence-play",
+                playing && "is-playing",
+              )}
+              onClick={togglePlayback}
+              disabled={shots.length === 0}
+              aria-label={playing ? "Pause sequence" : "Play sequence"}
+              title={playing ? "Pause (Space)" : "Autoplay (Space)"}
             >
-              Slides
+              {playing ? (
+                <Pause className="size-4 fill-current" />
+              ) : (
+                <Play className="size-4 translate-x-[0.5px] fill-current" />
+              )}
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "video"}
-              className={
-                mode === "video"
-                  ? "storyboard-sequence-mode storyboard-sequence-mode-active"
-                  : "storyboard-sequence-mode"
-              }
-              onClick={() => selectMode("video")}
-            >
-              Video
-            </button>
+
+            <div className="storyboard-sequence-status">
+              <span className="storyboard-sequence-index">
+                <strong>{shots.length > 0 ? safeIndex + 1 : 0}</strong>
+                <span>/ {shots.length}</span>
+              </span>
+              {current ? (
+                <span className="storyboard-sequence-scene-tag">
+                  Scene {String(current.sceneNumber).padStart(2, "0")} · Shot{" "}
+                  {String(current.shotNumber).padStart(2, "0")}
+                </span>
+              ) : null}
+            </div>
           </div>
 
-          {mode === "slides" ? (
-            <SequenceSlide shot={current} />
-          ) : (
-            <Player
-              ref={playerRef}
-              component={MainComposition}
-              inputProps={inputProps}
-              durationInFrames={composition.durationInFrames}
-              compositionWidth={width}
-              compositionHeight={height}
-              fps={composition.fps}
-              controls={false}
-              clickToPlay
-              doubleClickToFullscreen={false}
-              spaceKeyToPlayOrPause={false}
-              style={{ width: "100%", height: "100%" }}
-              acknowledgeRemotionLicense
-            />
-          )}
-
-          <div className="storyboard-sequence-remote">
-            {mode === "video" ? (
-              <button
-                type="button"
-                className="storyboard-sequence-play"
-                onClick={togglePlayback}
-                aria-label={playing ? "Pause sequence" : "Play sequence"}
-                title={playing ? "Pause" : "Play"}
-              >
-                {playing ? (
-                  <Pause className="size-4 fill-current" />
-                ) : (
-                  <Play className="size-4 fill-current" />
-                )}
-              </button>
-            ) : null}
+          <div className="storyboard-sequence-controls-right">
             <button
               type="button"
               className="storyboard-sequence-nav"
-              onClick={() =>
-                mode === "video"
-                  ? seekToShot(videoIndex - 1)
-                  : goToSlide(slideIndex - 1)
-              }
-              disabled={activeIndex <= 0}
+              onClick={() => stepToShot(safeIndex - 1)}
+              disabled={safeIndex <= 0}
               aria-label="Previous shot"
+              title="Previous shot (←)"
             >
               <ChevronLeft className="size-4" />
             </button>
-            <span className="storyboard-sequence-counter">{counter}</span>
             <button
               type="button"
               className="storyboard-sequence-nav"
-              onClick={() =>
-                mode === "video"
-                  ? seekToShot(videoIndex + 1)
-                  : goToSlide(slideIndex + 1)
-              }
-              disabled={activeIndex >= lastIndex}
+              onClick={() => stepToShot(safeIndex + 1)}
+              disabled={safeIndex >= lastIndex}
               aria-label="Next shot"
+              title="Next shot (→)"
             >
               <ChevronRight className="size-4" />
             </button>
           </div>
         </div>
+
+        {/* Single-Line Filmstrip Timeline */}
+        <div
+          ref={timelineRef}
+          className="storyboard-sequence-timeline scrollbar-hide"
+        >
+          <div className="storyboard-sequence-track">
+            {shots.map((shot, index) => {
+              const isActive = index === safeIndex
+              const isPast = index < safeIndex
+              const startSec = shotStartTimes[index] ?? 0
+              const fillPercent = isPast
+                ? 100
+                : isActive
+                  ? playing
+                    ? Math.round(shotProgress * 100)
+                    : 100
+                  : 0
+
+              return (
+                <button
+                  key={`${shot.sceneNumber}-${shot.shotNumber}-${index}`}
+                  ref={(el) => {
+                    thumbRefs.current[index] = el
+                  }}
+                  type="button"
+                  onClick={() => stepToShot(index)}
+                  aria-label={`Scene ${shot.sceneNumber}, Shot ${shot.shotNumber}`}
+                  aria-current={isActive ? "true" : undefined}
+                  className={cn(
+                    "storyboard-sequence-cell",
+                    isActive && "is-active",
+                    isPast && "is-past",
+                  )}
+                >
+                  {/* Ruler & Timecode Node */}
+                  <div className="storyboard-sequence-ruler">
+                    <span className="storyboard-sequence-timecode">
+                      {formatTimecode(startSec)}
+                    </span>
+                    <div className="storyboard-sequence-rail-line">
+                      <div
+                        className="storyboard-sequence-rail-fill"
+                        style={{ width: `${fillPercent}%` }}
+                      />
+                      <span
+                        className={cn(
+                          "storyboard-sequence-rail-dot",
+                          isActive && "is-active",
+                          isPast && "is-past",
+                        )}
+                      >
+                        {isActive ? index + 1 : null}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Thumbnail Frame */}
+                  <div className="storyboard-sequence-thumb">
+                    {shot.image ? (
+                      <img
+                        src={thumbnailImageUrl(shot.image)}
+                        alt={`Shot ${index + 1}`}
+                      />
+                    ) : (
+                      <div className="storyboard-sequence-thumb-empty">
+                        <ImageIcon className="size-4 opacity-40" />
+                      </div>
+                    )}
+                    <span className="storyboard-sequence-thumb-badge">
+                      {index + 1}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function SequenceSlide({ shot }: { shot: SequenceShot | undefined }) {
-  if (!shot) {
-    return (
-      <div className="storyboard-sequence-slide">
-        <div className="storyboard-sequence-slide-empty">
-          <ImageIcon className="size-8" />
-          <span>No shots to preview</span>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="storyboard-sequence-slide">
-      <div className="storyboard-sequence-slide-frame">
-        {shot.image ? (
-          <img
-            src={thumbnailImageUrl(shot.image, "large")}
-            alt={shot.subtitle || "Shot"}
-          />
-        ) : (
-          <div className="storyboard-sequence-slide-empty">
-            <ImageIcon className="size-8" />
-          </div>
-        )}
-      </div>
-      {shot.subtitle ? (
-        <p className="storyboard-sequence-subtitle">{shot.subtitle}</p>
-      ) : null}
-    </div>
   )
 }

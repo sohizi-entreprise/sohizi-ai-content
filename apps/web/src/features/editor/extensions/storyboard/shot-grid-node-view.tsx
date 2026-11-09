@@ -5,7 +5,7 @@ import { useStoryboardContext } from "./storyboard-context"
 import type { ReactNodeViewProps } from "@tiptap/react"
 import { cn } from "@/lib/utils"
 
-export function ShotGridNodeView({ editor, getPos }: ReactNodeViewProps) {
+export function ShotGridNodeView({ node, editor, getPos }: ReactNodeViewProps) {
   const { openNewShotSheet } = useStoryboardContext()
 
   const resolveSceneId = (): string | null => {
@@ -20,16 +20,12 @@ export function ShotGridNodeView({ editor, getPos }: ReactNodeViewProps) {
   }
 
   const sceneId = resolveSceneId()
+  const isEmpty = node.childCount === 0
 
   const { setNodeRef, isOver } = useDroppable({
     id: sceneId ? `grid:${sceneId}` : `grid:unknown`,
     data: { type: "grid", sceneId },
   })
-
-  const handleAddShot = () => {
-    if (!sceneId) return
-    openNewShotSheet(sceneId)
-  }
 
   return (
     <NodeViewWrapper
@@ -40,22 +36,23 @@ export function ShotGridNodeView({ editor, getPos }: ReactNodeViewProps) {
     >
       <div ref={setNodeRef} className="storyboard-shot-grid-inner">
         <NodeViewContent className="storyboard-shot-grid-content" as="div" />
-        <button
-          type="button"
-          className="storyboard-shot-placeholder"
-          contentEditable={false}
-          title="Append shot"
-          aria-label="Append shot"
-          onClick={handleAddShot}
-        >
-          <span className="storyboard-shot-placeholder-icon">
-            <Plus className="size-5" />
-          </span>
-          <span className="storyboard-shot-placeholder-title">Append Shot</span>
-          <span className="storyboard-shot-placeholder-hint">
-            Click or drag image file
-          </span>
-        </button>
+        {isEmpty ? (
+          <button
+            type="button"
+            contentEditable={false}
+            className="storyboard-shot-empty-card"
+            title="Add shot"
+            aria-label="Add shot"
+            onClick={() => {
+              if (sceneId) openNewShotSheet(sceneId)
+            }}
+          >
+            <span className="storyboard-shot-empty-icon">
+              <Plus className="size-5" />
+            </span>
+            <span className="storyboard-shot-empty-label">Add shot</span>
+          </button>
+        ) : null}
       </div>
     </NodeViewWrapper>
   )

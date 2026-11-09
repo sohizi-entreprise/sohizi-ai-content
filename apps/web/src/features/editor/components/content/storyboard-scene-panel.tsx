@@ -13,6 +13,7 @@ import { thumbnailImageUrl } from "@/utils/transform-url"
 
 interface StoryboardScenePanelProps {
   scenes: Array<SceneSummary>
+  activeSceneId?: string | null
   onSelect: (sceneId: string) => void
 }
 
@@ -21,6 +22,7 @@ type PanelPin =
 
 export function StoryboardScenePanel({
   scenes,
+  activeSceneId,
   onSelect,
 }: StoryboardScenePanelProps) {
   const hitRef = useRef<HTMLElement>(null)
@@ -89,6 +91,7 @@ export function StoryboardScenePanel({
                 key={scene.id}
                 scene={scene}
                 index={index}
+                isActive={scene.id === activeSceneId}
                 onSelect={onSelect}
               />
             ))}
@@ -105,10 +108,12 @@ export function StoryboardScenePanel({
 function ScenePreview({
   scene,
   index,
+  isActive,
   onSelect,
 }: {
   scene: SceneSummary
   index: number
+  isActive: boolean
   onSelect: (sceneId: string) => void
 }) {
   const {
@@ -133,8 +138,10 @@ function ScenePreview({
       type="button"
       ref={setNodeRef}
       style={style}
+      aria-current={isActive ? "true" : undefined}
       className={cn(
         "storyboard-panel-item",
+        isActive && "is-active",
         isDragging && "storyboard-panel-item-dragging",
       )}
       title={scene.title || `Scene ${index + 1}`}

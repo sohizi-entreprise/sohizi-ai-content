@@ -15,7 +15,7 @@
  *   :::scene
  *   id: scene-1
  *   title: Arrival
- *   description: A detective enters an abandoned warehouse.
+ *   action: A detective enters an abandoned warehouse.
  *   environment: Abandoned warehouse on the docks, night.
  *   lighting: One practical bulb overhead, hard shadows.
  *
@@ -24,6 +24,10 @@
  *   number: 1
  *   image: /images/shot-1.jpg
  *   action: Wide establishing shot of the warehouse.
+ *   composition: Warehouse occupies upper two-thirds; dock pilings in foreground.
+ *   duration: 3s
+ *   purpose: Establish scale and isolation before entry.
+ *   transition: Cut on door movement
  *   camera:
  *     angle: low angle
  *     movement: slow push in
@@ -93,6 +97,10 @@ export type ShotData = {
   shotType?: StoryboardShotType
   image?: string
   action?: string
+  composition?: string
+  duration?: string
+  purpose?: string
+  transition?: string
   dialogue?: Array<ShotDialogueLine>
   narration?: string
   camera?: ShotCamera
@@ -101,7 +109,7 @@ export type ShotData = {
 export type SceneData = {
   id: string
   title: string
-  description: string
+  action: string
   environment: string
   lighting: string
   shots: Array<ShotData>
@@ -356,7 +364,7 @@ export function parseSceneBlock(raw: string): SceneData {
   return {
     id: meta.id || generateStoryboardId("scene"),
     title: meta.title ?? "",
-    description: meta.description ?? "",
+    action: meta.action ?? meta.description ?? "",
     environment: meta.environment ?? "",
     lighting: meta.lighting ?? "",
     shots,
@@ -438,6 +446,18 @@ function parseShotLines(lines: Array<string>): ShotData {
         case "action":
           shot.action = value
           break
+        case "composition":
+          if (value) shot.composition = value
+          break
+        case "duration":
+          if (value) shot.duration = value
+          break
+        case "purpose":
+          if (value) shot.purpose = value
+          break
+        case "transition":
+          if (value) shot.transition = value
+          break
         case "narration":
           shot.narration = value
           break
@@ -460,6 +480,10 @@ export function serializeShot(shot: ShotData): string {
   if (shot.shotType) lines.push(`shotType: ${shot.shotType}`)
   if (shot.image) lines.push(`image: ${shot.image}`)
   lines.push(`action: ${shot.action ?? ""}`)
+  if (shot.composition) lines.push(`composition: ${shot.composition}`)
+  if (shot.duration) lines.push(`duration: ${shot.duration}`)
+  if (shot.purpose) lines.push(`purpose: ${shot.purpose}`)
+  if (shot.transition) lines.push(`transition: ${shot.transition}`)
   if (shot.dialogue && shot.dialogue.length > 0) {
     lines.push("dialogue:")
     for (const line of shot.dialogue) {
@@ -482,7 +506,7 @@ export function serializeScene(scene: SceneData): string {
   const lines: Array<string> = [":::scene"]
   lines.push(`id: ${scene.id}`)
   lines.push(`title: ${scene.title}`)
-  lines.push(`description: ${scene.description}`)
+  lines.push(`action: ${scene.action}`)
   lines.push(`environment: ${scene.environment}`)
   lines.push(`lighting: ${scene.lighting}`)
   lines.push("")

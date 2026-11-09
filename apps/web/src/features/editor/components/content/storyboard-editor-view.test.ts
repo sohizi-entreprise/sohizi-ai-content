@@ -33,7 +33,7 @@ describe("toStoryboardContent", () => {
     const markdown = `:::scene
 id: scene-1
 title: Arrival
-description:
+action:
 
 :::
 `
@@ -50,7 +50,7 @@ description:
 :::scene
 id: scene-1
 title: Arrival
-description:
+action:
 environment:
 lighting:
 

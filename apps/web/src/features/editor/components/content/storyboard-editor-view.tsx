@@ -122,6 +122,7 @@ export function StoryboardEditorView({
   const [shotSheet, setShotSheet] = useState<ShotSheetState | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [sequenceOpen, setSequenceOpen] = useState(false)
+  const [activeSceneId, setActiveSceneId] = useState<string | null>(null)
   const [, setTick] = useState(0)
 
   const autosave = useAutoSave({
@@ -266,6 +267,7 @@ export function StoryboardEditorView({
   )
 
   const handleSelectScene = useCallback((sceneId: string) => {
+    setActiveSceneId(sceneId)
     const container = scrollRef.current
     if (!container) return
     const target = container.querySelector<HTMLElement>(
@@ -288,6 +290,10 @@ export function StoryboardEditorView({
           image: values.image,
           shotType: values.shotType,
           action: values.action,
+          composition: values.composition,
+          duration: values.duration,
+          purpose: values.purpose,
+          transition: values.transition,
           narration: values.narration,
           dialogue: values.dialogue,
           camera: {
@@ -315,6 +321,55 @@ export function StoryboardEditorView({
       editor.off("update", handler)
     }
   }, [editor])
+
+  const sceneIdsKey = sceneIds.join(",")
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+
+    const updateActiveScene = () => {
+      const elements = Array.from(
+        container.querySelectorAll<HTMLElement>("[data-scene-id]"),
+      )
+      if (elements.length === 0) {
+        setActiveSceneId(null)
+        return
+      }
+
+      const containerRect = container.getBoundingClientRect()
+      const focusLine = containerRect.top + containerRect.height * 0.3
+      let bestId = elements[0].getAttribute("data-scene-id")
+      let bestDistance = Number.POSITIVE_INFINITY
+
+      for (const el of elements) {
+        const rect = el.getBoundingClientRect()
+        const id = el.getAttribute("data-scene-id")
+        if (!id) continue
+        if (rect.top <= focusLine && rect.bottom >= focusLine) {
+          bestId = id
+          break
+        }
+        const distance = Math.min(
+          Math.abs(rect.top - focusLine),
+          Math.abs(rect.bottom - focusLine),
+        )
+        if (distance < bestDistance) {
+          bestDistance = distance
+          bestId = id
+        }
+      }
+
+      setActiveSceneId(bestId)
+    }
+
+    updateActiveScene()
+    container.addEventListener("scroll", updateActiveScene, { passive: true })
+    window.addEventListener("resize", updateActiveScene)
+    return () => {
+      container.removeEventListener("scroll", updateActiveScene)
+      window.removeEventListener("resize", updateActiveScene)
+    }
+  }, [sceneIdsKey])
 
   const activeShot =
     shotSheet?.mode === "edit" ? getShotData(editor, shotSheet.shotId) : null
@@ -354,6 +409,7 @@ export function StoryboardEditorView({
 
             <StoryboardScenePanel
               scenes={scenes}
+              activeSceneId={activeSceneId}
               onSelect={handleSelectScene}
             />
           </div>
@@ -435,7 +491,7 @@ export function toStoryboardContent(markdown: string): {
           sceneToNode({
             id: generateStoryboardId("scene"),
             title: "",
-            description: "",
+            action: "",
             environment: "",
             lighting: "",
             shots: [],

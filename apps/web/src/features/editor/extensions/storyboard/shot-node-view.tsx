@@ -24,6 +24,7 @@ import { thumbnailImageUrl } from "@/utils/transform-url"
 export function ShotNodeView({ node, editor, deleteNode }: ReactNodeViewProps) {
   const shotId: string = node.attrs.shotId
   const shotType: string = node.attrs.shotType ?? ""
+  const duration: string = node.attrs.duration ?? ""
   const image: string = node.attrs.image ?? ""
   const action: string = node.attrs.action ?? ""
   const { openShotSheet, attachShot } = useStoryboardContext()
@@ -146,12 +147,10 @@ export function ShotNodeView({ node, editor, deleteNode }: ReactNodeViewProps) {
       </div>
 
       <div className="storyboard-shot-body">
-        {shotType ? (
-          <span className="storyboard-shot-type">{shotType}</span>
+        <span className="storyboard-shot-type">{shotType}</span>
+        {duration ? (
+          <span className="storyboard-shot-duration">{duration}</span>
         ) : null}
-        <p className="storyboard-shot-desc">
-          {action || "No description yet."}
-        </p>
       </div>
     </NodeViewWrapper>
   )

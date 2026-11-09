@@ -14,7 +14,7 @@ temporalContext: "Present day, late autumn"
 :::scene
 id: scene-1
 title: Arrival
-description: A detective enters an abandoned warehouse.
+action: A detective enters an abandoned warehouse.
 environment: Abandoned warehouse on the docks, night.
 lighting: One practical bulb overhead, hard shadows.
 
@@ -24,6 +24,10 @@ number: 1
 shotType: Wide Shot
 image: https://example.com/shot-1.jpg
 action: Wide establishing shot of the warehouse.
+composition: Warehouse centered in upper two-thirds; dock pilings in foreground.
+duration: 3s
+purpose: Establish scale and isolation before entry.
+transition: Cut on door movement
 camera:
   angle: low angle
   movement: slow push in
@@ -63,7 +67,7 @@ temporalContext: ""
 :::scene
 id:
 title:
-description:
+action:
 environment:
 lighting:
 
@@ -96,7 +100,7 @@ temporalContext: ""
 :::scene
 id: scene-1
 title: Arrival
-description: A detective enters.
+action: A detective enters.
 environment: Warehouse
 :::
 `
@@ -116,7 +120,7 @@ temporalContext: ""
 :::scene
 id: scene-1
 title:
-description:
+action:
 environment:
 lighting:
 ::: shot
@@ -143,7 +147,7 @@ temporalContext: ""
 :::scene
 id: scene-1
 title:
-description:
+action:
 environment:
 lighting:
 

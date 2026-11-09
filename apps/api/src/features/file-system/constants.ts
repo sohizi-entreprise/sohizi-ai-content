@@ -29,7 +29,7 @@ temporalContext: ""
 :::scene
 id: scene-1
 title:
-description:
+action:
 environment:
 lighting:
 

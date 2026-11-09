@@ -251,6 +251,30 @@ export const Shot = Node.create({
         renderHTML: (attrs) =>
           attrs.action ? { "data-action": attrs.action } : {},
       },
+      composition: {
+        default: "",
+        parseHTML: (el) => el.getAttribute("data-composition") ?? "",
+        renderHTML: (attrs) =>
+          attrs.composition ? { "data-composition": attrs.composition } : {},
+      },
+      duration: {
+        default: "",
+        parseHTML: (el) => el.getAttribute("data-duration") ?? "",
+        renderHTML: (attrs) =>
+          attrs.duration ? { "data-duration": attrs.duration } : {},
+      },
+      purpose: {
+        default: "",
+        parseHTML: (el) => el.getAttribute("data-purpose") ?? "",
+        renderHTML: (attrs) =>
+          attrs.purpose ? { "data-purpose": attrs.purpose } : {},
+      },
+      transition: {
+        default: "",
+        parseHTML: (el) => el.getAttribute("data-transition") ?? "",
+        renderHTML: (attrs) =>
+          attrs.transition ? { "data-transition": attrs.transition } : {},
+      },
       dialogue: {
         default: [],
         parseHTML: (el) =>
@@ -385,7 +409,7 @@ export function sceneToNode(scene: SceneData): JSONContent {
       },
       {
         type: "sceneAction",
-        content: textContent(scene.description),
+        content: textContent(scene.action),
       },
       {
         type: "sceneEnvironment",
@@ -412,6 +436,10 @@ export function shotToNode(shot: ShotData): JSONContent {
       shotType: parseShotType(shot.shotType ?? ""),
       image: shot.image ?? "",
       action: shot.action ?? "",
+      composition: shot.composition ?? "",
+      duration: shot.duration ?? "",
+      purpose: shot.purpose ?? "",
+      transition: shot.transition ?? "",
       dialogue: normalizeDialogue(shot.dialogue),
       narration: shot.narration ?? "",
       cameraAngle: shot.camera?.angle ?? "",
@@ -433,7 +461,7 @@ export function nodeToScene(node: JSONContent): SceneData {
   return {
     id: node.attrs?.sceneId ?? generateStoryboardId("scene"),
     title: getNodeText(titleNode),
-    description: getNodeText(actionNode),
+    action: getNodeText(actionNode),
     environment: getNodeText(environmentNode),
     lighting: getNodeText(lightingNode),
     shots: (gridNode?.content ?? []).map(nodeToShot),
@@ -453,6 +481,10 @@ export function nodeToShot(node: JSONContent): ShotData {
   if (shotType) shot.shotType = shotType
   if (attrs.image) shot.image = attrs.image
   if (attrs.action) shot.action = attrs.action
+  if (attrs.composition) shot.composition = attrs.composition
+  if (attrs.duration) shot.duration = attrs.duration
+  if (attrs.purpose) shot.purpose = attrs.purpose
+  if (attrs.transition) shot.transition = attrs.transition
   if (dialogue.length > 0) shot.dialogue = dialogue
   if (attrs.narration) shot.narration = attrs.narration
   const cameraAngle =

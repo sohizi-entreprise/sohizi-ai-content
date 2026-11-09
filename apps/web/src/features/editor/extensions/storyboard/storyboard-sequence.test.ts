@@ -37,7 +37,7 @@ const SAMPLE_DOC: JSONContent = {
     sceneToNode({
       id: "scene-1",
       title: "Arrival",
-      description: "",
+      action: "",
       environment: "",
       lighting: "",
       shots: [
@@ -62,7 +62,7 @@ const SAMPLE_DOC: JSONContent = {
     sceneToNode({
       id: "scene-2",
       title: "Departure",
-      description: "",
+      action: "",
       environment: "",
       lighting: "",
       shots: [{ id: "shot-4", action: "Exterior wide." }],
@@ -71,7 +71,7 @@ const SAMPLE_DOC: JSONContent = {
 }
 
 describe("formatShotSubtitle", () => {
-  it("prefers dialogue over narration and action", () => {
+  it("prefers dialogue over narration and ignores action", () => {
     expect(
       formatShotSubtitle({
         id: "shot",
@@ -82,7 +82,7 @@ describe("formatShotSubtitle", () => {
     ).toBe("DETECTIVE: Hello?")
   })
 
-  it("falls back to narration, then action", () => {
+  it("falls back to narration and returns empty when only action is present", () => {
     expect(
       formatShotSubtitle({
         id: "shot",
@@ -90,9 +90,7 @@ describe("formatShotSubtitle", () => {
         narration: "A voice over",
       }),
     ).toBe("A voice over")
-    expect(formatShotSubtitle({ id: "shot", action: "walks in" })).toBe(
-      "walks in",
-    )
+    expect(formatShotSubtitle({ id: "shot", action: "walks in" })).toBe("")
   })
 
   it("joins dialogue lines and skips empty ones", () => {
@@ -117,7 +115,7 @@ describe("collectSequenceShotsFromJson", () => {
       sceneNumber: 1,
       shotNumber: 1,
       image: "/images/shot-1.jpg",
-      subtitle: "Wide establishing shot.",
+      subtitle: "",
     })
     expect(shots[1]).toMatchObject({
       sceneNumber: 1,
@@ -132,7 +130,7 @@ describe("collectSequenceShotsFromJson", () => {
     expect(shots[3]).toMatchObject({
       sceneNumber: 2,
       shotNumber: 1,
-      subtitle: "Exterior wide.",
+      subtitle: "",
     })
   })
 })
@@ -151,7 +149,7 @@ describe("buildStoryboardSequence", () => {
     expect(composition.fps).toBe(SEQUENCE_FPS)
     expect(composition.durationInFrames).toBe(4 * SEQUENCE_FRAMES_PER_SHOT)
     expect(imageTrack?.clips).toHaveLength(4)
-    expect(textTrack?.clips).toHaveLength(4)
+    expect(textTrack?.clips).toHaveLength(2)
     expect(imageTrack?.clips[0]).toMatchObject({
       url: thumbnailImageUrl("/images/shot-1.jpg", "large"),
     })
@@ -159,7 +157,7 @@ describe("buildStoryboardSequence", () => {
       startFrame: SEQUENCE_FRAMES_PER_SHOT,
       endFrame: SEQUENCE_FRAMES_PER_SHOT * 2,
     })
-    expect(textTrack?.clips[1]).toMatchObject({
+    expect(textTrack?.clips[0]).toMatchObject({
       text: "DETECTIVE: Hello?",
     })
   })

@@ -211,7 +211,7 @@ export function insertSceneAfter(editor: Editor, sceneId: string): string {
   const newScene = sceneToNode({
     id: newId,
     title: "",
-    description: "",
+    action: "",
     environment: "",
     lighting: "",
     shots: [],
@@ -268,6 +268,12 @@ export function updateShot(
     ...(patch.shotType !== undefined ? { shotType: patch.shotType } : {}),
     ...(patch.image !== undefined ? { image: patch.image } : {}),
     ...(patch.action !== undefined ? { action: patch.action } : {}),
+    ...(patch.composition !== undefined
+      ? { composition: patch.composition }
+      : {}),
+    ...(patch.duration !== undefined ? { duration: patch.duration } : {}),
+    ...(patch.purpose !== undefined ? { purpose: patch.purpose } : {}),
+    ...(patch.transition !== undefined ? { transition: patch.transition } : {}),
     ...(patch.dialogue !== undefined ? { dialogue: patch.dialogue } : {}),
     ...(patch.narration !== undefined ? { narration: patch.narration } : {}),
     ...(patch.camera !== undefined

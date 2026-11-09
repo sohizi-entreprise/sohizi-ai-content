@@ -15,13 +15,7 @@ const FRONT_MATTER_KEYS = [
   "temporalContext",
 ] as const
 
-const SCENE_KEYS = [
-  "id",
-  "title",
-  "description",
-  "environment",
-  "lighting",
-] as const
+const SCENE_KEYS = ["id", "title", "action", "environment", "lighting"] as const
 
 const SHOT_TYPES = [
   "Extreme Close-Up",
@@ -40,6 +34,10 @@ const SHOT_SCALAR_KEYS = [
   "shotType",
   "image",
   "action",
+  "composition",
+  "duration",
+  "purpose",
+  "transition",
   "narration",
 ] as const
 const SHOT_REQUIRED_KEYS = ["id", "number", "action"] as const
@@ -379,7 +377,7 @@ function parseSceneField(
   const match = line.match(/^([A-Za-z_]+):(.*)$/)
   if (!match) {
     problems.push(
-      `Line ${lineNo}: expected a scene key (\`id\`, \`title\`, \`description\`, \`environment\`, \`lighting\`) or a \`:::shot\` block.`,
+      `Line ${lineNo}: expected a scene key (\`id\`, \`title\`, \`action\`, \`environment\`, \`lighting\`) or a \`:::shot\` block.`,
     )
     return
   }
@@ -439,7 +437,7 @@ function parseShotLine(
   const match = line.match(/^([A-Za-z_]+):(.*)$/)
   if (!match) {
     problems.push(
-      `Line ${lineNo}: expected a shot key (\`id\`, \`number\`, \`action\`, and optional \`shotType\`, \`image\`, \`dialogue\`, \`narration\`, \`camera\`).`,
+      `Line ${lineNo}: expected a shot key (\`id\`, \`number\`, \`action\`, and optional \`shotType\`, \`image\`, \`composition\`, \`duration\`, \`purpose\`, \`transition\`, \`dialogue\`, \`narration\`, \`camera\`).`,
     )
     return
   }

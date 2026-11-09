@@ -18,7 +18,7 @@ temporalContext: "Present day, late autumn"
 :::scene
 id: scene-1
 title: Arrival
-description: A detective enters an abandoned warehouse.
+action: A detective enters an abandoned warehouse.
 environment: Abandoned warehouse on the docks, night.
 lighting: One practical bulb overhead, hard shadows.
 
@@ -28,6 +28,10 @@ number: 1
 shotType: Wide Shot
 image: https://example.com/shot-1.jpg
 action: Wide establishing shot of the warehouse.
+composition: Warehouse centered in upper two-thirds; dock pilings in foreground.
+duration: 3s
+purpose: Establish scale and isolation before entry.
+transition: Cut on door movement
 camera:
   angle: low angle
   movement: slow push in
@@ -38,6 +42,7 @@ id: shot-2
 number: 2
 shotType: Medium Shot
 action: The detective opens the door.
+duration: 4s
 dialogue:
   - speaker: DETECTIVE
     text: Hello?
@@ -60,21 +65,25 @@ narration: Wind moves through the rafters.
 - Put shots inside the scene, after the scene fields.
 
 ### Fields
-Keys start at column 0. Each value stays on that same line. Do not wrap a value, and do not indent \`id\`, \`title\`, \`description\`, \`environment\`, \`lighting\`, \`number\`, \`shotType\`, \`image\`, \`action\`, or \`narration\`.
+Keys start at column 0. Each value stays on that same line. Do not wrap a value, and do not indent \`id\`, \`title\`, \`action\`, \`environment\`, \`lighting\`, \`number\`, \`shotType\`, \`image\`, \`composition\`, \`duration\`, \`purpose\`, \`transition\`, or \`narration\`.
 
 Scene, in this order:
 - \`id\`: stable id, unique in the file. Keep an existing id when you edit that scene.
 - \`title\`: scene name shown above the scene body.
-- \`description\`: one sentence for what happens in the scene. This is the scene summary, not a shot description.
+- \`action\`: one sentence for what happens in the scene. This is the scene summary, not a shot description.
 - \`environment\`: location and time of day.
 - \`lighting\`: how the scene is lit.
 
-Shot, in this order. Omit \`shotType\`, \`image\`, \`dialogue\`, \`narration\`, and \`camera\` when they are empty:
+Shot, in this order. Omit \`shotType\`, \`image\`, \`composition\`, \`duration\`, \`purpose\`, \`transition\`, \`dialogue\`, \`narration\`, and \`camera\` when they are empty:
 - \`id\`: stable id, unique in the file. Keep an existing id when you edit that shot.
 - \`number\`: 1-based position of the shot inside its scene. After inserting, deleting, or reordering, renumber that scene from 1.
 - \`shotType\`: one of \`Extreme Close-Up\`, \`Close-Up\`, \`Medium Close-Up\`, \`Medium Shot\`, \`Medium Long Shot\`, \`Long Shot\`, \`Wide Shot\`, \`Extreme Wide Shot\`.
 - \`image\`: a real image URL only. Never invent a path.
-- \`action\`: one line describing what the shot shows. This is the shot description on the card.
+- \`action\`: one line telling what happens in the shot.
+- \`composition\`: what is visible and where in the frame.
+- \`duration\`: how long we see the shot (for example \`3s\`).
+- \`purpose\`: why this shot is necessary.
+- \`transition\`: how it connects to the next shot.
 - \`dialogue\`: spoken lines. The key is alone on its line. Each line is an indented speaker plus a \`text\` line indented under it:
   \`\`\`
   dialogue:

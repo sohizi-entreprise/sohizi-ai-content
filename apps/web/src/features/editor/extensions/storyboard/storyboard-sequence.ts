@@ -17,6 +17,7 @@ export type SequenceShot = {
   shotNumber: number
   image: string
   subtitle: string
+  durationSeconds: number
 }
 
 export type StoryboardSequenceComposition = {
@@ -36,12 +37,24 @@ export function shotAttachLabel(
   return `scene ${sceneNumber} - shot ${shotNumber}`
 }
 
-/** Dialogue first, then narration, then action. */
+/** Parse a human duration string (e.g. "4s", "2.5 sec", "5") into seconds. */
+export function parseShotDurationSeconds(raw: string | undefined): number {
+  if (!raw) return SEQUENCE_SHOT_SECONDS
+  const match = raw
+    .trim()
+    .match(/^(\d+(?:\.\d+)?)\s*(?:s|sec|secs|seconds?)?$/i)
+  if (!match) return SEQUENCE_SHOT_SECONDS
+  const value = Number(match[1])
+  if (!Number.isFinite(value) || value <= 0) return SEQUENCE_SHOT_SECONDS
+  return Math.min(Math.max(value, 0.5), 60)
+}
+
+/** Dialogue first, then narration. Action is intentionally excluded. */
 export function formatShotSubtitle(shot: ShotData): string {
   const dialogue = formatDialogue(shot.dialogue)
   if (dialogue) return dialogue
   if (shot.narration?.trim()) return shot.narration.trim()
-  return shot.action?.trim() ?? ""
+  return ""
 }
 
 export function collectSequenceShots(
@@ -71,6 +84,7 @@ export function collectSequenceShotsFromJson(
         shotNumber,
         image: shot.image ?? "",
         subtitle: formatShotSubtitle(shot),
+        durationSeconds: parseShotDurationSeconds(shot.duration),
       })
     }
   }

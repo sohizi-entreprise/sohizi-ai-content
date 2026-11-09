@@ -7,7 +7,7 @@ function scene(id: string, shotIds: Array<string>): JSONContent {
   return sceneToNode({
     id,
     title: id,
-    description: "",
+    action: "",
     environment: "",
     lighting: "",
     shots: shotIds.map((shotId) => ({ id: shotId })),

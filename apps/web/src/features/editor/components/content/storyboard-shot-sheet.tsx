@@ -38,6 +38,10 @@ export type ShotFormValues = {
   image: string
   shotType: StoryboardShotType | ""
   action: string
+  composition: string
+  duration: string
+  purpose: string
+  transition: string
   narration: string
   dialogue: Array<ShotDialogueLine>
   cameraAngle: string
@@ -55,6 +59,10 @@ const EMPTY_VALUES: ShotFormValues = {
   image: "",
   shotType: "",
   action: "",
+  composition: "",
+  duration: "",
+  purpose: "",
+  transition: "",
   narration: "",
   dialogue: [],
   cameraAngle: "",
@@ -62,6 +70,17 @@ const EMPTY_VALUES: ShotFormValues = {
 }
 
 const UNSET_SHOT_TYPE_VALUE = "__none__"
+
+function ShotSectionHeader({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-3 pt-1">
+      <span className="text-muted-foreground shrink-0 text-[11px] font-semibold tracking-wider uppercase">
+        {title}
+      </span>
+      <div className="bg-border h-px flex-1" />
+    </div>
+  )
+}
 
 export function StoryboardShotSheet({
   open,
@@ -82,6 +101,10 @@ export function StoryboardShotSheet({
       image: shot.image ?? "",
       shotType: parseShotType(shot.shotType ?? ""),
       action: shot.action ?? "",
+      composition: shot.composition ?? "",
+      duration: shot.duration ?? "",
+      purpose: shot.purpose ?? "",
+      transition: shot.transition ?? "",
       narration: shot.narration ?? "",
       dialogue: shot.dialogue ? shot.dialogue.map((line) => ({ ...line })) : [],
       cameraAngle: shot.camera?.angle ?? "",
@@ -159,6 +182,8 @@ export function StoryboardShotSheet({
             </div>
           ) : null}
 
+          <ShotSectionHeader title="Framing" />
+
           <div className="space-y-2">
             <Label htmlFor="shot-image">Image URL</Label>
             <Input
@@ -195,15 +220,96 @@ export function StoryboardShotSheet({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="shot-action">Description</Label>
+            <Label htmlFor="shot-composition">Composition</Label>
+            <Textarea
+              id="shot-composition"
+              value={values.composition}
+              rows={2}
+              placeholder="What is visible and where?"
+              onChange={(event) =>
+                updateField("composition", event.target.value)
+              }
+            />
+          </div>
+
+          <ShotSectionHeader title="Narrative & Timing" />
+
+          <div className="space-y-2">
+            <Label htmlFor="shot-action">Action</Label>
             <Textarea
               id="shot-action"
               value={values.action}
               rows={3}
-              placeholder="Describe what happens in this shot..."
+              placeholder="What happens on the shot?"
               onChange={(event) => updateField("action", event.target.value)}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="shot-purpose">Purpose</Label>
+            <Textarea
+              id="shot-purpose"
+              value={values.purpose}
+              rows={2}
+              placeholder="Why is this shot necessary?"
+              onChange={(event) => updateField("purpose", event.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="shot-duration">Duration</Label>
+              <Input
+                id="shot-duration"
+                value={values.duration}
+                placeholder="How long do we see it?"
+                onChange={(event) =>
+                  updateField("duration", event.target.value)
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="shot-transition">Transition</Label>
+              <Input
+                id="shot-transition"
+                value={values.transition}
+                placeholder="How does it connect to the next shot?"
+                onChange={(event) =>
+                  updateField("transition", event.target.value)
+                }
+              />
+            </div>
+          </div>
+
+          <ShotSectionHeader title="Camera" />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="shot-camera-angle">Angle</Label>
+              <Input
+                id="shot-camera-angle"
+                value={values.cameraAngle}
+                placeholder="low angle, over the shoulder…"
+                onChange={(event) =>
+                  updateField("cameraAngle", event.target.value)
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="shot-camera-movement">Movement</Label>
+              <Input
+                id="shot-camera-movement"
+                value={values.cameraMovement}
+                placeholder="slow push in, static…"
+                onChange={(event) =>
+                  updateField("cameraMovement", event.target.value)
+                }
+              />
+            </div>
+          </div>
+
+          <ShotSectionHeader title="Audio" />
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -254,42 +360,6 @@ export function StoryboardShotSheet({
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="space-y-3">
-            <Label>Camera</Label>
-            <div className="space-y-2">
-              <Label
-                htmlFor="shot-camera-angle"
-                className="text-muted-foreground font-normal"
-              >
-                Angle
-              </Label>
-              <Input
-                id="shot-camera-angle"
-                value={values.cameraAngle}
-                placeholder="low angle, over the shoulder…"
-                onChange={(event) =>
-                  updateField("cameraAngle", event.target.value)
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="shot-camera-movement"
-                className="text-muted-foreground font-normal"
-              >
-                Movement
-              </Label>
-              <Input
-                id="shot-camera-movement"
-                value={values.cameraMovement}
-                placeholder="slow push in, static…"
-                onChange={(event) =>
-                  updateField("cameraMovement", event.target.value)
-                }
-              />
-            </div>
           </div>
 
           <div className="space-y-2">

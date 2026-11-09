@@ -42,7 +42,7 @@ temporalContext: "Present day, late autumn"
 const SCENE = `:::scene
 id: scene-1
 title: Arrival
-description: A detective enters an abandoned warehouse.
+action: A detective enters an abandoned warehouse.
 environment: Abandoned warehouse on the docks, night.
 lighting: One practical bulb overhead, hard shadows.
 
@@ -52,6 +52,10 @@ number: 1
 shotType: Wide Shot
 image: /images/shot-1.jpg
 action: Wide establishing shot of the warehouse.
+composition: Warehouse occupies upper two-thirds; dock pilings in foreground.
+duration: 3s
+purpose: Establish scale and isolation before entry.
+transition: Cut on door movement
 camera:
   angle: low angle
   movement: slow push in
@@ -112,7 +116,7 @@ describe("storyboard scene parsing", () => {
     const scene = parseSceneBlock(SCENE)
     expect(scene.id).toBe("scene-1")
     expect(scene.title).toBe("Arrival")
-    expect(scene.description).toBe("A detective enters an abandoned warehouse.")
+    expect(scene.action).toBe("A detective enters an abandoned warehouse.")
     expect(scene.environment).toBe("Abandoned warehouse on the docks, night.")
     expect(scene.lighting).toBe("One practical bulb overhead, hard shadows.")
     expect(scene.shots).toHaveLength(3)
@@ -122,6 +126,11 @@ describe("storyboard scene parsing", () => {
       shotType: "Wide Shot",
       image: "/images/shot-1.jpg",
       action: "Wide establishing shot of the warehouse.",
+      composition:
+        "Warehouse occupies upper two-thirds; dock pilings in foreground.",
+      duration: "3s",
+      purpose: "Establish scale and isolation before entry.",
+      transition: "Cut on door movement",
       camera: { angle: "low angle", movement: "slow push in" },
     })
     expect(scene.shots[1].dialogue).toEqual([
@@ -138,7 +147,7 @@ describe("storyboard scene parsing", () => {
     const scene = parseSceneBlock(`:::scene
 id: scene-1
 title: Arrival
-description: A detective enters.
+action: A detective enters.
 
 :::
 `)
@@ -160,9 +169,8 @@ description: A detective enters.
     })
     expect(serialized).not.toContain("camera:")
     expect(
-      parseSceneBlock(
-        `:::scene\nid: s\ntitle:\ndescription:\n\n${serialized}\n:::`,
-      ).shots[0].camera,
+      parseSceneBlock(`:::scene\nid: s\ntitle:\naction:\n\n${serialized}\n:::`)
+        .shots[0].camera,
     ).toBeUndefined()
   })
 })
@@ -197,6 +205,11 @@ describe("storyboard markdown round-trip via MarkdownManager", () => {
     expect(grid.content).toHaveLength(3)
     expect(grid.content?.[0]?.attrs).toMatchObject({
       shotType: "Wide Shot",
+      composition:
+        "Warehouse occupies upper two-thirds; dock pilings in foreground.",
+      duration: "3s",
+      purpose: "Establish scale and isolation before entry.",
+      transition: "Cut on door movement",
       cameraAngle: "low angle",
       cameraMovement: "slow push in",
     })
@@ -213,7 +226,7 @@ describe("storyboard markdown round-trip via MarkdownManager", () => {
   })
 
   it("handles multiple scenes", () => {
-    const twoScenes = `${SAMPLE}\n\n:::scene\nid: scene-2\ntitle: Departure\ndescription: The detective leaves.\nenvironment:\nlighting:\n\n:::shot\nid: shot-4\nnumber: 1\naction: Exterior wide.\n:::\n:::`
+    const twoScenes = `${SAMPLE}\n\n:::scene\nid: scene-2\ntitle: Departure\naction: The detective leaves.\nenvironment:\nlighting:\n\n:::shot\nid: shot-4\nnumber: 1\naction: Exterior wide.\n:::\n:::`
     const doc = manager.parse(twoScenes) as unknown as JsonNode
     expect(doc.content).toHaveLength(3)
     expect(doc.content?.[2]?.attrs?.sceneId).toBe("scene-2")
