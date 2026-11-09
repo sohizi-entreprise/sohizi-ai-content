@@ -160,7 +160,7 @@ export function StoryboardSequenceDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="storyboard-sequence-dialog flex h-[90vh] max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 sm:max-w-5xl md:max-w-6xl"
+        className="storyboard-sequence-dialog flex h-[90vh] max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col p-0 sm:max-w-5xl md:max-w-6xl"
         style={{ "--storyboard-aspect": aspectCss } as CSSProperties}
       >
         <DialogTitle className="sr-only">Storyboard sequence</DialogTitle>
