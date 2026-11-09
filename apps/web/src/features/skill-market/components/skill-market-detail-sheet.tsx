@@ -134,51 +134,54 @@ export function SkillMarketDetailSheet({
           </div>
         ) : (
           <>
-            <SheetHeader className="shrink-0 space-y-0 border-b border-border">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <SheetTitle className="truncate text-lg">
-                    {skill.name}
-                  </SheetTitle>
-                  <SheetDescription className="sr-only">
-                    {skill.description || "Skill details"}
-                  </SheetDescription>
-                  {skill.categories.length > 0 ? (
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {skill.categories.map((category) => (
-                        <Badge
-                          key={category.id}
-                          variant="secondary"
-                          className="text-[10px]"
-                        >
-                          {category.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : null}
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface">
+              <SheetHeader className="sticky top-0 z-20 shrink-0 space-y-0 border-b border-white/[0.08] bg-surface/65 px-6 py-4 backdrop-blur-xl supports-[backdrop-filter]:bg-surface/55">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 space-y-1.5">
+                    <SheetTitle className="truncate font-display text-lg font-semibold tracking-tight">
+                      {skill.name}
+                    </SheetTitle>
+                    <SheetDescription className="sr-only">
+                      {skill.description || "Skill details"}
+                    </SheetDescription>
+                    {skill.categories.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {skill.categories.map((category) => (
+                          <Badge
+                            key={category.id}
+                            variant="secondary"
+                            className="border border-white/[0.06] bg-white/[0.06] text-[10px] font-medium tracking-wide"
+                          >
+                            {category.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                  <Button
+                    onClick={handleAdd}
+                    disabled={added || installMutation.isPending}
+                    className="shrink-0 rounded-full px-4 shadow-[0_0_24px_-6px_color-mix(in_oklch,var(--primary)_45%,transparent)]"
+                  >
+                    {installMutation.isPending && !conflictOpen ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : added ? (
+                      <Check className="size-4" />
+                    ) : (
+                      <Plus className="size-4" />
+                    )}
+                    {added ? "Added" : "Add to project"}
+                  </Button>
                 </div>
-                <Button
-                  onClick={handleAdd}
-                  disabled={added || installMutation.isPending}
-                  className="shrink-0"
-                >
-                  {installMutation.isPending && !conflictOpen ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : added ? (
-                    <Check className="size-4" />
-                  ) : (
-                    <Plus className="size-4" />
-                  )}
-                  {added ? "Added" : "Add to project"}
-                </Button>
-              </div>
-            </SheetHeader>
+              </SheetHeader>
 
-            <div className="min-h-0 flex-1 overflow-y-auto bg-surface">
-              <ReadonlySkillViewer
-                description={skill.description}
-                instructions={skill.instructions}
-              />
+              <div className="flex-1">
+                <ReadonlySkillViewer
+                  key={skill.id}
+                  description={skill.description}
+                  instructions={skill.instructions}
+                />
+              </div>
             </div>
 
             <SkillNameConflictModal
@@ -202,8 +205,8 @@ export function SkillMarketDetailSheet({
 
 function SkillDetailSkeleton() {
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <SheetHeader className="space-y-3 border-b border-border">
+    <div className="flex h-full flex-col overflow-hidden bg-surface">
+      <SheetHeader className="sticky top-0 z-20 space-y-3 border-b border-white/[0.08] bg-surface/65 px-6 py-4 backdrop-blur-xl supports-[backdrop-filter]:bg-surface/55">
         <SheetTitle className="sr-only">Skill details</SheetTitle>
         <SheetDescription className="sr-only">
           Loading skill details

@@ -1,4 +1,4 @@
-import { Download, Folder, ImagePlus, Trash2, X } from "lucide-react"
+import { Download, Folder, Trash2, X } from "lucide-react"
 import { useParams } from "@tanstack/react-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query"
@@ -165,7 +165,7 @@ function RenderAssets({
   }
 
   if (!requests || requests.length === 0) {
-    return <EmptyMediaState />
+    return <EmptyMediaState filter={filter} />
   }
 
   const onSelectedChange = (assetId: string, selected: boolean) => {
@@ -464,19 +464,68 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url)
 }
 
-function EmptyMediaState() {
+function EmptyMediaState({ filter }: { filter: MediaFilter }) {
+  const filterLabel =
+    filter === "all"
+      ? "No media generated yet"
+      : `No ${filter} assets generated yet`
+
   return (
-    <div className="flex min-h-105 items-center justify-center">
-      <div className="max-w-sm text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-card">
-          <ImagePlus className="size-6" />
+    <div className="relative flex min-h-[calc(100vh-11rem)] w-full items-center justify-center overflow-hidden px-6 py-12 select-none">
+      {/* Ambient studio light & subtle dot matrix */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 flex items-center justify-center"
+      >
+        <div className="size-112 rounded-full bg-primary/6 blur-[120px]" />
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              "radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+            maskImage:
+              "radial-gradient(ellipse 55% 50% at 50% 45%, black 10%, transparent 80%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 55% 50% at 50% 45%, black 10%, transparent 80%)",
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 flex w-full max-w-lg flex-col items-center text-center animate-fade-in">
+        {/* Framed artwork showcase */}
+        <div className="group relative mb-7 flex items-center justify-center">
+          <div
+            aria-hidden="true"
+            className="absolute -inset-6 rounded-full bg-primary/12 opacity-75 blur-2xl transition-all duration-700 group-hover:scale-105 group-hover:opacity-100"
+          />
+
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-background/50 p-2 shadow-[0_24px_60px_-15px_rgba(0,0,0,0.75)] backdrop-blur-xl">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-8 top-0 z-10 h-px bg-linear-to-r from-transparent via-primary/60 to-transparent"
+            />
+            <div className="relative overflow-hidden rounded-2xl border border-white/6 bg-black/40">
+              <img
+                src="/empty.avif"
+                alt="No media generated yet"
+                className="h-44 w-64 object-cover transition-transform duration-700 ease-out group-hover:scale-105 sm:h-48 sm:w-72"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-linear-to-t from-background/85 via-transparent to-transparent"
+              />
+            </div>
+          </div>
         </div>
-        <h2 className="mt-4 text-lg font-semibold text-foreground">
-          No media generated yet
+
+        {/* Copy */}
+        <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-foreground sm:text-[26px]">
+          {filterLabel}
         </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Use the media settings to create mock images, videos, or audio for
-          this project.
+        <p className="mt-2 max-w-md text-xs leading-relaxed text-muted-foreground sm:text-sm">
+          Transform prompts and reference frames into studio-grade visuals,
+          motion sequences, and audio tracks for this project.
         </p>
       </div>
     </div>
