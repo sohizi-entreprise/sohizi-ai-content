@@ -45,6 +45,9 @@ export default defineConfig(({ mode }) => {
         // Nitro/Rollup cannot bundle the Sentry server package; trace it into .output.
         rollupConfig: { external: [/^@sentry\//] },
         traceDeps: ["@sentry/tanstackstart-react*"],
+        routeRules: {
+          "/api/**": { proxy: `${apiUrl}/**` },
+        },
       }),
       viteTsConfigPaths({
         projects: ["./tsconfig.json"],
