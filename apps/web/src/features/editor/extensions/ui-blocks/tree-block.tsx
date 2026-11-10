@@ -8,7 +8,6 @@ import {
   Trash2,
   X,
 } from "lucide-react"
-import { useState } from "react"
 import {
   findContainerBlockStart,
   matchContainerBlock,
@@ -46,16 +45,19 @@ const DEFAULT_TREE_ITEMS: Array<TreeItem> = [
     label: "Video Production",
     description: "30-second cinematic brand film",
     depth: 0,
+    collapsed: false,
   },
   {
     label: "Pre-production",
     description: "Creative direction and planning",
     depth: 1,
+    collapsed: false,
   },
   {
     label: "Script Development",
     description: "Narrative, dialogue and scene structure",
     depth: 2,
+    collapsed: false,
   },
 ]
 
@@ -184,16 +186,13 @@ function TreeBlockView({
 }: ReactNodeViewProps) {
   const isEditable = editor.isEditable
   const items = normalizeTreeItems(node.attrs.items)
-  const [collapsedParents, setCollapsedParents] = useState<Set<number>>(
-    () => new Set(),
-  )
 
   const isHiddenByCollapsedAncestor = (index: number): boolean => {
     let targetDepth = items[index]?.depth ?? 0
     for (let i = index - 1; i >= 0; i -= 1) {
       const candidateDepth = items[i].depth
       if (candidateDepth < targetDepth) {
-        if (collapsedParents.has(i)) return true
+        if (items[i].collapsed) return true
         targetDepth = candidateDepth
         if (targetDepth === 0) break
       }
@@ -201,23 +200,16 @@ function TreeBlockView({
     return false
   }
 
-  const toggleCollapse = (index: number) => {
-    setCollapsedParents((prev) => {
-      const next = new Set(prev)
-      if (next.has(index)) {
-        next.delete(index)
-      } else {
-        next.add(index)
-      }
-      return next
-    })
-  }
-
   const updateItem = (index: number, patch: Partial<TreeItem>) => {
     const next = items.map((item, i) =>
       i === index ? { ...item, ...patch } : item,
     )
     updateAttributes({ items: normalizeTreeItems(next) })
+  }
+
+  const toggleCollapse = (index: number) => {
+    if (index < 0 || index >= items.length) return
+    updateItem(index, { collapsed: !items[index].collapsed })
   }
 
   const changeDepth = (index: number, delta: -1 | 1) => {
@@ -250,18 +242,12 @@ function TreeBlockView({
       label: "New item",
       description: "Description",
       depth: current.depth + 1,
+      collapsed: false,
     }
-    const next = [
-      ...items.slice(0, insertAfter + 1),
-      newItem,
-      ...items.slice(insertAfter + 1),
-    ]
-    setCollapsedParents((prev) => {
-      if (!prev.has(index)) return prev
-      const updated = new Set(prev)
-      updated.delete(index)
-      return updated
-    })
+    const next = items.map((item, i) =>
+      i === index ? { ...item, collapsed: false } : item,
+    )
+    next.splice(insertAfter + 1, 0, newItem)
     updateAttributes({ items: normalizeTreeItems(next) })
   }
 
@@ -290,7 +276,7 @@ function TreeBlockView({
 
           const hasChildren =
             index + 1 < items.length && items[index + 1].depth > item.depth
-          const isCollapsed = collapsedParents.has(index)
+          const isCollapsed = item.collapsed
           const prevDepth = index > 0 ? items[index - 1].depth : -1
           const canIndent = index > 0 && item.depth <= prevDepth
           const canOutdent = item.depth > 0

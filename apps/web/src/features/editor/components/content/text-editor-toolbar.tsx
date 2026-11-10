@@ -2,32 +2,19 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
-  BadgeCheck,
   Bold,
-  Clock,
-  FileText,
-  FolderTree,
-  Globe,
+  ChevronDown,
   Heading1,
   Heading2,
   Heading3,
   Highlighter,
-  ImageIcon,
   Italic,
-  LayoutDashboard,
-  Link2,
   List,
   ListOrdered,
   ListTodo,
-  Minus,
-  Palette,
-  Plus,
-  SlidersHorizontal,
-  Sparkles,
   Strikethrough,
   Table2,
   TextAlignJustify,
-  TextQuote,
   Underline,
 } from "lucide-react"
 import React, { useState } from "react"
@@ -42,7 +29,6 @@ import {
 } from "@sohizi/ui/dropdown-menu"
 import { Separator } from "@sohizi/ui/separator"
 import { Button } from "@sohizi/ui/button"
-import { LinkInsertDialog } from "./link-insert-dialog"
 import type { Editor } from "@tiptap/core"
 import type { LucideProps } from "lucide-react"
 import type { ClassValue } from "clsx"
@@ -129,7 +115,6 @@ export default function TextEditorToolbar({
   /** Portal target for nested dropdowns. Required when embedded in TipTap BubbleMenu. */
   portalContainer?: HTMLElement | null
 }) {
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const dropdownContentProps = getToolbarDropdownContentProps(portalContainer)
 
   const editorState = useEditorState({
@@ -145,10 +130,6 @@ export default function TextEditorToolbar({
       isBulletList: currentEditor.isActive("bulletList"),
       isOrderedList: currentEditor.isActive("orderedList"),
       isTaskList: currentEditor.isActive("taskList"),
-      isBlockquote: currentEditor.isActive("blockquote"),
-      isLink: currentEditor.isActive("link"),
-      linkHref: (currentEditor.getAttributes("link").href as string) || "",
-      isSelectionEmpty: currentEditor.state.selection.empty,
       isAlignLeft: currentEditor.isActive({ textAlign: "left" }),
       isAlignCenter: currentEditor.isActive({ textAlign: "center" }),
       isAlignRight: currentEditor.isActive({ textAlign: "right" }),
@@ -163,7 +144,6 @@ export default function TextEditorToolbar({
       canDeleteRow: canRunCommand(currentEditor, "deleteRow"),
       canDeleteColumn: canRunCommand(currentEditor, "deleteColumn"),
       canDeleteTable: canRunCommand(currentEditor, "deleteTable"),
-      canInsertTable: canRunCommand(currentEditor, "insertTable"),
     }),
   })
 
@@ -253,7 +233,6 @@ export default function TextEditorToolbar({
       icon: List,
       onClick: () => editor.chain().focus().toggleBulletList().run(),
       isActive: editorState.isBulletList,
-      separator: true,
       children: [
         {
           label: "Bullet List",
@@ -272,99 +251,6 @@ export default function TextEditorToolbar({
           icon: ListTodo,
           onClick: () => editor.chain().focus().toggleTaskList().run(),
           isActive: editorState.isTaskList,
-        },
-      ],
-    },
-    {
-      label: "Insert",
-      icon: Plus,
-      onClick: () => {},
-      children: [
-        {
-          label: "Media",
-          icon: ImageIcon,
-          onClick: () =>
-            editor.chain().focus().insertMediaBlock({ type: "image" }).run(),
-        },
-        {
-          label: "Card",
-          icon: Sparkles,
-          onClick: () => editor.chain().focus().insertCardBlock().run(),
-        },
-        {
-          label: "Moodboard",
-          icon: LayoutDashboard,
-          onClick: () => editor.chain().focus().insertMoodboardBlock().run(),
-        },
-        {
-          label: "Palette",
-          icon: Palette,
-          onClick: () => editor.chain().focus().insertPaletteBlock().run(),
-        },
-        {
-          label: "Timeline",
-          icon: Clock,
-          onClick: () => editor.chain().focus().insertTimelineBlock().run(),
-        },
-        {
-          label: "Properties",
-          icon: SlidersHorizontal,
-          onClick: () => editor.chain().focus().insertPropertiesBlock().run(),
-        },
-        {
-          label: "Attributes",
-          icon: FileText,
-          onClick: () => editor.chain().focus().insertAttributesBlock().run(),
-        },
-        {
-          label: "Tree",
-          icon: FolderTree,
-          onClick: () => editor.chain().focus().insertTreeBlock().run(),
-        },
-        {
-          label: "Sources",
-          icon: Globe,
-          onClick: () => editor.chain().focus().insertSourcesBlock().run(),
-        },
-        {
-          label: "Badge",
-          icon: BadgeCheck,
-          onClick: () =>
-            editor
-              .chain()
-              .focus()
-              .insertInlineBadge({ label: "Approved", color: "highlight" })
-              .run(),
-        },
-        {
-          label: "Divider",
-          icon: Minus,
-          onClick: () => editor.chain().focus().setHorizontalRule().run(),
-        },
-        {
-          label: "Link",
-          icon: Link2,
-          onClick: () => {
-            if (!editor.state.selection.empty) {
-              setLinkDialogOpen(true)
-            }
-          },
-          disabled: editorState.isSelectionEmpty,
-          isActive: !editorState.isSelectionEmpty && editorState.isLink,
-          restoreFocus: false,
-        },
-        {
-          label: "Blockquote",
-          icon: TextQuote,
-          onClick: () => editor.chain().focus().toggleBlockquote().run(),
-          isActive: editorState.isBlockquote,
-        },
-        {
-          label: "Table",
-          icon: Table2,
-          onClick: () => editor.chain().focus().insertTable().run(),
-          disabled: !editorState.canInsertTable,
-          isActive: editorState.isInTable,
         },
       ],
     },
@@ -405,13 +291,6 @@ export default function TextEditorToolbar({
           />
         </>
       )}
-      <LinkInsertDialog
-        editor={editor}
-        open={linkDialogOpen}
-        onOpenChange={setLinkDialogOpen}
-        initialHref={editorState.linkHref}
-        hasLink={editorState.isLink}
-      />
     </div>
   )
 }
@@ -503,11 +382,12 @@ function RenderToolbarOption({
           title={option.label}
           onMouseDown={preventToolbarFocusLoss}
           className={cn(
-            "size-7 text-muted-foreground hover:text-foreground",
+            "h-7 w-auto gap-0.5 px-1.5 text-muted-foreground hover:text-foreground",
             option.isActive && "bg-accent/50 text-foreground",
           )}
         >
           <Icon className="size-4" />
+          <ChevronDown className="size-2.5 opacity-70" aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       {option.separator && (

@@ -364,6 +364,58 @@ describe("Document UI blocks round-trip serialization", () => {
     expect(manager.serialize(titledDoc)).toBe(titledTree)
   })
 
+  it("round-trips :::tree {collapsed} markers and defaults expanded nodes to unmarked", () => {
+    const collapsedTree = `:::tree
+- Video Production | 30-second cinematic brand film
+  - Pre-production | Creative direction and planning {collapsed}
+    - Script Development | Narrative, dialogue and scene structure
+  - Production | Generate and assemble visual assets
+:::`
+
+    const doc = manager.parse(collapsedTree)
+    expect(doc.content?.[0]).toMatchObject({
+      type: "treeBlock",
+      attrs: {
+        items: [
+          {
+            label: "Video Production",
+            description: "30-second cinematic brand film",
+            depth: 0,
+            collapsed: false,
+          },
+          {
+            label: "Pre-production",
+            description: "Creative direction and planning",
+            depth: 1,
+            collapsed: true,
+          },
+          {
+            label: "Script Development",
+            description: "Narrative, dialogue and scene structure",
+            depth: 2,
+            collapsed: false,
+          },
+          {
+            label: "Production",
+            description: "Generate and assemble visual assets",
+            depth: 1,
+            collapsed: false,
+          },
+        ],
+      },
+    })
+    expect(manager.serialize(doc)).toBe(collapsedTree)
+
+    const labelOnlyCollapsed = `:::tree
+- Root
+  - Branch {collapsed}
+    - Leaf
+:::`
+    expect(manager.serialize(manager.parse(labelOnlyCollapsed))).toBe(
+      labelOnlyCollapsed,
+    )
+  })
+
   it("preserves trailing spaces in normalizeTreeItems while editing and trims when serializing", () => {
     const normalized =
       createManager().parse(SAMPLE_TREE).content?.[0]?.attrs?.items
@@ -515,6 +567,28 @@ describe("Diff hunk isolation & Pending-Change Reject/Merge with UI blocks", () 
     expect(hunks).toHaveLength(1)
     expect(hunks[0]?.deleted).toContain("8s, slow cinematic dolly-in")
     expect(hunks[0]?.inserted).toContain("6s, handheld tracking shot")
+  })
+
+  it("isolates a :::tree collapse toggle to the {collapsed} marker without rewriting children", () => {
+    const expanded = `:::tree
+- Video Production | 30-second cinematic brand film
+  - Pre-production | Creative direction and planning
+    - Script Development | Narrative, dialogue and scene structure
+:::`
+    const collapsed = `:::tree
+- Video Production | 30-second cinematic brand film
+  - Pre-production | Creative direction and planning {collapsed}
+    - Script Development | Narrative, dialogue and scene structure
+:::`
+    const hunks = getMarkdownChangeHunks(expanded, collapsed)
+
+    // Word-level diff treats the marker as a pure insertion on that line.
+    expect(hunks).toEqual([
+      expect.objectContaining({
+        deleted: "",
+        inserted: " {collapsed}",
+      }),
+    ])
   })
 
   it("isolates a body text edit inside :::card without touching card headers", () => {

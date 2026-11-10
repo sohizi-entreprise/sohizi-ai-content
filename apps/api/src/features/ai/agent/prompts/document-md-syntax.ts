@@ -195,7 +195,7 @@ Use for hierarchical structures and parent-child dependencies, such as productio
 \`\`\`markdown
 :::tree
 - Video Production | 30-second cinematic brand film
-  - Pre-production | Creative direction and planning
+  - Pre-production | Creative direction and planning {collapsed}
     - Script Development | Narrative, dialogue and scene structure
     - Storyboard | Visual composition and shot references
   - Production | Generate and assemble visual assets
@@ -209,6 +209,7 @@ Use for hierarchical structures and parent-child dependencies, such as productio
 
 - Start with the root item at column 0 (\`- <Root Label> | <Description>\`) and indent child nodes by two spaces per nesting level (\`  - ...\`).
 - Format each node on a single line as \`- <Node Label> | <One-line description or metadata>\` (the \`| <description>\` part is optional).
+- Append \`{collapsed}\` at the end of a parent line to hide its descendants in the UI. Keep the descendant lines in the markdown — collapse is presentation-only. Omit \`{collapsed}\` when expanded (default).
 
 ---
 

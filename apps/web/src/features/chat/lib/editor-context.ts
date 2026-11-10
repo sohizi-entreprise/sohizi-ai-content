@@ -89,32 +89,37 @@ export function buildAttachedSelection(params: {
   file: { id: string; name: string; format: string; path: string }
   from: number
   to: number
+  selectedText?: string
 }): AttachedSelection | null {
   const { editor, file, from, to } = params
-  const selectedText = editor.state.doc.textBetween(from, to, "\n")
+  const docSize = editor.state.doc.content.size
+  const safeFrom = Math.max(0, Math.min(from, docSize))
+  const safeTo = Math.max(safeFrom, Math.min(to, docSize))
+  const selectedText =
+    params.selectedText !== undefined
+      ? params.selectedText.trim()
+      : editor.state.doc.textBetween(safeFrom, safeTo, "\n")
   if (!selectedText) return null
 
-  const fullText = editor.state.doc.textBetween(
-    0,
-    editor.state.doc.content.size,
-    "\n",
-  )
-  const isEntireFile = selectedText === fullText
-  const textBeforeDoc = editor.state.doc.textBetween(0, from, "\n")
-  const textThroughSelection = editor.state.doc.textBetween(0, to, "\n")
-  const textAfterDoc = editor.state.doc.textBetween(
-    to,
-    editor.state.doc.content.size,
-    "\n",
-  )
+  const fullText = editor.state.doc.textBetween(0, docSize, "\n")
+  const isEntireFile =
+    params.selectedText === undefined && selectedText === fullText
+  const textBeforeDoc = editor.state.doc.textBetween(0, safeFrom, "\n")
+  const textThroughSelection = editor.state.doc.textBetween(0, safeTo, "\n")
+  const textAfterDoc = editor.state.doc.textBetween(safeTo, docSize, "\n")
+  const startLine = textBeforeDoc.split("\n").length
+  const endLine =
+    params.selectedText !== undefined
+      ? startLine + Math.max(0, selectedText.split("\n").length - 1)
+      : textThroughSelection.split("\n").length
 
   return {
     file: formatFileTag({
       displayName: file.name,
       path: file.path,
     }),
-    startLine: textBeforeDoc.split("\n").length,
-    endLine: textThroughSelection.split("\n").length,
+    startLine,
+    endLine,
     selectedText: truncateSelectedText(selectedText),
     isEntireFile,
     ...(isEntireFile

@@ -117,6 +117,8 @@ export interface TreeItem {
   label: string
   description: string
   depth: number
+  /** Presentation-only: descendants stay in markdown when true. */
+  collapsed: boolean
 }
 
 export interface TreeBlockData {
@@ -1017,6 +1019,7 @@ export function serializeAttributesBlock(data: AttributesBlockData): string {
 
 const TREE_KEYS = new Set(["title"])
 const TREE_ITEM_LINE_REGEX = /^([ \t]*)-\s*(.*)$/
+const TREE_COLLAPSED_MARKER_REGEX = /\s*\{collapsed\}\s*$/
 
 function countIndentSpaces(indent: string): number {
   let spaces = 0
@@ -1028,6 +1031,20 @@ function countIndentSpaces(indent: string): number {
     }
   }
   return spaces
+}
+
+function stripTreeCollapsedMarker(content: string): {
+  content: string
+  collapsed: boolean
+} {
+  const match = content.match(TREE_COLLAPSED_MARKER_REGEX)
+  if (!match || match.index === undefined) {
+    return { content, collapsed: false }
+  }
+  return {
+    content: content.slice(0, match.index),
+    collapsed: true,
+  }
 }
 
 export function parseTreeBlock(raw: string): TreeBlockData {
@@ -1045,7 +1062,7 @@ export function parseTreeBlock(raw: string): TreeBlockData {
     const prevDepth = items.length > 0 ? items[items.length - 1].depth : -1
     const depth = Math.min(rawDepth, prevDepth + 1)
 
-    const content = match[2]
+    const { content, collapsed } = stripTreeCollapsedMarker(match[2])
     const pipeIndex = content.indexOf("|")
     const label =
       pipeIndex === -1
@@ -1060,6 +1077,7 @@ export function parseTreeBlock(raw: string): TreeBlockData {
       label,
       description,
       depth,
+      collapsed,
     })
   }
 
@@ -1087,6 +1105,7 @@ export function normalizeTreeItems(value: unknown): Array<TreeItem> {
       label: preserveSpacesSingleLine(record.label),
       description: preserveSpacesSingleLine(record.description),
       depth,
+      collapsed: Boolean(record.collapsed),
     })
   }
 
@@ -1114,10 +1133,11 @@ export function serializeTreeBlock(
     const indent = "  ".repeat(Math.max(0, item.depth))
     const label = cleanSingleLine(item.label)
     const description = cleanSingleLine(item.description)
+    const collapsedSuffix = item.collapsed ? " {collapsed}" : ""
     if (description) {
-      return `${indent}- ${label} | ${description}`
+      return `${indent}- ${label} | ${description}${collapsedSuffix}`
     }
-    return `${indent}- ${label}`
+    return `${indent}- ${label}${collapsedSuffix}`
   })
 
   if (itemLines.length > 0) {
