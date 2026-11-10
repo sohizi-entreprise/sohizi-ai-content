@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react"
 import {
   AbsoluteFill,
   Html5Audio,
@@ -12,6 +13,7 @@ import type {
   ClipAnimationOut,
   ImageClip,
   ImageMotionEffect,
+  ObjectFitMode,
   TextClip,
   VideoClip,
 } from "./types"
@@ -151,6 +153,70 @@ function colorWithOpacity(color: string, opacity: number): string {
   return color
 }
 
+interface MemoizedVideoMediaProps {
+  src: string
+  muted: boolean
+  volume: number
+  playbackRate: number
+  trimBefore: number
+  fit: ObjectFitMode
+}
+
+const MemoizedVideoMedia = memo(function MemoizedVideoMedia({
+  src,
+  muted,
+  volume,
+  playbackRate,
+  trimBefore,
+  fit,
+}: MemoizedVideoMediaProps) {
+  const videoStyle = useMemo(
+    () => ({
+      width: "100%",
+      height: "100%",
+      objectFit: fit,
+    }),
+    [fit],
+  )
+
+  return (
+    <OffthreadVideo
+      src={src}
+      muted={muted}
+      volume={volume}
+      playbackRate={playbackRate}
+      trimBefore={trimBefore}
+      pauseWhenBuffering={false}
+      style={videoStyle}
+    />
+  )
+})
+
+interface MemoizedAudioMediaProps {
+  src: string
+  trimBefore: number
+  volume: number
+  playbackRate: number
+}
+
+const MemoizedAudioMedia = memo(function MemoizedAudioMedia({
+  src,
+  trimBefore,
+  volume,
+  playbackRate,
+}: MemoizedAudioMediaProps) {
+  return (
+    <Html5Audio
+      src={src}
+      trimBefore={trimBefore}
+      volume={volume}
+      playbackRate={playbackRate}
+      pauseWhenBuffering={false}
+      preload="auto"
+    />
+  )
+})
+
 interface VideoClipRendererProps {
   clip: VideoClip
   muted: boolean
@@ -172,7 +238,8 @@ export function VideoClipRenderer({ clip, muted }: VideoClipRendererProps) {
     clip.animationOut,
   )
   const effectiveOpacity = clip.opacity * fadeMult * anim.opacityMultiplier
-  const effectiveVolume = muted ? 0 : clip.volume * fadeMult
+  const isSilenced = muted || clip.volume <= 0
+  const effectiveVolume = isSilenced ? 0 : clip.volume * fadeMult
   const blur = clip.blur ?? 0
   const brightness = clip.brightness ?? 100
   const hasFilter = blur > 0 || brightness !== 100
@@ -195,17 +262,13 @@ export function VideoClipRenderer({ clip, muted }: VideoClipRendererProps) {
             : undefined,
         }}
       >
-        <OffthreadVideo
+        <MemoizedVideoMedia
           src={clip.url}
-          muted={muted}
+          muted={isSilenced}
           volume={effectiveVolume}
           playbackRate={clip.speed}
           trimBefore={clip.sourceStartFrame}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: clip.fit ?? "contain",
-          }}
+          fit={clip.fit ?? "contain"}
         />
       </div>
     </AbsoluteFill>
@@ -219,7 +282,7 @@ interface AudioClipRendererProps {
 
 export function AudioClipRenderer({ clip, muted }: AudioClipRendererProps) {
   const frame = useCurrentFrame()
-  if (muted) return null
+  if (muted || clip.volume <= 0) return null
   const durationInFrames = Math.max(1, clip.endFrame - clip.startFrame)
   const fadeMult = computeFadeMultiplier(
     frame,
@@ -228,7 +291,7 @@ export function AudioClipRenderer({ clip, muted }: AudioClipRendererProps) {
     clip.fadeOutFrames,
   )
   return (
-    <Html5Audio
+    <MemoizedAudioMedia
       src={clip.url}
       trimBefore={clip.sourceStartFrame}
       volume={clip.volume * fadeMult}

@@ -15,6 +15,9 @@ interface VideoEditorPlayerProps {
   className?: string
 }
 
+const PLAYER_STYLE = { width: "100%", height: "100%" } as const
+const SHARED_AUDIO_TAGS_POOL_SIZE = 16
+
 export function VideoEditorPlayer({ className }: VideoEditorPlayerProps) {
   const playerRef = usePlayerRef()
 
@@ -84,7 +87,7 @@ export function VideoEditorPlayer({ className }: VideoEditorPlayerProps) {
   }, [fps, playerRef])
 
   return (
-    <div className={className} style={{ width: "100%", height: "100%" }}>
+    <div className={className} style={PLAYER_STYLE}>
       <Player
         ref={playerRef}
         component={MainComposition}
@@ -94,11 +97,12 @@ export function VideoEditorPlayer({ className }: VideoEditorPlayerProps) {
         compositionHeight={height}
         fps={fps}
         playbackRate={playbackRate}
+        numberOfSharedAudioTags={SHARED_AUDIO_TAGS_POOL_SIZE}
         controls={false}
         clickToPlay={false}
         doubleClickToFullscreen={false}
         spaceKeyToPlayOrPause={false}
-        style={{ width: "100%", height: "100%" }}
+        style={PLAYER_STYLE}
         acknowledgeRemotionLicense
       />
     </div>

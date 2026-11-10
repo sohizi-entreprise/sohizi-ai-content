@@ -14,14 +14,19 @@ export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
     [clip.captions],
   )
 
-  const { pages } = createTikTokStyleCaptions({
-    captions,
-    combineTokensWithinMilliseconds: 500, // Word-by-word
-  })
+  const { pages } = useMemo(
+    () =>
+      createTikTokStyleCaptions({
+        captions,
+        combineTokensWithinMilliseconds: 500, // Word-by-word
+      }),
+    [captions],
+  )
 
   const {
     fontSize = 48,
     color = "#ffffff",
+    fontFamily = "Inter",
     fontWeight = "bold",
     align = "center",
     opacity = 1,
@@ -56,6 +61,7 @@ export const CaptionsRenderer = ({ clip }: { clip: CaptionClip }) => {
               ? "flex-end"
               : "center",
         fontSize,
+        fontFamily: `${fontFamily}, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`,
         fontWeight,
         textAlign: align,
         whiteSpace: "pre",

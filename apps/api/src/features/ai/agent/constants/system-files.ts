@@ -4,6 +4,7 @@ import { default as storyboardMdSyntaxPrompt } from "../prompts/storyboard-md-sy
 import { default as imageVideoGenerationSkill } from "../skills/image-video-generation"
 import { default as planGenerationSkill } from "../skills/plan-generation"
 import { default as storyboardSkill } from "../skills/storyboard"
+import { default as videoEditorSkill } from "../skills/video-editor"
 
 export const SYSTEM_LEVEL_FILES = {
   "/system/syntax/document": {
@@ -35,5 +36,10 @@ export const SYSTEM_LEVEL_FILES = {
     description:
       "Read BEFORE writing a production plan. Use when the PLAN command is invoked, or when the user asks to plan, outline, or break down a video from an idea. Defines how to produce a complete, execution-ready plan.",
     content: planGenerationSkill,
+  },
+  "/system/skills/video-editor": {
+    description:
+      "Read BEFORE inspecting, assembling, or editing a video timeline composition via videoEditorAPI. Covers track z-order and spatial layout, cross-track vertical/horizontal harmony, batch/split/ripple-shift workflows, and professional editing techniques.",
+    content: videoEditorSkill,
   },
 } as Record<string, { description: string; content: string }>

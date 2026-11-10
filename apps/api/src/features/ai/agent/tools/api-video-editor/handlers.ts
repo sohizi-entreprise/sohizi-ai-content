@@ -62,7 +62,7 @@ export async function executeOverview(
           : "empty"
       const mutedLabel = track.muted ? " (muted)" : ""
       const hiddenLabel = track.hidden ? " (hidden)" : ""
-      output += `  ${track.position + 1}. [${track.type}] (trackId: ${track.id}) — ${trackClips.length} clips, span: ${span}${mutedLabel}${hiddenLabel}\n`
+      output += `  ${track.position + 1}. [${track.type}] (trackId: ${track.id}, position: ${track.position}) — ${trackClips.length} clips, span: ${span}${mutedLabel}${hiddenLabel}\n`
     }
   }
 
@@ -233,8 +233,28 @@ export async function executeAddTrack(
   if (!composition) {
     return failure("Video composition not found for this file.")
   }
-  const position =
-    data.body.position ?? (await repo.getNextTrackPosition(composition.id))
+
+  let position: number
+  const shiftedChanges: VideoEditorChange[] = []
+
+  if (data.body.position !== undefined) {
+    position = data.body.position
+    const existingAtOrAfter =
+      (await repo.getTracksByCompositionId?.(composition.id, {
+        min: position,
+      })) ?? []
+    for (const existing of existingAtOrAfter) {
+      const shifted = await repo.updateTrack(existing.id, {
+        position: existing.position + 1,
+      })
+      if (shifted) {
+        shiftedChanges.push({ type: "update_track", track: shifted })
+      }
+    }
+  } else {
+    position = await repo.getNextTrackPosition(composition.id)
+  }
+
   const track = await repo.createTrack({
     compositionId: composition.id,
     type: data.body.type,
@@ -244,7 +264,10 @@ export async function executeAddTrack(
     ...success(
       `Track created: ID: ${track.id} - Type: ${track.type} - Position: ${track.position}`,
     ),
-    videoEditorChanges: [{ type: "add_track", track, name: data.body.name }],
+    videoEditorChanges: [
+      { type: "add_track", track, name: data.body.name },
+      ...shiftedChanges,
+    ],
   }
 }
 
@@ -253,13 +276,55 @@ export async function executeUpdateTrack(
   _options: ToolExecutionOptions,
 ): Promise<ToolResult> {
   const { trackId, name, ...patch } = data.body
+  const shiftedChanges: VideoEditorChange[] = []
+
+  if (patch.position !== undefined) {
+    const existingTrack = await repo.getTrackById?.(trackId)
+    if (existingTrack && existingTrack.position !== patch.position) {
+      const oldPos = existingTrack.position
+      const newPos = patch.position
+      const allTracks =
+        (await repo.getTracksByCompositionId?.(existingTrack.compositionId)) ??
+        []
+      for (const sibling of allTracks) {
+        if (sibling.id === trackId) continue
+        if (
+          newPos < oldPos &&
+          sibling.position >= newPos &&
+          sibling.position < oldPos
+        ) {
+          const shifted = await repo.updateTrack(sibling.id, {
+            position: sibling.position + 1,
+          })
+          if (shifted) {
+            shiftedChanges.push({ type: "update_track", track: shifted })
+          }
+        } else if (
+          newPos > oldPos &&
+          sibling.position > oldPos &&
+          sibling.position <= newPos
+        ) {
+          const shifted = await repo.updateTrack(sibling.id, {
+            position: sibling.position - 1,
+          })
+          if (shifted) {
+            shiftedChanges.push({ type: "update_track", track: shifted })
+          }
+        }
+      }
+    }
+  }
+
   const updated = await repo.updateTrack(trackId, patch)
   if (!updated) {
     return failure("Track not found.")
   }
   return {
     ...success(`Track ${updated.id} updated.`),
-    videoEditorChanges: [{ type: "update_track", track: updated, name }],
+    videoEditorChanges: [
+      { type: "update_track", track: updated, name },
+      ...shiftedChanges,
+    ],
   }
 }
 
@@ -286,6 +351,12 @@ export async function executeAddClip(
   const track = await repo.getTrackById(data.body.trackId)
   if (!track) {
     return failure("Track not found.")
+  }
+
+  if (track.type !== data.body.type) {
+    return failure(
+      `Cannot add a "${data.body.type}" clip to a "${track.type}" track. Clip type must match track type.`,
+    )
   }
 
   if (data.body.endFrame <= data.body.startFrame) {
@@ -315,6 +386,36 @@ export async function executeUpdateClip(
   _options: ToolExecutionOptions,
 ): Promise<ToolResult> {
   const { clipId, ...patch } = data.body
+
+  if (
+    patch.trackId !== undefined ||
+    patch.startFrame !== undefined ||
+    patch.endFrame !== undefined
+  ) {
+    const existingClip = await repo.getClipById?.(clipId)
+    if (existingClip) {
+      const nextStart = patch.startFrame ?? existingClip.startFrame
+      const nextEnd = patch.endFrame ?? existingClip.endFrame
+      if (nextEnd <= nextStart) {
+        return failure("endFrame must be greater than startFrame.")
+      }
+      if (
+        patch.trackId !== undefined &&
+        patch.trackId !== existingClip.trackId
+      ) {
+        const targetTrack = await repo.getTrackById(patch.trackId)
+        if (!targetTrack) {
+          return failure("Target track not found.")
+        }
+        if (targetTrack.type !== existingClip.type) {
+          return failure(
+            `Cannot move a "${existingClip.type}" clip to a "${targetTrack.type}" track. Clip type must match track type.`,
+          )
+        }
+      }
+    }
+  }
+
   const updated = await repo.updateClip(clipId, patch)
   if (!updated) {
     return failure("Clip not found.")
@@ -376,6 +477,35 @@ export async function executeSplitClip(
   }
   if ("fadeInFrames" in rightProperties) {
     rightProperties.fadeInFrames = 0
+  }
+
+  if (clip.type === "caption" && Array.isArray(props.words)) {
+    const composition = await repo.getCompositionById?.(clip.compositionId)
+    const fps = composition?.fps && composition.fps > 0 ? composition.fps : 30
+    const splitTimeSec = leftDurationFrames / fps
+    const words = props.words as Array<{
+      word: string
+      start: number
+      end: number
+    }>
+    const leftWords = words
+      .filter((w) => (w.start + w.end) / 2 < splitTimeSec)
+      .map((w) => ({
+        word: w.word,
+        start: w.start,
+        end: Number(Math.min(w.end, splitTimeSec).toFixed(3)),
+      }))
+    const rightWords = words
+      .filter((w) => (w.start + w.end) / 2 >= splitTimeSec)
+      .map((w) => ({
+        word: w.word,
+        start: Number(Math.max(0, w.start - splitTimeSec).toFixed(3)),
+        end: Number(Math.max(0, w.end - splitTimeSec).toFixed(3)),
+      }))
+    leftProperties.words = leftWords
+    leftProperties.text = leftWords.map((w) => w.word.trim()).join(" ")
+    rightProperties.words = rightWords
+    rightProperties.text = rightWords.map((w) => w.word.trim()).join(" ")
   }
 
   const updatedLeft = await repo.updateClip(clipId, {
@@ -553,6 +683,15 @@ export async function executeBatch(
   }
 
   const changes: VideoEditorChange[] = []
+  const knownTracks = new Map<
+    string,
+    { id: string; type: string; position: number; compositionId: string }
+  >()
+  const initialTracks =
+    (await repo.getTracksByCompositionId?.(composition.id)) ?? []
+  for (const t of initialTracks) {
+    knownTracks.set(t.id, t)
+  }
 
   for (const op of operations) {
     switch (op.op) {
@@ -563,8 +702,26 @@ export async function executeBatch(
         break
       }
       case "add_track": {
-        const position =
-          op.data.position ?? (await repo.getNextTrackPosition(composition.id))
+        let position: number
+        const shiftedChanges: VideoEditorChange[] = []
+        if (op.data.position !== undefined) {
+          position = op.data.position
+          const existingAtOrAfter =
+            (await repo.getTracksByCompositionId?.(composition.id, {
+              min: position,
+            })) ?? []
+          for (const existing of existingAtOrAfter) {
+            const shifted = await repo.updateTrack(existing.id, {
+              position: existing.position + 1,
+            })
+            if (shifted) {
+              knownTracks.set(shifted.id, shifted)
+              shiftedChanges.push({ type: "update_track", track: shifted })
+            }
+          }
+        } else {
+          position = await repo.getNextTrackPosition(composition.id)
+        }
         const track = await repo.createTrack({
           compositionId: composition.id,
           type: op.data.type,
@@ -572,19 +729,64 @@ export async function executeBatch(
           muted: op.data.muted,
           hidden: op.data.hidden,
         })
+        knownTracks.set(track.id, track)
         changes.push({ type: "add_track", track, name: op.data.name })
+        changes.push(...shiftedChanges)
         break
       }
       case "update_track": {
         const { name, ...trackPatch } = op.patch
+        const shiftedChanges: VideoEditorChange[] = []
+        if (trackPatch.position !== undefined) {
+          const existingTrack =
+            knownTracks.get(op.trackId) ??
+            (await repo.getTrackById?.(op.trackId))
+          if (existingTrack && existingTrack.position !== trackPatch.position) {
+            const oldPos = existingTrack.position
+            const newPos = trackPatch.position
+            const allTracks =
+              (await repo.getTracksByCompositionId?.(composition.id)) ?? []
+            for (const sibling of allTracks) {
+              if (sibling.id === op.trackId) continue
+              if (
+                newPos < oldPos &&
+                sibling.position >= newPos &&
+                sibling.position < oldPos
+              ) {
+                const shifted = await repo.updateTrack(sibling.id, {
+                  position: sibling.position + 1,
+                })
+                if (shifted) {
+                  knownTracks.set(shifted.id, shifted)
+                  shiftedChanges.push({ type: "update_track", track: shifted })
+                }
+              } else if (
+                newPos > oldPos &&
+                sibling.position > oldPos &&
+                sibling.position <= newPos
+              ) {
+                const shifted = await repo.updateTrack(sibling.id, {
+                  position: sibling.position - 1,
+                })
+                if (shifted) {
+                  knownTracks.set(shifted.id, shifted)
+                  shiftedChanges.push({ type: "update_track", track: shifted })
+                }
+              }
+            }
+          }
+        }
         const updated = await repo.updateTrack(op.trackId, trackPatch)
         if (!updated) return failure(`Track ${op.trackId} not found in batch.`)
+        knownTracks.set(updated.id, updated)
         changes.push({ type: "update_track", track: updated, name })
+        changes.push(...shiftedChanges)
         break
       }
       case "remove_track": {
         const deleted = await repo.deleteTrack(op.trackId)
         if (!deleted) return failure(`Track ${op.trackId} not found in batch.`)
+        knownTracks.delete(op.trackId)
         changes.push({ type: "remove_track", trackId: op.trackId })
         break
       }
@@ -592,6 +794,14 @@ export async function executeBatch(
         if (op.data.endFrame <= op.data.startFrame) {
           return failure(
             "endFrame must be greater than startFrame in batch add_clip.",
+          )
+        }
+        const targetTrack =
+          knownTracks.get(op.data.trackId) ??
+          (await repo.getTrackById?.(op.data.trackId))
+        if (targetTrack && targetTrack.type !== op.data.type) {
+          return failure(
+            `Cannot add a "${op.data.type}" clip to a "${targetTrack.type}" track in batch. Clip type must match track type.`,
           )
         }
         const clip = await repo.createClip({
@@ -608,6 +818,35 @@ export async function executeBatch(
         break
       }
       case "update_clip": {
+        if (
+          op.patch.trackId !== undefined ||
+          op.patch.startFrame !== undefined ||
+          op.patch.endFrame !== undefined
+        ) {
+          const existingClip = await repo.getClipById?.(op.clipId)
+          if (existingClip) {
+            const nextStart = op.patch.startFrame ?? existingClip.startFrame
+            const nextEnd = op.patch.endFrame ?? existingClip.endFrame
+            if (nextEnd <= nextStart) {
+              return failure(
+                "endFrame must be greater than startFrame in batch update_clip.",
+              )
+            }
+            if (
+              op.patch.trackId !== undefined &&
+              op.patch.trackId !== existingClip.trackId
+            ) {
+              const targetTrack =
+                knownTracks.get(op.patch.trackId) ??
+                (await repo.getTrackById?.(op.patch.trackId))
+              if (targetTrack && targetTrack.type !== existingClip.type) {
+                return failure(
+                  `Cannot move a "${existingClip.type}" clip to a "${targetTrack.type}" track in batch. Clip type must match track type.`,
+                )
+              }
+            }
+          }
+        }
         const updated = await repo.updateClip(op.clipId, op.patch)
         if (!updated) return failure(`Clip ${op.clipId} not found in batch.`)
         changes.push({ type: "update_clip", clip: updated })

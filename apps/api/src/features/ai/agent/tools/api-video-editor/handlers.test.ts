@@ -111,8 +111,25 @@ mock.module("@/features/video-editor/repo", () => ({
     ...data,
   }),
   deleteTrack: async () => true,
-  getTrackById: async () => mockTrack,
-  getClipById: async (id: string) => (id === "clip-1" ? mockClip : null),
+  getTrackById: async (id: string) =>
+    id === "track-cap" ? mockCaptionTrack : mockTrack,
+  getTracksByCompositionId: async (
+    _compId: string,
+    pos?: { min?: number; max?: number },
+  ) => {
+    const tracks = [mockTrack]
+    return tracks.filter(
+      (t) =>
+        (pos?.min === undefined || t.position >= pos.min) &&
+        (pos?.max === undefined || t.position <= pos.max),
+    )
+  },
+  getCompositionById: async () => mockComposition,
+  getClipById: async (id: string) => {
+    if (id === "clip-1") return mockClip
+    if (id === "clip-cap-1") return mockCaptionClip
+    return null
+  },
   getClipsByFilters: async () => [mockClip, mockSecondClip],
   createClip: async (data: Record<string, unknown>) => ({
     ...mockClip,
@@ -415,5 +432,60 @@ describe("api-video-editor handlers videoEditorChanges", () => {
     expect(imageSchemaRes.success).toBe(true)
     expect(imageSchemaRes.output).toContain("motionEffect")
     expect(imageSchemaRes.output).toContain("fadeInFrames")
+  })
+
+  it("shifts existing tracks when adding a track at an explicit position", async () => {
+    const addAtTopRes = await executeAddTrack(
+      {
+        endpoint: "/video-editor/tracks/add",
+        method: "POST",
+        body: {
+          filePath: "/video.ve",
+          type: "text",
+          name: "Overlay Titles",
+          position: 0,
+        },
+      },
+      mockOptions,
+    )
+    expect(addAtTopRes.success).toBe(true)
+    expect(addAtTopRes.videoEditorChanges).toEqual([
+      { type: "add_track", track: mockTrack, name: "Overlay Titles" },
+      { type: "update_track", track: { ...mockTrack, position: 1 } },
+    ])
+  })
+
+  it("rejects adding a clip whose type does not match the target track type", async () => {
+    const badRes = await executeAddClip(
+      {
+        endpoint: "/video-editor/clips/add",
+        method: "POST",
+        body: {
+          trackId: "track-1",
+          type: "audio",
+          startFrame: 0,
+          endFrame: 90,
+          sourceStartFrame: 0,
+          sourceDurationInFrames: 90,
+          properties: { url: "https://example.com/a.mp3", fileName: "a.mp3" },
+        },
+      },
+      mockOptions,
+    )
+    expect(badRes.success).toBe(false)
+    expect(badRes.output).toContain("Clip type must match track type")
+  })
+
+  it("splits caption clip words and offsets timestamps for the right half", async () => {
+    const splitCapRes = await executeSplitClip(
+      {
+        endpoint: "/video-editor/clips/split",
+        method: "POST",
+        body: { clipId: "clip-cap-1", frame: 18 },
+      },
+      mockOptions,
+    )
+    expect(splitCapRes.success).toBe(true)
+    expect(splitCapRes.videoEditorChanges).toHaveLength(2)
   })
 })

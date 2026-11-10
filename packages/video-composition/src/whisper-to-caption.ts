@@ -35,7 +35,7 @@ export const whisperToCaptions = ({
   const captions: Array<Caption> = []
 
   if (transcription.words.length === 0) {
-    throw new Error("No words found in transcription")
+    return { captions }
   }
 
   let remainingText = transcription.text
@@ -50,14 +50,14 @@ export const whisperToCaptions = ({
     const match = new RegExp(
       `^([\\s?${punctuation}]{0,4})${escapeWordForRegex(wordToMatch)}([${punctuation}]{0,3})?`,
     ).exec(remainingText)
-    if (!match) {
-      throw new Error(
-        `Unable to parse punctuation from OpenAI Whisper output. Could not find word "${wordText}" in text "${remainingText.slice(0, 100)}". File an issue under https://remotion.dev/issue and post the input for openAiWhisperApiToCaptions() to ask for a fix.`,
-      )
-    }
 
-    const foundText = match[0]
-    remainingText = remainingText.slice(foundText.length)
+    let foundText: string
+    if (match) {
+      foundText = match[0]
+      remainingText = remainingText.slice(foundText.length)
+    } else {
+      foundText = i === 0 ? wordText.trim() : ` ${wordText.trim()}`
+    }
 
     captions.push({
       confidence: null,
