@@ -1,7 +1,6 @@
-export const CTA_LABEL = "Start creating free"
+export const CTA_LABEL = "Start your first film"
 
 export const navLinks = [
-  { label: "Showcase", href: "/#showcase" },
   { label: "How it works", href: "/#how-it-works" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/#faq" },
@@ -16,10 +15,16 @@ export const socialLinks = [
 
 export const hero = {
   brand: "Sohizi Lab",
-  eyebrow: "The AI video workspace",
-  headline: "Make your whole AI video in one tool. Not eight.",
+  eyebrow: "The AI film studio",
+  headline: "Stop prompting. Start directing.",
   subheadline:
-    "Write scripts, generate media, storyboard, and edit video in one AI-assisted workspace that knows the full context of your project.",
+    "One studio where your AI knows your whole film, from first idea to final cut. Your characters, world, and story carry into every shot, so it all feels like one movie.",
+  demoVideo: "https://cdn.sohizi.com/app/full_demo.mp4",
+  demoVideoHd: "https://cdn.sohizi.com/app/final_hd.mp4",
+  demoPoster:
+    "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/thumbnail.png",
+  demoLabel:
+    "Product demonstration: idea to script, cast, storyboard, generated shots, and final cut inside Sohizi Lab.",
 } as const
 
 export const problem = {
@@ -268,60 +273,60 @@ export const audience = {
 
 export const faq = {
   id: "faq",
-  headline: "Frequently Asked Questions",
-  contactLine: "Have more questions? Reach out at",
-  contactEmail: "hello@sohizi.com",
-  ctaCard: {
-    title: "Ready to make your next video in one workspace?",
-    body: "Start free, open a project, and see the full workflow — script to final cut — without hopping tools.",
-  },
+  headline: "Straight answers before you roll.",
   items: [
     {
-      question: "Do I have to give up the tools I already use?",
+      question: "Do I need filmmaking experience?",
       answer:
-        "No. Sohizi Lab covers writing, generation, organization, and editing in one place, but you can still bring in work from elsewhere. The point is that your project stops scattering — not that you throw everything out on day one.",
+        "No. If you can describe a scene, you can start. Your AI partner handles the technical parts, and you can go as deep as you want.",
     },
     {
-      question: "Is my work locked into Sohizi?",
+      question: 'What does it mean that the AI "knows my project"?',
       answer:
-        "Your work is yours. You can export your final videos and assets. Sohizi keeps them connected while you create; it doesn't hold them hostage.",
+        "Your script, characters, style, and decisions live in one shared project. Every request draws on all of it, so you never re-explain your story and your visuals stay consistent from shot to shot.",
     },
     {
-      question: "Will this take forever to learn?",
+      question: "Does the AI make creative decisions for me?",
       answer:
-        "If you've used a document editor and a video editor, you already know the shape of it — files, folders, tabs, a timeline. The AI handles the parts that usually slow you down.",
+        "Never. You're the director. The AI researches, plans, generates, and edits when you ask. You decide what makes the final cut.",
+    },
+    {
+      question: "Can I edit manually?",
+      answer:
+        "Always. Everything the AI makes is editable, from the script and storyboard to the media tab and the timeline.",
+    },
+    {
+      question: "Can I bring my own assets?",
+      answer: "Yes. Upload and reuse your own images, video, audio, and PDFs.",
+    },
+    {
+      question: "Which AI models power Sohizi Lab?",
+      answer:
+        "Leading state-of-the-art models for text, image, video, and audio, all in one place.",
     },
     {
       question: "Who owns what I create?",
-      answer:
-        "You do. Everything you write, generate, and edit in Sohizi Lab belongs to you.",
+      answer: "You do. Sohizi Lab never uses your work to train AI models.",
     },
     {
-      question: "What's included right now?",
+      question: "How much does it cost?",
       answer:
-        "The full end-to-end workflow for individual creators: script and text editing, AI image, video, voice, and music generation, storyboarding, scene and asset organization, video editing, and the context-aware AI assistant. Team collaboration is coming later.",
-    },
-    {
-      question: "How much does it cost to start?",
-      answer:
-        "You get free credit to start. Create your first project and see the workflow before you decide anything.",
+        "The studio's manual tools are free to use. Everything AI-powered, from research and generation to editing, comes with a paid plan. See Pricing to find the one that fits your film.",
     },
   ],
 } as const
 
 export const finalCta = {
-  headline: "Stop managing tools. Start making videos.",
-  body: "Your next project doesn't have to live in eight places at once. Write it, generate it, and cut it in one workspace — with an AI that remembers everything you've made.",
+  headline: "That idea in your head? Let's get it out.",
+  body: "Your next story is waiting. Give it a place to come to life.",
 } as const
 
 export const footer = {
-  tagline:
-    "The AI-native video workspace — write, generate, storyboard, and edit in one project.",
+  tagline: "Your AI film studio.",
   columns: [
     {
       title: "Product",
       links: [
-        { label: "Showcase", href: "/#showcase" },
         { label: "How it works", href: "/#how-it-works" },
         { label: "Pricing", href: "/pricing" },
         { label: "FAQ", href: "/#faq" },
@@ -331,7 +336,7 @@ export const footer = {
       title: "Account",
       links: [
         { label: "Sign in", href: "/sign-in" },
-        { label: "Create account", href: "/sign-up" },
+        { label: "Start your first film", href: "/sign-up" },
       ],
     },
     {

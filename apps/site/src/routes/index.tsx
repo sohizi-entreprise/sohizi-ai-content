@@ -5,12 +5,12 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       {
-        title: "Sohizi Lab — Make the whole AI video in one tool",
+        title: "Sohizi Lab — Stop Prompting. Start Directing.",
       },
       {
         name: "description",
         content:
-          "Write scripts, generate media, storyboard, and edit video in one AI-assisted workspace that knows the full context of your project.",
+          "Write the script, lock your characters, storyboard every scene, generate video and sound, and edit the final cut in one AI studio that remembers your story.",
       },
     ],
   }),
