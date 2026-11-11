@@ -118,6 +118,15 @@ function ProblemSection() {
             </p>
           </div>
         </Reveal>
+        <Reveal className="mt-16 sm:mt-24">
+          <img
+            src="https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/frustation.png"
+            alt="Disconnected AI tools fracturing the same film across apps"
+            loading="lazy"
+            decoding="async"
+            className="w-full rounded-[1.25rem]"
+          />
+        </Reveal>
       </div>
     </section>
   )
