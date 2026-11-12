@@ -1,3 +1,5 @@
+import { cdnImage } from "./lib/cdn-image"
+
 export const CTA_LABEL = "Start your first film"
 
 export const navLinks = [
@@ -15,14 +17,13 @@ export const socialLinks = [
 
 export const hero = {
   brand: "Sohizi Lab",
-  eyebrow: "The AI film studio",
+  eyebrow: "Your AI film studio",
   headline: "Stop prompting. Start directing.",
   subheadline:
     "One studio where your AI knows your whole film, from first idea to final cut. Your characters, world, and story carry into every shot, so it all feels like one movie.",
   demoVideo: "https://cdn.sohizi.com/app/full_demo.mp4",
   demoVideoHd: "https://cdn.sohizi.com/app/final_hd.mp4",
-  demoPoster:
-    "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/thumbnail.png",
+  demoPoster: cdnImage("app/thumbnail.png", { width: 1600 }),
   demoLabel:
     "Product demonstration: idea to script, cast, storyboard, generated shots, and final cut inside Sohizi Lab.",
 } as const
@@ -333,10 +334,9 @@ export const footer = {
       ],
     },
     {
-      title: "Account",
+      title: "Contact",
       links: [
-        { label: "Sign in", href: "/sign-in" },
-        { label: "Start your first film", href: "/sign-up" },
+        { label: "support@sohizi.com", href: "mailto:support@sohizi.com" },
       ],
     },
     {

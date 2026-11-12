@@ -8,8 +8,13 @@ import {
 } from "motion/react"
 import { CtaButton } from "../components/cta-button"
 import { StackedCarousel } from "../components/stacked-carousel"
+import { cdnImage } from "../lib/cdn-image"
 
 const ease = [0.22, 1, 0.36, 1] as const
+
+/** ~2× budget for sticky/mobile carousel frames (~700–1200px wide). */
+const STEP_IMAGE_WIDTH = 1400
+const PROBLEM_IMAGE_WIDTH = 1800
 
 function Reveal({
   children,
@@ -39,9 +44,9 @@ const steps = [
       "Brainstorm with a creative partner that does the research. Ask it to find a real story, then turn it into a plan.",
     label: "Research / Plan",
     images: [
-      "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/plan_1.png",
-      "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/plan_2.png",
-      "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/plan_3.png",
+      cdnImage("app/plan_1.png", { width: STEP_IMAGE_WIDTH }),
+      cdnImage("app/plan_2.png", { width: STEP_IMAGE_WIDTH }),
+      cdnImage("app/plan_3.png", { width: STEP_IMAGE_WIDTH }),
     ],
   },
   {
@@ -50,8 +55,8 @@ const steps = [
       "Define your film's concept, genre, and visual style, then add your characters, locations, and props. Generate a character sheet once, and your AI remembers all of it in every scene.",
     label: "The world / Cast",
     images: [
-      "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/lock_1.png",
-      "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/lock_2.png",
+      cdnImage("app/lock_1.png", { width: STEP_IMAGE_WIDTH }),
+      cdnImage("app/lock_2.png", { width: STEP_IMAGE_WIDTH }),
     ],
   },
   {
@@ -60,8 +65,8 @@ const steps = [
       "Turn your script into a storyboard and fix the story before you spend time and credits on video.",
     label: "Script / Storyboard",
     images: [
-      "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/storyboard_1.png",
-      "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/storyboard_2.png",
+      cdnImage("app/storyboard_1.png", { width: STEP_IMAGE_WIDTH }),
+      cdnImage("app/storyboard_2.png", { width: STEP_IMAGE_WIDTH }),
     ],
   },
   {
@@ -69,9 +74,7 @@ const steps = [
     description:
       "Ask for images, video, voice, or music in plain language. Your AI already knows your characters, style, and story, so shot 40 matches shot 1. Want more control? Open the media tab and tune every detail yourself.",
     label: "Scene 01 / Scene 40",
-    images: [
-      "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/media_generator.png",
-    ],
+    images: [cdnImage("app/media_generator.png", { width: STEP_IMAGE_WIDTH })],
   },
   {
     title: "Cut it your way",
@@ -79,8 +82,8 @@ const steps = [
       "An editor your AI can drive. Tell it what you want, then take the wheel whenever you like. Same timeline, shared control.",
     label: "Timeline / Final cut",
     images: [
-      "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/timeline_1.png",
-      "https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/timeline_2.png",
+      cdnImage("app/timeline_1.png", { width: STEP_IMAGE_WIDTH }),
+      cdnImage("app/timeline_2.png", { width: STEP_IMAGE_WIDTH }),
     ],
   },
 ] as const
@@ -120,7 +123,7 @@ function ProblemSection() {
         </Reveal>
         <Reveal className="mt-16 sm:mt-24">
           <img
-            src="https://cdn.sohizi.com/cdn-cgi/image/format=avif/app/frustation.png"
+            src={cdnImage("app/frustation.png", { width: PROBLEM_IMAGE_WIDTH })}
             alt="Disconnected AI tools fracturing the same film across apps"
             loading="lazy"
             decoding="async"
@@ -348,10 +351,7 @@ function MissionSection() {
               without losing the vision along the way.
             </p>
             <div className="mt-8">
-              <CtaButton
-                location="mission"
-                className="rounded-full bg-[#111312] text-white hover:bg-black/80"
-              />
+              <CtaButton location="mission" />
             </div>
           </div>
         </Reveal>

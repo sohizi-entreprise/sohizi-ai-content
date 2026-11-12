@@ -22,7 +22,7 @@ export function CtaButton({
       asChild
       size={size}
       className={cn(
-        "h-11 rounded-lg px-6 text-base font-medium shadow-primary",
+        "h-11 rounded-lg px-6 text-base font-semibold shadow-primary",
         className,
       )}
     >

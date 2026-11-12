@@ -36,10 +36,7 @@ export function FinalCtaSection() {
               {finalCta.body}
             </p>
             <div className="mt-9 flex flex-col items-center gap-4">
-              <CtaButton
-                location="final_cta"
-                className="rounded-full bg-white text-black hover:bg-white/85"
-              />
+              <CtaButton location="final_cta" />
               <span className="text-xs text-white/55">
                 No credit card required.
               </span>

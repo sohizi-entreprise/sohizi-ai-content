@@ -112,7 +112,7 @@ export function LandingNav() {
           />
           <span
             className={cn(
-              "relative top-[5px] font-display text-base font-semibold tracking-tight transition-colors duration-300 sm:text-lg",
+              "relative top-[5px] font-space-grotesk text-sm font-medium tracking-tight transition-colors duration-300 sm:text-lg",
               overLight ? "text-background" : "text-foreground",
             )}
           >

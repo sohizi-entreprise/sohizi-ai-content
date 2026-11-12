@@ -7,7 +7,12 @@ function FooterLink({ href, label }: { href: string; label: string }) {
   const className =
     "text-sm text-white/55 transition-colors duration-200 hover:text-white sm:text-base"
 
-  if (href.startsWith("/#") || href.startsWith("#") || isAppPath(href)) {
+  if (
+    href.startsWith("/#") ||
+    href.startsWith("#") ||
+    href.startsWith("mailto:") ||
+    isAppPath(href)
+  ) {
     return (
       <a href={isAppPath(href) ? appUrl(href) : href} className={className}>
         {label}

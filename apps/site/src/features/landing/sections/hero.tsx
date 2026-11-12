@@ -76,8 +76,8 @@ export function HeroSection() {
           className="relative z-10 text-center"
         >
           <p className="mb-7 text-xs font-medium uppercase tracking-[0.25em] text-white/50">
-            {hero.eyebrow} <span className="mx-3 text-primary">✳</span> A new
-            way to make movies
+            Sohizi lab <span className="mx-3 text-primary">✳</span>{" "}
+            {hero.eyebrow}
           </p>
           <h1 className="mx-auto max-w-[13ch] font-display text-[clamp(2.25rem,9vw,4rem)] font-medium leading-[0.86] tracking-[-0.085em] sm:text-[clamp(3.25rem,10vw,12rem)]">
             Stop prompting.
@@ -95,10 +95,7 @@ export function HeroSection() {
             {hero.subheadline}
           </p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-4">
-            <CtaButton
-              location="hero"
-              className="rounded-full bg-white text-black hover:bg-white/85"
-            />
+            <CtaButton location="hero" />
             <a
               href="#product-demo"
               className="border-b border-white/50 pb-1 text-sm font-medium text-white transition hover:border-white"
