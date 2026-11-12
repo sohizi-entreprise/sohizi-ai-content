@@ -116,9 +116,10 @@ export function HeroSection() {
             poster={hero.demoPoster}
             label={hero.demoLabel}
             playback="manual"
+            location="hero"
             priority
             fit="contain"
-            className="aspect-video w-full shadow-[0_45px_140px_rgba(0,0,0,.55)]"
+            className="aspect-video w-full border border-white/15 shadow-[0_45px_140px_rgba(0,0,0,.55)]"
           />
         </motion.div>
         <ModelLogoRow />

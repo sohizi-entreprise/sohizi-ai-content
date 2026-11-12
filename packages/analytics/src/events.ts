@@ -1,6 +1,7 @@
 /** The only public event names and payloads used by Sohizi analytics. */
 export type AnalyticsEvents = {
   marketing_cta_clicked: { location: string; destination: "sign-up" }
+  marketing_demo_played: { location: string }
   signup_started: { method: "email" | "google" }
   signup_completed: { method: "email" | "google" }
   organization_created: Record<string, never>

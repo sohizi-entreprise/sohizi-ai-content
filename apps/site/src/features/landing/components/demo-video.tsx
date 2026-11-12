@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react"
 import { useReducedMotion } from "motion/react"
 import { Play } from "lucide-react"
+import { captureAnalyticsEvent } from "@sohizi/analytics/browser"
 import { cn } from "@/lib/utils"
 
 type DemoVideoProps = {
@@ -19,6 +20,8 @@ type DemoVideoProps = {
   playback?: "auto" | "manual"
   label?: string
   fit?: "cover" | "contain"
+  /** Analytics location for manual play clicks. */
+  location?: string
 }
 
 const HD_QUERY = "(min-width: 1024px)"
@@ -58,6 +61,7 @@ export function DemoVideo({
   playback = "auto",
   label,
   fit = "cover",
+  location = "unknown",
 }: DemoVideoProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -156,6 +160,7 @@ export function DemoVideo({
   const handlePlayClick = () => {
     const video = videoRef.current
     if (!video) return
+    captureAnalyticsEvent("marketing_demo_played", { location })
     video.muted = false
     void video
       .play()
