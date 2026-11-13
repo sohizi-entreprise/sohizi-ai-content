@@ -19,11 +19,9 @@ import {
 } from "./render-schema"
 import { RENDER_RESERVATION_TTL_MS, lambdaUsdToCredits } from "./render-pricing"
 import { inngest as defaultInngest } from "@/lib/inngest/client"
-import {
-  billingService as defaultBillingService,
-  InsufficientCreditsError,
-  safeRefund as defaultSafeRefund,
-} from "@/features/billing"
+import { InsufficientCreditsError } from "@/features/billing/errors"
+import { billingService as defaultBillingService } from "@/features/billing/service"
+import { safeRefund as defaultSafeRefund } from "@/features/billing/wrapper"
 import {
   BadRequest,
   Conflict,
