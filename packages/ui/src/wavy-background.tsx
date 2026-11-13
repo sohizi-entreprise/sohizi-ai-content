@@ -26,7 +26,8 @@ export const WavyBackground = ({
   waveOpacity?: number
   [key: string]: unknown
 }) => {
-  const noise = createNoise3D()
+  const noiseRef = useRef<ReturnType<typeof createNoise3D> | null>(null)
+  noiseRef.current ??= createNoise3D()
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationIdRef = useRef(0)
@@ -64,14 +65,20 @@ export const WavyBackground = ({
 
     const resize = () => {
       const { width, height } = container.getBoundingClientRect()
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      // The wave is blurred, so extra Retina pixels only increase canvas work.
+      const dpr = 1
       sizeRef.current = { w: width, h: height }
-      canvas.width = Math.max(1, Math.floor(width * dpr))
-      canvas.height = Math.max(1, Math.floor(height * dpr))
+      const pixelWidth = Math.max(1, Math.floor(width * dpr))
+      const pixelHeight = Math.max(1, Math.floor(height * dpr))
+      ctx.filter = `blur(${blur}px)`
+      if (canvas.width === pixelWidth && canvas.height === pixelHeight) return
+      canvas.width = pixelWidth
+      canvas.height = pixelHeight
       canvas.style.width = `${width}px`
       canvas.style.height = `${height}px`
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.filter = `blur(${blur}px)`
+      paint()
     }
 
     const drawWave = (n: number) => {
@@ -83,7 +90,7 @@ export const WavyBackground = ({
         ctx.lineWidth = waveWidth || 50
         ctx.strokeStyle = waveColors[i % waveColors.length]
         for (let x = 0; x < w; x += 5) {
-          const y = noise(x / 800, 0.3 * i, ntRef.current) * 100
+          const y = noiseRef.current!(x / 800, 0.3 * i, ntRef.current) * 100
           ctx.lineTo(x, y + h * 0.5)
         }
         ctx.stroke()
@@ -91,19 +98,25 @@ export const WavyBackground = ({
       }
     }
 
-    const render = () => {
+    const paint = () => {
       const { w, h } = sizeRef.current
       if (w && h) {
         if (backgroundFill && backgroundFill !== "transparent") {
-          ctx.globalAlpha = waveOpacity || 0.5
+          ctx.globalAlpha = 1
+          ctx.filter = "none"
           ctx.fillStyle = backgroundFill
           ctx.fillRect(0, 0, w, h)
         } else {
           ctx.clearRect(0, 0, w, h)
-          ctx.globalAlpha = waveOpacity || 0.5
         }
+        ctx.filter = `blur(${blur}px)`
+        ctx.globalAlpha = waveOpacity
         drawWave(5)
       }
+    }
+
+    const render = () => {
+      paint()
       animationIdRef.current = requestAnimationFrame(render)
     }
 

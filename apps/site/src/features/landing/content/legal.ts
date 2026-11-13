@@ -12,7 +12,7 @@ export type LegalDocument = {
 
 export const privacyPolicy: LegalDocument = {
   title: "Privacy Policy",
-  lastUpdated: "October 6, 2026",
+  lastUpdated: "November 13, 2026",
   intro:
     "This Privacy Policy explains how Sohizi Lab (“Sohizi,” “we,” “us,” or “our”) collects, uses, and shares information when you use our website and AI video workspace. ",
   sections: [
@@ -20,6 +20,7 @@ export const privacyPolicy: LegalDocument = {
       heading: "Information we collect",
       paragraphs: [
         "Account information: when you create an account we collect details such as your name, email address, and authentication data from our sign-in providers.",
+        "Waitlist information: when you join the prelaunch waitlist, we collect your email address to notify you when Sohizi Lab launches.",
         "Project and content data: scripts, prompts, storyboards, media you upload or generate, timeline edits, and related project metadata needed to run the workspace.",
         "Usage and technical data: product interactions, feature usage, device and browser information, IP address, approximate location derived from IP, and diagnostic logs that help us operate and improve the service.",
         "Billing data: subscription plan, credit balances, and payment-related records processed by our payment providers. We do not store full payment card numbers on our servers.",
@@ -30,6 +31,7 @@ export const privacyPolicy: LegalDocument = {
       paragraphs: [
         "We use your information to provide and maintain the Sohizi Lab service, including generating media, running the editor, managing credits, and supporting your account.",
         "We also use data to secure the platform, prevent abuse, improve product quality, communicate service updates, and comply with legal obligations.",
+        "We use waitlist email addresses to send the launch announcement. Joining the waitlist does not create an account.",
       ],
     },
     {
@@ -59,7 +61,7 @@ export const privacyPolicy: LegalDocument = {
     {
       heading: "Retention",
       paragraphs: [
-        "We retain account, project, and billing records for as long as needed to provide the service and for legitimate business, legal, and security purposes. Analytics consent records are valid for six months; analytics events are retained according to our PostHog project settings and are deleted when no longer needed for product analysis. You may request deletion of your account; some records may be retained where we are legally required to keep them.",
+        "We retain account, project, and billing records for as long as needed to provide the service and for legitimate business, legal, and security purposes. We retain waitlist email addresses until the launch announcement is sent or you request deletion. Analytics consent records are valid for six months; analytics events are retained according to our PostHog project settings and are deleted when no longer needed for product analysis. You may request deletion of your account; some records may be retained where we are legally required to keep them.",
       ],
     },
     {

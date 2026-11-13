@@ -15,6 +15,7 @@ import { inngest, functions } from "@/lib/inngest"
 import { serve } from "inngest/bun"
 import { auth } from "@/lib/auth"
 import { analyticsConsentRoutes } from "@/features/analytics-consent"
+import { launchGateRoutes } from "@/features/launch-gate"
 import { InsufficientCreditsError } from "@/features/billing"
 import { NameConflictError } from "@/features/skill-market"
 import { waitForActiveAgentRuns } from "@/features/chat/service"
@@ -178,6 +179,7 @@ const app = new Elysia()
   .use(inngestHandler)
   .get("/", () => "Welcome to Sohizi Labs API")
   .use(analyticsConsentRoutes)
+  .use(launchGateRoutes)
   .use(routes.projectRoutes)
   .use(routes.fileSystemRoutes)
   .use(routes.chatRoutes)

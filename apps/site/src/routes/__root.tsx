@@ -14,6 +14,7 @@ import appCss from "../styles.css?url"
 import type { PublicEnv } from "@/lib/public-env"
 import { loadPublicEnv } from "@/lib/load-public-env"
 import { getPublicEnv, setPublicEnv } from "@/lib/public-env"
+import { LaunchGateProvider } from "@/features/landing/components/launch-gate"
 
 interface RouterContext {
   publicEnv?: PublicEnv
@@ -110,8 +111,10 @@ function RootComponent() {
       privacyHref="/privacy"
       app="site"
     >
-      <AnalyticsRouteTracker />
-      <Outlet />
+      <LaunchGateProvider>
+        <AnalyticsRouteTracker />
+        <Outlet />
+      </LaunchGateProvider>
     </AnalyticsProvider>
   )
 }

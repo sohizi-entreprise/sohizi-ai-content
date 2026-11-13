@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth"
+import { APIError } from "better-auth/api"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { organization, emailOTP } from "better-auth/plugins"
 import { db } from "@/db"
@@ -12,6 +13,7 @@ import {
   syncPolarSubscription,
 } from "@/features/billing/polar"
 import { prepareAccountDeletion } from "@/features/account/delete-account"
+import { acceptingUsers } from "@/features/launch-gate"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const REPLY_TO = "support@sohizi.com"
@@ -24,6 +26,20 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins: [process.env.FRONTEND_URL!],
   database: drizzleAdapter(db, { provider: "pg" }),
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          if (!(await acceptingUsers())) {
+            throw new APIError("FORBIDDEN", {
+              message: "Sign-up is not open yet. Join the waitlist instead.",
+            })
+          }
+          return { data: user }
+        },
+      },
+    },
+  },
   user: {
     additionalFields: {
       type: {

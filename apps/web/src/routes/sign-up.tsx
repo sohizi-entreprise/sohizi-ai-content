@@ -1,6 +1,6 @@
 import { captureAnalyticsEvent } from "@sohizi/analytics/browser"
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@sohizi/ui/button"
 import { Spinner } from "@sohizi/ui/spinner"
 import { Input } from "@sohizi/ui/input"
@@ -15,12 +15,36 @@ import {
 } from "@sohizi/ui/card"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@sohizi/ui/input-otp"
 import { emailOtp, signIn, signUp } from "@/lib/auth-client"
+import { getPublicEnv } from "@/lib/public-env"
 
 export const Route = createFileRoute("/sign-up")({
   component: SignUpPage,
 })
 
 function SignUpPage() {
+  const [acceptingUsers, setAcceptingUsers] = useState(false)
+  const [gateError, setGateError] = useState(false)
+  const checkLaunchGate = async () => {
+    try {
+      const response = await fetch("/api/feature-flags/ACCEPT_USERS")
+      if (!response.ok) throw new Error("Unable to check launch status")
+      const result = (await response.json()) as { enable: boolean }
+      if (result.enable === true) {
+        setAcceptingUsers(true)
+      } else {
+        window.location.replace(
+          `${getPublicEnv().siteUrl.replace(/\/$/, "")}/?waitlist=1`,
+        )
+      }
+    } catch {
+      setGateError(true)
+    }
+  }
+
+  useEffect(() => {
+    void checkLaunchGate()
+  }, [])
+
   const navigate = useNavigate()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -109,6 +133,21 @@ function SignUpPage() {
       callbackURL: window.location.origin + "/",
       errorCallbackURL: window.location.origin + "/auth-error",
     })
+  }
+
+  if (!acceptingUsers) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        {gateError ? (
+          <div className="space-y-3 text-center">
+            <p>We couldn’t check launch status. Please try again.</p>
+            <Button onClick={() => void checkLaunchGate()}>Retry</Button>
+          </div>
+        ) : (
+          <p>Checking launch status…</p>
+        )}
+      </div>
+    )
   }
 
   return (

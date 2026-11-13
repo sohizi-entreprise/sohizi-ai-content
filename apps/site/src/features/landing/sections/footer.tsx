@@ -81,7 +81,7 @@ export function LandingFooter() {
           fontSize="285"
           className="font-display font-medium"
         >
-          Sohizi lab
+          Sohizi Lab
         </text>
       </svg>
     </footer>
