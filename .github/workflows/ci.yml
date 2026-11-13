@@ -260,6 +260,7 @@ jobs:
           cat <<EOF >> /tmp/sohizi-deploy-rc/.env
 
           APP_ENV=rc
+          CADDY_SITE_PREFIX=http://
           API_STOP_GRACE_PERIOD=10s
           GHCR_OWNER=${OWNER_LOWER}
           IMAGE_TAG=rc

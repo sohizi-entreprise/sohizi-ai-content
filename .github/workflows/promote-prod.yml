@@ -86,6 +86,7 @@ jobs:
           cat <<EOF >> /tmp/sohizi-deploy-prod/.env
 
           APP_ENV=prod
+          CADDY_SITE_PREFIX=
           GHCR_OWNER=${OWNER_LOWER}
           IMAGE_TAG=prod
           POSTGRES_DB=sohizi_prod

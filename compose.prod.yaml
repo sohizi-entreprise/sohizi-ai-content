@@ -76,7 +76,7 @@ services:
         aliases:
           - ${APP_ENV:-rc}-api
     labels:
-      caddy: http://api.${DOMAIN}
+      caddy: ${CADDY_SITE_PREFIX-http://}api.${DOMAIN}
       caddy.reverse_proxy: "{{upstreams 3030}}"
       caddy.reverse_proxy.lb_try_duration: 5s
 
@@ -118,7 +118,7 @@ services:
     networks:
       - caddy
     labels:
-      caddy: http://app.${DOMAIN}
+      caddy: ${CADDY_SITE_PREFIX-http://}app.${DOMAIN}
       caddy.0_handle: /api/auth*
       caddy.0_handle.0_reverse_proxy: ${APP_ENV:-rc}-api:3030
       caddy.0_handle.0_reverse_proxy.lb_try_duration: 5s
@@ -165,7 +165,7 @@ services:
     networks:
       - caddy
     labels:
-      caddy: http://www.${DOMAIN}
+      caddy: ${CADDY_SITE_PREFIX-http://}www.${DOMAIN}
       caddy.0_handle_path: /api/*
       caddy.0_handle_path.0_reverse_proxy: ${APP_ENV:-rc}-api:3030
       caddy.0_handle_path.0_reverse_proxy.lb_try_duration: 5s
