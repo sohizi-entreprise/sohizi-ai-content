@@ -45,10 +45,10 @@ describe("buildEditorContextPrompt", () => {
       '<user_local_time timezone="Africa/Nairobi">2026-10-21T20:43:00.000+03:00</user_local_time>',
     )
     expect(prompt).toContain(
-      "message_part_index is that part's position in the user message content. Index 0 is the text.",
+      "message_part_index is the 0-based index of the part within that content. Index 0 refers to the text part.",
     )
     expect(prompt).toContain(
-      "user_index is the 1-based order of uploaded attachments as the user sees them.",
+      "user_index is the 1-based position of an uploaded attachment in the order shown to the user.",
     )
     expect(prompt).toContain(
       '<loaded_file message_part_index="1" user_index="1" type="image" media_type="image/png" url="https://cdn.example/shot.png" />',

@@ -5,7 +5,7 @@
  * Run with `bun test`.
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import {
   BadRequest,
@@ -14,6 +14,8 @@ import {
   NotFound,
 } from "../../error"
 import { InsufficientCreditsError } from "../../billing/errors"
+import * as renderService from "../render-service"
+import { setRenderServiceDepsForTests } from "../render-service"
 import type { VideoRenderJob } from "@/db/schema"
 import type { RemoteRenderJob } from "../render-client"
 import type { CreateRenderInput } from "../render-schema"
@@ -107,171 +109,155 @@ function remote(overrides: Partial<RemoteRenderJob> = {}): RemoteRenderJob {
   }
 }
 
-mock.module("../repo", () => ({
-  getCompositionById: async (id: string) =>
-    composition?.id === id ? composition : null,
-  createRenderJob: async (data: Record<string, unknown>) => {
-    const job = buildJob(data as Partial<VideoRenderJob>)
-    jobs.set(job.id, job)
-    return job
-  },
-  getRenderJobById: async (id: string) => jobs.get(id) ?? null,
-  getActiveRenderJobForComposition: async (compositionId: string) =>
-    [...jobs.values()]
-      .reverse()
-      .find(
-        (job) =>
-          job.compositionId === compositionId &&
-          (job.status === "queued" || job.status === "rendering"),
-      ) ?? null,
-  listRenderJobsForComposition: async (compositionId: string) =>
-    [...jobs.values()].filter((job) => job.compositionId === compositionId),
-  updateRenderJob: async (id: string, patch: Partial<VideoRenderJob>) => {
-    const job = jobs.get(id)
-    if (!job) return null
-    const updated = { ...job, ...patch, updatedAt: new Date() }
-    jobs.set(id, updated)
-    return updated
-  },
-}))
-
-mock.module("../render-client", () => ({
-  RenderRateLimitError,
-  parseAllowedMediaHosts: () => ["cdn.sohizi.test"],
-  estimateRenderCost: async () => ({
-    costUsd: 0.05,
-    framesPerLambda: 20,
-    lambdasInvoked: 16,
-    memorySizeInMb: 2048,
-    diskSizeInMb: 2048,
-    region: "us-east-1",
-  }),
-  createRemoteRender: async (input: { jobId: string }) => {
-    if (createRemoteRenderError) throw createRemoteRenderError
-    createdRemoteRenders.push(input.jobId)
-    const job = remote({
-      jobId: input.jobId,
-      status: "queued",
-      progress: 0,
-      renderedFrames: 0,
-      outputBucket: "remotionlambda-test",
-      functionName: "remotion-render-test",
-    })
-    remoteJobs.set(input.jobId, job)
-    return job
-  },
-  getRemoteRender: async (jobId: string) => remoteJobs.get(jobId) ?? null,
-  cancelRemoteRender: async (jobId: string) => {
-    cancelledRemoteRenders.push(jobId)
-    remoteJobs.delete(jobId)
-  },
-  presignRenderOutput: async (input: {
-    bucketName: string
-    objectKey: string
-    fileName: string
-  }) => ({
-    url: `https://signed.sohizi.test/${input.bucketName}/${input.objectKey}?name=${encodeURIComponent(input.fileName)}`,
-  }),
-}))
-
-mock.module("@/features/billing", () => ({
-  billingService: {
-    reserve: async (input: { idempotencyKey: string; id?: string }) => {
-      if (reserveError) throw reserveError
-      reservedKeys.push(input.idempotencyKey)
-      return {
-        id: input.id ?? randomUUID(),
-        status: "reserved",
-        metadata: { estimatedCostUsd: 0.05 },
-      }
-    },
-    settle: async (input: {
-      reservationId: string
-      providerCostUsd?: number
-      metadata?: Record<string, unknown>
-    }) => {
-      settledReservations.push(input.reservationId)
-      settledInputs.push(input)
-      return { id: input.reservationId, status: "settled" }
-    },
-    refund: async (reservationId: string) => {
-      refundedReservations.push(reservationId)
-    },
-    getReservation: async (reservationId: string) => ({
-      id: reservationId,
-      status: "reserved",
-      metadata: { estimatedCostUsd: 0.05 },
-    }),
-    renewIfNearExpiry: async () => undefined,
-  },
-  safeRefund: async (
-    _billing: unknown,
-    reservationId: string | null | undefined,
-  ) => {
-    if (reservationId) refundedReservations.push(reservationId)
-  },
-  InsufficientCreditsError,
-}))
-
-mock.module("@/lib/inngest/client", () => ({
-  inngest: { send: async () => undefined },
-}))
-
 const capacityReleases: Array<{ outcome: string; retryAfterMs?: number }> = []
 
-mock.module("@/features/capacity/router", () => ({
-  tryAcquireCapacity: async () => ({
-    ok: true,
-    selection: {
-      account: {
-        id: "remotion:primary",
-        providerName: "remotion",
-        adapter: "remotion",
-        credential: "",
-        strategy: "spread",
-        limits: { maxConcurrency: 2, probeTtlMs: 30_000, cooldownMs: 15_000 },
-        remotion: {
-          region: "us-east-1",
-          functionName: "remotion-render-test",
-          serveUrl: "https://serve.test",
+function installRenderFakes() {
+  setRenderServiceDepsForTests({
+    repo: {
+      getCompositionById: async (id: string) =>
+        composition?.id === id ? composition : null,
+      createRenderJob: async (data: Record<string, unknown>) => {
+        const job = buildJob(data as Partial<VideoRenderJob>)
+        jobs.set(job.id, job)
+        return job
+      },
+      getRenderJobById: async (id: string) => jobs.get(id) ?? null,
+      getActiveRenderJobForComposition: async (compositionId: string) =>
+        [...jobs.values()]
+          .reverse()
+          .find(
+            (job) =>
+              job.compositionId === compositionId &&
+              (job.status === "queued" || job.status === "rendering"),
+          ) ?? null,
+      listRenderJobsForComposition: async (compositionId: string) =>
+        [...jobs.values()].filter((job) => job.compositionId === compositionId),
+      updateRenderJob: async (id: string, patch: Partial<VideoRenderJob>) => {
+        const job = jobs.get(id)
+        if (!job) return null
+        const updated = { ...job, ...patch, updatedAt: new Date() }
+        jobs.set(id, updated)
+        return updated
+      },
+    } as never,
+    estimateRenderCost: (async () => ({
+      costUsd: 0.05,
+      framesPerLambda: 20,
+      lambdasInvoked: 16,
+      memorySizeInMb: 2048,
+      diskSizeInMb: 2048,
+      region: "us-east-1",
+    })) as never,
+    createRemoteRender: (async (input: { jobId: string }) => {
+      if (createRemoteRenderError) throw createRemoteRenderError
+      createdRemoteRenders.push(input.jobId)
+      const job = remote({
+        jobId: input.jobId,
+        status: "queued",
+        progress: 0,
+        renderedFrames: 0,
+        outputBucket: "remotionlambda-test",
+        functionName: "remotion-render-test",
+      })
+      remoteJobs.set(input.jobId, job)
+      return job
+    }) as never,
+    getRemoteRender: (async (jobId: string) =>
+      remoteJobs.get(jobId) ?? null) as never,
+    cancelRemoteRender: (async (jobId: string) => {
+      cancelledRemoteRenders.push(jobId)
+      remoteJobs.delete(jobId)
+    }) as never,
+    presignRenderOutput: (async (input: {
+      bucketName: string
+      objectKey: string
+      fileName: string
+    }) => ({
+      url: `https://signed.sohizi.test/${input.bucketName}/${input.objectKey}?name=${encodeURIComponent(input.fileName)}`,
+    })) as never,
+    billingService: {
+      reserve: async (input: { idempotencyKey: string; id?: string }) => {
+        if (reserveError) throw reserveError
+        reservedKeys.push(input.idempotencyKey)
+        return {
+          id: input.id ?? randomUUID(),
+          status: "reserved",
+          metadata: { estimatedCostUsd: 0.05 },
+        }
+      },
+      settle: async (input: {
+        reservationId: string
+        providerCostUsd?: number
+        metadata?: Record<string, unknown>
+      }) => {
+        settledReservations.push(input.reservationId)
+        settledInputs.push(input)
+        return { id: input.reservationId, status: "settled" }
+      },
+      refund: async (reservationId: string) => {
+        refundedReservations.push(reservationId)
+      },
+      getReservation: async (reservationId: string) => ({
+        id: reservationId,
+        status: "reserved",
+        metadata: { estimatedCostUsd: 0.05 },
+      }),
+      renewIfNearExpiry: async () => undefined,
+    } as never,
+    safeRefund: (async (
+      _billing: unknown,
+      reservationId: string | null | undefined,
+    ) => {
+      if (reservationId) refundedReservations.push(reservationId)
+    }) as never,
+    inngest: { send: async () => undefined } as never,
+    tryAcquireCapacity: (async () => ({
+      ok: true,
+      selection: {
+        account: {
+          id: "remotion:primary",
+          providerName: "remotion",
+          adapter: "remotion",
+          credential: "",
+          strategy: "spread",
+          limits: { maxConcurrency: 2, probeTtlMs: 30_000, cooldownMs: 15_000 },
+          remotion: {
+            region: "us-east-1",
+            functionName: "remotion-render-test",
+            serveUrl: "https://serve.test",
+          },
+        },
+        binding: {
+          providerName: "remotion",
+          adapter: "remotion",
+          apiName: "video.export",
+          priority: 0,
+        },
+        lease: {
+          poolId: "account:remotion:primary",
+          holderId: "job",
+          leaseId: "lease",
+          epoch: 1,
+          expiresAtMs: Date.now() + 60_000,
         },
       },
-      binding: {
-        providerName: "remotion",
-        adapter: "remotion",
-        apiName: "video.export",
-        priority: 0,
-      },
-      lease: {
-        poolId: "account:remotion:primary",
-        holderId: "job",
-        leaseId: "lease",
-        epoch: 1,
-        expiresAtMs: Date.now() + 60_000,
-      },
-    },
-  }),
-  releaseCapacityLease: async (
-    _lease: unknown,
-    outcome: string,
-    options?: { retryAfterMs?: number },
-  ) => {
-    capacityReleases.push({ outcome, retryAfterMs: options?.retryAfterMs })
-    return { ok: true }
-  },
-  renewCapacityLease: async () => ({ ok: true }),
-  abortableSleep: async () => undefined,
-}))
-
-mock.module("@/features/capacity/user-gate", () => ({
-  acquireUserSlot: async () => null,
-  releaseUserSlot: async () => ({ ok: true }),
-  renewUserSlot: async () => ({ ok: true }),
-  UserConcurrencyLimitError: class UserConcurrencyLimitError extends Error {},
-  userLimitToHttp: (error: Error) => error,
-}))
-
-const renderService = await import("../render-service")
+    })) as never,
+    releaseCapacityLease: (async (
+      _lease: unknown,
+      outcome: string,
+      options?: { retryAfterMs?: number },
+    ) => {
+      capacityReleases.push({ outcome, retryAfterMs: options?.retryAfterMs })
+      return { ok: true }
+    }) as never,
+    renewCapacityLease: (async () => ({ ok: true })) as never,
+    abortableSleep: (async () => undefined) as never,
+    acquireUserSlot: (async () => null) as never,
+    releaseUserSlot: (async () => ({ ok: true })) as never,
+    renewUserSlot: (async () => ({ ok: true })) as never,
+    userLimitToHttp: ((error: Error) => error) as never,
+  })
+}
 
 // ----------------------------------------------------------------------------
 // helpers
@@ -323,6 +309,7 @@ const create = () =>
   )
 
 beforeEach(() => {
+  installRenderFakes()
   jobs.clear()
   remoteJobs = new Map()
   createRemoteRenderError = null
@@ -335,6 +322,10 @@ beforeEach(() => {
   refundedReservations.length = 0
   capacityReleases.length = 0
   composition = { id: COMPOSITION_ID, projectId: PROJECT_ID, version: 7 }
+})
+
+afterEach(() => {
+  setRenderServiceDepsForTests(null)
 })
 
 // ----------------------------------------------------------------------------

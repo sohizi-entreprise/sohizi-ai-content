@@ -1,5 +1,20 @@
-import { describe, expect, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import type { ToolExecutionOptions } from "../tool-definition"
+import {
+  executeAddClip,
+  executeAddTrack,
+  executeBatch,
+  executeGenerateCaptions,
+  executeRemoveClip,
+  executeRemoveTrack,
+  executeRippleShift,
+  executeSplitClip,
+  executeUpdateClip,
+  executeUpdateComposition,
+  executeUpdateTrack,
+  executeViewClipSchema,
+} from "./handlers"
+import { setVideoEditorHandlerDepsForTests } from "./handlers"
 
 const now = new Date("2026-01-01T00:00:00Z")
 
@@ -101,7 +116,7 @@ const mockCaptionClip = {
   updatedAt: now,
 }
 
-mock.module("@/features/video-editor/repo", () => ({
+const repoFake = {
   getCompositionByFileNodeId: async () => mockComposition,
   updateComposition: async () => mockComposition,
   getNextTrackPosition: async () => 0,
@@ -156,26 +171,18 @@ mock.module("@/features/video-editor/repo", () => ({
       clips: [mockCaptionClip, mockClip],
     }
   },
-}))
+}
 
-mock.module("@/features/video-editor/service", () => ({
-  addCaption: async () => ({ ok: true }),
-}))
+beforeEach(() => {
+  setVideoEditorHandlerDepsForTests({
+    repo: repoFake as never,
+    service: { addCaption: async () => ({ ok: true }) } as never,
+  })
+})
 
-const {
-  executeUpdateComposition,
-  executeAddTrack,
-  executeUpdateTrack,
-  executeRemoveTrack,
-  executeAddClip,
-  executeUpdateClip,
-  executeRemoveClip,
-  executeSplitClip,
-  executeRippleShift,
-  executeGenerateCaptions,
-  executeBatch,
-  executeViewClipSchema,
-} = await import("./handlers")
+afterEach(() => {
+  setVideoEditorHandlerDepsForTests(null)
+})
 
 const mockOptions = {
   session: {

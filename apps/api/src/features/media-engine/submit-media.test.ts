@@ -1,109 +1,99 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import {
+  registerProvider,
+  unregisterProvider,
+} from "@/features/capacity/registry"
 import {
   MediaRateLimitError,
   MediaServiceUnavailableError,
   MediaSubmissionUnknownError,
 } from "./providers/type"
+import {
+  setSubmitMediaDepsForTests,
+  submitMediaWithCapacity,
+} from "./submit-media"
 
 const calls: string[] = []
 const releases: Array<{ outcome: string; retryAfterMs?: number }> = []
 let row: Record<string, unknown> | null = null
 let submitError: Error = new MediaSubmissionUnknownError("socket closed")
 
-mock.module("@/features/generation-request/repo", () => ({
-  getGenerationRequest: async () => row,
-}))
-
-mock.module("./repo", () => ({
-  saveMediaSelection: async () => {
-    calls.push("save")
-    return true
-  },
-  claimMediaSubmit: async () => {
-    calls.push("claim")
-    return true
-  },
-  patchRequestRouting: async () => {
-    calls.push("patch")
-  },
-  markMediaSubmissionUnknown: async () => {
-    calls.push("unknown")
-  },
-  clearMediaSelection: async () => {
-    calls.push("clear")
-  },
-}))
-
-mock.module("./providers/factory", () => ({
-  createProvider: () => ({
-    submitRequest: async () => {
-      calls.push("submit")
-      throw submitError
-    },
-  }),
-}))
-
-mock.module("./providers/utils", () => ({
-  mapVendorPayload: async () => ({}),
-}))
-
-mock.module("@/features/capacity/router", () => ({
-  tryAcquireCapacity: async () => ({
-    ok: true,
-    selection: {
-      account: {
-        id: "media-test:primary",
-        providerName: "media-test",
-        adapter: "wavespeed",
-        credential: "secret",
-        strategy: "priority",
-        limits: {
-          rpm: 60,
-          burst: 60,
-          maxConcurrency: 10,
-          probeTtlMs: 30_000,
-          cooldownMs: 15_000,
-        },
-      },
-      binding: {
-        providerName: "wavespeed",
-        adapter: "wavespeed",
-        apiName: "image",
-        priority: 0,
-      },
-      lease: {
-        poolId: "account:media-test:primary",
-        holderId: "req",
-        leaseId: "lease",
-        epoch: 1,
-        expiresAtMs: Date.now() + 60_000,
-      },
-    },
-  }),
-  releaseCapacityLease: async (
-    _lease: unknown,
-    outcome: string,
-    options?: { retryAfterMs?: number },
-  ) => {
-    calls.push("release")
-    releases.push({ outcome, retryAfterMs: options?.retryAfterMs })
-    return { ok: true }
-  },
-  renewCapacityLease: async () => ({ ok: true }),
-}))
-
-import {
-  registerProvider,
-  unregisterProvider,
-} from "@/features/capacity/registry"
-
-const { submitMediaWithCapacity } = await import("./submit-media")
-
 describe("media submit lifecycle", () => {
   beforeEach(() => {
     calls.length = 0
     releases.length = 0
     submitError = new MediaSubmissionUnknownError("socket closed")
+    setSubmitMediaDepsForTests({
+      getGenerationRequest: async () => row as never,
+      repo: {
+        saveMediaSelection: async () => {
+          calls.push("save")
+          return true
+        },
+        claimMediaSubmit: async () => {
+          calls.push("claim")
+          return true
+        },
+        patchRequestRouting: async () => {
+          calls.push("patch")
+        },
+        markMediaSubmissionUnknown: async () => {
+          calls.push("unknown")
+        },
+        clearMediaSelection: async () => {
+          calls.push("clear")
+        },
+      } as never,
+      createProvider: (() => ({
+        submitRequest: async () => {
+          calls.push("submit")
+          throw submitError
+        },
+      })) as never,
+      mapVendorPayload: (async () => ({})) as never,
+      tryAcquireCapacity: (async () => ({
+        ok: true,
+        selection: {
+          account: {
+            id: "media-test:primary",
+            providerName: "media-test",
+            adapter: "wavespeed",
+            credential: "secret",
+            strategy: "priority",
+            limits: {
+              rpm: 60,
+              burst: 60,
+              maxConcurrency: 10,
+              probeTtlMs: 30_000,
+              cooldownMs: 15_000,
+            },
+          },
+          binding: {
+            providerName: "wavespeed",
+            adapter: "wavespeed",
+            apiName: "image",
+            priority: 0,
+          },
+          lease: {
+            poolId: "account:media-test:primary",
+            holderId: "req",
+            leaseId: "lease",
+            epoch: 1,
+            expiresAtMs: Date.now() + 60_000,
+          },
+        },
+      })) as never,
+      releaseCapacityLease: (async (
+        _lease: unknown,
+        outcome: string,
+        options?: { retryAfterMs?: number },
+      ) => {
+        calls.push("release")
+        releases.push({ outcome, retryAfterMs: options?.retryAfterMs })
+        return { ok: true }
+      }) as never,
+      renewCapacityLease: (async () => ({ ok: true })) as never,
+    })
     registerProvider({
       name: "media-test",
       adapter: "media-test",
@@ -126,6 +116,7 @@ describe("media submit lifecycle", () => {
   })
 
   afterEach(() => {
+    setSubmitMediaDepsForTests(null)
     unregisterProvider("media-test")
   })
 

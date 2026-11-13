@@ -1,19 +1,82 @@
 import { NonRetriableError } from "inngest"
-import { getGenerationRequest } from "@/features/generation-request/repo"
+import { getGenerationRequest as defaultGetGenerationRequest } from "@/features/generation-request/repo"
 import { classifyMediaError } from "@/features/capacity/classify"
 import { rateLimitRetryAfterMs } from "@/features/capacity/retry-after"
 import {
-  releaseCapacityLease,
-  renewCapacityLease,
-  tryAcquireCapacity,
+  releaseCapacityLease as defaultReleaseCapacityLease,
+  renewCapacityLease as defaultRenewCapacityLease,
+  tryAcquireCapacity as defaultTryAcquireCapacity,
 } from "@/features/capacity/router"
 import { resolveAccount } from "@/features/capacity/registry"
 import { releaseUserSlot, renewUserSlot } from "@/features/capacity/user-gate"
 import type { LeaseHandle } from "@/features/capacity/types"
-import { createProvider } from "./providers/factory"
-import { mapVendorPayload } from "./providers/utils"
+import { createProvider as defaultCreateProvider } from "./providers/factory"
+import { mapVendorPayload as defaultMapVendorPayload } from "./providers/utils"
 import type { SubmitPayload } from "./providers/type"
-import * as repo from "./repo"
+import * as defaultRepo from "./repo"
+
+type SubmitMediaDeps = {
+  getGenerationRequest: typeof defaultGetGenerationRequest
+  repo: typeof defaultRepo
+  createProvider: typeof defaultCreateProvider
+  mapVendorPayload: typeof defaultMapVendorPayload
+  tryAcquireCapacity: typeof defaultTryAcquireCapacity
+  releaseCapacityLease: typeof defaultReleaseCapacityLease
+  renewCapacityLease: typeof defaultRenewCapacityLease
+}
+
+const defaultSubmitMediaDeps: SubmitMediaDeps = {
+  getGenerationRequest: defaultGetGenerationRequest,
+  repo: defaultRepo,
+  createProvider: defaultCreateProvider,
+  mapVendorPayload: defaultMapVendorPayload,
+  tryAcquireCapacity: defaultTryAcquireCapacity,
+  releaseCapacityLease: defaultReleaseCapacityLease,
+  renewCapacityLease: defaultRenewCapacityLease,
+}
+
+let submitMediaDeps = defaultSubmitMediaDeps
+
+/** Test-only override. Pass null to restore the real collaborators. */
+export function setSubmitMediaDepsForTests(
+  overrides: Partial<SubmitMediaDeps> | null,
+) {
+  submitMediaDeps = overrides
+    ? { ...defaultSubmitMediaDeps, ...overrides }
+    : defaultSubmitMediaDeps
+}
+
+function readNamespace<T extends object>(read: () => T): T {
+  return new Proxy({} as T, {
+    get(_target, property) {
+      const source = read() as Record<PropertyKey, unknown>
+      const value = source[property]
+      return typeof value === "function" ? value.bind(source) : value
+    },
+  })
+}
+
+function readFunction<T extends (...args: never[]) => unknown>(
+  read: () => T,
+): T {
+  return ((...args: Parameters<T>) => read()(...args)) as T
+}
+
+const repo = readNamespace(() => submitMediaDeps.repo)
+const getGenerationRequest = readFunction(
+  () => submitMediaDeps.getGenerationRequest,
+)
+const createProvider = readFunction(() => submitMediaDeps.createProvider)
+const mapVendorPayload = readFunction(() => submitMediaDeps.mapVendorPayload)
+const tryAcquireCapacity = readFunction(
+  () => submitMediaDeps.tryAcquireCapacity,
+)
+const releaseCapacityLease = readFunction(
+  () => submitMediaDeps.releaseCapacityLease,
+)
+const renewCapacityLease = readFunction(
+  () => submitMediaDeps.renewCapacityLease,
+)
 
 export type MediaSticky = {
   accountId: string

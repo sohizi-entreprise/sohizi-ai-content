@@ -30,6 +30,6 @@ describe("catalog media credit conversion", () => {
           overbookingFactor: 1,
         }),
       ),
-    ).toBe(13)
+    ).toBe(11)
   })
 })

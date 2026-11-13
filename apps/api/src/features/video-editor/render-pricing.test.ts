@@ -68,12 +68,12 @@ describe("estimatedLambdaDurationMs", () => {
 
 describe("lambdaUsdToCredits", () => {
   test("reserves overhead and overbooking on the estimate", () => {
-    // 1.00 * 1.30 = 1.30 → 434 credits, * 1.15 → 500
-    expect(lambdaUsdToCredits(1, { overbook: true })).toBe(500n)
+    // 1.00 * 1.15 = 1.15 → 384 credits, * 1.15 overbook → 442
+    expect(lambdaUsdToCredits(1, { overbook: true })).toBe(442n)
   })
 
   test("settles overhead without overbooking", () => {
-    expect(lambdaUsdToCredits(1, { overbook: false })).toBe(434n)
+    expect(lambdaUsdToCredits(1, { overbook: false })).toBe(384n)
   })
 
   test("charges at least one credit", () => {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import {
   setDefaultTranscriberForTests,
   type TranscribeInput,
@@ -6,6 +6,8 @@ import {
 } from "@/features/ai/llm/transcribe"
 import type { WithBillingCallContext } from "@/features/billing/wrapper"
 import type { ToolExecutionOptions, ToolResult } from "../tool-definition"
+import { setMediaOperationDepsForTests } from "./handlers"
+import { apiMediaOperationsTool } from "./index"
 
 const captures: Array<{
   youtubeUrl: string
@@ -20,28 +22,6 @@ let captureResponse = Response.json({
   capturedSeconds: 42.1,
 })
 
-mock.module("@/lib/authorize", () => ({
-  assertProjectAccess: async () => {
-    if (!accessAllowed) throw new Error("Project access denied")
-  },
-  assertOrgMember: async () => {},
-  assertConversationOwner: async () => {},
-  assertAdmin: () => {},
-  requireActiveOrganization: () => "organization-1",
-}))
-
-mock.module("@/features/media-engine/youtube-screenshot", () => ({
-  captureYoutubeScreenshot: async (
-    input: { youtubeUrl: string; seconds?: number },
-    userId: string,
-  ) => {
-    captures.push({ ...input, userId })
-    return captureResponse
-  },
-}))
-
-const { apiMediaOperationsTool } = await import("./index")
-
 const options = {
   session: { userId: "user-1", projectId: "project-1" },
 } as ToolExecutionOptions
@@ -49,12 +29,28 @@ const options = {
 beforeEach(() => {
   captures.length = 0
   accessAllowed = true
+  setMediaOperationDepsForTests({
+    assertProjectAccess: (async () => {
+      if (!accessAllowed) throw new Error("Project access denied")
+    }) as never,
+    captureYoutubeScreenshot: (async (
+      input: { youtubeUrl: string; seconds?: number },
+      userId: string,
+    ) => {
+      captures.push({ ...input, userId })
+      return captureResponse
+    }) as never,
+  })
   captureResponse = Response.json({
     id: "extraction-1",
     url: "https://media-dev.sohizi.com/youtube_extractions/extraction-1.png",
     requestedSeconds: 42,
     capturedSeconds: 42.1,
   })
+})
+
+afterEach(() => {
+  setMediaOperationDepsForTests(null)
 })
 
 describe("YouTube screenshot agent tool", () => {

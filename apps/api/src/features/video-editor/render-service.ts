@@ -1,13 +1,14 @@
 import { captureConsentedEvent } from "@/features/analytics-consent"
 import { v4 as uuidv4 } from "uuid"
-import * as repo from "./repo"
+import * as defaultRepo from "./repo"
+import type { UpdateRenderJobData } from "./repo"
 import {
-  cancelRemoteRender,
-  createRemoteRender,
-  estimateRenderCost,
-  getRemoteRender,
+  cancelRemoteRender as defaultCancelRemoteRender,
+  createRemoteRender as defaultCreateRemoteRender,
+  estimateRenderCost as defaultEstimateRenderCost,
+  getRemoteRender as defaultGetRemoteRender,
   parseAllowedMediaHosts,
-  presignRenderOutput,
+  presignRenderOutput as defaultPresignRenderOutput,
   type RemoteRenderJob,
 } from "./render-client"
 import {
@@ -17,11 +18,11 @@ import {
   type RenderComposition,
 } from "./render-schema"
 import { RENDER_RESERVATION_TTL_MS, lambdaUsdToCredits } from "./render-pricing"
-import { inngest } from "@/lib/inngest/client"
+import { inngest as defaultInngest } from "@/lib/inngest/client"
 import {
-  billingService,
+  billingService as defaultBillingService,
   InsufficientCreditsError,
-  safeRefund,
+  safeRefund as defaultSafeRefund,
 } from "@/features/billing"
 import {
   BadRequest,
@@ -32,21 +33,120 @@ import {
 } from "../error"
 import type { VideoRenderJob } from "@/db/schema"
 import {
-  abortableSleep,
-  releaseCapacityLease,
-  renewCapacityLease,
-  tryAcquireCapacity,
+  abortableSleep as defaultAbortableSleep,
+  releaseCapacityLease as defaultReleaseCapacityLease,
+  renewCapacityLease as defaultRenewCapacityLease,
+  tryAcquireCapacity as defaultTryAcquireCapacity,
 } from "@/features/capacity/router"
 import { resolveAccount } from "@/features/capacity/registry"
 import {
-  acquireUserSlot,
-  releaseUserSlot,
-  renewUserSlot,
-  userLimitToHttp,
+  acquireUserSlot as defaultAcquireUserSlot,
+  releaseUserSlot as defaultReleaseUserSlot,
+  renewUserSlot as defaultRenewUserSlot,
+  userLimitToHttp as defaultUserLimitToHttp,
   UserConcurrencyLimitError,
 } from "@/features/capacity/user-gate"
 import { classifyRenderError } from "@/features/capacity/classify"
 import { rateLimitRetryAfterMs } from "@/features/capacity/retry-after"
+
+type RenderServiceDeps = {
+  repo: typeof defaultRepo
+  billingService: typeof defaultBillingService
+  safeRefund: typeof defaultSafeRefund
+  inngest: typeof defaultInngest
+  tryAcquireCapacity: typeof defaultTryAcquireCapacity
+  releaseCapacityLease: typeof defaultReleaseCapacityLease
+  renewCapacityLease: typeof defaultRenewCapacityLease
+  abortableSleep: typeof defaultAbortableSleep
+  acquireUserSlot: typeof defaultAcquireUserSlot
+  releaseUserSlot: typeof defaultReleaseUserSlot
+  renewUserSlot: typeof defaultRenewUserSlot
+  userLimitToHttp: typeof defaultUserLimitToHttp
+  createRemoteRender: typeof defaultCreateRemoteRender
+  getRemoteRender: typeof defaultGetRemoteRender
+  cancelRemoteRender: typeof defaultCancelRemoteRender
+  estimateRenderCost: typeof defaultEstimateRenderCost
+  presignRenderOutput: typeof defaultPresignRenderOutput
+}
+
+const defaultRenderServiceDeps: RenderServiceDeps = {
+  repo: defaultRepo,
+  billingService: defaultBillingService,
+  safeRefund: defaultSafeRefund,
+  inngest: defaultInngest,
+  tryAcquireCapacity: defaultTryAcquireCapacity,
+  releaseCapacityLease: defaultReleaseCapacityLease,
+  renewCapacityLease: defaultRenewCapacityLease,
+  abortableSleep: defaultAbortableSleep,
+  acquireUserSlot: defaultAcquireUserSlot,
+  releaseUserSlot: defaultReleaseUserSlot,
+  renewUserSlot: defaultRenewUserSlot,
+  userLimitToHttp: defaultUserLimitToHttp,
+  createRemoteRender: defaultCreateRemoteRender,
+  getRemoteRender: defaultGetRemoteRender,
+  cancelRemoteRender: defaultCancelRemoteRender,
+  estimateRenderCost: defaultEstimateRenderCost,
+  presignRenderOutput: defaultPresignRenderOutput,
+}
+
+let renderServiceDeps = defaultRenderServiceDeps
+
+/** Test-only override. Pass null to restore the real collaborators. */
+export function setRenderServiceDepsForTests(
+  overrides: Partial<RenderServiceDeps> | null,
+) {
+  renderServiceDeps = overrides
+    ? { ...defaultRenderServiceDeps, ...overrides }
+    : defaultRenderServiceDeps
+}
+
+function readNamespace<T extends object>(read: () => T): T {
+  return new Proxy({} as T, {
+    get(_target, property) {
+      const source = read() as Record<PropertyKey, unknown>
+      const value = source[property]
+      return typeof value === "function" ? value.bind(source) : value
+    },
+  })
+}
+
+function readFunction<T extends (...args: never[]) => unknown>(
+  read: () => T,
+): T {
+  return ((...args: Parameters<T>) => read()(...args)) as T
+}
+
+const repo = readNamespace(() => renderServiceDeps.repo)
+const billingService = readNamespace(() => renderServiceDeps.billingService)
+const inngest = readNamespace(() => renderServiceDeps.inngest)
+const safeRefund = readFunction(() => renderServiceDeps.safeRefund)
+const tryAcquireCapacity = readFunction(
+  () => renderServiceDeps.tryAcquireCapacity,
+)
+const releaseCapacityLease = readFunction(
+  () => renderServiceDeps.releaseCapacityLease,
+)
+const renewCapacityLease = readFunction(
+  () => renderServiceDeps.renewCapacityLease,
+)
+const abortableSleep = readFunction(() => renderServiceDeps.abortableSleep)
+const acquireUserSlot = readFunction(() => renderServiceDeps.acquireUserSlot)
+const releaseUserSlot = readFunction(() => renderServiceDeps.releaseUserSlot)
+const renewUserSlot = readFunction(() => renderServiceDeps.renewUserSlot)
+const userLimitToHttp = readFunction(() => renderServiceDeps.userLimitToHttp)
+const createRemoteRender = readFunction(
+  () => renderServiceDeps.createRemoteRender,
+)
+const getRemoteRender = readFunction(() => renderServiceDeps.getRemoteRender)
+const cancelRemoteRender = readFunction(
+  () => renderServiceDeps.cancelRemoteRender,
+)
+const estimateRenderCost = readFunction(
+  () => renderServiceDeps.estimateRenderCost,
+)
+const presignRenderOutput = readFunction(
+  () => renderServiceDeps.presignRenderOutput,
+)
 
 /**
  * Render jobs are owned by the API: the editor never talks to Remotion Lambda
@@ -429,7 +529,7 @@ async function applyRemoteStatus(
 /** Skips the write when nothing actually moved, since status is polled often. */
 async function update(
   job: VideoRenderJob,
-  patch: repo.UpdateRenderJobData,
+  patch: UpdateRenderJobData,
 ): Promise<VideoRenderJob> {
   const changed = Object.entries(patch).some(([key, value]) => {
     const current = job[key as keyof VideoRenderJob]

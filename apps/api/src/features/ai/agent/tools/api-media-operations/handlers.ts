@@ -3,8 +3,35 @@ import { billingService } from "@/features/billing"
 import { withBillingStream } from "@/features/billing/wrapper"
 import { readStreamChunks } from "@/features/generation-request/stream-handler"
 import { generateAsset } from "@/features/media-engine/service"
-import { captureYoutubeScreenshot } from "@/features/media-engine/youtube-screenshot"
-import { assertProjectAccess } from "@/lib/authorize"
+import { captureYoutubeScreenshot as defaultCaptureYoutubeScreenshot } from "@/features/media-engine/youtube-screenshot"
+import { assertProjectAccess as defaultAssertProjectAccess } from "@/lib/authorize"
+
+type MediaOperationDeps = {
+  assertProjectAccess: typeof defaultAssertProjectAccess
+  captureYoutubeScreenshot: typeof defaultCaptureYoutubeScreenshot
+}
+
+const defaultMediaOperationDeps: MediaOperationDeps = {
+  assertProjectAccess: defaultAssertProjectAccess,
+  captureYoutubeScreenshot: defaultCaptureYoutubeScreenshot,
+}
+
+let mediaOperationDeps = defaultMediaOperationDeps
+
+/** Test-only override. Pass null to restore the real collaborators. */
+export function setMediaOperationDepsForTests(
+  overrides: Partial<MediaOperationDeps> | null,
+) {
+  mediaOperationDeps = overrides
+    ? { ...defaultMediaOperationDeps, ...overrides }
+    : defaultMediaOperationDeps
+}
+
+const assertProjectAccess: typeof defaultAssertProjectAccess = (...args) =>
+  mediaOperationDeps.assertProjectAccess(...args)
+const captureYoutubeScreenshot: typeof defaultCaptureYoutubeScreenshot = (
+  ...args
+) => mediaOperationDeps.captureYoutubeScreenshot(...args)
 import {
   attachAssetToFileNode,
   getAssetById,

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test"
+import { SYSTEM_LEVEL_FILES } from "@/features/ai/agent/constants/system-files"
 import {
   getCommands,
   resetCommandCache,
@@ -52,9 +53,16 @@ describe("commands", () => {
     resetCommandCache()
     const commands = await getCommands()
     const plan = commands.find((command) => command.id === "plan")
+    const script = commands.find((command) => command.id === "script")
     const brainstorm = commands.find((command) => command.id === "brainstorm")
+    const remix = commands.find((command) => command.id === "remix")
 
-    expect(plan?.promptModifier).toContain("/system/syntax/document")
+    expect(plan?.promptModifier).toContain("/system/skills/generate-plan")
+    expect(
+      SYSTEM_LEVEL_FILES["/system/skills/generate-plan"].content,
+    ).toContain("/system/syntax/document")
+    expect(script?.promptModifier).toContain("/system/syntax/document")
     expect(brainstorm?.promptModifier).toContain("/system/syntax/document")
+    expect(remix?.promptModifier).toContain("/system/syntax/document")
   })
 })

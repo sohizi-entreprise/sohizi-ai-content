@@ -1,6 +1,40 @@
 import type { VideoClip } from "@/db/schema"
-import * as repo from "@/features/video-editor/repo"
-import * as videoEditorService from "@/features/video-editor/service"
+import * as defaultVideoEditorRepo from "@/features/video-editor/repo"
+import * as defaultVideoEditorService from "@/features/video-editor/service"
+
+type VideoEditorHandlerDeps = {
+  repo: typeof defaultVideoEditorRepo
+  service: typeof defaultVideoEditorService
+}
+
+const defaultVideoEditorHandlerDeps: VideoEditorHandlerDeps = {
+  repo: defaultVideoEditorRepo,
+  service: defaultVideoEditorService,
+}
+
+let videoEditorHandlerDeps = defaultVideoEditorHandlerDeps
+
+/** Test-only override. Pass null to restore the real collaborators. */
+export function setVideoEditorHandlerDepsForTests(
+  overrides: Partial<VideoEditorHandlerDeps> | null,
+) {
+  videoEditorHandlerDeps = overrides
+    ? { ...defaultVideoEditorHandlerDeps, ...overrides }
+    : defaultVideoEditorHandlerDeps
+}
+
+function readNamespace<T extends object>(read: () => T): T {
+  return new Proxy({} as T, {
+    get(_target, property) {
+      const source = read() as Record<PropertyKey, unknown>
+      const value = source[property]
+      return typeof value === "function" ? value.bind(source) : value
+    },
+  })
+}
+
+const repo = readNamespace(() => videoEditorHandlerDeps.repo)
+const videoEditorService = readNamespace(() => videoEditorHandlerDeps.service)
 import {
   clipPropertiesSchemaByType,
   type VideoClipProperties,
