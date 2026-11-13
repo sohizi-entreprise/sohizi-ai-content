@@ -98,6 +98,18 @@ const timestamps = {
     .notNull(),
 }
 
+export const featureFlags = pgTable("feature_flags", {
+  name: varchar("name", { length: 100 }).primaryKey(),
+  enable: boolean("enable").default(false).notNull(),
+})
+
+export const waitingList = pgTable("waiting_list", {
+  email: varchar("email", { length: 320 }).primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+})
+
 export const analyticsConsents = pgTable("analytics_consents", {
   id: uuid("id").primaryKey(),
   choice: varchar("choice", { length: 16 })

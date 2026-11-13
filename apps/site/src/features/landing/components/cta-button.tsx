@@ -1,6 +1,7 @@
 import { captureAnalyticsEvent } from "@sohizi/analytics/browser"
 import { Button } from "@sohizi/ui/button"
 import { CTA_LABEL } from "../content"
+import { useLaunchGate } from "./launch-gate"
 import { cn } from "@/lib/utils"
 import { appUrl } from "@/lib/app-url"
 
@@ -17,6 +18,7 @@ export function CtaButton({
   label = CTA_LABEL,
   location = "unknown",
 }: CtaButtonProps) {
+  const { enabled, openWaitlist } = useLaunchGate()
   return (
     <Button
       asChild
@@ -26,17 +28,23 @@ export function CtaButton({
         className,
       )}
     >
-      <a
-        href={appUrl("/sign-up")}
-        onClick={() =>
-          captureAnalyticsEvent("marketing_cta_clicked", {
-            location,
-            destination: "sign-up",
-          })
-        }
-      >
-        {label}
-      </a>
+      {enabled ? (
+        <a
+          href={appUrl("/sign-up")}
+          onClick={() =>
+            captureAnalyticsEvent("marketing_cta_clicked", {
+              location,
+              destination: "sign-up",
+            })
+          }
+        >
+          {label}
+        </a>
+      ) : (
+        <button type="button" onClick={openWaitlist}>
+          {label}
+        </button>
+      )}
     </Button>
   )
 }

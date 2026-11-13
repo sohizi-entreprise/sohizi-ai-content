@@ -1,4 +1,3 @@
-import { IconBrandGoogle, IconBrandOpenai } from "@tabler/icons-react"
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react"
 import { useRef } from "react"
 import { CtaButton } from "../components/cta-button"
@@ -7,24 +6,33 @@ import { hero } from "../content"
 
 const ease = [0.22, 1, 0.36, 1] as const
 
-const modelLogos: Array<{ name: string; icon?: typeof IconBrandGoogle }> = [
-  { name: "Google", icon: IconBrandGoogle },
-  { name: "OpenAI", icon: IconBrandOpenai },
+const modelLogos: Array<{ name: string }> = [
+  { name: "Google" },
+  { name: "OpenAI" },
+  { name: "Anthropic" },
+  { name: "xAI" },
   { name: "Seedance" },
-  { name: "Runway" },
-  { name: "Luma" },
+  { name: "ByteDance" },
   { name: "Kling AI" },
+  { name: "ElevenLabs" },
+  { name: "MiniMax" },
+  // { name: "Microsoft" },
+  // { name: "Mureka" },
+  // { name: "Sonilo" },
+  // { name: "Sync" },
+  // { name: "Clarity AI" },
+  // { name: "WaveSpeed AI" },
 ]
 
 function ModelLogoRow() {
   return (
     <div className="relative z-20 mx-auto mt-12 max-w-[1240px] sm:mt-16">
       <p className="mb-7 text-center text-[10px] font-medium uppercase tracking-[0.24em] text-white/40">
-        Leading media models, one creative space
+        Leading AI providers, one creative space
       </p>
       <div
         className="model-logo-marquee overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]"
-        aria-label="Media model providers and platforms: Google, OpenAI, Seedance, Runway, Luma, and Kling AI"
+        aria-label={`AI providers and platforms: ${modelLogos.map(({ name }) => name).join(", ")}`}
       >
         <div className="model-logo-marquee-track flex w-max items-center">
           {[0, 1].map((copy) => (
@@ -33,12 +41,12 @@ function ModelLogoRow() {
               aria-hidden={copy === 1}
               className="flex shrink-0 items-center gap-12 pr-12 sm:gap-20 sm:pr-20"
             >
-              {modelLogos.map(({ name, icon: Icon }) => (
+              {modelLogos.map(({ name }) => (
                 <span
                   key={name}
                   className="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-display text-xl font-medium tracking-[-0.045em] text-white/65 sm:text-2xl"
                 >
-                  {Icon && <Icon size={23} stroke={1.7} aria-hidden="true" />}
+                  {/* {Icon && <Icon size={23} stroke={1.7} aria-hidden="true" />} */}
                   {name}
                 </span>
               ))}

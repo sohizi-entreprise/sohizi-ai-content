@@ -28,7 +28,7 @@ export function LegalPage({ document }: { document: LegalDocument }) {
             <h1 className="max-w-[12ch] font-display text-[clamp(3.5rem,10vw,8rem)] font-medium leading-[0.9] tracking-[-0.08em]">
               {document.title}
             </h1>
-            <div className="mt-12 flex flex-col gap-8 border-t border-white/15 pt-7 sm:mt-16 sm:flex-row sm:items-start sm:justify-between">
+            <div className="mt-12 flex flex-col gap-8 sm:mt-16 sm:flex-row sm:items-start sm:justify-between">
               <p className="max-w-3xl text-base leading-relaxed text-white/65 sm:text-xl">
                 {document.intro}
               </p>

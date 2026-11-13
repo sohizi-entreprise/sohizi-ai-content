@@ -400,6 +400,13 @@
       "when": 1793217600000,
       "tag": "0056_drop_video_clips_asset_id",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1793304000000,
+      "tag": "0057_launch_waiting_list",
+      "breakpoints": true
     }
   ]
 }

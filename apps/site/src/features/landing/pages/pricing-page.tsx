@@ -135,7 +135,7 @@ export function PricingPage() {
         <WavyBackground
           containerClassName="mt-14 h-auto w-full items-stretch justify-start overflow-visible sm:mt-20"
           className="mx-auto w-full max-w-[1400px]"
-          backgroundFill="transparent"
+          backgroundFill="#080909"
           colors={PRICING_WAVE_COLORS}
           speed="slow"
           blur={12}
@@ -151,7 +151,7 @@ export function PricingPage() {
               >
                 <div
                   className={cn(
-                    "relative flex h-full flex-col rounded-[1.25rem] border border-white/12 bg-[#0c100f]/72 px-6 py-8 backdrop-blur-md transition duration-300 sm:px-7 sm:py-9",
+                    "relative flex h-full flex-col rounded-[1.25rem] border border-white/12 bg-[#0c100f]/72 px-6 py-8 transition duration-300 sm:px-7 sm:py-9",
                     plan.highlighted
                       ? "border-primary/55 bg-[#121a14]/85 shadow-[0_28px_80px_rgba(0,0,0,.35)]"
                       : "hover:border-white/25",

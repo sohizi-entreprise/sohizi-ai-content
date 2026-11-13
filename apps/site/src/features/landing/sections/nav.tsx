@@ -10,6 +10,7 @@ import {
   SheetTrigger,
 } from "@sohizi/ui/sheet"
 import { CtaButton } from "../components/cta-button"
+import { useLaunchGate } from "../components/launch-gate"
 import { navLinks } from "../content"
 import { cn } from "@/lib/utils"
 import { appUrl, isAppPath } from "@/lib/app-url"
@@ -49,6 +50,7 @@ function NavLink({
 }
 
 export function LandingNav() {
+  const { enabled } = useLaunchGate()
   const [open, setOpen] = useState(false)
   const [overLight, setOverLight] = useState(false)
 
@@ -137,18 +139,20 @@ export function LandingNav() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "transition-colors duration-300",
-              overLight &&
-                "text-background hover:bg-background/10 hover:text-background",
-            )}
-          >
-            <a href={appUrl("/sign-in")}>Sign in</a>
-          </Button>
+          {enabled && (
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "transition-colors duration-300",
+                overLight &&
+                  "text-background hover:bg-background/10 hover:text-background",
+              )}
+            >
+              <a href={appUrl("/sign-in")}>Sign in</a>
+            </Button>
+          )}
           <CtaButton location="nav" size="sm" className="h-9 px-4 text-sm" />
         </div>
 
@@ -187,15 +191,17 @@ export function LandingNav() {
                 />
               ))}
               <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 justify-center"
-                >
-                  <a href={appUrl("/sign-in")} onClick={() => setOpen(false)}>
-                    Sign in
-                  </a>
-                </Button>
+                {enabled && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-11 justify-center"
+                  >
+                    <a href={appUrl("/sign-in")} onClick={() => setOpen(false)}>
+                      Sign in
+                    </a>
+                  </Button>
+                )}
                 <span onClick={() => setOpen(false)} className="block w-full">
                   <CtaButton location="mobile_nav" className="w-full" />
                 </span>
