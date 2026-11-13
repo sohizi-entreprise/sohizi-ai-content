@@ -11,10 +11,17 @@ function FooterLink({ href, label }: { href: string; label: string }) {
     href.startsWith("/#") ||
     href.startsWith("#") ||
     href.startsWith("mailto:") ||
+    href.startsWith("https://") ||
+    href.startsWith("http://") ||
     isAppPath(href)
   ) {
     return (
-      <a href={isAppPath(href) ? appUrl(href) : href} className={className}>
+      <a
+        href={isAppPath(href) ? appUrl(href) : href}
+        className={className}
+        target={href.startsWith("http") ? "_blank" : undefined}
+        rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+      >
         {label}
       </a>
     )
@@ -29,14 +36,9 @@ function FooterLink({ href, label }: { href: string; label: string }) {
 
 export function LandingFooter() {
   return (
-    <footer className="bg-[#080909] px-4 pb-8 text-white sm:px-6">
+    <footer className="overflow-hidden border-t border-white/10 bg-[#080909] px-4 text-white sm:px-6">
       <div className="mx-auto max-w-[1400px] pt-8 sm:pt-12">
-        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.7fr)_repeat(3,minmax(0,.7fr))] lg:gap-12">
-          <div>
-            <p className="max-w-sm font-display text-2xl leading-tight tracking-tight text-white/75 sm:text-3xl">
-              {footer.tagline}
-            </p>
-          </div>
+        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
           {footer.columns.map((column) => (
             <div key={column.title}>
               <p className="mb-5 text-xs font-medium uppercase tracking-[0.2em] text-white/35">
@@ -48,15 +50,40 @@ export function LandingFooter() {
                     <FooterLink href={link.href} label={link.label} />
                   </li>
                 ))}
+                {column.title === "Legal" ? (
+                  <li>
+                    <CookieSettingsButton className="text-left text-sm text-white/55 transition-colors duration-200 hover:text-white sm:text-base" />
+                  </li>
+                ) : null}
               </ul>
+              {column.title === "Legal" ? (
+                <p className="mt-5 text-xs tracking-wide text-white/30">
+                  © {new Date().getFullYear()} Sohizi Lab
+                </p>
+              ) : null}
             </div>
           ))}
         </div>
-        <div className="mt-20 flex flex-col justify-between gap-3 pt-6 text-xs text-white/40 sm:flex-row sm:items-center">
-          <span>© {new Date().getFullYear()}. All rights reserved.</span>
-          <CookieSettingsButton className="w-fit text-white/50 underline decoration-white/30 underline-offset-4 transition hover:text-white" />
-        </div>
       </div>
+      <svg
+        aria-hidden="true"
+        focusable="false"
+        viewBox="0 0 1200 270"
+        preserveAspectRatio="none"
+        className="mt-2 block w-full select-none text-white/[0.07]"
+      >
+        <text
+          x="0"
+          y="250"
+          textLength="1200"
+          lengthAdjust="spacingAndGlyphs"
+          fill="currentColor"
+          fontSize="285"
+          className="font-display font-medium"
+        >
+          Sohizi lab
+        </text>
+      </svg>
     </footer>
   )
 }

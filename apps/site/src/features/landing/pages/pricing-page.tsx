@@ -1,4 +1,6 @@
-import { Check, Minus } from "lucide-react"
+import { Check } from "lucide-react"
+import { useEffect, useState } from "react"
+import { motion, useReducedMotion } from "motion/react"
 import {
   Accordion,
   AccordionContent,
@@ -9,12 +11,12 @@ import { WavyBackground } from "@sohizi/ui/wavy-background"
 import { MarketingShell } from "../marketing-shell"
 import { CtaButton } from "../components/cta-button"
 import {
-  comparisonRows,
+  creditPacks,
   plans,
   pricingFaq,
   pricingPage,
+  sharedPlanFeatures,
 } from "../content/pricing"
-import type { CompareCell } from "../content/pricing"
 import { cn } from "@/lib/utils"
 
 /** Brand lemon green + nearby teal (hex for reliable canvas support) */
@@ -26,39 +28,113 @@ const PRICING_WAVE_COLORS = [
   "#6AE0A0",
 ]
 
-function CellValue({ value }: { value: CompareCell }) {
-  if (typeof value === "boolean") {
-    return value ? (
-      <Check className="mx-auto size-4 text-primary" aria-label="Included" />
-    ) : (
-      <Minus
-        className="mx-auto size-4 text-muted-foreground/50"
-        aria-label="Not included"
-      />
-    )
-  }
-  return <span className="text-sm text-foreground/90">{value}</span>
+const ease = [0.22, 1, 0.36, 1] as const
+const CREDIT_STEP = 50
+const CREDIT_SLIDER_MAX = 50_000
+
+type TopUpPrice = {
+  id: string
+  name: string
+  unitAmount: number
+  minimumUnits: number | null
+  maximumUnits: number | null
+  currency: string
+}
+
+function formatTopUpPrice(amountInCents: number, currency: string) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    currencyDisplay: "narrowSymbol",
+    minimumFractionDigits: amountInCents % 100 === 0 ? 0 : 2,
+  }).format(amountInCents / 100)
+}
+
+function Reveal({
+  children,
+  className = "",
+  delay = 0,
+}: {
+  children: React.ReactNode
+  className?: string
+  delay?: number
+}) {
+  const reduced = useReducedMotion()
+  return (
+    <motion.div
+      initial={reduced ? false : { opacity: 0, y: 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.8, delay, ease }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  )
 }
 
 export function PricingPage() {
+  const reduceMotion = useReducedMotion()
+  const [topUpPrice, setTopUpPrice] = useState<TopUpPrice | null>(null)
+  const [topUpUnits, setTopUpUnits] = useState(1000)
+
+  useEffect(() => {
+    let mounted = true
+    fetch("/api/billing/top-up-pricing")
+      .then((response) => {
+        if (!response.ok) throw new Error("Top-up pricing unavailable")
+        return response.json() as Promise<{ products: Array<TopUpPrice> }>
+      })
+      .then(({ products }) => {
+        if (mounted) setTopUpPrice(products[0] ?? null)
+      })
+      .catch(() => {
+        if (mounted) setTopUpPrice(null)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const minimumTopUp = topUpPrice
+    ? Math.ceil((topUpPrice.minimumUnits ?? 1) / CREDIT_STEP) * CREDIT_STEP
+    : CREDIT_STEP
+  const maximumTopUp = topUpPrice
+    ? Math.max(
+        minimumTopUp,
+        Math.min(
+          CREDIT_SLIDER_MAX,
+          topUpPrice.maximumUnits ?? CREDIT_SLIDER_MAX,
+        ),
+      )
+    : CREDIT_SLIDER_MAX
+  const selectedTopUp = Math.min(
+    maximumTopUp,
+    Math.max(minimumTopUp, topUpUnits),
+  )
+
   return (
-    <MarketingShell mainClassName="pt-14 sm:pt-16">
-      <section className="py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+    <MarketingShell>
+      <section className="relative overflow-hidden bg-[#080909] px-4 pb-12 pt-32 text-white sm:px-6 sm:pb-16 sm:pt-40">
+        <div className="mx-auto max-w-[1400px]">
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0.8, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease }}
+            className="relative z-10"
+          >
+            <h1 className="max-w-[14ch] font-display text-[clamp(2.75rem,9vw,7.5rem)] font-medium leading-[0.9] tracking-[-0.08em]">
               {pricingPage.headline}
             </h1>
-            <p className="mt-5 text-base leading-relaxed text-muted-foreground sm:text-lg">
+            <p className="mt-8 max-w-xl text-base leading-relaxed text-white/65 sm:mt-10 sm:text-xl">
               {pricingPage.body}
             </p>
-          </div>
+          </motion.div>
         </div>
 
-        {/* Full-bleed waves; cards stay in the centered content column */}
         <WavyBackground
-          containerClassName="mt-20 h-auto w-full items-stretch justify-start overflow-visible"
-          className="mx-auto w-full max-w-6xl px-4 sm:px-6"
+          containerClassName="mt-14 h-auto w-full items-stretch justify-start overflow-visible sm:mt-20"
+          className="mx-auto w-full max-w-[1400px]"
           backgroundFill="transparent"
           colors={PRICING_WAVE_COLORS}
           speed="slow"
@@ -66,175 +142,206 @@ export function PricingPage() {
           waveOpacity={0.45}
           waveWidth={40}
         >
-          <div className="grid items-center gap-5 sm:grid-cols-2 xl:grid-cols-4 xl:gap-4">
-            {plans.map((plan) => (
-              <div
+          <div className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
+            {plans.map((plan, index) => (
+              <Reveal
                 key={plan.id}
-                className={cn(
-                  "relative flex flex-col rounded-2xl border backdrop-blur-sm transition-transform duration-300 ease-out will-change-transform hover:z-20",
-                  plan.highlighted
-                    ? "z-10 border-primary/50 bg-background/80 px-7 py-10 shadow-primary hover:scale-[1.03] xl:scale-110 xl:hover:scale-[1.14]"
-                    : "border-white/10 bg-background px-5 py-7 hover:scale-[1.03]",
-                  plan.id === "free" &&
-                    "xl:scale-[0.88] xl:opacity-75 xl:hover:scale-[0.93]",
-                  plan.id === "creator" &&
-                    "xl:scale-[0.94] xl:opacity-90 xl:hover:scale-[0.99]",
-                  plan.id === "pro" &&
-                    "xl:scale-[0.94] xl:opacity-90 xl:hover:scale-[0.99]",
-                )}
+                delay={reduceMotion ? 0 : index * 0.06}
+                className="h-full"
               >
-                {plan.highlighted ? (
-                  <span className="absolute top-3 right-3 rounded-md bg-primary px-2.5 py-0.5 text-[11px] font-medium text-primary-foreground">
-                    Recommended
-                  </span>
-                ) : null}
-                <p
+                <div
                   className={cn(
-                    "font-display font-semibold text-foreground",
-                    plan.highlighted ? "pr-24 text-xl" : "text-base",
+                    "relative flex h-full flex-col rounded-[1.25rem] border border-white/12 bg-[#0c100f]/72 px-6 py-8 backdrop-blur-md transition duration-300 sm:px-7 sm:py-9",
+                    plan.highlighted
+                      ? "border-primary/55 bg-[#121a14]/85 shadow-[0_28px_80px_rgba(0,0,0,.35)]"
+                      : "hover:border-white/25",
                   )}
                 >
-                  {plan.name}
-                </p>
-                <p className="mt-4 flex items-baseline gap-1">
-                  {plan.price === 0 ? (
-                    <span className="font-display text-3xl font-semibold tracking-tight text-foreground">
-                      $0
-                    </span>
-                  ) : (
-                    <>
-                      <span
-                        className={cn(
-                          "font-display font-semibold tracking-tight text-foreground",
-                          plan.highlighted ? "text-5xl" : "text-3xl",
-                        )}
-                      >
-                        ${plan.price}
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-display text-xl font-medium tracking-tight text-white sm:text-2xl">
+                      {plan.name}
+                    </p>
+                    {plan.badge ? (
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-black">
+                        {plan.badge}
                       </span>
-                      <span className="text-sm text-foreground">/month</span>
-                    </>
-                  )}
-                </p>
-                <p
-                  className={cn(
-                    "mt-2 font-medium text-primary",
-                    plan.highlighted ? "text-sm" : "text-xs",
-                  )}
-                >
-                  {plan.credits.toLocaleString()} credits
-                  {plan.creditCadence === "one-time"
-                    ? " (one-time)"
-                    : " / month"}
-                </p>
-                <p className="mt-4 flex-1 text-sm leading-relaxed text-foreground/80">
-                  {plan.description}
-                </p>
-                <div className="mt-8">
-                  <CtaButton
-                    location="pricing"
-                    className={cn("w-full", !plan.highlighted && "opacity-90")}
-                    size="sm"
-                    label={plan.ctaLabel}
-                  />
+                    ) : null}
+                  </div>
+
+                  <p className="mt-8 flex items-baseline gap-1.5">
+                    <span className="font-display text-5xl font-medium tracking-[-0.06em] text-white">
+                      ${plan.price}
+                    </span>
+                    <span className="text-sm text-white/45">/ month</span>
+                  </p>
+
+                  <p className="mt-2 text-sm font-medium text-primary">
+                    {plan.credits.toLocaleString()} credits / month
+                  </p>
+
+                  <p className="mt-6 min-h-12 text-sm leading-relaxed text-white/65">
+                    {plan.description}
+                  </p>
+
+                  <div className="mt-8">
+                    <CtaButton
+                      location={`pricing_${plan.id}`}
+                      className="w-full"
+                      size="sm"
+                      label={plan.ctaLabel}
+                    />
+                  </div>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </WavyBackground>
 
-        <div className="mx-auto mt-24 max-w-6xl px-4 sm:px-6">
-          <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Compare plans
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Everything you need to write, generate, storyboard, and edit —
-            scaled by how many credits you need.
-          </p>
-
-          <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10">
-            <table className="w-full min-w-200 border-collapse text-left">
-              <thead>
-                <tr className="border-b border-white/10 bg-muted/30">
-                  <th className="px-4 py-3 text-sm font-medium text-muted-foreground sm:px-6">
-                    Feature
-                  </th>
-                  {plans.map((plan) => (
-                    <th
-                      key={plan.id}
-                      className={cn(
-                        "px-4 py-3 text-center text-sm font-semibold sm:px-6",
-                        plan.highlighted ? "text-primary" : "text-foreground",
-                      )}
-                    >
-                      {plan.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {comparisonRows.map((row) => (
-                  <tr
-                    key={row.feature}
-                    className="border-b border-white/5 last:border-0"
-                  >
-                    <td className="px-4 py-3.5 text-sm text-foreground/90 sm:px-6">
-                      {row.feature}
-                    </td>
-                    <td className="px-4 py-3.5 text-center sm:px-6">
-                      <CellValue value={row.free} />
-                    </td>
-                    <td className="px-4 py-3.5 text-center sm:px-6">
-                      <CellValue value={row.creator} />
-                    </td>
-                    <td className="px-4 py-3.5 text-center sm:px-6">
-                      <CellValue value={row.studio} />
-                    </td>
-                    <td className="px-4 py-3.5 text-center sm:px-6">
-                      <CellValue value={row.pro} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <Reveal className="mx-auto mt-10 max-w-[1400px] sm:mt-12">
+          <div className="rounded-[1.25rem] border border-white/12 bg-[#0c100f]/72 px-6 py-10 backdrop-blur-md sm:px-10 sm:py-12">
+            <h2 className="font-display text-2xl font-medium tracking-tight sm:text-3xl">
+              Every plan includes the full studio
+            </h2>
+            <ul className="mt-8 grid gap-x-10 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+              {sharedPlanFeatures.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-start gap-2.5 text-sm leading-snug text-white/70"
+                >
+                  <Check
+                    className="mt-0.5 size-4 shrink-0 text-primary"
+                    aria-hidden
+                  />
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
+        </Reveal>
+
+        <Reveal className="mx-auto mt-8 max-w-[1400px] sm:mt-10">
+          <div className="rounded-[1.25rem] border border-white/12 bg-[#0c100f]/72 px-6 py-8 backdrop-blur-md sm:px-10 sm:py-10">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+              {creditPacks.eyebrow}
+            </p>
+            <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="font-display text-2xl font-medium tracking-tight sm:text-3xl">
+                  {creditPacks.headline}
+                </h2>
+                <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/55 sm:text-base">
+                  {creditPacks.body}
+                </p>
+              </div>
+              {topUpPrice ? (
+                <div className="shrink-0 lg:text-right">
+                  <p className="flex items-baseline gap-2 lg:justify-end">
+                    <span className="font-display text-5xl font-medium tracking-[-0.06em] text-white">
+                      {formatTopUpPrice(
+                        selectedTopUp * topUpPrice.unitAmount,
+                        topUpPrice.currency,
+                      )}
+                    </span>
+                    <span className="text-sm text-white/55">one-time</span>
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-primary">
+                    {selectedTopUp.toLocaleString()} credits
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-white/55">
+                  Current price appears here when top-ups are available.
+                </p>
+              )}
+            </div>
+
+            {topUpPrice ? (
+              <div className="mt-8">
+                <div className="mb-3 text-sm">
+                  <label
+                    htmlFor="top-up-credits"
+                    className="font-medium text-white"
+                  >
+                    Choose credits
+                  </label>
+                </div>
+                <input
+                  id="top-up-credits"
+                  type="range"
+                  min={minimumTopUp}
+                  max={maximumTopUp}
+                  step={CREDIT_STEP}
+                  value={selectedTopUp}
+                  onChange={(event) =>
+                    setTopUpUnits(Number(event.target.value))
+                  }
+                  className="w-full accent-primary"
+                />
+                <div className="mt-3 flex justify-between text-xs text-white/45">
+                  <span>{minimumTopUp.toLocaleString()} credits</span>
+                  <span>{maximumTopUp.toLocaleString()} credits</span>
+                </div>
+              </div>
+            ) : null}
+            <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-2xl text-sm leading-relaxed text-white/50">
+                {creditPacks.note}
+              </p>
+              <CtaButton
+                location="pricing_credit_packs"
+                size="sm"
+                label="Start with a plan"
+                className="shrink-0"
+              />
+            </div>
+          </div>
+        </Reveal>
       </section>
 
       <section
         id="pricing-faq"
-        data-nav-contrast="light"
-        className="scroll-mt-20 bg-white-brand px-4 py-16 sm:px-6 sm:py-24"
+        className="scroll-mt-20 bg-[#080909] px-4 pb-28 pt-12 text-white sm:px-6 sm:pb-40 sm:pt-16"
       >
-        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
-          <div>
-            <h2 className="font-display text-3xl font-semibold tracking-tight text-background sm:text-4xl">
+        <div className="mx-auto max-w-[1400px]">
+          <div className="mx-auto mb-14 max-w-4xl text-center sm:mb-20">
+            <h2 className="font-display text-[clamp(3.2rem,8vw,7rem)] font-medium leading-[0.95] tracking-[-0.075em]">
               {pricingFaq.headline}
             </h2>
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+            <p className="mx-auto mt-7 max-w-lg text-base leading-relaxed text-white/50 sm:text-lg">
               {pricingFaq.body}
             </p>
-            <p className="mt-4 text-sm text-muted-foreground">
+            <p className="mx-auto mt-5 text-sm text-white/40">
               {pricingFaq.contactLine}{" "}
               <a
                 href={`mailto:${pricingFaq.contactEmail}`}
-                className="text-muted-foreground underline underline-offset-4 transition-colors hover:text-primary"
+                className="text-white/70 underline decoration-white/30 underline-offset-4 transition hover:decoration-white"
               >
                 {pricingFaq.contactEmail}
               </a>
             </p>
           </div>
 
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion
+            type="single"
+            collapsible
+            className="mx-auto max-w-4xl border-t border-white/20"
+          >
             {pricingFaq.items.map((item) => (
               <AccordionItem
                 key={item.question}
                 value={item.question}
-                className="border-white/10"
+                className="border-white/20"
               >
-                <AccordionTrigger className="py-5 text-left text-base font-medium text-background hover:no-underline">
-                  {item.question}
+                <AccordionTrigger className="group items-center rounded-none py-6 font-display text-lg font-medium tracking-tight text-white hover:no-underline sm:py-8 sm:text-2xl [&>svg]:hidden">
+                  <span>{item.question}</span>
+                  <span
+                    aria-hidden
+                    className="ml-auto text-2xl font-light leading-none text-white/65 transition-transform duration-300 group-data-[state=open]:rotate-45 sm:text-3xl"
+                  >
+                    +
+                  </span>
                 </AccordionTrigger>
-                <AccordionContent className="pb-5 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                <AccordionContent className="max-w-2xl pb-7 pr-8 text-base leading-relaxed text-white/55 sm:pb-9 sm:text-lg">
                   {item.answer}
                 </AccordionContent>
               </AccordionItem>

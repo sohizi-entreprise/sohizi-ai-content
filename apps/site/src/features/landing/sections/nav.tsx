@@ -106,13 +106,13 @@ export function LandingNav() {
               overLight ? "/logo-monochrome.svg" : "/logo-monochrome-white.svg"
             }
             alt=""
-            width={32}
-            height={28}
-            className="h-7 w-8 shrink-0 object-contain sm:h-8 sm:w-9"
+            width={36}
+            height={32}
+            className="h-7 w-auto shrink-0 -translate-y-1 sm:h-8"
           />
           <span
             className={cn(
-              "relative top-[5px] font-space-grotesk text-sm font-medium tracking-tight transition-colors duration-300 sm:text-lg",
+              "font-space-grotesk text-sm font-medium tracking-tight transition-colors duration-300 sm:text-lg",
               overLight ? "text-background" : "text-foreground",
             )}
           >

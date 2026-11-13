@@ -72,6 +72,30 @@ function packQuantity(
   return units
 }
 
+export const publicTopUpPricingRoutes = new Elysia({ prefix: "/billing" }).get(
+  "/top-up-pricing",
+  async () => ({
+    products: (await catalog()).flatMap((product) => {
+      if (
+        product.kind !== "pack" ||
+        product.unitAmount == null ||
+        product.currency == null
+      )
+        return []
+      return [
+        {
+          id: product.id,
+          name: product.name,
+          unitAmount: product.unitAmount,
+          minimumUnits: product.minimumUnits,
+          maximumUnits: product.maximumUnits,
+          currency: product.currency,
+        },
+      ]
+    }),
+  }),
+)
+
 export const billingRoutes = new Elysia({ prefix: "/billing" })
   .use(authMiddleware)
   .get("/catalog", async () => ({ products: await catalog() }))

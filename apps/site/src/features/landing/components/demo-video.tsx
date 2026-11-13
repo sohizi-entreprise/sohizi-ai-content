@@ -26,6 +26,19 @@ type DemoVideoProps = {
 
 const HD_QUERY = "(min-width: 1024px)"
 
+type DemoStopReason =
+  | "paused"
+  | "out_of_view"
+  | "page_hidden"
+  | "navigation"
+  | "inactive"
+  | "source_changed"
+  | "ended"
+
+function roundToTenth(value: number) {
+  return Math.round(value * 10) / 10
+}
+
 function usePreferredSrc(src: string, hdSrc?: string) {
   const [resolved, setResolved] = useState(src)
 
@@ -73,10 +86,39 @@ export function DemoVideo({
   const [failed, setFailed] = useState(false)
   const [buffered, setBuffered] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const trackingPlaybackRef = useRef(false)
+  const stopReasonRef = useRef<DemoStopReason>("paused")
 
   const manual = playback === "manual"
   const shouldLoad = nearView && active
   const shouldAutoPlay = !manual && active && inView && !reduceMotion && !failed
+
+  const recordPlaybackOutcome = (reason: DemoStopReason) => {
+    const video = videoRef.current
+    if (!manual || !video || !trackingPlaybackRef.current) return
+    trackingPlaybackRef.current = false
+
+    const duration = video.duration
+    if (!Number.isFinite(duration) || duration <= 0) return
+
+    const position = Math.min(duration, Math.max(0, video.currentTime))
+    let watched = 0
+    for (let i = 0; i < video.played.length; i += 1) {
+      watched += video.played.end(i) - video.played.start(i)
+    }
+    watched = Math.min(duration, watched)
+
+    captureAnalyticsEvent("marketing_demo_viewed", {
+      location,
+      position_seconds: roundToTenth(position),
+      duration_seconds: roundToTenth(duration),
+      position_percent: Math.round((position / duration) * 100),
+      watched_seconds: roundToTenth(watched),
+      watched_percent: Math.round((watched / duration) * 100),
+      completed: reason === "ended",
+      stop_reason: reason,
+    })
+  }
 
   useEffect(() => {
     const node = rootRef.current
@@ -90,6 +132,8 @@ export function DemoVideo({
       (entries) => {
         const entry = entries[0]
         if (entry.isIntersecting) setNearView(true)
+        if (!entry.isIntersecting && manual)
+          stopReasonRef.current = "out_of_view"
         setInView(entry.isIntersecting)
       },
       {
@@ -100,7 +144,7 @@ export function DemoVideo({
 
     observer.observe(node)
     return () => observer.disconnect()
-  }, [priority])
+  }, [priority, manual])
 
   const syncPlayback = useEffectEvent((play: boolean) => {
     const video = videoRef.current
@@ -124,7 +168,10 @@ export function DemoVideo({
 
   useEffect(() => {
     if (manual) {
-      if (!active || !inView) syncPlayback(false)
+      if (!active || !inView) {
+        stopReasonRef.current = active ? "out_of_view" : "inactive"
+        syncPlayback(false)
+      }
       return
     }
     syncPlayback(shouldAutoPlay && ready)
@@ -134,6 +181,7 @@ export function DemoVideo({
     const video = videoRef.current
     if (!video || !shouldLoad) return
     if (video.dataset.loadedSrc === preferredSrc) return
+    recordPlaybackOutcome("source_changed")
     video.dataset.loadedSrc = preferredSrc
     video.src = preferredSrc
     setReady(false)
@@ -146,6 +194,8 @@ export function DemoVideo({
     if (shouldLoad) return
     const video = videoRef.current
     if (!video) return
+    stopReasonRef.current = "inactive"
+    recordPlaybackOutcome("inactive")
     video.pause()
     if (video.dataset.loadedSrc) {
       video.removeAttribute("src")
@@ -156,6 +206,25 @@ export function DemoVideo({
       setPlaying(false)
     }
   }, [shouldLoad])
+
+  useEffect(() => {
+    if (!manual) return
+
+    const handlePageHidden = () => {
+      if (document.visibilityState !== "hidden") return
+      recordPlaybackOutcome("page_hidden")
+      videoRef.current?.pause()
+    }
+    const handlePageExit = () => recordPlaybackOutcome("navigation")
+
+    document.addEventListener("visibilitychange", handlePageHidden)
+    window.addEventListener("pagehide", handlePageExit)
+    return () => {
+      document.removeEventListener("visibilitychange", handlePageHidden)
+      window.removeEventListener("pagehide", handlePageExit)
+      recordPlaybackOutcome("navigation")
+    }
+  }, [manual, location])
 
   const handlePlayClick = () => {
     const video = videoRef.current
@@ -219,9 +288,23 @@ export function DemoVideo({
           }}
           onCanPlay={() => setReady(true)}
           onProgress={updateBuffered}
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          onEnded={() => setPlaying(false)}
+          onPlay={() => {
+            setPlaying(true)
+            if (manual) {
+              stopReasonRef.current = "paused"
+              trackingPlaybackRef.current = true
+            }
+          }}
+          onPause={() => {
+            setPlaying(false)
+            recordPlaybackOutcome(
+              videoRef.current?.ended ? "ended" : stopReasonRef.current,
+            )
+          }}
+          onEnded={() => {
+            setPlaying(false)
+            recordPlaybackOutcome("ended")
+          }}
           onError={() => setFailed(true)}
           className={cn(
             "absolute inset-0 size-full transition-opacity duration-300",

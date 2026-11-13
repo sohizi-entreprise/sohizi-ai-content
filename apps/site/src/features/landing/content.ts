@@ -323,7 +323,6 @@ export const finalCta = {
 } as const
 
 export const footer = {
-  tagline: "Your AI film studio.",
   columns: [
     {
       title: "Product",
@@ -337,6 +336,15 @@ export const footer = {
       title: "Contact",
       links: [
         { label: "support@sohizi.com", href: "mailto:support@sohizi.com" },
+      ],
+    },
+    {
+      title: "Social",
+      links: [
+        {
+          label: "LinkedIn",
+          href: "https://www.linkedin.com/company/sohizi",
+        },
       ],
     },
     {

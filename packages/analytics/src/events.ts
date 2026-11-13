@@ -2,6 +2,23 @@
 export type AnalyticsEvents = {
   marketing_cta_clicked: { location: string; destination: "sign-up" }
   marketing_demo_played: { location: string }
+  marketing_demo_viewed: {
+    location: string
+    position_seconds: number
+    duration_seconds: number
+    position_percent: number
+    watched_seconds: number
+    watched_percent: number
+    completed: boolean
+    stop_reason:
+      | "paused"
+      | "out_of_view"
+      | "page_hidden"
+      | "navigation"
+      | "inactive"
+      | "source_changed"
+      | "ended"
+  }
   signup_started: { method: "email" | "google" }
   signup_completed: { method: "email" | "google" }
   organization_created: Record<string, never>
