@@ -2,10 +2,15 @@ import { useLayoutEffect } from "react"
 import { Outlet, createFileRoute, useParams } from "@tanstack/react-router"
 import { AppHeader } from "@/components/layout/app-header"
 import { AppNavBar } from "@/components/layout/app-nav-bar"
+import { RoutePending } from "@/components/layout/route-pending"
 import { useChatStore } from "@/features/chat/store/chat-store"
 import { useEditorStore } from "@/features/editor/stores/editor-store"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
+  // Authenticated project workspace is client-rendered: editor/media/video tools
+  // pull remotion/mermaid/shiki into the SSR graph when these routes are SSRed.
+  ssr: false,
+  pendingComponent: () => <RoutePending label="Loading project..." />,
   component: RouteComponent,
 })
 

@@ -1,16 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { MediaGenerator } from "@/features/media-generator"
+import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router"
+import { RoutePending } from "@/components/layout/route-pending"
 
 export const Route = createFileRoute(
   "/_authenticated/projects/$projectId/generate",
 )({
-  component: RouteComponent,
+  ssr: false,
+  pendingComponent: () => <RoutePending label="Loading generator..." />,
+  component: lazyRouteComponent(() =>
+    import("./-generate-page").then((module) => ({
+      default: module.GeneratePage,
+    })),
+  ),
 })
-
-function RouteComponent() {
-  return (
-    <div className="h-full min-w-0 flex-1">
-      <MediaGenerator />
-    </div>
-  )
-}

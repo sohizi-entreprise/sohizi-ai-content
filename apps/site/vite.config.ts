@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => {
       dedupe: ["react", "react-dom"],
     },
     ssr: {
+      // Keep Sentry external: bundling @sentry/node OOMs the Vite/Nitro build.
       external: ["@sentry/tanstackstart-react"],
     },
     server: {
@@ -42,7 +43,9 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       nitro({
-        // Nitro/Rollup cannot bundle the Sentry server package; trace it into .output.
+        // Nitro cannot safely bundle the Sentry server SDK (OOM). Trace the
+        // runtime package into .output; Dockerfiles prune build-only transitive
+        // deps (@sentry/bundler-plugins → vite/esbuild/rollup/sentry-cli).
         rollupConfig: { external: [/^@sentry\//] },
         traceDeps: ["@sentry/tanstackstart-react*"],
         routeRules: {

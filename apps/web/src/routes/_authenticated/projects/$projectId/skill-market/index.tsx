@@ -1,12 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { SkillMarketListPage } from "@/features/skill-market"
+import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router"
+import { RoutePending } from "@/components/layout/route-pending"
 
 export const Route = createFileRoute(
   "/_authenticated/projects/$projectId/skill-market/",
 )({
-  component: RouteComponent,
+  ssr: false,
+  pendingComponent: () => <RoutePending label="Loading skill market..." />,
+  component: lazyRouteComponent(
+    () => import("@/features/skill-market"),
+    "SkillMarketListPage",
+  ),
 })
-
-function RouteComponent() {
-  return <SkillMarketListPage />
-}
