@@ -1,28 +1,13 @@
 import { APIError } from "better-auth/api"
 import { inArray, eq } from "drizzle-orm"
 import { db } from "@/db"
-import { member, organization, organizationWallets, user } from "@/db/schema"
-import { polar } from "@/features/billing/polar-client"
+import { member, organization, organizationWallets } from "@/db/schema"
+import { requireStripe } from "@/features/billing/stripe-client"
 import { expireAssetsForOrganizations } from "@/features/media-engine/asset-retention"
 
-const RENEWABLE_STATUSES = new Set([
-  "incomplete",
-  "trialing",
-  "active",
-  "past_due",
-  "unpaid",
-])
-
-export type AccountDeletionPolar = {
-  cancelSubscription: (
-    subscriptionId: string,
-  ) => Promise<{ cancel_at_period_end: boolean }>
+export type AccountDeletionStripe = {
+  cancelSubscription: (subscriptionId: string) => Promise<void>
   deleteCustomer: (customerId: string) => Promise<void>
-  transferOwnership: (input: {
-    polarCustomerId: string
-    fromUserId: string
-    toUser: { id: string; email: string; name: string }
-  }) => Promise<void>
 }
 
 type Membership = {
@@ -40,76 +25,30 @@ function abort(message: string): never {
   })
 }
 
-export function polarAccountClient(): AccountDeletionPolar | null {
-  const client = polar
-  if (!client) return null
+function stripeAccountClient(): AccountDeletionStripe {
+  const stripe = requireStripe()
   return {
     async cancelSubscription(subscriptionId) {
-      const subscription = await client.subscriptions.update(subscriptionId, {
-        cancel_at_period_end: true,
-      })
-      return { cancel_at_period_end: subscription.cancel_at_period_end }
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+      if (!["canceled", "incomplete_expired"].includes(subscription.status))
+        await stripe.subscriptions.cancel(subscriptionId)
     },
-    deleteCustomer: (customerId) => client.customers.delete(customerId),
-    async transferOwnership({ polarCustomerId, fromUserId, toUser }) {
-      const listed = await client.customers.members.list(polarCustomerId, {
-        limit: 100,
-      })
-      const current = listed.items.find(
-        (item) => item.external_id === fromUserId,
-      )
-      if (!current || current.role !== "owner") return
-      const successor =
-        listed.items.find((item) => item.external_id === toUser.id) ??
-        (await client.customers.members.create(polarCustomerId, {
-          email: toUser.email,
-          name: toUser.name,
-          external_id: toUser.id,
-        }))
-      const updated = await client.customers.members.update(
-        polarCustomerId,
-        successor.id,
-        { role: "owner" },
-      )
-      if (updated.role !== "owner") {
-        throw new Error("Polar did not transfer customer ownership")
-      }
+    async deleteCustomer(customerId) {
+      await stripe.customers.del(customerId)
     },
   }
 }
 
-function subscriptionCanRenew(row: {
-  polarSubscriptionId: string | null
-  status: string
-  cancelAtPeriodEnd: boolean
-}) {
-  return (
-    !!row.polarSubscriptionId &&
-    !row.cancelAtPeriodEnd &&
-    RENEWABLE_STATUSES.has(row.status)
-  )
-}
-
-/**
- * Cancels Polar billing before any local row is removed. A failed Polar call
- * throws and leaves the user, organizations, and wallets in place.
- */
+/** Cancel paid billing before deleting sole-member organizations. */
 export async function prepareAccountDeletion(
   userId: string,
-  options: {
-    polar?: AccountDeletionPolar | null
-  } = {},
+  options: { stripe?: AccountDeletionStripe | null } = {},
 ) {
-  const billing =
-    options.polar === undefined ? polarAccountClient() : options.polar
-
   const ownMemberships = await db
     .select({ organizationId: member.organizationId })
     .from(member)
     .where(eq(member.userId, userId))
   if (ownMemberships.length === 0) return
-
-  const organizationIds = ownMemberships.map((row) => row.organizationId)
   const memberships: Membership[] = await db
     .select({
       organizationId: member.organizationId,
@@ -120,158 +59,67 @@ export async function prepareAccountDeletion(
     })
     .from(member)
     .innerJoin(organization, eq(member.organizationId, organization.id))
-    .where(inArray(member.organizationId, organizationIds))
-
-  const byOrganization = new Map<string, Membership[]>()
-  for (const row of memberships) {
-    const group = byOrganization.get(row.organizationId) ?? []
-    group.push(row)
-    byOrganization.set(row.organizationId, group)
-  }
-
-  const blocked: string[] = []
+    .where(
+      inArray(
+        member.organizationId,
+        ownMemberships.map((row) => row.organizationId),
+      ),
+    )
+  const groups = new Map<string, Membership[]>()
+  for (const row of memberships)
+    groups.set(row.organizationId, [
+      ...(groups.get(row.organizationId) ?? []),
+      row,
+    ])
   const soleOrganizationIds: string[] = []
-  const shared: Array<{ organizationId: string; members: Membership[] }> = []
-  for (const [organizationId, members] of byOrganization) {
+  const blocked: string[] = []
+  for (const [organizationId, members] of groups) {
     const self = members.find((row) => row.userId === userId)
     if (!self) continue
     if (members.length === 1) {
       soleOrganizationIds.push(organizationId)
       continue
     }
-    const otherOwners = members.filter(
-      (row) => row.userId !== userId && row.role === "owner",
+    if (
+      self.role === "owner" &&
+      !members.some((row) => row.userId !== userId && row.role === "owner")
     )
-    if (self.role === "owner" && otherOwners.length === 0) {
       blocked.push(self.organizationName)
-      continue
-    }
-    shared.push({ organizationId, members })
   }
-
-  if (blocked.length > 0) {
+  if (blocked.length)
     abort(
       `You are the only owner of ${blocked.join(", ")}. Transfer ownership or remove the other members before deleting your account.`,
     )
-  }
-
-  const wallets =
-    soleOrganizationIds.length === 0
-      ? []
-      : await db
-          .select()
-          .from(organizationWallets)
-          .where(
-            inArray(organizationWallets.organizationId, soleOrganizationIds),
-          )
-
-  const toCancel = wallets.filter(subscriptionCanRenew)
-  if (toCancel.length > 0 && !billing) {
+  if (!soleOrganizationIds.length) return
+  const wallets = await db
+    .select()
+    .from(organizationWallets)
+    .where(inArray(organizationWallets.organizationId, soleOrganizationIds))
+  const requiresStripe = wallets.some(
+    (row) => row.stripeCustomerId || row.stripeSubscriptionId,
+  )
+  const stripe =
+    options.stripe === undefined && requiresStripe
+      ? stripeAccountClient()
+      : options.stripe
+  if (requiresStripe && !stripe)
     abort(
-      "The payment system is not configured, so the subscription could not be cancelled. Your account was not deleted.",
+      "The payment system is not configured, so billing could not be cancelled. Your account was not deleted.",
     )
-  }
-  for (const wallet of toCancel) {
+  for (const wallet of wallets) {
     try {
-      const subscription = await billing!.cancelSubscription(
-        wallet.polarSubscriptionId!,
-      )
-      if (!subscription.cancel_at_period_end) {
-        abort(
-          "The payment system did not confirm the subscription was cancelled. Your account was not deleted.",
-        )
-      }
+      if (wallet.stripeSubscriptionId)
+        await stripe!.cancelSubscription(wallet.stripeSubscriptionId)
+      if (wallet.stripeCustomerId)
+        await stripe!.deleteCustomer(wallet.stripeCustomerId)
     } catch (error) {
-      if (error instanceof APIError) throw error
-      console.error(
-        `[account] Failed to cancel Polar subscription ${wallet.polarSubscriptionId}:`,
-        error,
-      )
+      console.error("[account] Failed to remove Stripe billing:", error)
       abort(
-        "Could not cancel the subscription in the payment system. Your account was not deleted.",
+        "Could not remove billing in the payment system. Your account was not deleted.",
       )
     }
   }
-
-  const sharedWallets =
-    shared.length === 0
-      ? []
-      : await db
-          .select()
-          .from(organizationWallets)
-          .where(
-            inArray(
-              organizationWallets.organizationId,
-              shared.map((row) => row.organizationId),
-            ),
-          )
-  for (const workspace of shared) {
-    const wallet = sharedWallets.find(
-      (row) => row.organizationId === workspace.organizationId,
-    )
-    if (!wallet?.polarCustomerId) continue
-    const successor = workspace.members
-      .filter((row) => row.userId !== userId && row.role === "owner")
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0]
-    if (!successor) continue
-    const [successorUser] = await db
-      .select({ id: user.id, email: user.email, name: user.name })
-      .from(user)
-      .where(eq(user.id, successor.userId))
-      .limit(1)
-    if (!successorUser) {
-      abort(
-        "Could not transfer billing ownership. Your account was not deleted.",
-      )
-    }
-    if (!billing) {
-      abort(
-        "The payment system is not configured, so billing ownership could not be transferred. Your account was not deleted.",
-      )
-    }
-    try {
-      await billing.transferOwnership({
-        polarCustomerId: wallet.polarCustomerId,
-        fromUserId: userId,
-        toUser: successorUser,
-      })
-    } catch (error) {
-      if (error instanceof APIError) throw error
-      console.error(
-        `[account] Failed to transfer Polar customer ${wallet.polarCustomerId}:`,
-        error,
-      )
-      abort(
-        "Could not transfer billing ownership. Your account was not deleted.",
-      )
-    }
-  }
-
-  const customers = wallets.filter((row) => row.polarCustomerId)
-  if (customers.length > 0 && !billing) {
-    abort(
-      "The payment system is not configured, so the billing customer could not be removed. Your account was not deleted.",
-    )
-  }
-  for (const wallet of customers) {
-    try {
-      await billing!.deleteCustomer(wallet.polarCustomerId!)
-    } catch (error) {
-      if (error instanceof APIError) throw error
-      console.error(
-        `[account] Failed to delete Polar customer ${wallet.polarCustomerId}:`,
-        error,
-      )
-      abort(
-        "Could not remove the customer from the payment system. Your account was not deleted.",
-      )
-    }
-  }
-
-  if (soleOrganizationIds.length === 0) return
-
   await expireAssetsForOrganizations(soleOrganizationIds)
-
   await db
     .delete(organization)
     .where(inArray(organization.id, soleOrganizationIds))

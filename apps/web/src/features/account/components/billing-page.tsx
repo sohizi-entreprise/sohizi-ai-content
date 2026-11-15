@@ -3,6 +3,7 @@ import { Button } from "@sohizi/ui/button"
 import { Badge } from "@sohizi/ui/badge"
 import { Card, CardContent } from "@sohizi/ui/card"
 import { CheckCircle2, CircleHelp, Wallet } from "lucide-react"
+import { Input } from "@sohizi/ui/input"
 import { Slider } from "@sohizi/ui/slider"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"
 import {
@@ -104,10 +105,15 @@ function PaygPackCard({
   onBuy: (units: number) => void
 }) {
   const { min, max } = packSliderBounds(product)
-  const [units, setUnits] = useState(min)
+  const [units, setUnits] = useState(String(min))
   const currency = product.currency ?? "usd"
   const unitAmount = product.unitAmount ?? 0
-  const selected = Math.min(max, Math.max(min, units))
+  const requested = Number(units)
+  const valid =
+    Number.isSafeInteger(requested) &&
+    requested >= (product.minimumUnits ?? 1) &&
+    requested <= max
+  const selected = Math.min(max, Math.max(min, requested || min))
 
   return (
     <Card className="border-none bg-white/5! transition-colors">
@@ -131,6 +137,16 @@ function PaygPackCard({
               {formatPrice(selected * unitAmount, currency)}
             </p>
           </div>
+          <Input
+            type="number"
+            min={product.minimumUnits ?? 1}
+            max={max}
+            step={1}
+            value={units}
+            disabled={pending || !canBuy}
+            aria-label="Number of credits"
+            onChange={(event) => setUnits(event.target.value)}
+          />
           <Slider
             min={min}
             max={max}
@@ -138,7 +154,7 @@ function PaygPackCard({
             value={[selected]}
             disabled={pending || !canBuy}
             onValueChange={([next]) => {
-              setUnits(next)
+              setUnits(String(next))
             }}
             className="**:data-[slot=slider-track]:bg-background"
           />
@@ -150,8 +166,8 @@ function PaygPackCard({
         {canBuy ? (
           <Button
             className="w-full cursor-pointer rounded-full transition-transform duration-200 hover:scale-102 font-semibold"
-            disabled={pending}
-            onClick={() => onBuy(selected)}
+            disabled={pending || !valid}
+            onClick={() => onBuy(requested)}
           >
             <IconCoins className="size-4" />
             Buy credits

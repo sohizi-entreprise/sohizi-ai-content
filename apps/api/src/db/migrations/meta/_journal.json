@@ -407,6 +407,20 @@
       "when": 1793304000000,
       "tag": "0057_launch_waiting_list",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1794679000000,
+      "tag": "0058_stripe_sandbox_subscription_ids",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794765400000,
+      "tag": "0059_drop_polar_billing",
+      "breakpoints": true
     }
   ]
 }

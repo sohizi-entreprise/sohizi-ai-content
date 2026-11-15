@@ -12,7 +12,7 @@ import {
 } from "@/db/schema"
 import {
   prepareAccountDeletion,
-  type AccountDeletionPolar,
+  type AccountDeletionStripe,
 } from "./delete-account"
 
 const createdUsers: string[] = []
@@ -60,19 +60,18 @@ async function addMember(
   })
 }
 
-function polar(
-  overrides: Partial<AccountDeletionPolar> = {},
-): AccountDeletionPolar {
+function stripe(
+  overrides: Partial<AccountDeletionStripe> = {},
+): AccountDeletionStripe {
   return {
-    cancelSubscription: async () => ({ cancel_at_period_end: true }),
+    cancelSubscription: async () => {},
     deleteCustomer: async () => {},
-    transferOwnership: async () => {},
     ...overrides,
   }
 }
 
 describe("prepareAccountDeletion", () => {
-  test("deletes a sole-member organization only after Polar cancel succeeds", async () => {
+  test("deletes a sole-member organization only after Stripe cancel succeeds", async () => {
     const userId = await createUser("solo")
     const orgId = await createOrg("Solo workspace")
     await addMember(orgId, userId, "owner")
@@ -80,8 +79,8 @@ describe("prepareAccountDeletion", () => {
     const customerId = `cus_${randomUUID()}`
     await db.insert(organizationWallets).values({
       organizationId: orgId,
-      polarSubscriptionId: subscriptionId,
-      polarCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      stripeCustomerId: customerId,
       status: "active",
       cancelAtPeriodEnd: false,
     })
@@ -100,7 +99,7 @@ describe("prepareAccountDeletion", () => {
 
     const calls: string[] = []
     await prepareAccountDeletion(userId, {
-      polar: polar({
+      stripe: stripe({
         cancelSubscription: async (id) => {
           const [stillThere] = await db
             .select({ id: organization.id })
@@ -109,7 +108,6 @@ describe("prepareAccountDeletion", () => {
           expect(stillThere?.id).toBe(orgId)
           expect(id).toBe(subscriptionId)
           calls.push("cancel")
-          return { cancel_at_period_end: true }
         },
         deleteCustomer: async (id) => {
           const [stillThere] = await db
@@ -161,7 +159,7 @@ describe("prepareAccountDeletion", () => {
     await addMember(orgId, memberId, "member")
 
     await expect(
-      prepareAccountDeletion(ownerId, { polar: null }),
+      prepareAccountDeletion(ownerId, { stripe: null }),
     ).rejects.toThrow(/only owner of Shared/)
 
     const [org] = await db
@@ -183,7 +181,7 @@ describe("prepareAccountDeletion", () => {
     await addMember(orgId, ownerId, "owner", new Date("2026-01-01"))
     await addMember(orgId, otherOwnerId, "owner", new Date("2026-01-02"))
 
-    await prepareAccountDeletion(ownerId, { polar: null })
+    await prepareAccountDeletion(ownerId, { stripe: null })
 
     const memberships = await db
       .select({ userId: member.userId })
@@ -194,14 +192,14 @@ describe("prepareAccountDeletion", () => {
     )
   })
 
-  test("aborts without local deletes when Polar cancellation fails", async () => {
+  test("aborts without local deletes when Stripe cancellation fails", async () => {
     const userId = await createUser("payer")
     const orgId = await createOrg("Paid")
     await addMember(orgId, userId, "owner")
     await db.insert(organizationWallets).values({
       organizationId: orgId,
-      polarSubscriptionId: `sub_${randomUUID()}`,
-      polarCustomerId: `cus_${randomUUID()}`,
+      stripeSubscriptionId: `sub_${randomUUID()}`,
+      stripeCustomerId: `cus_${randomUUID()}`,
       status: "active",
       cancelAtPeriodEnd: false,
     })
@@ -209,18 +207,16 @@ describe("prepareAccountDeletion", () => {
 
     await expect(
       prepareAccountDeletion(userId, {
-        polar: polar({
+        stripe: stripe({
           cancelSubscription: async () => {
-            throw new Error("polar down")
+            throw new Error("stripe down")
           },
           deleteCustomer: async () => {
             deletedCustomer = true
           },
         }),
       }),
-    ).rejects.toThrow(
-      /could not cancel the subscription in the payment system/i,
-    )
+    ).rejects.toThrow(/Could not remove billing in the payment system/i)
 
     expect(deletedCustomer).toBe(false)
     const [org] = await db
@@ -238,31 +234,5 @@ describe("prepareAccountDeletion", () => {
     expect(org?.id).toBe(orgId)
     expect(wallet?.organizationId).toBe(orgId)
     expect(remainingUser?.id).toBe(userId)
-  })
-
-  test("aborts when Polar does not confirm cancellation", async () => {
-    const userId = await createUser("unconfirmed")
-    const orgId = await createOrg("Unconfirmed")
-    await addMember(orgId, userId, "owner")
-    await db.insert(organizationWallets).values({
-      organizationId: orgId,
-      polarSubscriptionId: `sub_${randomUUID()}`,
-      status: "past_due",
-      cancelAtPeriodEnd: false,
-    })
-
-    await expect(
-      prepareAccountDeletion(userId, {
-        polar: polar({
-          cancelSubscription: async () => ({ cancel_at_period_end: false }),
-        }),
-      }),
-    ).rejects.toThrow(/did not confirm/)
-
-    const [wallet] = await db
-      .select()
-      .from(organizationWallets)
-      .where(eq(organizationWallets.organizationId, orgId))
-    expect(wallet?.organizationId).toBe(orgId)
   })
 })

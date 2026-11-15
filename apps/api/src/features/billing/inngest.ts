@@ -3,7 +3,7 @@ import { billingService } from "./service"
 import { captureUnexpectedError } from "@/sentry"
 import { db } from "@/db"
 import { organizationWallets } from "@/db/schema"
-import { reconcileOrganization } from "./polar"
+import { reconcileOrganization } from "./stripe"
 
 const BATCH_SIZE = 100
 const MAX_BATCHES_PER_RUN = 10
@@ -92,16 +92,16 @@ export const sweepBillingWallets = inngest.createFunction(
   },
 )
 
-/** Repair missing or out-of-order Polar webhooks from Polar's authoritative state. */
-export const reconcilePolarBilling = inngest.createFunction(
+/** Repair missing or out-of-order Stripe webhooks from Stripe's authoritative state. */
+export const reconcileStripeBilling = inngest.createFunction(
   {
-    id: "polar-billing-reconciliation",
+    id: "stripe-billing-reconciliation",
     triggers: [{ cron: "0 3 * * *" }],
     concurrency: { limit: 1 },
     retries: 3,
   },
   async ({ step }) => {
-    if (!process.env.POLAR_ACCESS_TOKEN) return { checked: 0 }
+    if (!process.env.STRIPE_SECRET_KEY) return { checked: 0 }
     const rows = await db
       .select({ organizationId: organizationWallets.organizationId })
       .from(organizationWallets)

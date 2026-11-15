@@ -5,7 +5,7 @@ import { recoverStuckJobs } from "@/features/capacity/recovery"
 import {
   sweepBillingReservations,
   sweepBillingWallets,
-  reconcilePolarBilling,
+  reconcileStripeBilling,
 } from "@/features/billing/inngest"
 import { sweepExpiredArtifacts } from "@/features/ai/agent/core/artifact-expiration"
 import { sweepExpiredAssets } from "@/features/media-engine/asset-expiration"
@@ -19,7 +19,7 @@ export const functions = [
   recoverStuckJobs,
   sweepBillingReservations,
   sweepBillingWallets,
-  reconcilePolarBilling,
+  reconcileStripeBilling,
   sweepExpiredArtifacts,
   sweepExpiredAssets,
 ]

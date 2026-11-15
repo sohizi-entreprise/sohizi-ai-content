@@ -4,22 +4,11 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { organization, emailOTP } from "better-auth/plugins"
 import { db } from "@/db"
 import { Resend } from "resend"
-import { billingService } from "@/features/billing/service"
-import { polar, webhooks } from "@polar-sh/better-auth"
-import { polarCore } from "@/features/billing/polar-client"
-import {
-  handleOrderPaid,
-  handleOrderRefunded,
-  syncPolarSubscription,
-} from "@/features/billing/polar"
 import { prepareAccountDeletion } from "@/features/account/delete-account"
 import { acceptingUsers } from "@/features/launch-gate"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const REPLY_TO = "support@sohizi.com"
-
-const WELCOME_CREDITS = 500n
-const polarWebhookSecret = process.env.POLAR_WEBHOOK_SECRET
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -90,53 +79,7 @@ export const auth = betterAuth({
     errorURL: process.env.FRONTEND_URL + "/auth-error",
   },
   plugins: [
-    ...(polarCore && polarWebhookSecret
-      ? [
-          polar({
-            client: polarCore,
-            use: [
-              webhooks({
-                secret: polarWebhookSecret,
-                onOrderPaid: handleOrderPaid,
-                onOrderRefunded: handleOrderRefunded,
-                onSubscriptionCreated: async (payload) =>
-                  syncPolarSubscription(payload.data.id),
-                onSubscriptionUpdated: async (payload) =>
-                  syncPolarSubscription(payload.data.id),
-                onSubscriptionActive: async (payload) =>
-                  syncPolarSubscription(payload.data.id),
-                onSubscriptionCanceled: async (payload) =>
-                  syncPolarSubscription(payload.data.id),
-                onSubscriptionUncanceled: async (payload) =>
-                  syncPolarSubscription(payload.data.id),
-                onSubscriptionPastDue: async (payload) =>
-                  syncPolarSubscription(payload.data.id),
-                onSubscriptionRevoked: async (payload) =>
-                  syncPolarSubscription(payload.data.id),
-              }),
-            ],
-          }),
-        ]
-      : []),
-    organization({
-      organizationHooks: {
-        afterCreateOrganization: async ({ organization }) => {
-          try {
-            await billingService.topup({
-              organizationId: organization.id,
-              amount: WELCOME_CREDITS,
-              idempotencyKey: `org-welcome:${organization.id}`,
-              metadata: { reason: "welcome_credits" },
-            })
-          } catch (error) {
-            console.error(
-              `[auth] Failed to grant welcome credits to org ${organization.id}:`,
-              error,
-            )
-          }
-        },
-      },
-    }),
+    organization(),
     emailOTP({
       sendVerificationOnSignUp: true,
       async sendVerificationOTP({ email, otp, type }) {

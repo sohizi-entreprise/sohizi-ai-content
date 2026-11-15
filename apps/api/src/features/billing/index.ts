@@ -6,20 +6,17 @@ import { billingService } from "./service"
 import { db } from "@/db"
 import { member } from "@/db/schema"
 import { and, eq } from "drizzle-orm"
-import { BadRequest, Forbidden } from "@/features/error"
+import { Forbidden } from "@/features/error"
 import {
   catalog,
-  ensurePolarCustomer,
   getBilling,
-  getCatalogProduct,
   hasPaidAccess,
-  packUnitBounds,
-  planChangeBehavior,
-  planTier,
+  checkout,
+  changePlan,
+  cancel,
+  portal,
   reconcileOrganization,
-  syncSubscription,
-} from "./polar"
-import { requirePolar } from "./polar-client"
+} from "./stripe"
 
 export async function billingContext(
   userId: string,
@@ -48,28 +45,6 @@ export async function billingContext(
       .split(",")
       .some((role) => ["owner", "admin"].includes(role.trim())),
   }
-}
-
-function publicBillingUrl() {
-  const origin = process.env.FRONTEND_URL
-  if (!origin) throw new Error("FRONTEND_URL is required for billing")
-  return new URL("/account/billing", origin).toString()
-}
-
-function packQuantity(
-  product: Awaited<ReturnType<typeof getCatalogProduct>>,
-  units: number | undefined,
-) {
-  const bounds = packUnitBounds(product)
-  if (!bounds)
-    throw new BadRequest("Product is not available for this purchase")
-  if (units == null) throw new BadRequest("Choose how many credits to buy")
-  if (
-    units < bounds.minimumUnits ||
-    (bounds.maximumUnits != null && units > bounds.maximumUnits)
-  )
-    throw new BadRequest("Credit quantity is outside the allowed range")
-  return units
 }
 
 export const publicTopUpPricingRoutes = new Elysia({ prefix: "/billing" }).get(
@@ -130,33 +105,7 @@ export const billingRoutes = new Elysia({ prefix: "/billing" })
     "/checkout",
     async ({ session, user, body }) => {
       const { organizationId } = await billingContext(user.id, session, true)
-      const product = await getCatalogProduct(body.productId, body.kind)
-      const billing = await getBilling(organizationId)
-      if (body.kind === "pack" && !hasPaidAccess(billing))
-        throw new Forbidden("An active paid plan is required to buy credits")
-      if (body.kind === "plan" && hasPaidAccess(billing))
-        throw new BadRequest(
-          "Change the current plan instead of starting another subscription",
-        )
-      const quantity =
-        body.kind === "pack" ? packQuantity(product, body.units) : null
-      const customerId = await ensurePolarCustomer(organizationId)
-      const checkout = await requirePolar().checkouts.create({
-        customer_id: customerId,
-        products: [body.productId],
-        allow_trial: false,
-        metadata: { organizationId },
-        success_url: publicBillingUrl() + "?checkout=success",
-        return_url: publicBillingUrl(),
-        ...(quantity
-          ? {
-              units: quantity,
-              min_units: quantity,
-              max_units: quantity,
-            }
-          : {}),
-      })
-      return { url: checkout.url }
+      return checkout(organizationId, body.productId, body.kind, body.units)
     },
     {
       body: z.object({
@@ -170,100 +119,21 @@ export const billingRoutes = new Elysia({ prefix: "/billing" })
     "/change-plan",
     async ({ session, user, body }) => {
       const { organizationId } = await billingContext(user.id, session, true)
-      const product = await getCatalogProduct(body.productId, "plan")
-      const billing = await getBilling(organizationId)
-      if (
-        !hasPaidAccess(billing) ||
-        !billing?.polarSubscriptionId ||
-        !billing.productId
-      )
-        throw new BadRequest("No paid subscription to change")
-      if (billing.pendingProductId)
-        throw new BadRequest("A plan change is already pending")
-      if (body.productId === billing.productId)
-        throw new BadRequest("Choose a different plan")
-      const currentProduct = await requirePolar().products.get(
-        billing.productId,
-      )
-      const currentTier = planTier(currentProduct.metadata)
-      const nextTier = planTier(product.metadata)
-      if (!currentTier || !nextTier)
-        throw new BadRequest("Plan tier metadata is missing")
-      const behavior = planChangeBehavior(currentTier, nextTier)
-      if (!behavior) throw new BadRequest("Choose a different plan tier")
-      if (behavior === "reset") {
-        const polarOrganization = await requirePolar().organizations.get(
-          product.organization_id,
-        )
-        if (
-          !polarOrganization.feature_settings?.reset_proration_behavior_enabled
-        )
-          throw new BadRequest(
-            "Immediate plan upgrades are not enabled in Polar yet",
-          )
-      }
-      const subscription = await requirePolar().subscriptions.update(
-        billing.polarSubscriptionId,
-        {
-          product_id: body.productId,
-          proration_behavior: behavior,
-        },
-      )
-      await syncSubscription(subscription)
-      return { pending: true }
+      return changePlan(organizationId, body.productId)
     },
     { body: z.object({ productId: z.string() }) },
   )
   .post("/cancel", async ({ session, user }) => {
     const { organizationId } = await billingContext(user.id, session, true)
-    const billing = await getBilling(organizationId)
-    if (!hasPaidAccess(billing) || !billing?.polarSubscriptionId)
-      throw new BadRequest("No paid subscription to cancel")
-    await syncSubscription(
-      await requirePolar().subscriptions.update(billing.polarSubscriptionId, {
-        cancel_at_period_end: true,
-      }),
-    )
-    return { pending: true }
+    return cancel(organizationId)
   })
   .post("/resume", async ({ session, user }) => {
     const { organizationId } = await billingContext(user.id, session, true)
-    const billing = await getBilling(organizationId)
-    if (
-      !billing?.polarSubscriptionId ||
-      !billing.cancelAtPeriodEnd ||
-      !hasPaidAccess(billing)
-    )
-      throw new BadRequest("No cancellation to resume")
-    await syncSubscription(
-      await requirePolar().subscriptions.update(billing.polarSubscriptionId, {
-        cancel_at_period_end: false,
-      }),
-    )
-    return { pending: false }
+    return cancel(organizationId, true)
   })
   .post("/portal", async ({ session, user }) => {
     const { organizationId } = await billingContext(user.id, session, true)
-    const billing = await getBilling(organizationId)
-    if (!billing?.polarCustomerId)
-      throw new BadRequest("No billing customer yet")
-    const [owner] = await db
-      .select({ userId: member.userId })
-      .from(member)
-      .where(
-        and(
-          eq(member.organizationId, organizationId),
-          eq(member.role, "owner"),
-        ),
-      )
-      .limit(1)
-    if (!owner) throw new BadRequest("Organization owner not found")
-    const portal = await requirePolar().customerSessions.create({
-      customer_id: billing.polarCustomerId,
-      external_member_id: owner.userId,
-      return_url: publicBillingUrl(),
-    })
-    return { url: portal.customer_portal_url }
+    return portal(organizationId)
   })
   .post("/reconcile", async ({ session, user }) => {
     const { organizationId } = await billingContext(user.id, session, true)

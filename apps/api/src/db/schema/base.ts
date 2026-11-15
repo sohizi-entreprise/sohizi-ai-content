@@ -726,8 +726,8 @@ export const organizationWallets = pgTable(
     paygGeneration: bigint("payg_generation", { mode: "bigint" })
       .default(sql`0`)
       .notNull(),
-    polarCustomerId: text("polar_customer_id"),
-    polarSubscriptionId: text("polar_subscription_id"),
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
     productId: text("product_id"),
     productName: text("product_name"),
     allowance: bigint("allowance", { mode: "bigint" }),
@@ -739,11 +739,11 @@ export const organizationWallets = pgTable(
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("organization_wallets_polar_customer_id_unique").on(
-      table.polarCustomerId,
+    uniqueIndex("organization_wallets_stripe_customer_id_unique").on(
+      table.stripeCustomerId,
     ),
-    uniqueIndex("organization_wallets_polar_subscription_id_unique").on(
-      table.polarSubscriptionId,
+    uniqueIndex("organization_wallets_stripe_subscription_id_unique").on(
+      table.stripeSubscriptionId,
     ),
     check(
       "organization_wallets_balance_nonnegative",
@@ -805,20 +805,6 @@ export const billingReservations = pgTable(
     ),
   ],
 )
-
-export const polarProcessedOrders = pgTable("polar_processed_orders", {
-  orderId: text("order_id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  productId: text("product_id").notNull(),
-  creditsGranted: bigint("credits_granted", { mode: "bigint" }).notNull(),
-  kind: text("kind").notNull(),
-  refunded: boolean("refunded").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-})
 
 export const billingLedger = pgTable(
   "billing_ledger",
