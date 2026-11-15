@@ -17,6 +17,7 @@ import { auth } from "@/lib/auth"
 import { analyticsConsentRoutes } from "@/features/analytics-consent"
 import { launchGateRoutes } from "@/features/launch-gate"
 import { InsufficientCreditsError } from "@/features/billing"
+import { stripeWebhookRoutes } from "@/features/billing/stripe"
 import { NameConflictError } from "@/features/skill-market"
 import { waitForActiveAgentRuns } from "@/features/chat/service"
 
@@ -185,6 +186,7 @@ const app = new Elysia()
   .use(routes.chatRoutes)
   .use(routes.mediaEngineRoutes)
   .use(routes.publicTopUpPricingRoutes)
+  .use(stripeWebhookRoutes)
   .use(routes.billingRoutes)
   .use(routes.videoEditorRoutes)
   .use(routes.generationRequestRoutes)

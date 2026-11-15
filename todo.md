@@ -63,8 +63,8 @@
 <!-- Payment -->
 
 [ ] design final pricing and plan
-[ ] create product in polar.sh
-[ ] validate account with polar.sh
+[x] create Stripe products
+[ ] validate Stripe Managed Payments account
 [ ] connect payments
 
 <!-- Issues -->
