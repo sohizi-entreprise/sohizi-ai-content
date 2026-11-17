@@ -6,15 +6,39 @@ kind: llm
 rateLimit: { rpm: 60, burst: 60, maxConcurrency: 10 }
 circuitConfig: { cooldownMs: 15000, probeTtlMs: 30000 }
 models:
+  - { id: openai/gpt-6.1-sol, apiName: openai/gpt-6.1-sol, priority: 98 }
   - { id: openai/gpt-6-astra, apiName: openai/gpt-6-astra, priority: 100 }
   - { id: openai/gpt-6-sol, apiName: openai/gpt-6-sol, priority: 95 }
   - { id: openai/gpt-5.6-sol, apiName: openai/gpt-5.6-sol, priority: 85 }
+  - { id: openai/gpt-5.6-terra, apiName: openai/gpt-5.6-terra, priority: 82 }
+  - { id: openai/gpt-5.6-luna, apiName: openai/gpt-5.6-luna, priority: 78 }
   - { id: openai/gpt-5.5, apiName: openai/gpt-5.5, priority: 80 }
   - { id: openai/gpt-5.4, apiName: openai/gpt-5.4, priority: 75 }
+  - {
+      id: google/gemini-4-carbon,
+      apiName: google/gemini-4-carbon,
+      priority: 100,
+    }
+  - { id: google/gemini-4-argon, apiName: google/gemini-4-argon, priority: 95 }
+  - {
+      id: google/gemini-3.8-flash,
+      apiName: google/gemini-3.8-flash,
+      priority: 92,
+    }
+  - {
+      id: google/gemini-3.7-flash,
+      apiName: google/gemini-3.7-flash,
+      priority: 88,
+    }
   - {
       id: google/gemini-3.1-pro-preview,
       apiName: google/gemini-3.1-pro-preview,
       priority: 90,
+    }
+  - {
+      id: anthropic/claude-fable-5-2,
+      apiName: anthropic/claude-fable-5.2,
+      priority: 100,
     }
   - {
       id: anthropic/claude-fable-5-1,
@@ -56,6 +80,7 @@ models:
       apiName: anthropic/claude-opus-4.5,
       priority: 64,
     }
+  - { id: xai/grok-4.7, apiName: x-ai/grok-4.7, priority: 95 }
   - { id: xai/grok-4.6, apiName: x-ai/grok-4.6, priority: 90 }
   - { id: openai/gpt-6-luna, apiName: openai/gpt-6-luna, priority: 90 }
   - { id: openai/gpt-5.4-mini, apiName: openai/gpt-5.4-mini, priority: 80 }
@@ -101,6 +126,11 @@ models:
       id: google/gemini-2.5-flash,
       apiName: google/gemini-2.5-flash,
       priority: 75,
+    }
+  - {
+      id: google/gemini-3.5-flash-lite,
+      apiName: google/gemini-3.5-flash-lite,
+      priority: 72,
     }
   - {
       id: google/gemini-3.1-flash-lite,
