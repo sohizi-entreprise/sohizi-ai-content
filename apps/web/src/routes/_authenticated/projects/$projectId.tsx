@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   // Authenticated project workspace is client-rendered: editor/media/video tools
   // pull remotion/mermaid/shiki into the SSR graph when these routes are SSRed.
   ssr: false,
-  pendingComponent: () => <RoutePending label="Loading project..." />,
+  pendingComponent: () => <RoutePending />,
   component: RouteComponent,
 })
 

@@ -5,7 +5,7 @@ export const Route = createFileRoute(
   "/_authenticated/projects/$projectId/editor",
 )({
   ssr: false,
-  pendingComponent: () => <RoutePending label="Loading editor..." />,
+  pendingComponent: () => <RoutePending />,
   component: lazyRouteComponent(
     () => import("@/features/editor"),
     "VideoProductionEditor",

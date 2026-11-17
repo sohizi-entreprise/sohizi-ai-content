@@ -9,6 +9,7 @@ import {
   reportBrowserError,
   reportServerBoundaryError,
 } from "@/lib/sentry-client"
+import { RoutePending } from "@/components/layout/route-pending"
 import { OrgSetupModal } from "@/features/account/components/org-setup-modal"
 import { authClient, organization, useSession } from "@/lib/auth-client"
 
@@ -73,11 +74,7 @@ function RouteComponent() {
   }, [userId, isPending, navigate, refetch])
 
   if (isPending && !session) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    )
+    return <RoutePending />
   }
 
   if (!session) {
@@ -87,11 +84,7 @@ function RouteComponent() {
   return (
     <div className="relative h-full">
       <Outlet />
-      {!orgReady && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      )}
+      {!orgReady && <RoutePending />}
       <OrgSetupModal
         open={showOrgModal}
         onCreated={async () => {
