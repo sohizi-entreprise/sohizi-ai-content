@@ -60,7 +60,7 @@ function RouteComponent() {
             alt=""
             className="size-8 object-contain relative -top-1"
           />
-          <span className="text-base font-medium font-space-grotesk tracking-wide tex-foreground">
+          <span className="font-display text-base font-medium tracking-tight text-foreground">
             Sohizi lab
           </span>
         </Link>

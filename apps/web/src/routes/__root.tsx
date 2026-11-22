@@ -69,7 +69,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap",
       },
       {
         rel: "stylesheet",
@@ -88,7 +88,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-background font-space-grotesk antialiased selection:bg-[Highlight] selection:text-foreground">
+      <body className="min-h-screen bg-background font-geist antialiased selection:bg-[Highlight] selection:text-foreground">
         {children}
         <script
           dangerouslySetInnerHTML={{
