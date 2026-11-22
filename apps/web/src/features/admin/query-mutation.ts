@@ -1,6 +1,7 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query"
 import * as requests from "./requests"
 import type {
+  CatalogSyncMode,
   CreateCategoryInput,
   CreateCommandInput,
   CreateContentCategoryInput,
@@ -461,5 +462,19 @@ export const deleteAdminSkillMutationOptions = () =>
     mutationFn: (id: string) => requests.deleteAdminSkill(id),
     meta: {
       invalidateQueries: [keysFactory.skills],
+    },
+  })
+
+export const syncAdminCatalogMutationOptions = () =>
+  mutationOptions({
+    mutationFn: (mode: CatalogSyncMode) => requests.syncAdminCatalog(mode),
+    meta: {
+      invalidateQueries: [
+        keysFactory.models,
+        keysFactory.categories,
+        keysFactory.parameters,
+        keysFactory.vendors,
+        keysFactory.commands,
+      ],
     },
   })

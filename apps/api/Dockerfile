@@ -42,8 +42,10 @@ WORKDIR /app
 COPY --from=build --chmod=755 /app/api api
 COPY --from=build --chmod=755 /app/migrate migrate
 COPY --from=build /app/apps/api/src/db/migrations /app/migrations
+COPY --from=build /app/apps/api/src/catalog /app/catalog
 
 ENV NODE_ENV=production
+ENV CATALOG_DIR=/app/catalog
 
 CMD ["./api"]
 

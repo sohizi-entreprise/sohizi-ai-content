@@ -11,6 +11,8 @@ import type {
   AdminSkill,
   AdminVendor,
   CatalogModel,
+  CatalogSyncMode,
+  CatalogSyncResult,
   CreateCategoryInput,
   CreateCommandInput,
   CreateContentCategoryInput,
@@ -312,12 +314,22 @@ export const updateAdminCommand = async (
   id: string,
   input: UpdateCommandInput,
 ): Promise<AdminCommand> => {
-  const response = await api.patch(`/admin/commands/${id}`, input)
+  const response = await api.patch(
+    `/admin/commands/${encodeURIComponent(id)}`,
+    input,
+  )
   return response.data
 }
 
 export const deleteAdminCommand = async (id: string): Promise<{ ok: true }> => {
-  const response = await api.delete(`/admin/commands/${id}`)
+  const response = await api.delete(`/admin/commands/${encodeURIComponent(id)}`)
+  return response.data
+}
+
+export const syncAdminCatalog = async (
+  mode: CatalogSyncMode,
+): Promise<CatalogSyncResult> => {
+  const response = await api.post("/admin/catalog/sync", { mode })
   return response.data
 }
 

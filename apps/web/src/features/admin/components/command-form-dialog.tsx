@@ -26,9 +26,10 @@ type Props = {
 }
 
 const emptyForm = {
+  id: "",
   name: "",
-  action: "",
-  visible: false,
+  promptModifier: "",
+  enabled: true,
 }
 
 export function CommandFormDialog({ open, onOpenChange, command }: Props) {
@@ -43,9 +44,10 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
     if (!open) return
     if (command) {
       setForm({
+        id: command.id,
         name: command.name,
-        action: command.action,
-        visible: command.visible,
+        promptModifier: command.promptModifier,
+        enabled: command.enabled,
       })
     } else {
       setForm(emptyForm)
@@ -58,12 +60,20 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
     setError(null)
     try {
       const payload: CreateCommandInput = {
+        id: form.id.trim(),
         name: form.name.trim(),
-        action: form.action.trim(),
-        visible: form.visible,
+        promptModifier: form.promptModifier.trim(),
+        enabled: form.enabled,
       }
       if (isEdit && command) {
-        await updateMutation.mutateAsync({ id: command.id, input: payload })
+        await updateMutation.mutateAsync({
+          id: command.id,
+          input: {
+            name: payload.name,
+            promptModifier: payload.promptModifier,
+            enabled: payload.enabled,
+          },
+        })
       } else {
         await createMutation.mutateAsync(payload)
       }
@@ -83,6 +93,22 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
+            <Label htmlFor="command-id">ID</Label>
+            <Input
+              id="command-id"
+              value={form.id}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, id: event.target.value }))
+              }
+              placeholder="plan"
+              disabled={isEdit}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Slash-friendly identifier (letters, numbers, - or _)
+            </p>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="command-name">Name</Label>
             <Input
               id="command-name"
@@ -90,20 +116,20 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, name: event.target.value }))
               }
-              placeholder="summarize"
+              placeholder="Plan"
               required
             />
-            <p className="text-xs text-muted-foreground">
-              Slash-friendly name (letters, numbers, - or _)
-            </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="command-action">Action</Label>
+            <Label htmlFor="command-prompt-modifier">Prompt modifier</Label>
             <Textarea
-              id="command-action"
-              value={form.action}
+              id="command-prompt-modifier"
+              value={form.promptModifier}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, action: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  promptModifier: event.target.value,
+                }))
               }
               placeholder="Instruction injected when this command is invoked"
               rows={6}
@@ -112,16 +138,16 @@ export function CommandFormDialog({ open, onOpenChange, command }: Props) {
           </div>
           <div className="flex items-center justify-between rounded-md border px-3 py-2">
             <div>
-              <Label htmlFor="command-visible">Visible</Label>
+              <Label htmlFor="command-enabled">Enabled</Label>
               <p className="text-xs text-muted-foreground">
                 When on, users can discover and invoke this command
               </p>
             </div>
             <Switch
-              id="command-visible"
-              checked={form.visible}
+              id="command-enabled"
+              checked={form.enabled}
               onCheckedChange={(checked) =>
-                setForm((prev) => ({ ...prev, visible: checked }))
+                setForm((prev) => ({ ...prev, enabled: checked }))
               }
             />
           </div>

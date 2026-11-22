@@ -1,15 +1,16 @@
 import { readdir } from "node:fs/promises"
 import { join } from "node:path"
+import { asc, eq, inArray } from "drizzle-orm"
 import { z } from "zod"
+import { db } from "@/db"
+import { presetOptions, presets as presetsTable } from "@/db/schema"
+import type { PresetGenerationTarget, PresetIllustration } from "@/type"
 
 export const generationTargets = ["image", "video", "audio", "project"] as const
 
-export type GenerationTarget = (typeof generationTargets)[number]
+export type GenerationTarget = PresetGenerationTarget
 
-export type PresetIllustration = {
-  url: string | null
-  type: "video" | "image"
-}
+export type { PresetIllustration }
 
 export type CatalogPresetOption = {
   label: string
@@ -66,12 +67,13 @@ const PRESET_KEY_ORDER = [
   "characterStyle",
 ]
 
-const PRESETS_DIR = join(import.meta.dir, "presets")
+const CATALOG_DIR = process.env.CATALOG_DIR ?? import.meta.dir
+const PRESETS_DIR = join(CATALOG_DIR, "presets")
 
 let cachedPresets: CatalogPreset[] | null = null
 let loadingPresets: Promise<CatalogPreset[]> | null = null
 
-const presetOrder = (key: string) => {
+export const presetOrder = (key: string) => {
   const index = PRESET_KEY_ORDER.indexOf(key)
   return index === -1 ? PRESET_KEY_ORDER.length : index
 }
@@ -139,17 +141,58 @@ export const loadPresets = async (
   )
 }
 
+export const loadPresetsFromDb = async (): Promise<CatalogPreset[]> => {
+  const presetRows = await db
+    .select()
+    .from(presetsTable)
+    .where(eq(presetsTable.enabled, true))
+    .orderBy(asc(presetsTable.sortOrder), asc(presetsTable.id))
+
+  if (presetRows.length === 0) {
+    return []
+  }
+
+  const presetIds = presetRows.map((row) => row.id)
+  const optionRows = await db
+    .select()
+    .from(presetOptions)
+    .where(inArray(presetOptions.presetId, presetIds))
+    .orderBy(asc(presetOptions.sortOrder), asc(presetOptions.id))
+
+  const optionsByPresetId = new Map<string, CatalogPresetOption[]>()
+  for (const option of optionRows) {
+    const list = optionsByPresetId.get(option.presetId) ?? []
+    list.push({
+      label: option.label,
+      value: option.value,
+      illustration: option.illustration,
+      promptModifier: option.promptModifier,
+    })
+    optionsByPresetId.set(option.presetId, list)
+  }
+
+  return presetRows.map((preset) => ({
+    id: preset.id,
+    key: preset.key,
+    label: preset.label,
+    generationTarget: preset.generationTarget,
+    options: optionsByPresetId.get(preset.id) ?? [],
+  }))
+}
+
 export const resetPresetCache = () => {
   cachedPresets = null
   loadingPresets = null
 }
 
-export const getPresets = async (): Promise<CatalogPreset[]> => {
+export const getPresets = async (
+  loader: () => Promise<CatalogPreset[]> = loadPresetsFromDb,
+): Promise<CatalogPreset[]> => {
   if (cachedPresets) {
     return cachedPresets
   }
   if (!loadingPresets) {
-    loadingPresets = loadPresets()
+    loadingPresets = loader()
       .then((presets) => {
         cachedPresets = presets
         return presets

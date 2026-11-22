@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm"
 import { db, pool } from "@/db"
+import { resetCommandCache } from "@/catalog/commands"
+import { syncCatalog, type CatalogWriteMode } from "@/catalog/populate"
 import { BadRequest, Conflict, NotFound } from "@/features/error"
 import {
   isRegisteredMediaAdapter,
@@ -597,14 +599,17 @@ export const getCommand = async (id: string) => {
 
 export const createCommand = async (input: CreateCommandInput) => {
   try {
-    return await commandRepo.createCommand({
+    const created = await commandRepo.createCommand({
+      id: input.id,
       name: input.name,
-      action: input.action,
-      visible: input.visible,
+      promptModifier: input.promptModifier,
+      enabled: input.enabled,
     })
+    resetCommandCache()
+    return created
   } catch (error) {
     if (isUniqueViolation(error)) {
-      throw new Conflict("Command with this name already exists")
+      throw new Conflict("Command with this ID or name already exists")
     }
     throw error
   }
@@ -625,6 +630,7 @@ export const updateCommand = async (id: string, input: UpdateCommandInput) => {
     if (!updated) {
       throw new NotFound("Command not found")
     }
+    resetCommandCache()
     return updated
   } catch (error) {
     if (isUniqueViolation(error)) {
@@ -640,7 +646,22 @@ export const deleteCommand = async (id: string) => {
     throw new NotFound("Command not found")
   }
   await commandRepo.deleteCommand(id)
+  resetCommandCache()
   return { ok: true as const }
+}
+
+export const syncCatalogData = async (mode: CatalogWriteMode) => {
+  try {
+    const result = await syncCatalog(mode)
+    return {
+      ok: true as const,
+      mode: result.mode,
+      removed: result.removed,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new BadRequest(message)
+  }
 }
 
 // ======================== Content categories ========================

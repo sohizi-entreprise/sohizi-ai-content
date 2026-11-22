@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { SYSTEM_LEVEL_FILES } from "@/features/ai/agent/constants/system-files"
 import {
   getCommands,
+  loadCommands,
   resetCommandCache,
   resolveCatalogCommands,
   toPublicCommands,
@@ -10,8 +11,8 @@ import {
 describe("commands", () => {
   it("caches the project commands", async () => {
     resetCommandCache()
-    const first = await getCommands()
-    const second = await getCommands()
+    const first = await getCommands(loadCommands)
+    const second = await getCommands(loadCommands)
 
     expect(first.map((command) => command.id)).toEqual([
       "plan",
@@ -23,7 +24,7 @@ describe("commands", () => {
   })
 
   it("hides prompt modifiers from the public payload", async () => {
-    const [plan] = toPublicCommands(await getCommands())
+    const [plan] = toPublicCommands(await getCommands(loadCommands))
 
     expect(plan).toEqual({
       id: "plan",
@@ -33,7 +34,7 @@ describe("commands", () => {
   })
 
   it("resolves catalog commands by id or name without duplicates", async () => {
-    const commands = await getCommands()
+    const commands = await getCommands(loadCommands)
     const resolved = resolveCatalogCommands(commands, [
       "plan",
       "Storyboard",
@@ -49,7 +50,7 @@ describe("commands", () => {
 
   it("instructs document-producing commands to use /system/syntax/document", async () => {
     resetCommandCache()
-    const commands = await getCommands()
+    const commands = await getCommands(loadCommands)
     const plan = commands.find((command) => command.id === "plan")
     const script = commands.find((command) => command.id === "script")
     const storyboard = commands.find((command) => command.id === "storyboard")

@@ -18,8 +18,10 @@ import {
 import { CommandFormDialog } from "./command-form-dialog"
 import type { AdminCommand } from "../types"
 
-const previewAction = (action: string) =>
-  action.length > 80 ? `${action.slice(0, 80)}…` : action
+const previewPromptModifier = (promptModifier: string) =>
+  promptModifier.length > 80
+    ? `${promptModifier.slice(0, 80)}…`
+    : promptModifier
 
 export function CommandsPage() {
   const {
@@ -59,7 +61,7 @@ export function CommandsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Commands</h1>
           <p className="text-sm text-muted-foreground">
-            Global slash commands available in chat when marked visible.
+            Catalog slash commands available in projects and chat when enabled.
           </p>
         </div>
         <Button onClick={openCreate}>Add command</Button>
@@ -76,9 +78,10 @@ export function CommandsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>ID</TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Visible</TableHead>
+              <TableHead>Prompt modifier</TableHead>
+              <TableHead>Enabled</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -86,18 +89,21 @@ export function CommandsPage() {
             {commands.map((command) => (
               <TableRow key={command.id}>
                 <TableCell className="font-mono text-sm">
-                  /{command.name}
+                  /{command.id}
+                </TableCell>
+                <TableCell className="font-medium text-sm">
+                  {command.name}
                 </TableCell>
                 <TableCell className="max-w-md text-sm text-muted-foreground">
-                  {previewAction(command.action)}
+                  {previewPromptModifier(command.promptModifier)}
                 </TableCell>
                 <TableCell>
                   <Switch
-                    checked={command.visible}
+                    checked={command.enabled}
                     onCheckedChange={(checked) =>
                       updateMutation.mutate({
                         id: command.id,
-                        input: { visible: checked },
+                        input: { enabled: checked },
                       })
                     }
                   />
@@ -123,7 +129,7 @@ export function CommandsPage() {
             {!isLoading && commands.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className="py-8 text-center text-muted-foreground"
                 >
                   No commands yet.
