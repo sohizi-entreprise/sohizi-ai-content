@@ -41,7 +41,7 @@ const editorExtensions = [
     emptyNodeClass: ({ hasAnchor }) => (hasAnchor ? "is-empty" : ""),
     placeholder: ({ node, hasAnchor }) => {
       if (!hasAnchor || node.type.name !== "paragraph") return ""
-      return "Write something or use / command"
+      return "Write something or use / special blocks"
     },
   }),
   TaskList,

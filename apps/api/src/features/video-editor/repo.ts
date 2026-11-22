@@ -1,5 +1,7 @@
 import { db } from "@/db"
 import {
+  assets,
+  fileNodes,
   videoCompositions,
   videoTracks,
   videoClips,
@@ -16,10 +18,21 @@ import {
   inArray,
   gte,
   isNull,
+  isNotNull,
   lt,
+  max,
 } from "drizzle-orm"
-import type { VideoTrackType, VideoClipProperties, AspectRatio } from "@/type"
+import type {
+  AssetMetadata,
+  VideoTrackType,
+  VideoClipProperties,
+  AspectRatio,
+} from "@/type"
 import type { VideoRenderJobStatus } from "@/db/schema"
+import { fileFormat, fileType } from "../file-system/constants"
+import { ORDER_GAP } from "../file-system/repo"
+import { joinLtree, normalizeFileNodeName } from "../file-system/utils"
+import { mergeAssetFileNodeMetadata } from "../media-engine/file-node-metadata"
 
 // ============================================================================
 // COMPOSITIONS
@@ -383,8 +396,13 @@ export type CreateRenderJobData = {
   id: string
   projectId: string
   compositionId: string
+  folderId?: string | null
+  fileNodeId?: string | null
+  compositionHash?: string | null
   userId: string
   analyticsConsentId?: string | null
+  status?: VideoRenderJobStatus
+  progress?: number
   compositionVersion: number
   fps: number
   width: number
@@ -395,6 +413,12 @@ export type CreateRenderJobData = {
   billingReservationId?: string | null
   outputBucket?: string | null
   functionName?: string | null
+  outputKey?: string | null
+  outputUrl?: string | null
+  outputStorageKey?: string | null
+  outputSizeInBytes?: number | null
+  startedAt?: Date | null
+  finishedAt?: Date | null
   capacityAccountId?: string | null
   capacityLease?: {
     poolId: string
@@ -443,6 +467,27 @@ export const getActiveRenderJobForComposition = async (
   return result[0] ?? null
 }
 
+export const getCompletedRenderJobByHash = async (
+  compositionId: string,
+  compositionHash: string,
+) => {
+  const result = await db
+    .select()
+    .from(videoRenderJobs)
+    .where(
+      and(
+        eq(videoRenderJobs.compositionId, compositionId),
+        eq(videoRenderJobs.compositionHash, compositionHash),
+        eq(videoRenderJobs.status, "completed"),
+        isNotNull(videoRenderJobs.outputUrl),
+        isNotNull(videoRenderJobs.outputStorageKey),
+      ),
+    )
+    .orderBy(desc(videoRenderJobs.createdAt))
+    .limit(1)
+  return result[0] ?? null
+}
+
 export const listRenderJobsForComposition = async (
   compositionId: string,
   limit = 10,
@@ -458,11 +503,17 @@ export const listRenderJobsForComposition = async (
 export type UpdateRenderJobData = {
   status?: VideoRenderJobStatus
   progress?: number
+  folderId?: string | null
+  fileNodeId?: string | null
+  fileName?: string
+  compositionHash?: string | null
   remoteJobId?: string
   billingReservationId?: string | null
   outputBucket?: string | null
   functionName?: string | null
   outputKey?: string | null
+  outputUrl?: string | null
+  outputStorageKey?: string | null
   outputSizeInBytes?: number | null
   failureCode?: string | null
   failureMessage?: string | null
@@ -500,6 +551,196 @@ export const listRendersMissingPoller = async (olderThan: Date, limit = 20) => {
       ),
     )
     .limit(limit)
+}
+
+export class FileNodeDirectoryConflictError extends Error {
+  constructor(
+    message = "A folder with this name already exists in the selected location.",
+  ) {
+    super(message)
+    this.name = "FileNodeDirectoryConflictError"
+  }
+}
+
+export const getFolderById = async (projectId: string, folderId: string) => {
+  const rows = await db
+    .select()
+    .from(fileNodes)
+    .where(and(eq(fileNodes.projectId, projectId), eq(fileNodes.id, folderId)))
+    .limit(1)
+  const folder = rows[0]
+  if (!folder || !folder.directory) return null
+  return folder
+}
+
+export type UpsertExportedVideoInput = {
+  projectId: string
+  folderId: string
+  fileName: string
+  url: string
+  storageKey: string
+  sizeInBytes: number | null
+}
+
+export const upsertExportedVideoInFolder = async (
+  input: UpsertExportedVideoInput,
+) => {
+  const { projectId, folderId, fileName, url, storageKey, sizeInBytes } = input
+  const normalizedName = normalizeFileNodeName(fileName, false)
+  if (!normalizedName) {
+    throw new Error("Invalid file name")
+  }
+
+  const assetMetadata: AssetMetadata = {
+    contentType: "video/mp4",
+    size: sizeInBytes ?? 0,
+  }
+
+  return db.transaction(async (tx) => {
+    const folderRows = await tx
+      .select({
+        id: fileNodes.id,
+        path: fileNodes.path,
+        directory: fileNodes.directory,
+      })
+      .from(fileNodes)
+      .where(
+        and(eq(fileNodes.projectId, projectId), eq(fileNodes.id, folderId)),
+      )
+      .limit(1)
+    const folder = folderRows[0]
+    if (!folder || !folder.directory) {
+      throw new Error("Folder not found")
+    }
+
+    const existingRows = await tx
+      .select()
+      .from(fileNodes)
+      .where(
+        and(
+          eq(fileNodes.projectId, projectId),
+          eq(fileNodes.parentId, folderId),
+          eq(fileNodes.name, normalizedName),
+        ),
+      )
+      .limit(1)
+    const existingFileNode = existingRows[0]
+
+    if (existingFileNode) {
+      if (existingFileNode.directory) {
+        throw new FileNodeDirectoryConflictError()
+      }
+
+      const updatedNodes = await tx
+        .update(fileNodes)
+        .set({
+          type: fileType.VIDEO,
+          format: fileFormat.FILE,
+          metadata: mergeAssetFileNodeMetadata(existingFileNode.metadata, {
+            metadata: assetMetadata,
+            url,
+            storageKey,
+          }),
+          updatedAt: new Date(),
+        })
+        .where(eq(fileNodes.id, existingFileNode.id))
+        .returning()
+      const fileNode = updatedNodes[0] ?? existingFileNode
+
+      const existingAssets = await tx
+        .select()
+        .from(assets)
+        .where(
+          and(
+            eq(assets.projectId, projectId),
+            eq(assets.fileNodeId, existingFileNode.id),
+            isNull(assets.expireAt),
+          ),
+        )
+        .limit(1)
+      const existingAsset = existingAssets[0]
+
+      if (existingAsset) {
+        const updatedAssets = await tx
+          .update(assets)
+          .set({
+            name: fileName,
+            type: "video",
+            url,
+            storageKey,
+            metadata: assetMetadata,
+            updatedAt: new Date(),
+          })
+          .where(eq(assets.id, existingAsset.id))
+          .returning()
+        return { fileNode, asset: updatedAssets[0] ?? existingAsset }
+      }
+
+      const insertedAssets = await tx
+        .insert(assets)
+        .values({
+          projectId,
+          name: fileName,
+          type: "video",
+          url,
+          storageKey,
+          source: "user-uploaded",
+          fileNodeId: existingFileNode.id,
+          metadata: assetMetadata,
+        })
+        .returning()
+      return { fileNode, asset: insertedAssets[0] }
+    }
+
+    const posRows = await tx
+      .select({ maxPosition: max(fileNodes.position) })
+      .from(fileNodes)
+      .where(
+        and(
+          eq(fileNodes.projectId, projectId),
+          eq(fileNodes.parentId, folderId),
+        ),
+      )
+    const filePosition = (posRows[0]?.maxPosition ?? 0) + ORDER_GAP
+
+    const insertedNodes = await tx
+      .insert(fileNodes)
+      .values({
+        projectId,
+        name: normalizedName,
+        parentId: folderId,
+        type: fileType.VIDEO,
+        format: fileFormat.FILE,
+        editable: true,
+        position: filePosition,
+        path: joinLtree(folder.path, normalizedName),
+        metadata: mergeAssetFileNodeMetadata(null, {
+          metadata: assetMetadata,
+          url,
+          storageKey,
+        }),
+      })
+      .returning()
+    const fileNode = insertedNodes[0]
+    if (!fileNode) {
+      throw new Error("Failed to create file node")
+    }
+
+    const insertedAssets = await tx
+      .insert(assets)
+      .values({
+        projectId,
+        name: fileName,
+        type: "video",
+        url,
+        storageKey,
+        source: "user-uploaded",
+        fileNodeId: fileNode.id,
+        metadata: assetMetadata,
+      })
+      .returning()
+    return { fileNode, asset: insertedAssets[0] }
+  })
 }
 
 // ============================================================================

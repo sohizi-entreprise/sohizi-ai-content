@@ -227,8 +227,15 @@ const selectionsFromSettings = (
 export const buildProjectBriefContent = (
   presets: CatalogPreset[],
   settings: Array<PresetSelection> | Record<string, unknown> | null | undefined,
+  briefText?: string | null,
 ): string => {
-  const lines: string[] = []
+  const trimmedBrief = typeof briefText === "string" ? briefText.trim() : ""
+  const resolvedPresets: Array<{
+    label: string
+    optionLabel: string
+    promptModifier: string
+  }> = []
+
   for (const selection of selectionsFromSettings(presets, settings)) {
     const preset = presets.find((item) => item.id === selection.id)
     if (!preset) {
@@ -238,12 +245,50 @@ export const buildProjectBriefContent = (
     if (!option) {
       continue
     }
-    lines.push(`- **${preset.label}**: ${option.promptModifier}`)
+    resolvedPresets.push({
+      label: preset.label,
+      optionLabel: option.label,
+      promptModifier: option.promptModifier,
+    })
   }
 
-  if (lines.length === 0) {
+  if (!trimmedBrief && resolvedPresets.length === 0) {
     return ""
   }
 
-  return `# Project Brief\n\n${lines.join("\n")}\n`
+  const sections: string[] = ["# Project Brief"]
+
+  if (resolvedPresets.length > 0) {
+    const propertyLines = resolvedPresets.map(
+      (item) => `- ${item.label}: ${item.optionLabel}`,
+    )
+    sections.push(
+      [
+        ":::properties",
+        "title: Production Specifications",
+        "layout: grid",
+        ...propertyLines,
+        ":::",
+      ].join("\n"),
+    )
+
+    const attributeBlocks = resolvedPresets.map(
+      (item) => `- ${item.label}:\n  ${item.promptModifier}`,
+    )
+    sections.push(
+      [
+        ":::attributes",
+        "title: Creative Direction",
+        "",
+        attributeBlocks.join("\n\n"),
+        ":::",
+      ].join("\n"),
+    )
+  }
+
+  if (trimmedBrief) {
+    sections.push(trimmedBrief)
+  }
+
+  return `${sections.join("\n\n")}\n`
 }

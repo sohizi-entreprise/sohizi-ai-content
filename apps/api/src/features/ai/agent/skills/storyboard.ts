@@ -13,7 +13,7 @@ Execute strictly in this order: **1. World -> 2. Full Text -> 3. References -> 4
 - Define the storyboard's world-bible front matter (\`aspectRatio\`, \`visualStyle\`, \`colorPalette\`, \`temporalContext\`) and keep fixed traits consistent across every prompt.
 
 ### 2. Write All Text Before Any Image Generation
-- Write the complete storyboard file (all scenes and shots) before generating any images.
+- Create a storyboard file with \`type: "storyboard"\` (or update the existing storyboard file in place) and write the complete storyboard (all scenes and shots) before generating any images.
 - Every shot must include \`action\`, \`shotType\`, and \`camera\` (\`angle\` + \`movement\`).
 - **Sound:** Decide from the brief whether the project uses \`narration\`, \`dialogue\`, or both, and write short, natural lines sized to each shot. If intentionally silent, state that in the scene \`action\`.
 - Read through once to verify story arc, pacing, and sound coverage before moving on.
@@ -52,11 +52,10 @@ Execute strictly in this order: **1. World -> 2. Full Text -> 3. References -> 4
 - Follow \`/system/skills/image-video-generation\` to create and verify reference anchors for recurring characters, locations, or props (plus an optional style frame) before generating shot images.
 - If an anchor is flawed, fix the anchor—do not patch around it in shot prompts.
 
-### 4. Generate and Attach Shot Images Continuously
-- Generate in shot order within the concurrency limit. Do not pause for user confirmation between shots.
+### 4. Generate and Attach Shot Images Batch by Batch (Scene by Scene)
+- Work batch by batch (scene by scene): generate all shot images for the current scene within the concurrency limit, save the assets, and attach their URLs to the shots' \`image\` fields in the storyboard file before moving on to the next scene. Do not pause for user confirmation between scenes.
 - Build each prompt from the shot (\`action\`, \`shotType\`, \`camera\`), scene (\`environment\`, \`lighting\`), and world bible. If a generated image improves a shot, update the shot text to match.
-- As soon as each image finishes, save the asset and write its URL to the shot's \`image\` field immediately—do not wait for other jobs to finish.
-- If a generation fails, retry once from the original references; if it fails again, skip it and continue.
+- Strictly avoid regenerating the same shot image more than once if a generation fails or produces a malformed image, as repeated retries hurt the project's image budget. If a single retry from the original references fails, skip it and continue.
 
 ### 5. Review
 - Check story flow, continuity, sound coverage, and image-to-text match. Make targeted fixes only—no extra polish passes.

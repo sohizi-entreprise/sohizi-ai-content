@@ -192,6 +192,7 @@ const app = new Elysia()
   .use(routes.generationRequestRoutes)
   .use(routes.modelsRoutes)
   .use(routes.skillMarketRoutes)
+  .use(routes.feedbackRoutes)
   .use(routes.adminRoutes)
   .listen({
     port: 3030,

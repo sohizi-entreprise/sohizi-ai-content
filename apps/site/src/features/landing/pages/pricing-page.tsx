@@ -123,7 +123,7 @@ export function PricingPage() {
             transition={{ duration: 0.8, ease }}
             className="relative z-10"
           >
-            <h1 className="max-w-[14ch] font-display text-[clamp(2.75rem,9vw,7.5rem)] font-medium leading-[0.9] tracking-[-0.08em]">
+            <h1 className="max-w-[14ch] font-display text-[clamp(2.75rem,9vw,7.5rem)] font-medium leading-[0.9] tracking-[-0.045em]">
               {pricingPage.headline}
             </h1>
             <p className="mt-8 max-w-xl text-base leading-relaxed text-white/65 sm:mt-10 sm:text-xl">
@@ -304,7 +304,7 @@ export function PricingPage() {
       >
         <div className="mx-auto max-w-[1400px]">
           <div className="mx-auto mb-14 max-w-4xl text-center sm:mb-20">
-            <h2 className="font-display text-[clamp(3.2rem,8vw,7rem)] font-medium leading-[0.95] tracking-[-0.075em]">
+            <h2 className="font-display text-[clamp(3.2rem,8vw,7rem)] font-medium leading-[0.95] tracking-[-0.04em]">
               {pricingFaq.headline}
             </h2>
             <p className="mx-auto mt-7 max-w-lg text-base leading-relaxed text-white/50 sm:text-lg">

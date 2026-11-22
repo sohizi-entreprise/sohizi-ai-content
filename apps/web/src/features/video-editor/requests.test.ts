@@ -22,7 +22,7 @@ describe("diffStateToBatchOps on FPS change", () => {
       fileNodeId: "file-1",
       projectId: "proj-1",
       fps: 30,
-      durationInFrames: 3660,
+      durationInFrames: 3250,
       aspectRatio: "16:9",
       width: 1920,
       height: 1080,
@@ -94,7 +94,7 @@ describe("diffStateToBatchOps on FPS change", () => {
         compositionId: "comp-1",
         patch: {
           fps: 60,
-          durationInFrames: 7320,
+          durationInFrames: 6500,
         },
       },
     ])

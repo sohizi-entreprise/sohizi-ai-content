@@ -17,7 +17,8 @@ import { generateSlug } from "@/utils/slug"
 
 const isInputProject = (
   data: z.infer<typeof createProjectSchema>,
-): data is z.infer<typeof createInputProjectSchema> => "presets" in data
+): data is z.infer<typeof createInputProjectSchema> =>
+  "presets" in data || "brief" in data
 
 export const startProject = async (
   data: z.infer<typeof createProjectSchema>,
@@ -26,7 +27,7 @@ export const startProject = async (
   let briefContent = ""
   if (isInputProject(data)) {
     const presets = await assertInputProject(data)
-    briefContent = buildProjectBriefContent(presets, data.presets)
+    briefContent = buildProjectBriefContent(presets, data.presets, data.brief)
   }
   const project = await projectRepo.createProject(
     data,

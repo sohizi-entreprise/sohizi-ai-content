@@ -184,6 +184,9 @@ export type RenderJob = {
   /** Percentage, 0-100. */
   progress: number
   fileName: string
+  folderId: string | null
+  fileNodeId: string | null
+  outputUrl: string | null
   fps: number
   width: number
   height: number
@@ -197,6 +200,7 @@ export type RenderJob = {
 
 export type CreateRenderInput = {
   contractVersion: number
+  folderId: string
   fileName: string
   composition: RenderCompositionInput
 }

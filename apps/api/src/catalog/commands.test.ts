@@ -17,9 +17,7 @@ describe("commands", () => {
       "plan",
       "script",
       "storyboard",
-      "end-to-end",
       "brainstorm",
-      "remix",
     ])
     expect(second).toBe(first)
   })
@@ -54,15 +52,21 @@ describe("commands", () => {
     const commands = await getCommands()
     const plan = commands.find((command) => command.id === "plan")
     const script = commands.find((command) => command.id === "script")
+    const storyboard = commands.find((command) => command.id === "storyboard")
     const brainstorm = commands.find((command) => command.id === "brainstorm")
-    const remix = commands.find((command) => command.id === "remix")
 
     expect(plan?.promptModifier).toContain("/system/skills/generate-plan")
     expect(
       SYSTEM_LEVEL_FILES["/system/skills/generate-plan"].content,
     ).toContain("/system/syntax/document")
     expect(script?.promptModifier).toContain("/system/syntax/document")
+    expect(storyboard?.promptModifier).toContain("/system/skills/storyboard")
+    expect(SYSTEM_LEVEL_FILES["/system/skills/storyboard"].content).toContain(
+      "/system/syntax/storyboard",
+    )
+    expect(SYSTEM_LEVEL_FILES["/system/skills/storyboard"].content).toContain(
+      "/system/skills/image-video-generation",
+    )
     expect(brainstorm?.promptModifier).toContain("/system/syntax/document")
-    expect(remix?.promptModifier).toContain("/system/syntax/document")
   })
 })

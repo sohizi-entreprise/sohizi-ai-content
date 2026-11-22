@@ -24,6 +24,7 @@ import { Route as AdminSkillsRouteImport } from './routes/admin/skills'
 import { Route as AdminVendorsRouteImport } from './routes/admin/vendors'
 import { Route as AuthenticatedSidebarIndexRouteImport } from './routes/_authenticated/_sidebar/index'
 import { Route as AuthenticatedSidebarAccountRouteImport } from './routes/_authenticated/_sidebar/account'
+import { Route as AuthenticatedSidebarCreateRouteImport } from './routes/_authenticated/_sidebar/create'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects/$projectId'
 import { Route as AdminCategoriesIndexRouteImport } from './routes/admin/categories/index'
 import { Route as AdminCategoriesContentRouteImport } from './routes/admin/categories/content'
@@ -116,6 +117,12 @@ const AuthenticatedSidebarAccountRoute =
   AuthenticatedSidebarAccountRouteImport.update({
     id: '/account',
     path: '/account',
+    getParentRoute: () => AuthenticatedSidebarRoute,
+  } as any)
+const AuthenticatedSidebarCreateRoute =
+  AuthenticatedSidebarCreateRouteImport.update({
+    id: '/create',
+    path: '/create',
     getParentRoute: () => AuthenticatedSidebarRoute,
   } as any)
 const AuthenticatedProjectsProjectIdRoute =
@@ -235,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/admin/vendors': typeof AdminVendorsRoute
   '/admin/': typeof AdminIndexRoute
   '/account': typeof AuthenticatedSidebarAccountRouteWithChildren
+  '/create': typeof AuthenticatedSidebarCreateRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/admin/categories/content': typeof AdminCategoriesContentRoute
   '/admin/categories/models': typeof AdminCategoriesModelsRoute
@@ -264,6 +272,7 @@ export interface FileRoutesByTo {
   '/admin/skills': typeof AdminSkillsRoute
   '/admin/vendors': typeof AdminVendorsRoute
   '/admin': typeof AdminIndexRoute
+  '/create': typeof AuthenticatedSidebarCreateRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/admin/categories/content': typeof AdminCategoriesContentRoute
   '/admin/categories/models': typeof AdminCategoriesModelsRoute
@@ -299,6 +308,7 @@ export interface FileRoutesById {
   '/admin/vendors': typeof AdminVendorsRoute
   '/admin/': typeof AdminIndexRoute
   '/_authenticated/_sidebar/account': typeof AuthenticatedSidebarAccountRouteWithChildren
+  '/_authenticated/_sidebar/create': typeof AuthenticatedSidebarCreateRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/admin/categories/content': typeof AdminCategoriesContentRoute
   '/admin/categories/models': typeof AdminCategoriesModelsRoute
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/admin/vendors'
     | '/admin/'
     | '/account'
+    | '/create'
     | '/projects/$projectId'
     | '/admin/categories/content'
     | '/admin/categories/models'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/admin/skills'
     | '/admin/vendors'
     | '/admin'
+    | '/create'
     | '/projects/$projectId'
     | '/admin/categories/content'
     | '/admin/categories/models'
@@ -398,6 +410,7 @@ export interface FileRouteTypes {
     | '/admin/vendors'
     | '/admin/'
     | '/_authenticated/_sidebar/account'
+    | '/_authenticated/_sidebar/create'
     | '/_authenticated/projects/$projectId'
     | '/admin/categories/content'
     | '/admin/categories/models'
@@ -532,6 +545,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AuthenticatedSidebarAccountRouteImport
+      parentRoute: typeof AuthenticatedSidebarRoute
+    }
+    '/_authenticated/_sidebar/create': {
+      id: '/_authenticated/_sidebar/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof AuthenticatedSidebarCreateRouteImport
       parentRoute: typeof AuthenticatedSidebarRoute
     }
     '/_authenticated/projects/$projectId': {
@@ -692,12 +712,14 @@ const AuthenticatedSidebarAccountRouteWithChildren =
 
 interface AuthenticatedSidebarRouteChildren {
   AuthenticatedSidebarAccountRoute: typeof AuthenticatedSidebarAccountRouteWithChildren
+  AuthenticatedSidebarCreateRoute: typeof AuthenticatedSidebarCreateRoute
   AuthenticatedSidebarIndexRoute: typeof AuthenticatedSidebarIndexRoute
 }
 
 const AuthenticatedSidebarRouteChildren: AuthenticatedSidebarRouteChildren = {
   AuthenticatedSidebarAccountRoute:
     AuthenticatedSidebarAccountRouteWithChildren,
+  AuthenticatedSidebarCreateRoute: AuthenticatedSidebarCreateRoute,
   AuthenticatedSidebarIndexRoute: AuthenticatedSidebarIndexRoute,
 }
 

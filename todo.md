@@ -1,20 +1,20 @@
-[ ] On Media generator history: add drag and drop on the image references based on the supported asset type
-[ ] Add an option on the folder node where you can preview all the content inside a folder in a grid or list layout
+[x] On Media generator history: add drag and drop on the image references based on the supported asset type
+[x] Add an option on the folder node where you can preview all the content inside a folder in a grid or list layout
+[x] Test that the agent can modify the video composition
+[x] Make context donut work
+[x] test assigning tasks
+[x] create a skill using the agent
+[x] create commands (plan, brainstorm, remix)
+[x] add youtube link to the slash command
+[x] add file citation tag
+[x] add websearch sub-agent
+[x] display the files that have been listed or read uring tool calling
+[x] Connect cancel request during chat generation
+[x] create text editor supported rules for formatting and adding different elements
+[-] Media generator tool in the main agent
+[x] Design a kind of story board using the document (we'll need a skill for that)
 [ ] Add preset for asset generation
-[ ] Test that the agent can modify the video composition
 [ ] Add a connection between contents (kind of lineage / maybe for assets too)
-[ ] Make context donut work
-[ ] test assigning tasks
-[ ] create a skill using the agent
-[ ] create commands (plan, brainstorm, remix)
-[ ] add youtube link to the slash command
-[ ] add file citation tag
-[ ] add websearch sub-agent
-[ ] display the files that have been listed or read uring tool calling
-[ ] Connect cancel request during chat generation
-[ ] create text editor supported rules for formatting and adding different elements
-[ ] Media generator tool in the main agent
-[ ] Design a kind of story board using the document (we'll need a skill for that)
 [ ] Test context summarizing
 
 ---
@@ -63,8 +63,8 @@
 <!-- Payment -->
 
 [ ] design final pricing and plan
-[x] create Stripe products
-[ ] validate Stripe Managed Payments account
+[ ] create product in polar.sh
+[ ] validate account with polar.sh
 [ ] connect payments
 
 <!-- Issues -->
@@ -95,3 +95,5 @@
 [ ] The agent can generate a submit request that will appear to the user so they can click it and submit themselves. [maybe add a setting that controls that]
 [ ] Add remove background models
 [ ] Caption is not working, move it to media generation
+
+Search the most untold stories about the battles of Alexander the Great and come up with 3 ideas for a short 30 sec video in a story-telling style

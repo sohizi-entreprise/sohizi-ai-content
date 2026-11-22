@@ -421,6 +421,20 @@
       "when": 1794765400000,
       "tag": "0059_drop_polar_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794851800000,
+      "tag": "0060_video_render_hash_and_folder",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1794938200000,
+      "tag": "0061_feedbacks",
+      "breakpoints": true
     }
   ]
 }

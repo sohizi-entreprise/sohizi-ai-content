@@ -55,7 +55,7 @@ describe("skill editor lists", () => {
       editor.view.dom
         .querySelector('[data-type="skill-instruction"] li p.is-empty')
         ?.getAttribute("data-placeholder"),
-    ).toBe("Write instructions or use / command...")
+    ).toBe("Write instructions or use / special blocks...")
   })
 
   it("lifts an empty bullet when Enter is pressed", () => {

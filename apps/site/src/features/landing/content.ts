@@ -20,9 +20,8 @@ export const hero = {
   eyebrow: "Your AI film studio",
   headline: "Stop prompting. Start directing.",
   subheadline:
-    "One studio where your AI knows your whole film, from first idea to final cut. Your characters, world, and story carry into every shot, so it all feels like one movie.",
-  demoVideo: "https://cdn.sohizi.com/app/full_demo.mp4",
-  demoVideoHd: "https://cdn.sohizi.com/app/final_hd.mp4",
+    "One studio where your AI knows your whole film — from script and storyboard to generated shots and final cut. Your characters, world, and story carry into every scene, so it all feels like one movie.",
+  demoVideo: "https://cdn.sohizi.com/app/sh_fin.mp4",
   demoPoster: cdnImage("app/thumbnail.png", { width: 1600 }),
   demoLabel:
     "Product demonstration: idea to script, cast, storyboard, generated shots, and final cut inside Sohizi Lab.",

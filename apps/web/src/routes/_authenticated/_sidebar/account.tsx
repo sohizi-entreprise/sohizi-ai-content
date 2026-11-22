@@ -27,7 +27,7 @@ function RouteComponent() {
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
           Settings
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
           Account
         </h1>
         <p className="text-sm leading-6 text-muted-foreground">

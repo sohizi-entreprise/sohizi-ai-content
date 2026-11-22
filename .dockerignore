@@ -49,3 +49,7 @@ prettier.config.js
 .prettierignore
 .editorconfig
 skills-lock.json
+
+# Apps that are never baked into api/web/site images
+apps/cloudflare
+apps/remotion-package

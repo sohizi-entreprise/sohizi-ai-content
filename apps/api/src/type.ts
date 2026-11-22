@@ -842,3 +842,15 @@ export type ModelParameterDataType =
   "string" | "number" | "boolean" | "array<string>" | "array<number>"
 export type ModelParameterUIComponent =
   "select" | "slider" | "uploader" | "textarea" | "checkbox"
+
+export type FeedbackType = "issue" | "feature_request"
+export type FeedbackStatus =
+  "open" | "in_review" | "planned" | "resolved" | "closed"
+export type FeedbackMetadata = {
+  pageUrl?: string
+  userAgent?: string
+  viewport?: {
+    width: number
+    height: number
+  }
+}

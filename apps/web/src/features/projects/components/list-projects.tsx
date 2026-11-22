@@ -1,16 +1,13 @@
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { Link, useSearch } from "@tanstack/react-router"
+import { IconCirclePlusFilled } from "@tabler/icons-react"
+import { Button } from "@sohizi/ui/button"
+import { Separator } from "@sohizi/ui/separator"
 import { Skeleton } from "@sohizi/ui/skeleton"
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@sohizi/ui/empty"
 import { getListProjectsQueryOptions } from "../query-mutation"
-import CreateProject from "./create-project"
+import StartProject from "../pages/start-project"
 import ProjectCard from "./project-card"
+import StepMarker from "./step-marker"
 import { cn } from "@/lib/utils"
 import { useSession } from "@/lib/auth-client"
 
@@ -19,7 +16,7 @@ export default function ListProjects() {
   const organizationId = session?.session.activeOrganizationId ?? undefined
 
   if (!organizationId) {
-    return <ListProjectEmpty />
+    return <StartProject />
   }
 
   return <ListProjectsContent organizationId={organizationId} />
@@ -36,36 +33,68 @@ function ListProjectsContent({ organizationId }: { organizationId: string }) {
   const { display } = useSearch({ from: "/_authenticated/_sidebar/" })
 
   if (projects.length === 0) {
-    return <ListProjectEmpty />
+    return <StartProject />
   }
 
   return (
-    <div
-      className={cn("grid gap-6 grid-cols-1", {
-        "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4": display === "grid",
-      })}
-    >
-      {projects.map((project) => (
-        <Link
-          to="/projects/$projectId/editor"
-          params={{ projectId: project.id }}
-          key={project.id}
-          className="block"
-          preload={false}
+    <section className="space-y-8" aria-label="Projects">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <StepMarker
+          step="Workspace"
+          title="Your projects"
+          description="Pick up where you left off."
+        />
+
+        <Button
+          asChild
+          className="rounded-xl font-bold cursor-pointer hover:scale-105 transition-transform duration-200"
         >
-          <ProjectCard {...project} display={display} />
-        </Link>
-      ))}
-    </div>
+          <Link to="/create">
+            <IconCirclePlusFilled className="size-5" />
+            Create project
+          </Link>
+        </Button>
+      </div>
+
+      {/* <Separator /> */}
+
+      <div
+        className={cn("grid gap-6 grid-cols-1", {
+          "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4": display === "grid",
+        })}
+      >
+        {projects.map((project) => (
+          <Link
+            to="/projects/$projectId/editor"
+            params={{ projectId: project.id }}
+            key={project.id}
+            className="block"
+            preload={false}
+          >
+            <ProjectCard {...project} display={display} />
+          </Link>
+        ))}
+      </div>
+    </section>
   )
 }
 
 export const ListProjectsSkeleton = () => {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <Skeleton key={index} className="h-70 w-full" />
-      ))}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-48" />
+          <Skeleton className="h-5 w-60" />
+        </div>
+        <Skeleton className="h-10 w-36 rounded-xl" />
+      </div>
+      <Separator />
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-70 w-full" />
+        ))}
+      </div>
     </div>
   )
 }
@@ -84,19 +113,5 @@ export const ListProjectsError = ({
         Retry
       </button>
     </div>
-  )
-}
-
-function ListProjectEmpty() {
-  return (
-    <Empty>
-      <EmptyHeader>
-        <EmptyTitle>No projects found</EmptyTitle>
-        <EmptyDescription>Create a new project to get started</EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent>
-        <CreateProject />
-      </EmptyContent>
-    </Empty>
   )
 }

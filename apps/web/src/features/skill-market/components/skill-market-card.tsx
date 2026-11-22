@@ -10,19 +10,7 @@ export function SkillMarketCard({ skill }: SkillMarketCardProps) {
   const remainingCount = Math.max(0, skill.categories.length - 3)
 
   return (
-    <article className="group relative flex h-full min-h-[210px] cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 backdrop-blur-md transition-all duration-500 ease-out hover:-translate-y-0.5 hover:border-primary/35 hover:bg-white/[0.04] hover:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.7),0_0_32px_-12px_color-mix(in_oklch,var(--primary)_22%,transparent)]">
-      {/* Top specular hairline */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-8 top-0 h-px bg-linear-to-r from-transparent via-white/15 to-transparent transition-all duration-500 group-hover:inset-x-4 group-hover:via-primary/70"
-      />
-
-      {/* Ambient hover bloom */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-24 right-0 size-48 rounded-full bg-primary/10 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
-      />
-
+    <article className="group relative flex h-full min-h-[210px] cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.07] bg-white/5 p-6 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-white/15 hover:bg-background/60">
       <div className="relative z-10 space-y-4">
         {/* Minimalist architectural eyebrow */}
         {primaryCategory ? (
@@ -35,7 +23,7 @@ export function SkillMarketCard({ skill }: SkillMarketCardProps) {
 
         {/* Title & description */}
         <div className="space-y-2.5">
-          <h3 className="line-clamp-1 font-display text-[19px] font-semibold tracking-[-0.02em] text-foreground transition-colors duration-300 group-hover:text-primary">
+          <h3 className="line-clamp-1 font-display text-[19px] font-semibold tracking-[-0.02em] text-foreground transition-colors duration-300">
             {skill.name}
           </h3>
           <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground/85 transition-colors duration-300 group-hover:text-foreground/80">

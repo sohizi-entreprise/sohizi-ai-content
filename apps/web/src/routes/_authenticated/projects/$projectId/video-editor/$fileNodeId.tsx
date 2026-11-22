@@ -1,26 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { DndProvider } from "react-dnd"
-import { HTML5Backend } from "react-dnd-html5-backend"
-import { VideoEditor } from "@/features/video-editor"
+import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router"
+import { RoutePending } from "@/components/layout/route-pending"
 
 export const Route = createFileRoute(
   "/_authenticated/projects/$projectId/video-editor/$fileNodeId",
 )({
-  component: RouteComponent,
+  ssr: false,
+  pendingComponent: () => <RoutePending label="Loading video editor..." />,
+  component: lazyRouteComponent(() =>
+    import("./-video-editor-session").then((module) => ({
+      default: module.VideoEditorSession,
+    })),
+  ),
 })
-
-function RouteComponent() {
-  const { projectId, fileNodeId } = Route.useParams()
-
-  return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="h-full min-w-0 flex-1 overflow-hidden">
-        <VideoEditor
-          projectId={projectId}
-          fileNodeId={fileNodeId}
-          key={fileNodeId}
-        />
-      </div>
-    </DndProvider>
-  )
-}

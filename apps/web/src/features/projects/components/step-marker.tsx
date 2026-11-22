@@ -19,7 +19,9 @@ export default function StepMarker({
           {step}
         </span>
       </div>
-      <h1 className="text-4xl font-bold tracking-tight mb-2">{title}</h1>
+      <h1 className="mb-2 font-display text-4xl font-bold tracking-tight">
+        {title}
+      </h1>
       {description && (
         <p className="text-muted-foreground leading-relaxed">{description}</p>
       )}

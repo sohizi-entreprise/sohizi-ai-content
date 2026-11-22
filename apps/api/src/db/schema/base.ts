@@ -53,6 +53,9 @@ import {
   ChatMetadata,
   MemoryScope,
   MemoryLoadingPolicy,
+  FeedbackType,
+  FeedbackStatus,
+  FeedbackMetadata,
 } from "@/type"
 import { FileFormat, FileType } from "@/features/file-system/constants"
 
@@ -955,6 +958,13 @@ export const videoRenderJobs = pgTable(
     compositionId: uuid("composition_id")
       .references(() => videoCompositions.id, { onDelete: "cascade" })
       .notNull(),
+    folderId: uuid("folder_id").references(() => fileNodes.id, {
+      onDelete: "set null",
+    }),
+    fileNodeId: uuid("file_node_id").references(() => fileNodes.id, {
+      onDelete: "set null",
+    }),
+    compositionHash: varchar("composition_hash", { length: 64 }),
     userId: text("user_id")
       .references(() => user.id, { onDelete: "cascade" })
       .notNull(),
@@ -993,6 +1003,8 @@ export const videoRenderJobs = pgTable(
     cancelRequestedAt: timestamp("cancel_requested_at", { withTimezone: true }),
     pollerEnqueuedAt: timestamp("poller_enqueued_at", { withTimezone: true }),
     outputKey: text("output_key"),
+    outputUrl: text("output_url"),
+    outputStorageKey: text("output_storage_key"),
     outputSizeInBytes: bigint("output_size_in_bytes", { mode: "number" }),
     progress: integer("progress").default(0).notNull(),
     /** Operator-safe failure summary; never raw upstream output. */
@@ -1011,6 +1023,10 @@ export const videoRenderJobs = pgTable(
     index("video_render_jobs_composition_status_idx").on(
       table.compositionId,
       table.status,
+    ),
+    index("video_render_jobs_composition_hash_idx").on(
+      table.compositionId,
+      table.compositionHash,
     ),
     index("video_render_jobs_user_id_idx").on(table.userId),
   ],
@@ -1290,6 +1306,35 @@ export const memories = pgTable(
   ],
 )
 
+export const feedbacks = pgTable(
+  "feedbacks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+    projectId: uuid("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
+    type: varchar("type", { length: 50 }).notNull().$type<FeedbackType>(),
+    content: text("content").notNull(),
+    status: varchar("status", { length: 50 })
+      .default("open")
+      .notNull()
+      .$type<FeedbackStatus>(),
+    metadata: jsonb("metadata").$type<FeedbackMetadata>(),
+    ...timestamps,
+  },
+  (table) => [
+    index("feedbacks_user_id_idx").on(table.userId),
+    index("feedbacks_type_status_created_at_idx").on(
+      table.type,
+      table.status,
+      table.createdAt,
+    ),
+  ],
+)
+
 // Type exports for use in app
 export type Project = typeof projects.$inferSelect
 export type FileNode = typeof fileNodes.$inferSelect
@@ -1330,3 +1375,4 @@ export type Template = typeof templates.$inferSelect
 export type PendingFileOperation = typeof pendingFileOperations.$inferSelect
 export type ConversationAgentRun = typeof conversationAgentRuns.$inferSelect
 export type Command = typeof commands.$inferSelect
+export type Feedback = typeof feedbacks.$inferSelect

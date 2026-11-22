@@ -84,10 +84,12 @@ export function HeroSection() {
           className="relative z-10 text-center"
         >
           <p className="mb-7 text-xs font-medium uppercase tracking-[0.25em] text-white/50">
-            Sohizi lab <span className="mx-3 text-primary">✳</span>{" "}
+            <span className="hidden sm:inline">
+              Sohizi lab <span className="mx-3 text-primary">✳</span>{" "}
+            </span>
             {hero.eyebrow}
           </p>
-          <h1 className="mx-auto max-w-[13ch] font-display text-[clamp(2.25rem,9vw,4rem)] font-medium leading-[0.86] tracking-[-0.085em] sm:text-[clamp(3.25rem,10vw,12rem)]">
+          <h1 className="mx-auto max-w-[13ch] font-display text-[clamp(2.25rem,9vw,4rem)] font-medium leading-[0.88] tracking-[-0.045em] sm:text-[clamp(3.25rem,10vw,12rem)]">
             Stop prompting.
             <br />
             <span className="text-white/90">Start directing.</span>
@@ -120,7 +122,6 @@ export function HeroSection() {
         >
           <DemoVideo
             src={hero.demoVideo}
-            hdSrc={hero.demoVideoHd}
             poster={hero.demoPoster}
             label={hero.demoLabel}
             playback="manual"

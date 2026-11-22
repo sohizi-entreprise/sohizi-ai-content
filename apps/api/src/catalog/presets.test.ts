@@ -47,7 +47,7 @@ describe("presets", () => {
     expect(genre?.options[0]).not.toHaveProperty("promptModifier")
   })
 
-  it("resolves selected values to prompt modifiers", async () => {
+  it("resolves selected values to custom properties and attributes markdown blocks", async () => {
     const presets = await getPresets()
     const brief = buildProjectBriefContent(presets, {
       format: "storytime",
@@ -58,22 +58,49 @@ describe("presets", () => {
     })
 
     expect(brief).toContain("# Project Brief")
-    expect(brief).toContain("- **Format**: Tell it as a story.")
-    expect(brief).toContain("- **Genre**: Tell the story as drama.")
+    expect(brief).toContain(
+      ":::properties\ntitle: Production Specifications\nlayout: grid",
+    )
+    expect(brief).toContain("- Format: Storytime")
+    expect(brief).toContain("- Genre: Drama")
+    expect(brief).toContain(":::attributes\ntitle: Creative Direction")
+    expect(brief).toContain("- Format:\n  Tell it as a story.")
+    expect(brief).toContain("- Genre:\n  Tell the story as drama.")
     expect(brief).not.toContain("Tone")
     expect(brief).not.toContain("nope")
   })
 
-  it("resolves preset selections by id", async () => {
+  it("resolves preset selections by id and places user brief text after settings", async () => {
     const presets = await getPresets()
     const format = presets.find((preset) => preset.key === "format")
-    const brief = buildProjectBriefContent(presets, {
-      presets: [{ id: format?.id ?? "", value: "explainer" }],
-      commandId: "plan",
-      modelId: null,
-    })
+    const brief = buildProjectBriefContent(
+      presets,
+      {
+        presets: [{ id: format?.id ?? "", value: "explainer" }],
+        commandId: "plan",
+        modelId: null,
+      },
+      "A 60-second breakdown of how quantum tunneling works in everyday flash memory.",
+    )
 
-    expect(brief).toContain("- **Format**: Explain one idea.")
+    expect(brief).toContain("- Format: Explainer")
+    expect(brief).toContain("- Format:\n  Explain one idea.")
+    expect(brief).toEndWith(
+      ":::\n\nA 60-second breakdown of how quantum tunneling works in everyday flash memory.\n",
+    )
     expect(brief).not.toContain("Genre")
+  })
+
+  it("formats brief with text only when no presets are selected", async () => {
+    const presets = await getPresets()
+    const brief = buildProjectBriefContent(
+      presets,
+      [],
+      "A short documentary about urban beekeeping.",
+    )
+
+    expect(brief).toBe(
+      "# Project Brief\n\nA short documentary about urban beekeeping.\n",
+    )
   })
 })

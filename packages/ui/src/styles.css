@@ -14,7 +14,6 @@ body {
   @apply m-0;
   font-family:
     "Geist",
-    "Space Grotesk",
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
@@ -39,10 +38,11 @@ code,
 
 .font-display {
   font-family:
-    "Space Grotesk",
+    "Bricolage Grotesque",
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;
+  font-optical-sizing: auto;
   font-weight: 600;
 }
 

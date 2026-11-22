@@ -17,11 +17,15 @@ import {
 import { getRenderDownload } from "../requests"
 import type { RenderCompositionInput } from "@sohizi/video-composition"
 import type { RenderJob } from "../requests"
+import {
+  directoryChildrenKey,
+  fileTreeKey,
+} from "@/features/projects/query-mutation"
 
 /**
  * Export submits the exact in-memory state the Remotion Player previews, so it
  * never has to wait for the autosave debounce, and then polls the server-owned
- * render job until the MP4 can be downloaded.
+ * render job until the MP4 is saved to the chosen project folder.
  */
 
 const DEFAULT_FILE_NAME = "video"
@@ -69,14 +73,20 @@ function triggerDownload(url: string, fileName: string) {
   link.remove()
 }
 
+export type StartVideoExportInput = {
+  fileName?: string
+  folderId: string
+}
+
 export type VideoExportState = {
+  projectId: string | null
   job: RenderJob | undefined
   isSubmitting: boolean
   isCancelling: boolean
   isDownloading: boolean
   isBusy: boolean
   canExport: boolean
-  start: (fileName?: string) => Promise<void>
+  start: (input: StartVideoExportInput) => Promise<boolean>
   cancel: () => Promise<void>
   download: () => Promise<void>
   dismiss: () => void
@@ -105,7 +115,7 @@ export function useVideoExport(): VideoExportState {
     cancelRenderMutationOptions(projectId ?? ""),
   )
   const [isDownloading, setIsDownloading] = useState(false)
-  const notifiedStatusRef = useRef<RenderJob["status"] | null>(null)
+  const notifiedJobStateRef = useRef<string | null>(null)
 
   const cacheJob = useCallback(
     (next: RenderJob) => {
@@ -118,44 +128,68 @@ export function useVideoExport(): VideoExportState {
     [projectId, queryClient],
   )
 
-  // Announce each terminal state once, even while the component stays mounted.
+  // Announce each terminal state once per job transition and invalidate folder caches.
   useEffect(() => {
-    if (!job || notifiedStatusRef.current === job.status) return
-    notifiedStatusRef.current = job.status
+    if (!job) return
+    const stateKey = `${job.id}:${job.status}:${job.folderId ?? ""}:${job.fileName}`
+    if (notifiedJobStateRef.current === stateKey) return
+    notifiedJobStateRef.current = stateKey
 
-    if (job.status === "completed")
-      toast.success("Your video is ready to download")
+    if (job.status === "completed") {
+      toast.success("Video exported to folder")
+      if (projectId && job.folderId) {
+        void queryClient.invalidateQueries({
+          queryKey: fileTreeKey(projectId, job.folderId),
+        })
+        void queryClient.invalidateQueries({
+          queryKey: directoryChildrenKey(projectId, job.folderId),
+        })
+      }
+      if (projectId && job.fileNodeId) {
+        void queryClient.invalidateQueries({
+          queryKey: ["editor", "fileContent", projectId, job.fileNodeId],
+        })
+      }
+      if (projectId) {
+        void queryClient.invalidateQueries({
+          queryKey: ["project", projectId, "assets"],
+        })
+      }
+    }
     if (job.status === "failed") {
       toast.error(job.error?.message ?? "The export failed. Please try again.")
     }
-  }, [job])
+  }, [job, projectId, queryClient])
 
   const start = useCallback(
-    async (fileName?: string) => {
-      if (!projectId || !compositionId) return
-      if (isSubmitting || isRunning(job)) return
+    async ({ fileName, folderId }: StartVideoExportInput): Promise<boolean> => {
+      if (!projectId || !compositionId || !folderId) return false
+      if (isSubmitting || isRunning(job)) return false
 
       const composition = takeRenderSnapshot()
       if (composition.tracks.every((track) => track.clips.length === 0)) {
         toast.error("Add something to the timeline before exporting.")
-        return
+        return false
       }
       if (isExportTooLong(composition.durationInFrames, composition.fps)) {
         toast.error(EXPORT_TOO_LONG_MESSAGE)
-        return
+        return false
       }
 
       try {
         const created = await submitRender({
           contractVersion: RENDER_CONTRACT_VERSION,
+          folderId,
           fileName: toRenderFileName(fileName ?? DEFAULT_FILE_NAME),
           composition,
         })
-        notifiedStatusRef.current = null
+        notifiedJobStateRef.current = null
         cacheJob(created)
         setActiveRender({ compositionId, jobId: created.id })
+        return true
       } catch (error) {
         toast.error(toMessage(error, "Could not start the export."))
+        return false
       }
     },
     [
@@ -195,6 +229,7 @@ export function useVideoExport(): VideoExportState {
   const dismiss = useCallback(() => setActiveRender(null), [setActiveRender])
 
   return {
+    projectId,
     job,
     isSubmitting,
     isCancelling,

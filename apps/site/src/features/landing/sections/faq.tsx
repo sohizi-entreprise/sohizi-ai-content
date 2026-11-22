@@ -17,7 +17,7 @@ export function FaqSection() {
           <span>04 / Questions</span>
         </div>
         <div className="mx-auto mb-16 mt-20 max-w-4xl text-center sm:mb-24 sm:mt-28">
-          <h2 className="font-display text-[clamp(3.7rem,8vw,8rem)] font-medium leading-[0.95] tracking-[-0.075em]">
+          <h2 className="font-display text-[clamp(3.7rem,8vw,8rem)] font-medium leading-[0.95] tracking-[-0.04em]">
             {faq.headline}
           </h2>
           <p className="mx-auto mt-7 max-w-lg text-base leading-relaxed text-white/50 sm:text-lg">

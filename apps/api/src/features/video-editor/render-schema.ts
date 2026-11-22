@@ -87,6 +87,7 @@ export const renderCompositionSchema = z.object({
 
 export const createRenderSchema = z.object({
   contractVersion: z.literal(RENDER_CONTRACT_VERSION),
+  folderId: z.uuid("Invalid folder id"),
   fileName: z
     .string()
     .min(1)

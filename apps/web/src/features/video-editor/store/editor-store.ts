@@ -323,17 +323,26 @@ function finishAddedClip(
   return id
 }
 
-function recomputeDuration(state: EditorState): void {
-  const minDuration = Math.max(state.fps * 10, 1)
+function getMaxClipEndFrame(tracks: ReadonlyArray<Track>): number {
   let maxEnd = 0
-  for (const track of state.tracks) {
+  for (const track of tracks) {
     for (const clip of track.clips) {
       if (clip.endFrame > maxEnd) maxEnd = clip.endFrame
     }
   }
+  return maxEnd
+}
+
+function recomputeDuration(state: EditorState): void {
+  const maxEnd = getMaxClipEndFrame(state.tracks)
+  const fallbackDuration = Math.max(state.fps * 10, 1)
   state.durationInFrames = clampTimelineDuration(
-    Math.max(minDuration, maxEnd + state.fps * 2),
+    maxEnd > 0 ? maxEnd : fallbackDuration,
     state.fps,
+  )
+  state.currentFrame = Math.min(
+    state.currentFrame,
+    Math.max(0, state.durationInFrames - 1),
   )
 }
 
@@ -443,15 +452,16 @@ const creator: StateCreator<
       state.fileNodeId = data.fileNodeId
       state.projectId = data.projectId
       state.fps = data.fps
-      state.durationInFrames = clampTimelineDuration(
-        data.durationInFrames,
-        data.fps,
-      )
       state.aspectRatio = data.aspectRatio
       state.width = data.width
       state.height = data.height
       state.tracks = data.tracks
       trimClipsToTimeline(state)
+      const maxEnd = getMaxClipEndFrame(state.tracks)
+      state.durationInFrames = clampTimelineDuration(
+        maxEnd > 0 ? maxEnd : data.durationInFrames,
+        data.fps,
+      )
       state.currentFrame = 0
       state.selection = { clipIds: [] }
       state.isPlaying = false
@@ -478,11 +488,12 @@ const creator: StateCreator<
           state.aspectRatio = composition.aspectRatio as AspectRatio
           state.width = composition.width
           state.height = composition.height
+          trimClipsToTimeline(state)
+          const maxEnd = getMaxClipEndFrame(state.tracks)
           state.durationInFrames = clampTimelineDuration(
-            composition.durationInFrames,
+            maxEnd > 0 ? maxEnd : composition.durationInFrames,
             composition.fps,
           )
-          trimClipsToTimeline(state)
           state.currentFrame = Math.min(
             state.currentFrame,
             Math.max(0, state.durationInFrames - 1),
@@ -1252,15 +1263,12 @@ const creator: StateCreator<
 
       trimClipsToTimeline(state)
 
-      let maxEnd = 0
-      for (const track of state.tracks) {
-        for (const clip of track.clips) {
-          if (clip.endFrame > maxEnd) maxEnd = clip.endFrame
-        }
-      }
+      const maxEnd = getMaxClipEndFrame(state.tracks)
 
       state.durationInFrames = clampTimelineDuration(
-        Math.max(1, scaleFrame(state.durationInFrames, scale), maxEnd),
+        maxEnd > 0
+          ? maxEnd
+          : Math.max(1, scaleFrame(state.durationInFrames, scale)),
         state.fps,
       )
       state.currentFrame = Math.min(
@@ -1293,7 +1301,11 @@ const creator: StateCreator<
 
   setDurationInFrames: (frames) => {
     set((state) => {
-      state.durationInFrames = clampTimelineDuration(frames, state.fps)
+      const maxEnd = getMaxClipEndFrame(state.tracks)
+      state.durationInFrames = clampTimelineDuration(
+        maxEnd > 0 ? maxEnd : frames,
+        state.fps,
+      )
     })
   },
 })

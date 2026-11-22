@@ -31,7 +31,7 @@ type ChatInputProps = {
 
 export function ChatInput({
   projectId,
-  placeholder = "Use @ to reference files and / for commands",
+  placeholder = "Use @ to reference files or skills, and / for commands",
   className,
 }: ChatInputProps) {
   const setInputContent = useChatStore((state) => state.setUserPrompt)

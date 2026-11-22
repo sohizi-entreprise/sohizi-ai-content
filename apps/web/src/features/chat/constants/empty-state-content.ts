@@ -1,4 +1,4 @@
-import { IconArrowsShuffle, IconBulb, IconRoute } from "@tabler/icons-react"
+import { IconBulb, IconRoute } from "@tabler/icons-react"
 import type { Icon } from "@tabler/icons-react"
 
 export type GreetingBuilder = (firstName?: string) => string
@@ -79,18 +79,6 @@ export const SUGGESTIONS: Array<EmptyStateSuggestion> = [
     command: {
       id: "brainstorm",
       display: "Brainstorm",
-    },
-  },
-  {
-    id: "remix",
-    icon: IconArrowsShuffle,
-    title: "Remix existing content",
-    description:
-      "Reimagine a file, script, or reference into new formats and angles.",
-    promptPrefix: "Remix the following content",
-    command: {
-      id: "remix",
-      display: "Remix",
     },
   },
   {
