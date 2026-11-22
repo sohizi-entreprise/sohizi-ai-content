@@ -71,10 +71,29 @@ async function billingRequest<T>(path: string, body?: object): Promise<T> {
   return response.json() as Promise<T>
 }
 
+const MONTH_NAMES = [
+  "Jan.",
+  "Feb.",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "Aug.",
+  "Sept.",
+  "Oct.",
+  "Nov.",
+  "Dec.",
+] as const
+
 const formatCredits = (amount: string | number) =>
   Number(amount).toLocaleString()
-const formatDate = (value: string | null) =>
-  value ? new Date(value).toLocaleDateString() : "—"
+const formatDate = (value: string | null) => {
+  if (!value) return "—"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "—"
+  return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
+}
 const formatPrice = (amount: number, currency: string) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -125,7 +144,7 @@ function PaygPackCard({
           <p className="text-sm text-muted-foreground">
             Purchased credits expire{" "}
             <span className="font-medium text-foreground">12 months</span> after
-            this purchase.
+            purchase.
           </p>
         </div>
         <div className="space-y-3">
@@ -365,7 +384,7 @@ export function AccountBillingPage() {
                     {formatCredits(summary.includedBalance)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Expires {formatDate(summary.includedExpiresAt)}
+                    Renews on {formatDate(summary.includedExpiresAt)}
                   </p>
                 </div>
                 <div className="rounded-xl bg-card/80 p-4 border border-white/10">
@@ -391,7 +410,7 @@ export function AccountBillingPage() {
                     {formatCredits(summary.purchasedBalance)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Expires {formatDate(summary.purchasedExpiresAt)}
+                    Expires on {formatDate(summary.purchasedExpiresAt)}
                   </p>
                 </div>
               </div>
@@ -564,8 +583,8 @@ export function AccountBillingPage() {
           <span className="text-foreground font-medium">
             available with a paid plan
           </span>
-          . Each purchase extends all purchased credits to 12 months from that
-          purchase.
+          . Each new purchase extends the expiration of all your purchased
+          credits to 12 months from the purchase date.
         </p>
         <div>
           {products
