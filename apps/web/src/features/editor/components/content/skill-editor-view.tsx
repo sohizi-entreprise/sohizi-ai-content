@@ -263,10 +263,10 @@ export const skillEditorExtensions = [
 
       const section = getSkillSection(editor, pos)
       if (section === "skillInstruction") {
-        return "Write instructions or use / command..."
+        return "Write instructions or use / special blocks..."
       }
 
-      return "Write something or use / command"
+      return "Write something or use / special blocks"
     },
   }),
   SlashCommandExtension,

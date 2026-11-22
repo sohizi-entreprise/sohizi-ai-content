@@ -217,10 +217,13 @@ function RenderHeader(props: {
   return (
     <header className="px-4 pt-4 pb-2 flex items-center justify-between relative z-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="mt-1 text-2xl font-semibold text-white">
+        <div className="space-y-1.5">
+          <h1 className="mt-1 font-display text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl lg:text-[42px] lg:leading-[1.08]">
             Media generator
           </h1>
+          <p className="max-w-lg text-xs leading-relaxed text-muted-foreground/80 sm:text-sm">
+            Generate images, videos, voice, and music for your scenes.
+          </p>
         </div>
       </div>
 

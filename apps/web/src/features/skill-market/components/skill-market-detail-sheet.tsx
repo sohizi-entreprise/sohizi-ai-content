@@ -161,7 +161,7 @@ export function SkillMarketDetailSheet({
                   <Button
                     onClick={handleAdd}
                     disabled={added || installMutation.isPending}
-                    className="shrink-0 rounded-full px-4 shadow-[0_0_24px_-6px_color-mix(in_oklch,var(--primary)_45%,transparent)]"
+                    className="shrink-0 rounded-full px-4"
                   >
                     {installMutation.isPending && !conflictOpen ? (
                       <Loader2 className="size-4 animate-spin" />
