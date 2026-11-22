@@ -3,6 +3,7 @@ import {
   buildProjectBriefContent,
   filterPresets,
   getPresets,
+  loadPresets,
   resetPresetCache,
   toPublicPresets,
 } from "./presets"
@@ -10,8 +11,8 @@ import {
 describe("presets", () => {
   it("caches nine project presets and filters by generation target", async () => {
     resetPresetCache()
-    const first = await getPresets()
-    const second = await getPresets()
+    const first = await getPresets(loadPresets)
+    const second = await getPresets(loadPresets)
 
     expect(first).toHaveLength(9)
     expect(second).toBe(first)
@@ -33,7 +34,7 @@ describe("presets", () => {
 
   it("hides prompt modifiers from the public payload", async () => {
     const [genre] = toPublicPresets(
-      filterPresets(await getPresets(), "project"),
+      filterPresets(await getPresets(loadPresets), "project"),
     ).filter((preset) => preset.key === "genre")
 
     expect(genre?.options[0]).toEqual({
@@ -48,7 +49,7 @@ describe("presets", () => {
   })
 
   it("resolves selected values to custom properties and attributes markdown blocks", async () => {
-    const presets = await getPresets()
+    const presets = await getPresets(loadPresets)
     const brief = buildProjectBriefContent(presets, {
       format: "storytime",
       genre: { label: "Drama", value: "drama" },
@@ -71,7 +72,7 @@ describe("presets", () => {
   })
 
   it("resolves preset selections by id and places user brief text after settings", async () => {
-    const presets = await getPresets()
+    const presets = await getPresets(loadPresets)
     const format = presets.find((preset) => preset.key === "format")
     const brief = buildProjectBriefContent(
       presets,
@@ -92,7 +93,7 @@ describe("presets", () => {
   })
 
   it("formats brief with text only when no presets are selected", async () => {
-    const presets = await getPresets()
+    const presets = await getPresets(loadPresets)
     const brief = buildProjectBriefContent(
       presets,
       [],

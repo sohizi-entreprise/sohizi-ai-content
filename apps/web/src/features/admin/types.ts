@@ -242,21 +242,29 @@ export type CatalogModel = {
 export type AdminCommand = {
   id: string
   name: string
-  action: string
-  isPublic: boolean
-  visible: boolean
-  projectId: string | null
+  promptModifier: string
+  sortOrder: number
+  enabled: boolean
   createdAt: string
   updatedAt: string
 }
 
 export type CreateCommandInput = {
+  id: string
   name: string
-  action: string
-  visible?: boolean
+  promptModifier: string
+  enabled?: boolean
 }
 
-export type UpdateCommandInput = Partial<CreateCommandInput>
+export type UpdateCommandInput = Partial<Omit<CreateCommandInput, "id">>
+
+export type CatalogSyncMode = "populate" | "overwrite"
+
+export type CatalogSyncResult = {
+  ok: true
+  mode: CatalogSyncMode
+  removed: number
+}
 
 export type ContentCategoryType = "genre" | "format" | "audience" | "platform"
 

@@ -5,7 +5,17 @@ import {
   useMatchRoute,
   useNavigate,
 } from "@tanstack/react-router"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { useMutation } from "@tanstack/react-query"
+import { Button } from "@sohizi/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@sohizi/ui/dialog"
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -14,7 +24,10 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@sohizi/ui/navigation-menu"
+import type { CatalogSyncMode, CatalogSyncResult } from "@/features/admin/types"
+import { syncAdminCatalogMutationOptions } from "@/features/admin/query-mutation"
 import { useSession } from "@/lib/auth-client"
+import { getErrorMessage } from "@/lib/errors"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/admin")({
@@ -33,6 +46,7 @@ type AdminPath =
 function AdminLayout() {
   const { data: session, isPending } = useSession()
   const navigate = useNavigate()
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false)
 
   useEffect(() => {
     if (isPending) return
@@ -77,18 +91,149 @@ function AdminLayout() {
               <CategoriesNavMenu />
             </nav>
           </div>
-          <Link
-            to="/"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Back to app
-          </Link>
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSyncDialogOpen(true)}
+            >
+              Sync catalog
+            </Button>
+            <Link
+              to="/"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Back to app
+            </Link>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-6 py-8">
         <Outlet />
       </main>
+      <CatalogSyncDialog
+        open={syncDialogOpen}
+        onOpenChange={setSyncDialogOpen}
+      />
     </div>
+  )
+}
+
+function CatalogSyncDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [result, setResult] = useState<CatalogSyncResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const syncMutation = useMutation(syncAdminCatalogMutationOptions())
+
+  useEffect(() => {
+    if (!open) return
+    setResult(null)
+    setError(null)
+  }, [open])
+
+  const handleSync = async (mode: CatalogSyncMode) => {
+    if (
+      mode === "overwrite" &&
+      !window.confirm(
+        "Overwrite catalog? This updates all catalog-owned fields from YAML and deletes stale rows (preserving enabled flags).",
+      )
+    ) {
+      return
+    }
+    setError(null)
+    setResult(null)
+    try {
+      const response = await syncMutation.mutateAsync(mode)
+      setResult(response)
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to sync catalog"))
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Sync catalog</DialogTitle>
+          <DialogDescription>
+            Sync categories, parameters, models, vendors, presets, and commands
+            from the catalog YAML files into the database.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 py-2">
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Populate</p>
+              <p className="text-xs text-muted-foreground">
+                Inserts missing rows from YAML and leaves existing records
+                unchanged.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              disabled={syncMutation.isPending}
+              onClick={() => handleSync("populate")}
+            >
+              {syncMutation.isPending && syncMutation.variables === "populate"
+                ? "Populating…"
+                : "Populate"}
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Overwrite</p>
+              <p className="text-xs text-muted-foreground">
+                Updates all catalog-owned fields from YAML and removes stale
+                rows. Preserves enabled toggles.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              disabled={syncMutation.isPending}
+              onClick={() => handleSync("overwrite")}
+            >
+              {syncMutation.isPending && syncMutation.variables === "overwrite"
+                ? "Overwriting…"
+                : "Overwrite"}
+            </Button>
+          </div>
+
+          {result ? (
+            <p className="rounded-md bg-muted px-3 py-2 text-sm">
+              {result.mode === "overwrite"
+                ? `Catalog overwrite completed (${result.removed} stale row${result.removed === 1 ? "" : "s"} removed).`
+                : "Catalog populate completed."}
+            </p>
+          ) : null}
+
+          {error ? (
+            <p className="text-sm text-destructive whitespace-pre-wrap">
+              {error}
+            </p>
+          ) : null}
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

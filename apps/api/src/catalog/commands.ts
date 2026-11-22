@@ -1,5 +1,8 @@
 import { join } from "node:path"
+import { asc, eq } from "drizzle-orm"
 import { z } from "zod"
+import { db } from "@/db"
+import { commands as commandsTable } from "@/db/schema"
 
 export type CatalogCommand = {
   id: string
@@ -19,7 +22,8 @@ const commandsFileSchema = z.object({
   commands: z.array(commandSchema).min(1),
 })
 
-const COMMANDS_FILE = join(import.meta.dir, "commands.yaml")
+const CATALOG_DIR = process.env.CATALOG_DIR ?? import.meta.dir
+const COMMANDS_FILE = join(CATALOG_DIR, "commands.yaml")
 
 let cachedCommands: CatalogCommand[] | null = null
 let loadingCommands: Promise<CatalogCommand[]> | null = null
@@ -52,17 +56,33 @@ export const loadCommands = async (
   return result.data.commands
 }
 
+export const loadCommandsFromDb = async (): Promise<CatalogCommand[]> => {
+  const rows = await db
+    .select()
+    .from(commandsTable)
+    .where(eq(commandsTable.enabled, true))
+    .orderBy(asc(commandsTable.sortOrder), asc(commandsTable.id))
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    promptModifier: row.promptModifier,
+  }))
+}
+
 export const resetCommandCache = () => {
   cachedCommands = null
   loadingCommands = null
 }
 
-export const getCommands = async (): Promise<CatalogCommand[]> => {
+export const getCommands = async (
+  loader: () => Promise<CatalogCommand[]> = loadCommandsFromDb,
+): Promise<CatalogCommand[]> => {
   if (cachedCommands) {
     return cachedCommands
   }
   if (!loadingCommands) {
-    loadingCommands = loadCommands()
+    loadingCommands = loader()
       .then((commands) => {
         cachedCommands = commands
         return commands

@@ -1,3 +1,4 @@
+import { presetOptionIdFromKeyValue } from "./ids"
 import { loadCatalog, type Catalog } from "./load"
 import modelsTracker from "./models-tracker"
 
@@ -186,6 +187,62 @@ export const validateCatalog = (catalog: Catalog): string[] => {
       errors.push(
         `${model.sourceFile} model "${model.id}" is not bound in any vendor file`,
       )
+    }
+  }
+
+  const presets = catalog.presets ?? []
+  addDuplicateErrors(
+    errors,
+    "preset",
+    presets.map((preset) => ({ id: preset.id })),
+  )
+  const presetKeys = new Map<string, string>()
+  const presetOptionIds: Array<{ id: string; source: string }> = []
+  for (const preset of presets) {
+    if (preset.key) {
+      const previous = presetKeys.get(preset.key)
+      if (previous) {
+        errors.push(
+          `duplicate preset key "${preset.key}" (${previous}, ${preset.id})`,
+        )
+      } else {
+        presetKeys.set(preset.key, preset.id)
+      }
+    }
+    const optionValues = new Set<string>()
+    for (const option of preset.options) {
+      presetOptionIds.push({
+        id: presetOptionIdFromKeyValue(preset.key, option.value),
+        source: preset.id,
+      })
+      if (optionValues.has(option.value)) {
+        errors.push(
+          `duplicate preset option value "${option.value}" on ${preset.id}`,
+        )
+      }
+      optionValues.add(option.value)
+    }
+  }
+  addDuplicateErrors(errors, "preset option", presetOptionIds)
+
+  const commands = catalog.commands ?? []
+  addDuplicateErrors(
+    errors,
+    "command",
+    commands.map((command) => ({ id: command.id })),
+  )
+  const commandNames = new Map<string, string>()
+  for (const command of commands) {
+    if (command.name) {
+      const key = command.name.toLowerCase()
+      const previous = commandNames.get(key)
+      if (previous) {
+        errors.push(
+          `duplicate command name "${command.name}" (${previous}, ${command.id})`,
+        )
+      } else {
+        commandNames.set(key, command.id)
+      }
     }
   }
 

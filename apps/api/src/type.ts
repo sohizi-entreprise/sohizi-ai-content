@@ -854,3 +854,10 @@ export type FeedbackMetadata = {
     height: number
   }
 }
+
+export type PresetGenerationTarget = "image" | "video" | "audio" | "project"
+
+export type PresetIllustration = {
+  url: string | null
+  type: "video" | "image"
+}

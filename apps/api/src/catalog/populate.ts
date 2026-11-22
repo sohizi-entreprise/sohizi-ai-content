@@ -1,5 +1,6 @@
 import { db } from "@/db"
 import {
+  commands,
   llmModels,
   llmVendorModelParameterOverrides,
   llmVendors,
@@ -12,6 +13,8 @@ import {
   modelsAndParameterOptions,
   modelsAndParameters,
   parameterOptions,
+  presetOptions,
+  presets,
 } from "@/db/schema"
 import type {
   ModelBasePricing,
@@ -20,7 +23,10 @@ import type {
   VendorKind,
 } from "@/type"
 import { notInArray, sql, type SQL, type SQLWrapper } from "drizzle-orm"
+import { resetCommandCache } from "./commands"
+import { presetOptionIdFromKeyValue } from "./ids"
 import { loadCatalog, withInheritedFileType, type Catalog } from "./load"
+import { resetPresetCache } from "./presets"
 import { validateCatalog, validateTrackedModels } from "./validate"
 
 const toText = (value: unknown): string | null => {
@@ -235,10 +241,35 @@ async function deleteMissing(
     llmVendors.id,
     catalog.vendors.map((vendor) => vendor.id),
   )
+  const presetOptionIds = catalog.presets.flatMap((preset) =>
+    preset.options.map((option) =>
+      presetOptionIdFromKeyValue(preset.key, option.value),
+    ),
+  )
+  removed += await deleteMissingIds(
+    tx,
+    presetOptions,
+    presetOptions.id,
+    presetOptionIds,
+  )
+  removed += await deleteMissingIds(
+    tx,
+    presets,
+    presets.id,
+    catalog.presets.map((preset) => preset.id),
+  )
+  removed += await deleteMissingIds(
+    tx,
+    commands,
+    commands.id,
+    catalog.commands.map((command) => command.id),
+  )
   return removed
 }
 
-export async function writeCatalog(mode: CatalogWriteMode) {
+export async function syncCatalog(
+  mode: CatalogWriteMode,
+): Promise<{ mode: CatalogWriteMode; removed: number }> {
   const script = mode === "overwrite" ? "catalog:overwrite" : "catalog:populate"
   const { catalog, errors: loadErrors } = await loadCatalog()
   const errors = [
@@ -247,13 +278,9 @@ export async function writeCatalog(mode: CatalogWriteMode) {
     ...validateTrackedModels(catalog),
   ]
   if (errors.length > 0) {
-    for (const error of errors) {
-      console.error(error)
-    }
-    console.error(
-      `${script} aborted: validation failed with ${errors.length} error(s)`,
+    throw new Error(
+      `${script} aborted: validation failed with ${errors.length} error(s):\n${errors.join("\n")}`,
     )
-    process.exit(1)
   }
 
   if (
@@ -261,370 +288,455 @@ export async function writeCatalog(mode: CatalogWriteMode) {
     (catalog.categories.length === 0 ||
       catalog.parameters.length === 0 ||
       catalog.models.length === 0 ||
-      catalog.vendors.length === 0)
+      catalog.vendors.length === 0 ||
+      catalog.presets.length === 0 ||
+      catalog.commands.length === 0)
   ) {
-    console.error(
+    throw new Error(
       `${script} aborted: refusing to wipe the catalog tables from an empty file set`,
     )
-    process.exit(1)
   }
 
-  try {
-    const removed = await db.transaction(async (tx) => {
-      if (catalog.categories.length > 0) {
-        const query = tx.insert(modelCategories).values(
-          catalog.categories.map((category) => ({
-            id: category.id,
-            name: category.name,
-            description: category.description,
+  const removed = await db.transaction(async (tx) => {
+    if (catalog.categories.length > 0) {
+      const query = tx.insert(modelCategories).values(
+        catalog.categories.map((category) => ({
+          id: category.id,
+          name: category.name,
+          description: category.description,
+        })),
+      )
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: modelCategories.id,
+          set: touched(mode, {
+            name: excluded("name"),
+            description: excluded("description"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
+      }
+    }
+
+    if (catalog.parameters.length > 0) {
+      await tx
+        .insert(modelParameters)
+        .values(
+          catalog.parameters.map((parameter) => ({
+            id: parameter.id,
+            key: parameter.key,
+            label: parameter.label,
+            type: parameter.type as ModelParameterDataType,
+            description: parameter.description ?? null,
+            xUiComponent: (parameter.xUiComponent ??
+              null) as ModelParameterUIComponent | null,
           })),
         )
-        if (mode === "overwrite") {
-          await query.onConflictDoUpdate({
-            target: modelCategories.id,
-            set: touched(mode, {
-              name: excluded("name"),
-              description: excluded("description"),
-            }),
-          })
-        } else {
-          await query.onConflictDoNothing()
-        }
-      }
+        .onConflictDoUpdate({
+          target: modelParameters.id,
+          set: touched(mode, {
+            key: excluded("key"),
+            label: excluded("label"),
+            type: excluded("type"),
+            description: excluded("description"),
+            xUiComponent: excluded("x_ui_component"),
+          }),
+        })
+    }
 
-      if (catalog.parameters.length > 0) {
-        await tx
-          .insert(modelParameters)
-          .values(
-            catalog.parameters.map((parameter) => ({
-              id: parameter.id,
-              key: parameter.key,
-              label: parameter.label,
-              type: parameter.type as ModelParameterDataType,
-              description: parameter.description ?? null,
-              xUiComponent: (parameter.xUiComponent ??
-                null) as ModelParameterUIComponent | null,
-            })),
-          )
-          .onConflictDoUpdate({
-            target: modelParameters.id,
-            set: touched(mode, {
-              key: excluded("key"),
-              label: excluded("label"),
-              type: excluded("type"),
-              description: excluded("description"),
-              xUiComponent: excluded("x_ui_component"),
-            }),
-          })
+    const optionRows = catalog.parameters.flatMap((parameter) =>
+      parameter.options.map((option) => ({
+        id: option.id,
+        parameterId: parameter.id,
+        label: option.label,
+        value: option.value,
+        description: option.description ?? null,
+      })),
+    )
+    if (optionRows.length > 0) {
+      const query = tx.insert(parameterOptions).values(optionRows)
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: parameterOptions.id,
+          set: touched(mode, {
+            parameterId: excluded("parameter_id"),
+            label: excluded("label"),
+            value: excluded("value"),
+            description: excluded("description"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
       }
+    }
 
-      const optionRows = catalog.parameters.flatMap((parameter) =>
-        parameter.options.map((option) => ({
-          id: option.id,
-          parameterId: parameter.id,
-          label: option.label,
-          value: option.value,
-          description: option.description ?? null,
+    if (catalog.models.length > 0) {
+      const query = tx.insert(llmModels).values(
+        catalog.models.map((model) => ({
+          id: model.id,
+          provider: model.provider,
+          name: model.name,
+          description: model.description ?? null,
+          promptingTechnics: model.promptingTechnics ?? null,
+          selectionGuidance: model.selectionGuidance ?? null,
+          pricing: model.pricing as ModelBasePricing | null,
+          contextWindow: model.contextWindow,
         })),
       )
-      if (optionRows.length > 0) {
-        const query = tx.insert(parameterOptions).values(optionRows)
-        if (mode === "overwrite") {
-          await query.onConflictDoUpdate({
-            target: parameterOptions.id,
-            set: touched(mode, {
-              parameterId: excluded("parameter_id"),
-              label: excluded("label"),
-              value: excluded("value"),
-              description: excluded("description"),
-            }),
-          })
-        } else {
-          await query.onConflictDoNothing()
-        }
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: llmModels.id,
+          set: touched(mode, {
+            provider: excluded("provider"),
+            name: excluded("name"),
+            description: excluded("description"),
+            promptingTechnics: excluded("prompting_technics"),
+            selectionGuidance: excluded("selection_guidance"),
+            pricing: excluded("pricing"),
+            contextWindow: excluded("context_window"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
       }
+    }
 
-      if (catalog.models.length > 0) {
-        const query = tx.insert(llmModels).values(
-          catalog.models.map((model) => ({
-            id: model.id,
-            provider: model.provider,
-            name: model.name,
-            description: model.description ?? null,
-            promptingTechnics: model.promptingTechnics ?? null,
-            selectionGuidance: model.selectionGuidance ?? null,
-            pricing: model.pricing as ModelBasePricing | null,
-            contextWindow: model.contextWindow,
-          })),
+    const categoryRows = catalog.models.flatMap((model) =>
+      model.categories.map((categoryId) => ({
+        modelId: model.id,
+        categoryId,
+      })),
+    )
+    if (categoryRows.length > 0) {
+      await tx
+        .insert(modelsAndCategories)
+        .values(categoryRows)
+        .onConflictDoNothing()
+    }
+
+    const parametersById = new Map(
+      catalog.parameters.map((parameter) => [parameter.id, parameter]),
+    )
+    const parameterBindingRows = catalog.models.flatMap((model) =>
+      model.parameters.map((parameter, index) => ({
+        modelId: model.id,
+        parameterId: parameter.id,
+        required: parameter.required ?? false,
+        sortOrder: index,
+        defaultValue: toText(parameter.defaultValue),
+        constraints: withInheritedFileType(
+          parameter.constraints,
+          parametersById.get(parameter.id)?.fileType,
+        ),
+      })),
+    )
+    if (parameterBindingRows.length > 0) {
+      const query = tx.insert(modelsAndParameters).values(parameterBindingRows)
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: [
+            modelsAndParameters.modelId,
+            modelsAndParameters.parameterId,
+          ],
+          set: touched(mode, {
+            required: excluded("required"),
+            sortOrder: excluded("sort_order"),
+            defaultValue: excluded("default_value"),
+            constraints: excluded("constraints"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
+      }
+    }
+
+    const optionsByParameterValue = new Map<string, string>()
+    for (const parameter of catalog.parameters) {
+      for (const option of parameter.options) {
+        optionsByParameterValue.set(
+          `${parameter.id}:${option.value}`,
+          option.id,
         )
-        if (mode === "overwrite") {
-          await query.onConflictDoUpdate({
-            target: llmModels.id,
-            set: touched(mode, {
-              provider: excluded("provider"),
-              name: excluded("name"),
-              description: excluded("description"),
-              promptingTechnics: excluded("prompting_technics"),
-              selectionGuidance: excluded("selection_guidance"),
-              pricing: excluded("pricing"),
-              contextWindow: excluded("context_window"),
-            }),
-          })
-        } else {
-          await query.onConflictDoNothing()
-        }
       }
+    }
 
-      const categoryRows = catalog.models.flatMap((model) =>
-        model.categories.map((categoryId) => ({
-          modelId: model.id,
-          categoryId,
-        })),
-      )
-      if (categoryRows.length > 0) {
-        await tx
-          .insert(modelsAndCategories)
-          .values(categoryRows)
-          .onConflictDoNothing()
-      }
-
-      const parametersById = new Map(
-        catalog.parameters.map((parameter) => [parameter.id, parameter]),
-      )
-      const parameterBindingRows = catalog.models.flatMap((model) =>
-        model.parameters.map((parameter, index) => ({
-          modelId: model.id,
-          parameterId: parameter.id,
-          required: parameter.required ?? false,
-          sortOrder: index,
-          defaultValue: toText(parameter.defaultValue),
-          constraints: withInheritedFileType(
-            parameter.constraints,
-            parametersById.get(parameter.id)?.fileType,
-          ),
-        })),
-      )
-      if (parameterBindingRows.length > 0) {
-        const query = tx
-          .insert(modelsAndParameters)
-          .values(parameterBindingRows)
-        if (mode === "overwrite") {
-          await query.onConflictDoUpdate({
-            target: [
-              modelsAndParameters.modelId,
-              modelsAndParameters.parameterId,
-            ],
-            set: touched(mode, {
-              required: excluded("required"),
-              sortOrder: excluded("sort_order"),
-              defaultValue: excluded("default_value"),
-              constraints: excluded("constraints"),
-            }),
-          })
-        } else {
-          await query.onConflictDoNothing()
-        }
-      }
-
-      const optionsByParameterValue = new Map<string, string>()
-      for (const parameter of catalog.parameters) {
-        for (const option of parameter.options) {
-          optionsByParameterValue.set(
-            `${parameter.id}:${option.value}`,
-            option.id,
+    const allowedOptionRows = catalog.models.flatMap((model) =>
+      model.parameters.flatMap((parameter) =>
+        (parameter.allowedValues ?? []).flatMap((value) => {
+          const optionId = optionsByParameterValue.get(
+            `${parameter.id}:${String(value)}`,
           )
-        }
-      }
+          if (!optionId) return []
+          return [
+            {
+              modelId: model.id,
+              parameterId: parameter.id,
+              optionId,
+            },
+          ]
+        }),
+      ),
+    )
+    if (allowedOptionRows.length > 0) {
+      await tx
+        .insert(modelsAndParameterOptions)
+        .values(allowedOptionRows)
+        .onConflictDoNothing()
+    }
 
-      const allowedOptionRows = catalog.models.flatMap((model) =>
-        model.parameters.flatMap((parameter) =>
-          (parameter.allowedValues ?? []).flatMap((value) => {
-            const optionId = optionsByParameterValue.get(
-              `${parameter.id}:${String(value)}`,
-            )
-            if (!optionId) return []
+    if (catalog.vendors.length > 0) {
+      const query = tx.insert(llmVendors).values(
+        catalog.vendors.map((vendor) => ({
+          id: vendor.id,
+          name: vendor.name,
+          adapter: vendor.adapter,
+          url: vendor.url ?? null,
+          kind: vendor.kind as VendorKind,
+          rateLimit: vendor.rateLimit ?? {
+            rpm: 60,
+            burst: 60,
+            maxConcurrency: 10,
+          },
+          circuitConfig: vendor.circuitConfig ?? null,
+        })),
+      )
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: llmVendors.id,
+          set: touched(mode, {
+            name: excluded("name"),
+            adapter: excluded("adapter"),
+            url: excluded("url"),
+            kind: excluded("kind"),
+            rateLimit: excluded("rate_limit"),
+            circuitConfig: excluded("circuit_config"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
+      }
+    }
+
+    const vendorModelRows = catalog.vendors.flatMap((vendor) =>
+      vendor.models.map((binding) => ({
+        vendorId: vendor.id,
+        modelId: binding.id,
+        apiName: binding.apiName,
+        priority: binding.priority ?? 100,
+      })),
+    )
+    if (vendorModelRows.length > 0) {
+      const query = tx.insert(llmVendorsAndModels).values(vendorModelRows)
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: [llmVendorsAndModels.vendorId, llmVendorsAndModels.modelId],
+          set: touched(mode, {
+            apiName: excluded("api_name"),
+            priority: excluded("priority"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
+      }
+    }
+
+    const vendorParameterRows = catalog.vendors.flatMap((vendor) =>
+      Object.entries(vendor.parametersMapping).map(
+        ([parameterId, mapping]) => ({
+          vendorId: vendor.id,
+          parameterId,
+          vendorParamName: mapping.vendorParamName ?? null,
+          vendorDefaultValue: mapping.vendorDefaultValue ?? null,
+        }),
+      ),
+    )
+    if (vendorParameterRows.length > 0) {
+      const query = tx
+        .insert(llmVendorsAndParameters)
+        .values(vendorParameterRows)
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: [
+            llmVendorsAndParameters.vendorId,
+            llmVendorsAndParameters.parameterId,
+          ],
+          set: touched(mode, {
+            vendorParamName: excluded("vendor_param_name"),
+            vendorDefaultValue: excluded("vendor_default_value"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
+      }
+    }
+
+    const vendorOptionRows = catalog.vendors.flatMap((vendor) =>
+      Object.values(vendor.parametersMapping).flatMap((mapping) =>
+        Object.entries(mapping.optionMapping ?? {}).map(
+          ([optionId, option]) => ({
+            vendorId: vendor.id,
+            parameterOptionId: optionId,
+            vendorOptionValue: toText(option.mappedValue ?? option.value) ?? "",
+          }),
+        ),
+      ),
+    )
+    if (vendorOptionRows.length > 0) {
+      const query = tx
+        .insert(llmVendorsAndParameterOptions)
+        .values(vendorOptionRows)
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: [
+            llmVendorsAndParameterOptions.vendorId,
+            llmVendorsAndParameterOptions.parameterOptionId,
+          ],
+          set: touched(mode, {
+            vendorOptionValue: excluded("vendor_option_value"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
+      }
+    }
+
+    const overrideRows = catalog.vendors.flatMap((vendor) =>
+      Object.entries(vendor.modelParameterOverrides).flatMap(
+        ([modelId, overrides]) =>
+          Object.entries(overrides).flatMap(([parameterId, override]) => {
+            if (!override.vendorParamName) return []
             return [
               {
-                modelId: model.id,
-                parameterId: parameter.id,
-                optionId,
+                vendorId: vendor.id,
+                modelId,
+                parameterId,
+                vendorParamName: override.vendorParamName,
               },
             ]
           }),
-        ),
-      )
-      if (allowedOptionRows.length > 0) {
-        await tx
-          .insert(modelsAndParameterOptions)
-          .values(allowedOptionRows)
-          .onConflictDoNothing()
+      ),
+    )
+    if (overrideRows.length > 0) {
+      const query = tx
+        .insert(llmVendorModelParameterOverrides)
+        .values(overrideRows)
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: [
+            llmVendorModelParameterOverrides.vendorId,
+            llmVendorModelParameterOverrides.modelId,
+            llmVendorModelParameterOverrides.parameterId,
+          ],
+          set: touched(mode, {
+            vendorParamName: excluded("vendor_param_name"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
       }
+    }
 
-      if (catalog.vendors.length > 0) {
-        const query = tx.insert(llmVendors).values(
-          catalog.vendors.map((vendor) => ({
-            id: vendor.id,
-            name: vendor.name,
-            adapter: vendor.adapter,
-            url: vendor.url ?? null,
-            kind: vendor.kind as VendorKind,
-            rateLimit: vendor.rateLimit ?? {
-              rpm: 60,
-              burst: 60,
-              maxConcurrency: 10,
-            },
-            circuitConfig: vendor.circuitConfig ?? null,
-          })),
-        )
-        if (mode === "overwrite") {
-          await query.onConflictDoUpdate({
-            target: llmVendors.id,
-            set: touched(mode, {
-              name: excluded("name"),
-              adapter: excluded("adapter"),
-              url: excluded("url"),
-              kind: excluded("kind"),
-              rateLimit: excluded("rate_limit"),
-              circuitConfig: excluded("circuit_config"),
-            }),
-          })
-        } else {
-          await query.onConflictDoNothing()
-        }
-      }
-
-      const vendorModelRows = catalog.vendors.flatMap((vendor) =>
-        vendor.models.map((binding) => ({
-          vendorId: vendor.id,
-          modelId: binding.id,
-          apiName: binding.apiName,
-          priority: binding.priority ?? 100,
+    if (catalog.presets.length > 0) {
+      const query = tx.insert(presets).values(
+        catalog.presets.map((preset, index) => ({
+          id: preset.id,
+          key: preset.key,
+          label: preset.label,
+          generationTarget: preset.generationTarget,
+          sortOrder: index,
         })),
       )
-      if (vendorModelRows.length > 0) {
-        const query = tx.insert(llmVendorsAndModels).values(vendorModelRows)
-        if (mode === "overwrite") {
-          await query.onConflictDoUpdate({
-            target: [llmVendorsAndModels.vendorId, llmVendorsAndModels.modelId],
-            set: touched(mode, {
-              apiName: excluded("api_name"),
-              priority: excluded("priority"),
-            }),
-          })
-        } else {
-          await query.onConflictDoNothing()
-        }
-      }
-
-      const vendorParameterRows = catalog.vendors.flatMap((vendor) =>
-        Object.entries(vendor.parametersMapping).map(
-          ([parameterId, mapping]) => ({
-            vendorId: vendor.id,
-            parameterId,
-            vendorParamName: mapping.vendorParamName ?? null,
-            vendorDefaultValue: mapping.vendorDefaultValue ?? null,
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: presets.id,
+          set: touched(mode, {
+            key: excluded("key"),
+            label: excluded("label"),
+            generationTarget: excluded("generation_target"),
+            sortOrder: excluded("sort_order"),
           }),
-        ),
-      )
-      if (vendorParameterRows.length > 0) {
-        const query = tx
-          .insert(llmVendorsAndParameters)
-          .values(vendorParameterRows)
-        if (mode === "overwrite") {
-          await query.onConflictDoUpdate({
-            target: [
-              llmVendorsAndParameters.vendorId,
-              llmVendorsAndParameters.parameterId,
-            ],
-            set: touched(mode, {
-              vendorParamName: excluded("vendor_param_name"),
-              vendorDefaultValue: excluded("vendor_default_value"),
-            }),
-          })
-        } else {
-          await query.onConflictDoNothing()
-        }
+        })
+      } else {
+        await query.onConflictDoNothing()
       }
+    }
 
-      const vendorOptionRows = catalog.vendors.flatMap((vendor) =>
-        Object.values(vendor.parametersMapping).flatMap((mapping) =>
-          Object.entries(mapping.optionMapping ?? {}).map(
-            ([optionId, option]) => ({
-              vendorId: vendor.id,
-              parameterOptionId: optionId,
-              vendorOptionValue:
-                toText(option.mappedValue ?? option.value) ?? "",
-            }),
-          ),
-        ),
-      )
-      if (vendorOptionRows.length > 0) {
-        const query = tx
-          .insert(llmVendorsAndParameterOptions)
-          .values(vendorOptionRows)
-        if (mode === "overwrite") {
-          await query.onConflictDoUpdate({
-            target: [
-              llmVendorsAndParameterOptions.vendorId,
-              llmVendorsAndParameterOptions.parameterOptionId,
-            ],
-            set: touched(mode, {
-              vendorOptionValue: excluded("vendor_option_value"),
-            }),
-          })
-        } else {
-          await query.onConflictDoNothing()
-        }
+    const presetOptionRows = catalog.presets.flatMap((preset) =>
+      preset.options.map((option, index) => ({
+        id: presetOptionIdFromKeyValue(preset.key, option.value),
+        presetId: preset.id,
+        label: option.label,
+        value: option.value,
+        illustration: option.illustration,
+        promptModifier: option.promptModifier,
+        sortOrder: index,
+      })),
+    )
+    if (presetOptionRows.length > 0) {
+      const query = tx.insert(presetOptions).values(presetOptionRows)
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: presetOptions.id,
+          set: touched(mode, {
+            presetId: excluded("preset_id"),
+            label: excluded("label"),
+            value: excluded("value"),
+            illustration: excluded("illustration"),
+            promptModifier: excluded("prompt_modifier"),
+            sortOrder: excluded("sort_order"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
       }
+    }
 
-      const overrideRows = catalog.vendors.flatMap((vendor) =>
-        Object.entries(vendor.modelParameterOverrides).flatMap(
-          ([modelId, overrides]) =>
-            Object.entries(overrides).flatMap(([parameterId, override]) => {
-              if (!override.vendorParamName) return []
-              return [
-                {
-                  vendorId: vendor.id,
-                  modelId,
-                  parameterId,
-                  vendorParamName: override.vendorParamName,
-                },
-              ]
-            }),
-        ),
+    if (catalog.commands.length > 0) {
+      const query = tx.insert(commands).values(
+        catalog.commands.map((command, index) => ({
+          id: command.id,
+          name: command.name,
+          promptModifier: command.promptModifier,
+          sortOrder: index,
+        })),
       )
-      if (overrideRows.length > 0) {
-        const query = tx
-          .insert(llmVendorModelParameterOverrides)
-          .values(overrideRows)
-        if (mode === "overwrite") {
-          await query.onConflictDoUpdate({
-            target: [
-              llmVendorModelParameterOverrides.vendorId,
-              llmVendorModelParameterOverrides.modelId,
-              llmVendorModelParameterOverrides.parameterId,
-            ],
-            set: touched(mode, {
-              vendorParamName: excluded("vendor_param_name"),
-            }),
-          })
-        } else {
-          await query.onConflictDoNothing()
-        }
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: commands.id,
+          set: touched(mode, {
+            name: excluded("name"),
+            promptModifier: excluded("prompt_modifier"),
+            sortOrder: excluded("sort_order"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
       }
+    }
 
-      if (mode !== "overwrite") return 0
-      return deleteMissing(tx, catalog, {
-        categoryRows,
-        parameterBindingRows,
-        allowedOptionRows,
-        vendorModelRows,
-        vendorParameterRows,
-        vendorOptionRows,
-        overrideRows,
-      })
+    if (mode !== "overwrite") return 0
+    return deleteMissing(tx, catalog, {
+      categoryRows,
+      parameterBindingRows,
+      allowedOptionRows,
+      vendorModelRows,
+      vendorParameterRows,
+      vendorOptionRows,
+      overrideRows,
     })
+  })
 
+  resetPresetCache()
+  resetCommandCache()
+
+  return { mode, removed }
+}
+
+export async function writeCatalog(mode: CatalogWriteMode) {
+  const script = mode === "overwrite" ? "catalog:overwrite" : "catalog:populate"
+  try {
+    const { removed } = await syncCatalog(mode)
     if (mode === "overwrite") {
       console.log(`${script} completed (removed ${removed} stale row(s))`)
     } else {

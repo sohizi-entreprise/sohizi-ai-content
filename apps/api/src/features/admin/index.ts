@@ -241,13 +241,13 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     body: createCommandSchema,
   })
   .get("/commands/:id", ({ params }) => adminService.getCommand(params.id), {
-    params: z.object({ id: z.uuid() }),
+    params: z.object({ id: catalogIdSchema }),
   })
   .patch(
     "/commands/:id",
     ({ params, body }) => adminService.updateCommand(params.id, body),
     {
-      params: z.object({ id: z.uuid() }),
+      params: z.object({ id: catalogIdSchema }),
       body: updateCommandSchema,
     },
   )
@@ -255,7 +255,16 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
     "/commands/:id",
     ({ params }) => adminService.deleteCommand(params.id),
     {
-      params: z.object({ id: z.uuid() }),
+      params: z.object({ id: catalogIdSchema }),
+    },
+  )
+  .post(
+    "/catalog/sync",
+    ({ body }) => adminService.syncCatalogData(body.mode),
+    {
+      body: z.object({
+        mode: z.enum(["populate", "overwrite"]),
+      }),
     },
   )
   .get("/content-categories", () => adminService.listContentCategories())

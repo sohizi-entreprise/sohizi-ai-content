@@ -1,7 +1,7 @@
 import "dotenv/config"
-import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
-import { Pool } from "pg"
+import { syncCatalog } from "@/catalog/populate"
+import { db, pool } from "@/db"
 
 const databaseUrl = process.env.DATABASE_URL
 if (!databaseUrl) {
@@ -11,11 +11,9 @@ if (!databaseUrl) {
 
 const migrationsFolder = process.env.MIGRATIONS_FOLDER ?? "/app/migrations"
 
-const pool = new Pool({ connectionString: databaseUrl })
-const db = drizzle(pool)
-
 try {
   await migrate(db, { migrationsFolder })
+  await syncCatalog("populate")
   await pool.end()
   process.exit(0)
 } catch (error) {

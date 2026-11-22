@@ -9,3 +9,8 @@ export const parameterIdFromKey = (key: string) => `parameter_${key}`
 
 export const optionIdFromKeyValue = (key: string, value: string) =>
   `option_${key}_${slugPart(value)}`
+
+export const presetIdFromKey = (key: string) => `preset_${key}`
+
+export const presetOptionIdFromKeyValue = (key: string, value: string) =>
+  `preset_option_${key}_${slugPart(value)}`

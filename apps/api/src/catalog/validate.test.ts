@@ -48,6 +48,8 @@ const catalog = (overrides: Partial<Catalog> = {}): Catalog => ({
   parameters: [],
   models: [],
   vendors: [],
+  presets: [],
+  commands: [],
   ...overrides,
 })
 

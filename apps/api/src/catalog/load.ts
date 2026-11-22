@@ -1,6 +1,8 @@
 import { readdir } from "node:fs/promises"
 import { join } from "node:path"
 import type { ModelBasePricing } from "@/type"
+import { loadCommands, type CatalogCommand } from "./commands"
+import { loadPresets, type CatalogPreset } from "./presets"
 
 export type CatalogCategory = {
   id: string
@@ -101,6 +103,8 @@ export type Catalog = {
   parameters: CatalogParameter[]
   models: CatalogModel[]
   vendors: CatalogVendor[]
+  presets: CatalogPreset[]
+  commands: CatalogCommand[]
 }
 
 export type LoadedCatalog = {
@@ -108,7 +112,7 @@ export type LoadedCatalog = {
   errors: string[]
 }
 
-const CATALOG_DIR = import.meta.dir
+const CATALOG_DIR = process.env.CATALOG_DIR ?? import.meta.dir
 
 const parseYaml = (text: string, source: string): unknown => {
   try {
@@ -344,6 +348,8 @@ export const loadCatalog = async (
     parameters: [],
     models: [],
     vendors: [],
+    presets: [],
+    commands: [],
   }
 
   const readFile = async (relativePath: string) => {
@@ -393,6 +399,18 @@ export const loadCatalog = async (
     const parsed = await readFile(relativePath)
     if (parsed == null) continue
     catalog.vendors.push(parseVendor(parsed, relativePath))
+  }
+
+  try {
+    catalog.presets = await loadPresets(join(catalogDir, "presets"))
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error))
+  }
+
+  try {
+    catalog.commands = await loadCommands(join(catalogDir, "commands.yaml"))
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error))
   }
 
   return { catalog, errors }

@@ -56,6 +56,8 @@ import {
   FeedbackType,
   FeedbackStatus,
   FeedbackMetadata,
+  PresetGenerationTarget,
+  PresetIllustration,
 } from "@/type"
 import { FileFormat, FileType } from "@/features/file-system/constants"
 
@@ -1228,23 +1230,59 @@ export const assetsRelations = relations(assets, ({ one }) => ({
   }),
 }))
 
-export const commands = pgTable(
-  "commands",
+export const presets = pgTable(
+  "presets",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    name: varchar("name", { length: 100 }).notNull(),
-    action: text("action").notNull(),
-    isPublic: boolean("is_public").default(false).notNull(),
-    visible: boolean("visible").default(false).notNull(),
-    projectId: uuid("project_id").references(() => projects.id, {
-      onDelete: "cascade",
-    }),
+    id: varchar("id", { length: 100 }).primaryKey(),
+    key: varchar("key", { length: 100 }).notNull(),
+    label: varchar("label", { length: 100 }).notNull(),
+    generationTarget: varchar("generation_target", { length: 50 })
+      .notNull()
+      .$type<PresetGenerationTarget>(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("presets_key_unique").on(table.key)],
+)
+
+export const presetOptions = pgTable(
+  "preset_options",
+  {
+    id: varchar("id", { length: 100 }).primaryKey(),
+    presetId: varchar("preset_id", { length: 100 })
+      .references(() => presets.id, { onDelete: "cascade" })
+      .notNull(),
+    label: varchar("label", { length: 100 }).notNull(),
+    value: text("value").notNull(),
+    illustration: jsonb("illustration").$type<PresetIllustration>().notNull(),
+    promptModifier: text("prompt_modifier").notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
     ...timestamps,
   },
   (table) => [
-    index("commands_project_id_idx").on(table.projectId),
-    uniqueIndex("commands_name_project_unique").on(table.name, table.projectId),
+    uniqueIndex("preset_options_preset_id_value_unique").on(
+      table.presetId,
+      table.value,
+    ),
+    index("preset_options_preset_id_sort_order_idx").on(
+      table.presetId,
+      table.sortOrder,
+    ),
   ],
+)
+
+export const commands = pgTable(
+  "commands",
+  {
+    id: varchar("id", { length: 100 }).primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(),
+    promptModifier: text("prompt_modifier").notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("commands_name_unique").on(table.name)],
 )
 
 export const assetVariants = pgTable(
@@ -1374,5 +1412,7 @@ export type VideoRenderJobStatus =
 export type Template = typeof templates.$inferSelect
 export type PendingFileOperation = typeof pendingFileOperations.$inferSelect
 export type ConversationAgentRun = typeof conversationAgentRuns.$inferSelect
+export type Preset = typeof presets.$inferSelect
+export type PresetOption = typeof presetOptions.$inferSelect
 export type Command = typeof commands.$inferSelect
 export type Feedback = typeof feedbacks.$inferSelect

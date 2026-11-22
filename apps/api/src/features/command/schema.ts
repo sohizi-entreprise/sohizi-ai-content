@@ -1,12 +1,11 @@
 import { z } from "zod"
 
 export const commandResponseSchema = z.object({
-  id: z.uuid(),
+  id: z.string(),
   name: z.string(),
-  action: z.string(),
-  isPublic: z.boolean(),
-  visible: z.boolean(),
-  projectId: z.uuid().nullable(),
+  promptModifier: z.string(),
+  sortOrder: z.number(),
+  enabled: z.boolean(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
@@ -14,17 +13,22 @@ export const commandResponseSchema = z.object({
 export type CommandResponse = z.infer<typeof commandResponseSchema>
 
 export const createCommandSchema = z.object({
-  name: z
+  id: z
     .string()
     .trim()
     .min(1)
     .max(100)
     .regex(
       /^[a-z0-9][a-z0-9-_]*$/i,
-      "Name must be slash-friendly (letters, numbers, - or _)",
+      "ID must be slash-friendly (letters, numbers, - or _)",
     ),
-  action: z.string().trim().min(1),
-  visible: z.boolean().optional().default(false),
+  name: z.string().trim().min(1).max(100),
+  promptModifier: z.string().trim().min(1),
+  enabled: z.boolean().optional().default(true),
 })
 
-export const updateCommandSchema = createCommandSchema.partial()
+export const updateCommandSchema = z.object({
+  name: z.string().trim().min(1).max(100).optional(),
+  promptModifier: z.string().trim().min(1).optional(),
+  enabled: z.boolean().optional(),
+})
