@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Copy, FileCode2, Paperclip } from "lucide-react"
+import { Copy, Download, FileCode2, Paperclip } from "lucide-react"
 import ReactPlayer from "react-player"
 import { toast } from "sonner"
 import { Badge } from "@sohizi/ui/badge"
@@ -19,6 +19,7 @@ import type { AssetContent, AssetType } from "../../types"
 import { useChatStore } from "@/features/chat/store/chat-store"
 import { getGenerationDetails } from "@/features/media-generator/lib/request-state"
 import { getAiGeneratedRequestQueryOptions } from "@/features/media-generator/query-mutations"
+import { getAssetDownloadUrl } from "@/features/media-generator/requests"
 import {
   buildOptimizeddImageUrl,
   imageUrlTransforms,
@@ -41,7 +42,30 @@ export default function AssetViewer(props: Props) {
     projectId,
   } = props
   const [sourceDialogOpen, setSourceDialogOpen] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
   const isAiGenerated = source === "ai-generated"
+
+  const handleDownload = async () => {
+    if (isDownloading) return
+    setIsDownloading(true)
+    try {
+      const downloadUrl =
+        projectId && assetId
+          ? (await getAssetDownloadUrl(projectId, assetId)).url
+          : url
+      const anchor = document.createElement("a")
+      anchor.href = downloadUrl
+      anchor.download = props.name
+      anchor.rel = "noopener"
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+    } catch {
+      toast.error("Failed to download asset")
+    } finally {
+      setIsDownloading(false)
+    }
+  }
 
   const handleAttach = () => {
     const { chatOpenByContext, toggleChatPanel } = useEditorStore.getState()
@@ -66,15 +90,30 @@ export default function AssetViewer(props: Props) {
     <div className="flex h-full w-full flex-col overflow-hidden">
       <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/50 px-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Badge
-            variant="default"
-            className="gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-          >
-            {isAiGenerated ? "AI Generated" : "User Uploaded"}
-          </Badge>
+          {isAiGenerated ? (
+            <Badge
+              variant="outline"
+              className="gap-1.5 rounded-full border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-medium text-violet-600 select-none dark:text-violet-300"
+            >
+              AI Generated
+            </Badge>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            disabled={isDownloading}
+            aria-label="Download asset"
+            title="Download"
+            className="size-8 rounded-full dark:border-border"
+            onClick={() => void handleDownload()}
+          >
+            <Download className="size-3.5" />
+          </Button>
+
           <Button
             type="button"
             size="sm"

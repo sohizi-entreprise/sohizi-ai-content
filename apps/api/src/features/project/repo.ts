@@ -53,8 +53,8 @@ export const createProject = async (
         content: briefContent,
         additionalSettings: {
           presets: data.presets,
-          commandId: data.commandId,
-          modelId: data.modelId,
+          commandId: data.commandId ?? null,
+          modelId: data.modelId ?? null,
         },
       })
     }

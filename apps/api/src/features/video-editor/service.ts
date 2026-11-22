@@ -53,7 +53,9 @@ export const loadComposition = async (
   }
 
   const clipsByTrack = new Map<string, typeof result.clips>()
+  let maxEnd = 0
   for (const clip of result.clips) {
+    if (clip.endFrame > maxEnd) maxEnd = clip.endFrame
     const arr = clipsByTrack.get(clip.trackId)
     if (arr) arr.push(clip)
     else clipsByTrack.set(clip.trackId, [clip])
@@ -63,7 +65,14 @@ export const loadComposition = async (
     clips: clipsByTrack.get(t.id) ?? [],
   }))
 
-  return { composition: result.composition, tracks }
+  const composition =
+    maxEnd > 0 && result.composition.durationInFrames !== maxEnd
+      ? ((await repo.updateComposition(result.composition.id, {
+          durationInFrames: maxEnd,
+        })) ?? { ...result.composition, durationInFrames: maxEnd })
+      : result.composition
+
+  return { composition, tracks }
 }
 
 export const createComposition = async (

@@ -17,13 +17,11 @@ import {
   DropdownMenuTrigger,
 } from "@sohizi/ui/dropdown-menu"
 import {
-  IconCirclePlusFilled,
   IconFolderFilled,
   IconLogout,
   IconSettingsFilled,
 } from "@tabler/icons-react"
 import { getInitials } from "@/features/account/lib"
-import CreateProject from "@/features/projects/components/create-project"
 import { authClient, useSession } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 
@@ -36,7 +34,7 @@ const navigation = [
     label: "My Projects",
     to: "/",
     icon: IconFolderFilled,
-    isActive: (pathname: string) => pathname === "/",
+    isActive: (pathname: string) => pathname === "/" || pathname === "/create",
   },
   {
     label: "Account Settings",
@@ -48,7 +46,6 @@ const navigation = [
 
 function RouteComponent() {
   const pathname = useLocation({ select: (location) => location.pathname })
-  const isProjects = pathname === "/"
 
   return (
     <div className="h-screen bg-background text-foreground md:flex font-geist">
@@ -93,8 +90,7 @@ function RouteComponent() {
       </aside>
 
       <div className="min-w-0 flex-1 overflow-y-auto bg-card rounded-2xl mt-4 mr-4 relative">
-        {isProjects && <GradientBackground />}
-        <header className="flex h-16 sticky top-0 z-10 items-center justify-between backdrop-blur-sm px-4 sm:px-6 lg:px-10">
+        <header className="flex h-16 sticky top-0 z-10 items-center justify-between backdrop-blur-sm px-4 sm:px-6 lg:px-10 md:hidden">
           <div className="flex items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -130,9 +126,6 @@ function RouteComponent() {
               <img src="/logo.svg" alt="" className="size-8 object-contain" />
               <span className="font-semibold tracking-tight">Sohizi Lab</span>
             </Link>
-          </div>
-          <div className="flex items-center gap-3">
-            {isProjects && <StartProjectAction />}
           </div>
         </header>
         <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6 lg:px-10">
@@ -201,27 +194,5 @@ function LogoutMenuItem() {
       <IconLogout className="size-4" aria-hidden="true" />
       {signingOut ? "Signing out..." : "Log out"}
     </DropdownMenuItem>
-  )
-}
-
-function StartProjectAction() {
-  return (
-    <CreateProject
-      trigger={
-        <Button className="hidden sm:inline-flex rounded-xl font-bold cursor-pointer hover:scale-105 transition-transform duration-200">
-          <IconCirclePlusFilled className="size-5" />
-          New blank project
-        </Button>
-      }
-    />
-  )
-}
-
-function GradientBackground() {
-  return (
-    <>
-      <div className="pointer-events-none absolute w-full h-1/2 inset-x-0 top-0 bg-[linear-gradient(to_right,oklch(1_0_0/0.04)_1px,transparent_1px),linear-gradient(to_bottom,oklch(1_0_0/0.04)_1px,transparent_1px)] bg-size-[48px_48px] mask-[radial-gradient(ellipse_at_center,black_20%,transparent_75%)]" />
-      <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-0 h-85 w-160 bg-[radial-gradient(ellipse_at_top,oklch(0.936036_0.225167_121.2409/0.18),transparent_60%)] blur-[80px]" />
-    </>
   )
 }

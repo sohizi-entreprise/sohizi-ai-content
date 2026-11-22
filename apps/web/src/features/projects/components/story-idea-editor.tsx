@@ -44,7 +44,7 @@ type StoryIdeaEditorProps = {
 export default function StoryIdeaEditor({
   onChange,
   onSubmit,
-  placeholder = "Share your idea with me, or pick a setting to get started quickly.",
+  placeholder = "Write your project brief — describe the concept, story, key message, or visual direction...",
   className,
   ref,
 }: StoryIdeaEditorProps) {

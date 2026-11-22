@@ -14,22 +14,10 @@ commands:
     name: Storyboard
     promptModifier: >
       Build the storyboard. Break the video into scenes with visual direction,
-      framing, and what happens in each shot.
-  - id: end-to-end
-    name: End to end
-    promptModifier: >
-      Build the entire video. Take the idea from plan through script,
-      storyboard, and finished scenes.
+      framing, and what happens in each shot. Follow the rules in `/system/skills/storyboard`.
   - id: brainstorm
     name: Brainstorm
     promptModifier: >
       Brainstorm fresh creative angles, hooks, and concepts with the user.
       Explore distinct directions and trade-offs before committing to a script or generating media.
-      When saving brainstorm concepts to a document file, follow `/system/syntax/document`
-      (such as `:::card`, `:::moodboard`, `:::palette`, `:::sources`, and `:badge[]`).
-  - id: remix
-    name: Remix
-    promptModifier: >
-      Remix and reimagine the referenced or described content into new formats,
-      angles, or variations while preserving what makes the original work.
-      When writing to a document file, follow `/system/syntax/document`.
+      When saving brainstorm concepts to a document file, follow `/system/syntax/document`.

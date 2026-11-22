@@ -31,12 +31,8 @@ describe("GREETINGS and SUGGESTIONS", () => {
     }
   })
 
-  it("provides the 3 command suggestions (brainstorm, remix, plan)", () => {
-    expect(SUGGESTIONS.map((s) => s.command.id)).toEqual([
-      "brainstorm",
-      "remix",
-      "plan",
-    ])
+  it("provides the command suggestions (brainstorm, plan)", () => {
+    expect(SUGGESTIONS.map((s) => s.command.id)).toEqual(["brainstorm", "plan"])
     for (const suggestion of SUGGESTIONS) {
       expect(suggestion.title.length).toBeGreaterThan(0)
       expect(suggestion.description.length).toBeGreaterThan(0)

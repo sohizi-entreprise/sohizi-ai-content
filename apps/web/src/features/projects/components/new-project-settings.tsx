@@ -3,6 +3,7 @@ import {
   IconAspectRatio,
   IconBook,
   IconBrandYoutube,
+  IconCheck,
   IconListTree,
   IconMoodSmile,
   IconMovie,
@@ -11,7 +12,6 @@ import {
   IconUsers,
 } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
-import { useState } from "react"
 import { Button } from "@sohizi/ui/button"
 import {
   Dialog,
@@ -21,7 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@sohizi/ui/dialog"
-import { Label } from "@sohizi/ui/label"
 import { getProjectOptionsQueryOptions } from "../query-mutation"
 import {
   isAdditionalSettingKey,
@@ -29,8 +28,8 @@ import {
 } from "../store/new-project-store"
 import type { IconProps } from "@tabler/icons-react"
 import type { ForwardRefExoticComponent, RefAttributes } from "react"
-import type { ProjectPreset, ProjectPresetIllustration } from "../type"
 import type { SettingOption } from "../store/new-project-store"
+import { cn } from "@/lib/utils"
 
 type SettingIcon = ForwardRefExoticComponent<
   IconProps & RefAttributes<SVGSVGElement>
@@ -51,151 +50,140 @@ const SETTING_ICONS: Partial<Record<string, SettingIcon>> = {
 export default function NewProjectSettings() {
   const { data } = useQuery(getProjectOptionsQueryOptions("project"))
   const presets = data?.presets ?? []
-  const [selectedKey, setSelectedKey] = useState("format")
-  const { setAdditionalSetting, additionalSettings } = useNewProjectStore()
-  const content: ProjectPreset | undefined =
-    presets.find((preset) => preset.key === selectedKey) ??
-    (presets.length > 0 ? presets[0] : undefined)
-  const currentValue =
-    content && isAdditionalSettingKey(content.key)
-      ? additionalSettings[content.key]
-      : null
+  const { setAdditionalSetting, clearAdditionalSetting, additionalSettings } =
+    useNewProjectStore()
 
-  const handleSelect = (option: SettingOption) => {
-    if (!content || !isAdditionalSettingKey(content.key)) {
-      return
+  const selectedCount = presets.reduce((count, preset) => {
+    if (isAdditionalSettingKey(preset.key) && additionalSettings[preset.key]) {
+      return count + 1
     }
-    setAdditionalSetting(content.key, option)
+    return count
+  }, 0)
+
+  const handleToggle = (key: string, option: SettingOption) => {
+    if (!isAdditionalSettingKey(key)) return
+    const current = additionalSettings[key]
+    if (current?.value === option.value) {
+      clearAdditionalSetting(key)
+    } else {
+      setAdditionalSetting(key, option)
+    }
+  }
+
+  const handleClearAll = () => {
+    for (const preset of presets) {
+      if (
+        isAdditionalSettingKey(preset.key) &&
+        additionalSettings[preset.key]
+      ) {
+        clearAdditionalSetting(preset.key)
+      }
+    }
   }
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="h-auto gap-1.5 rounded-full bg-card text-base px-3 py-1.5 font-normal text-foreground hover:bg-card/50 cursor-pointer">
+        <Button
+          type="button"
+          className="h-auto gap-1.5 rounded-full bg-card px-3.5 py-1.5 font-geist text-sm font-normal text-foreground hover:bg-card/70 cursor-pointer"
+        >
           <IconAdjustmentsHorizontalFilled className="size-4" />
-          Settings
+          <span>Settings</span>
+          {selectedCount > 0 ? (
+            <span className="text-xs text-muted-foreground">
+              ({selectedCount})
+            </span>
+          ) : null}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-6xl h-[80%] max-h-200 bg-surface p-0 rounded-xl">
-        <DialogDescription className="sr-only">
-          Projects settings
-        </DialogDescription>
-        <div className="flex gap-4 h-full min-h-0">
-          <div className="flex flex-col gap-2 bg-white/10 p-4 rounded-l-xl overflow-y-auto overscroll-y-none">
-            <DialogHeader>
-              <DialogTitle>Project Settings</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {presets.map((preset) => {
-                const Icon = SETTING_ICONS[preset.key]
-                const isSelected = preset.key === content?.key
-                return (
-                  <div
-                    key={preset.id}
-                    className={`flex items-center gap-2 w-full px-4 py-2 rounded-lg cursor-pointer ${isSelected ? "bg-primary/15 font-medium text-primary" : "hover:bg-gray-200/10"}`}
-                    onClick={() => setSelectedKey(preset.key)}
-                  >
-                    {Icon ? <Icon className="size-4" /> : null}
-                    {preset.label}
-                  </div>
-                )
-              })}
-            </div>
+
+      <DialogContent className="sm:max-w-xl bg-surface p-6 rounded-2xl font-geist">
+        <DialogHeader className="flex flex-row items-baseline justify-between gap-4 space-y-0">
+          <div className="space-y-1 text-left">
+            <DialogTitle className="text-base font-semibold text-white">
+              Project Settings
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Pick any settings to shape your brief. All fields are optional.
+            </DialogDescription>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto p-4">
-            {content ? (
-              <div className="space-y-4">
-                <Label>{content.label.toUpperCase()}</Label>
-                <div className="grid grid-cols-4 gap-4">
-                  {content.options.map((option) => (
-                    <SettingItem
-                      key={option.value}
-                      label={option.label}
-                      value={option.value}
-                      illustration={option.illustration}
-                      onClick={handleSelect}
-                      isSelected={option.value === currentValue?.value}
-                    />
-                  ))}
+
+          {selectedCount > 0 ? (
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="shrink-0 cursor-pointer text-xs text-muted-foreground transition-colors hover:text-white"
+            >
+              Clear all
+            </button>
+          ) : null}
+        </DialogHeader>
+
+        <div className="mt-2 max-h-[62vh] space-y-5 overflow-y-auto overscroll-y-none pr-1 scrollbar-thin">
+          {presets.map((preset) => {
+            const Icon = SETTING_ICONS[preset.key]
+            const currentValue = isAdditionalSettingKey(preset.key)
+              ? additionalSettings[preset.key]
+              : null
+
+            return (
+              <div
+                key={preset.id}
+                className="rounded-xl bg-card/70 p-4 space-y-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    {Icon ? <Icon className="size-3.5" /> : null}
+                    <span>{preset.label}</span>
+                  </div>
+
+                  {currentValue && isAdditionalSettingKey(preset.key) ? (
+                    <button
+                      type="button"
+                      onClick={() => clearAdditionalSetting(preset.key)}
+                      className="cursor-pointer text-[11px] text-muted-foreground transition-colors hover:text-white"
+                    >
+                      Reset
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {preset.options.map((option) => {
+                    const isSelected = option.value === currentValue?.value
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() =>
+                          handleToggle(preset.key, {
+                            label: option.label,
+                            value: option.value,
+                          })
+                        }
+                        className={cn(
+                          "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all duration-150",
+                          isSelected
+                            ? "bg-white/12 text-white font-medium scale-[1.03]"
+                            : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
+                        )}
+                      >
+                        {isSelected ? (
+                          <IconCheck className="size-3.5 shrink-0 text-white" />
+                        ) : null}
+                        <span>{option.label}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
-            ) : null}
-          </div>
+            )
+          })}
         </div>
       </DialogContent>
     </Dialog>
-  )
-}
-
-type SettingItemProps = {
-  label: string
-  value: string
-  illustration: ProjectPresetIllustration
-  onClick: (option: SettingOption) => void
-  isSelected?: boolean
-}
-
-function SettingItem({
-  label,
-  value,
-  illustration,
-  onClick,
-  isSelected,
-}: SettingItemProps) {
-  return (
-    <button
-      className="cursor-pointer duration-300 space-y-2 group"
-      onClick={() => onClick({ label, value })}
-    >
-      <div
-        className={`flex justify-center items-center bg-gray-200 rounded-xl overflow-hidden aspect-3/4 group-hover:scale-105 transition-all duration-300 ring-2 ${isSelected ? "ring-primary ring-offset-2 ring-offset-gray-800" : "ring-transparent"}`}
-      >
-        <SettingIllustration illustration={illustration} label={label} />
-      </div>
-      <Label
-        className={`text-base transition-all duration-300 ${isSelected ? "text-primary font-semibold" : "group-hover:text-primary"}`}
-      >
-        {label}
-      </Label>
-    </button>
-  )
-}
-
-function SettingIllustration({
-  illustration,
-  label,
-}: {
-  illustration: ProjectPresetIllustration
-  label: string
-}) {
-  if (!illustration.url) {
-    return (
-      <img
-        className="w-1/2 object-contain"
-        src="/imgPlaceholder.jpeg"
-        alt={label}
-      />
-    )
-  }
-
-  if (illustration.type === "video") {
-    return (
-      <video
-        className="h-full w-full object-cover"
-        src={illustration.url}
-        muted
-        loop
-        autoPlay
-        playsInline
-      />
-    )
-  }
-
-  return (
-    <img
-      className="h-full w-full object-cover object-top"
-      src={illustration.url}
-      alt={label}
-    />
   )
 }

@@ -124,12 +124,14 @@ export const useNewProjectStore = create<NewProjectState & NewProjectActions>(
     validate: () => {
       const state = get()
       const errors: Array<string> = []
+      const hasSettings = Object.values(state.additionalSettings).some(
+        (value) => value !== null,
+      )
 
-      if (!state.additionalSettings.format) {
-        errors.push("Please select a format")
-      }
-      if (!state.storyIdea.trim()) {
-        errors.push("Please describe your story idea")
+      if (!state.storyIdea.trim() && !hasSettings) {
+        errors.push(
+          "Please write a brief or select at least one project setting",
+        )
       }
 
       return {

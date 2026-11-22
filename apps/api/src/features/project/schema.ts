@@ -12,9 +12,10 @@ export const presetSelectionSchema = z.object({
 
 export const createInputProjectSchema = z.object({
   title: titleSchema,
+  brief: z.string().trim().optional(),
   presets: z.array(presetSelectionSchema),
-  commandId: z.string().min(1).nullable(),
-  modelId: z.string().min(1).nullable(),
+  commandId: z.string().min(1).nullable().optional(),
+  modelId: z.string().min(1).nullable().optional(),
 })
 
 export const createBlankProjectSchema = z.object({

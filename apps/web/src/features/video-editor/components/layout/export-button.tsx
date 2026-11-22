@@ -1,38 +1,21 @@
+import { useState } from "react"
 import { Download, Loader2, X } from "lucide-react"
 import { Button } from "@sohizi/ui/button"
 import { useVideoExport } from "../../hooks/use-video-export"
+import { ExportVideoDialog } from "./export-video-dialog"
 
 export function ExportButton({ fileName }: { fileName: string }) {
+  const [dialogOpen, setDialogOpen] = useState(false)
   const {
+    projectId,
     job,
     isSubmitting,
     isCancelling,
-    isDownloading,
     isBusy,
     canExport,
     start,
     cancel,
-    download,
   } = useVideoExport()
-
-  if (job?.status === "completed") {
-    return (
-      <Button
-        size="sm"
-        variant="secondary"
-        disabled={isDownloading}
-        className="h-8 gap-1.5 rounded-lg px-3 text-xs font-semibold"
-        onClick={() => void download()}
-      >
-        {isDownloading ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : (
-          <Download className="size-3.5" />
-        )}
-        Download
-      </Button>
-    )
-  }
 
   if (isBusy) {
     return (
@@ -58,14 +41,26 @@ export function ExportButton({ fileName }: { fileName: string }) {
   }
 
   return (
-    <Button
-      size="sm"
-      disabled={!canExport}
-      className="h-8 gap-1.5 rounded-lg px-3 text-xs font-semibold"
-      onClick={() => void start(fileName)}
-    >
-      <Download className="size-3.5" />
-      {job?.status === "failed" ? "Retry export" : "Export"}
-    </Button>
+    <>
+      <Button
+        size="sm"
+        disabled={!canExport}
+        className="h-8 gap-1.5 rounded-lg px-3 text-xs font-semibold"
+        onClick={() => setDialogOpen(true)}
+      >
+        <Download className="size-3.5" />
+        {job?.status === "failed" ? "Retry export" : "Export"}
+      </Button>
+      {projectId ? (
+        <ExportVideoDialog
+          projectId={projectId}
+          defaultFileName={fileName}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          isSubmitting={isSubmitting}
+          onConfirm={start}
+        />
+      ) : null}
+    </>
   )
 }

@@ -21,6 +21,7 @@ vi.mock("@/features/media-generator/requests", async (importOriginal) => {
   return {
     ...actual,
     getAiGeneratedRequest: vi.fn(),
+    getAssetDownloadUrl: vi.fn(),
   }
 })
 
@@ -53,7 +54,7 @@ describe("AssetViewer", () => {
     cleanup()
   })
 
-  it("renders 'user uploaded' badge, Attach button, and hides Source button for user-uploaded assets", () => {
+  it("hides source badge and Source button while showing Attach button for user-uploaded assets", () => {
     renderWithQueryClient(
       <AssetViewer
         id="file-1"
@@ -69,7 +70,8 @@ describe("AssetViewer", () => {
       />,
     )
 
-    expect(screen.getByText(/user uploaded/i)).toBeTruthy()
+    expect(screen.queryByText(/user uploaded/i)).toBeNull()
+    expect(screen.queryByText(/ai generated/i)).toBeNull()
     expect(screen.getByRole("button", { name: /attach/i })).toBeTruthy()
     expect(screen.queryByRole("button", { name: /source/i })).toBeNull()
   })
@@ -158,5 +160,40 @@ describe("AssetViewer", () => {
       "req-123",
     )
     expect(screen.getByText("flux-pro")).toBeTruthy()
+  })
+
+  it("downloads the asset when clicking the download icon button", async () => {
+    vi.mocked(mediaRequests.getAssetDownloadUrl).mockResolvedValue({
+      url: "https://signed.example.com/photo.png",
+    })
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {})
+
+    renderWithQueryClient(
+      <AssetViewer
+        id="file-1"
+        assetId="asset-1"
+        name="photo.png"
+        path="/root/assets/photo.png"
+        type="image"
+        url="https://cdn.example.com/photo.png"
+        storageKey="photo.png"
+        metadata={{ size: 1024, contentType: "image/png" }}
+        source="user-uploaded"
+        projectId="proj-1"
+      />,
+    )
+
+    const downloadBtn = screen.getByRole("button", { name: /download asset/i })
+    fireEvent.click(downloadBtn)
+
+    await vi.waitFor(() => {
+      expect(mediaRequests.getAssetDownloadUrl).toHaveBeenCalledWith(
+        "proj-1",
+        "asset-1",
+      )
+      expect(clickSpy).toHaveBeenCalled()
+    })
   })
 })

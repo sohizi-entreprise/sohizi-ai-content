@@ -1,12 +1,15 @@
+import { useState } from "react"
 import { Link, useParams, useRouterState } from "@tanstack/react-router"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"
 import {
   IconCategoryFilled,
   IconFilesFilled,
+  IconMessageReportFilled,
   IconPhotoFilled,
   IconUserFilled,
   // IconVideoPlusFilled,
 } from "@tabler/icons-react"
+import { FeedbackDialog } from "@/features/feedback/components/feedback-dialog"
 import { cn } from "@/lib/utils"
 
 const ITEMS = [
@@ -45,6 +48,7 @@ export function AppNavBar() {
     from: "/_authenticated/projects/$projectId",
   })
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
 
   const activeItem = ITEMS.find((item) =>
     pathname.startsWith(resolvePathname(item.link, projectId)),
@@ -80,10 +84,37 @@ export function AppNavBar() {
       </div>
 
       <div className="flex flex-col items-center gap-1 mb-4">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Feedback and bug report"
+              onClick={() => setFeedbackOpen(true)}
+              className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/30 hover:text-foreground cursor-pointer"
+            >
+              <IconMessageReportFilled className="size-4.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Feedback & bug report</TooltipContent>
+        </Tooltip>
+
         <Link to="/account/profile">
-          <IconUserFilled className="size-4.5 text-muted-foreground" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/30 hover:text-foreground">
+                <IconUserFilled className="size-4.5" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="right">Account profile</TooltipContent>
+          </Tooltip>
         </Link>
       </div>
+
+      <FeedbackDialog
+        projectId={projectId}
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+      />
     </div>
   )
 }

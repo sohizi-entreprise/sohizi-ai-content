@@ -1,7 +1,7 @@
 /**
- * Render job tests — the database, Remotion Lambda, and billing are replaced
- * with in-memory fakes so the lifecycle, credits, and status reconciliation
- * rules can be exercised without infrastructure.
+ * Render job tests — the database, Remotion Lambda, R2 storage, and billing are
+ * replaced with in-memory fakes so the lifecycle, credits, composition hash
+ * caching, and status reconciliation rules can be exercised without infrastructure.
  * Run with `bun test`.
  */
 
@@ -19,10 +19,13 @@ import { setRenderServiceDepsForTests } from "../render-service"
 import type { VideoRenderJob } from "@/db/schema"
 import type { RemoteRenderJob } from "../render-client"
 import type { CreateRenderInput } from "../render-schema"
+import type { UpsertExportedVideoInput } from "../repo"
 
 const PROJECT_ID = randomUUID()
 const OTHER_PROJECT_ID = randomUUID()
 const COMPOSITION_ID = randomUUID()
+const FOLDER_ID = randomUUID()
+const OTHER_FOLDER_ID = randomUUID()
 const USER_ID = "user_1"
 const ORGANIZATION_ID = "org_1"
 
@@ -46,6 +49,12 @@ const jobs = new Map<string, VideoRenderJob>()
 
 let composition: { id: string; projectId: string; version: number } | null =
   null
+const folders = new Map<
+  string,
+  { id: string; projectId: string; directory: boolean }
+>()
+const upsertedFolderVideos: UpsertExportedVideoInput[] = []
+const uploadedToR2: Array<{ sourceUrl: string; fileName: string }> = []
 let remoteJobs = new Map<string, RemoteRenderJob>()
 let createRemoteRenderError: Error | null = null
 let reserveError: Error | null = null
@@ -66,6 +75,9 @@ function buildJob(overrides: Partial<VideoRenderJob> = {}): VideoRenderJob {
     id,
     projectId: PROJECT_ID,
     compositionId: COMPOSITION_ID,
+    folderId: FOLDER_ID,
+    fileNodeId: null,
+    compositionHash: null,
     userId: USER_ID,
     analyticsConsentId: null,
     status: "queued",
@@ -80,6 +92,8 @@ function buildJob(overrides: Partial<VideoRenderJob> = {}): VideoRenderJob {
     outputBucket: null,
     functionName: null,
     outputKey: null,
+    outputUrl: null,
+    outputStorageKey: null,
     outputSizeInBytes: null,
     progress: 0,
     failureCode: null,
@@ -116,6 +130,13 @@ function installRenderFakes() {
     repo: {
       getCompositionById: async (id: string) =>
         composition?.id === id ? composition : null,
+      getFolderById: async (projectId: string, folderId: string) => {
+        const folder = folders.get(folderId)
+        if (!folder || folder.projectId !== projectId || !folder.directory) {
+          return null
+        }
+        return folder
+      },
       createRenderJob: async (data: Record<string, unknown>) => {
         const job = buildJob(data as Partial<VideoRenderJob>)
         jobs.set(job.id, job)
@@ -130,6 +151,36 @@ function installRenderFakes() {
               job.compositionId === compositionId &&
               (job.status === "queued" || job.status === "rendering"),
           ) ?? null,
+      getCompletedRenderJobByHash: async (
+        compositionId: string,
+        compositionHash: string,
+      ) =>
+        [...jobs.values()]
+          .reverse()
+          .find(
+            (job) =>
+              job.compositionId === compositionId &&
+              job.compositionHash === compositionHash &&
+              job.status === "completed" &&
+              Boolean(job.outputUrl) &&
+              Boolean(job.outputStorageKey),
+          ) ?? null,
+      upsertExportedVideoInFolder: async (input: UpsertExportedVideoInput) => {
+        upsertedFolderVideos.push(input)
+        return {
+          fileNode: {
+            id: `file-node-${upsertedFolderVideos.length}`,
+            projectId: input.projectId,
+            parentId: input.folderId,
+            name: input.fileName,
+          },
+          asset: {
+            id: `asset-${upsertedFolderVideos.length}`,
+            url: input.url,
+            storageKey: input.storageKey,
+          },
+        }
+      },
       listRenderJobsForComposition: async (compositionId: string) =>
         [...jobs.values()].filter((job) => job.compositionId === compositionId),
       updateRenderJob: async (id: string, patch: Partial<VideoRenderJob>) => {
@@ -175,6 +226,14 @@ function installRenderFakes() {
     }) => ({
       url: `https://signed.sohizi.test/${input.bucketName}/${input.objectKey}?name=${encodeURIComponent(input.fileName)}`,
     })) as never,
+    uploadRenderToR2: (async (sourceUrl: string, fileName: string) => {
+      uploadedToR2.push({ sourceUrl, fileName })
+      return {
+        url: `https://r2.sohizi.test/videos/${fileName}`,
+        storageKey: `videos/key/${fileName}`,
+        size: 2048,
+      }
+    }) as never,
     billingService: {
       reserve: async (input: { idempotencyKey: string; id?: string }) => {
         if (reserveError) throw reserveError
@@ -265,9 +324,11 @@ function installRenderFakes() {
 
 function snapshot(
   url = "https://cdn.sohizi.test/videos/a.mp4",
+  overrides: Partial<CreateRenderInput> = {},
 ): CreateRenderInput {
   return {
     contractVersion: 1,
+    folderId: FOLDER_ID,
     fileName: "export.mp4",
     composition: {
       fps: 30,
@@ -296,21 +357,35 @@ function snapshot(
         },
       ],
     },
+    ...overrides,
   }
 }
 
-const create = () =>
+const create = (input: CreateRenderInput = snapshot()) =>
   renderService.createRender(
     COMPOSITION_ID,
     PROJECT_ID,
     USER_ID,
     ORGANIZATION_ID,
-    snapshot(),
+    input,
   )
 
 beforeEach(() => {
   installRenderFakes()
   jobs.clear()
+  folders.clear()
+  folders.set(FOLDER_ID, {
+    id: FOLDER_ID,
+    projectId: PROJECT_ID,
+    directory: true,
+  })
+  folders.set(OTHER_FOLDER_ID, {
+    id: OTHER_FOLDER_ID,
+    projectId: PROJECT_ID,
+    directory: true,
+  })
+  upsertedFolderVideos.length = 0
+  uploadedToR2.length = 0
   remoteJobs = new Map()
   createRemoteRenderError = null
   reserveError = null
@@ -333,13 +408,15 @@ afterEach(() => {
 // ----------------------------------------------------------------------------
 
 describe("createRender", () => {
-  test("records the job and submits it to the render service", async () => {
+  test("records the job with compositionHash and folderId and submits it to the render service", async () => {
     const job = await create()
 
     expect(job.status).toBe("queued")
     expect(job.fileName).toBe("export.mp4")
+    expect(job.folderId).toBe(FOLDER_ID)
     expect(createdRemoteRenders).toEqual([job.id])
     expect(jobs.get(job.id)?.compositionVersion).toBe(7)
+    expect(jobs.get(job.id)?.compositionHash).toHaveLength(64)
   })
 
   test("rejects a composition from another project", async () => {
@@ -350,6 +427,14 @@ describe("createRender", () => {
     }
 
     await expect(create()).rejects.toBeInstanceOf(NotFound)
+    expect(createdRemoteRenders).toHaveLength(0)
+  })
+
+  test("rejects a folder that does not belong to the project", async () => {
+    const unknownFolder = randomUUID()
+    await expect(
+      create(snapshot(undefined, { folderId: unknownFolder })),
+    ).rejects.toBeInstanceOf(NotFound)
     expect(createdRemoteRenders).toHaveLength(0)
   })
 
@@ -408,8 +493,45 @@ describe("createRender", () => {
     expect(createdRemoteRenders).toEqual([first.id])
   })
 
-  test("starts a new render once the previous one finished", async () => {
+  test("reuses the already generated url when re-exporting an identical composition", async () => {
     const first = await create()
+    remoteJobs.set(
+      first.id,
+      remote({
+        jobId: first.id,
+        status: "completed",
+        progress: 1,
+        outputKey: "renders/a.mp4",
+        sizeInBytes: 4096,
+      }),
+    )
+
+    const second = await create(
+      snapshot(undefined, {
+        folderId: OTHER_FOLDER_ID,
+        fileName: "renamed.mp4",
+      }),
+    )
+
+    expect(second.id).toBe(first.id)
+    expect(second.status).toBe("completed")
+    expect(second.outputUrl).toBe("https://r2.sohizi.test/videos/renamed.mp4")
+    expect(second.folderId).toBe(OTHER_FOLDER_ID)
+    expect(second.fileName).toBe("renamed.mp4")
+    expect(createdRemoteRenders).toEqual([first.id])
+    expect(reservedKeys).toHaveLength(1)
+    expect(uploadedToR2).toHaveLength(1)
+    expect(upsertedFolderVideos.at(-1)).toMatchObject({
+      projectId: PROJECT_ID,
+      folderId: OTHER_FOLDER_ID,
+      fileName: "renamed.mp4",
+      url: "https://r2.sohizi.test/videos/renamed.mp4",
+      storageKey: "videos/key/renamed.mp4",
+    })
+  })
+
+  test("starts a new render when the composition changed after a completed render", async () => {
+    const first = await create(snapshot("https://cdn.sohizi.test/videos/a.mp4"))
     remoteJobs.set(
       first.id,
       remote({
@@ -420,7 +542,9 @@ describe("createRender", () => {
       }),
     )
 
-    const second = await create()
+    const second = await create(
+      snapshot("https://cdn.sohizi.test/videos/b.mp4"),
+    )
 
     expect(second.id).not.toBe(first.id)
     expect(createdRemoteRenders).toEqual([first.id, second.id])
@@ -473,7 +597,7 @@ describe("getRender", () => {
     ).rejects.toBeInstanceOf(NotFound)
   })
 
-  test("stores the output location when the render completes", async () => {
+  test("uploads to R2, saves into the target folder, and stores the output url when the render completes", async () => {
     const job = await create()
     remoteJobs.set(
       job.id,
@@ -491,10 +615,26 @@ describe("getRender", () => {
     expect(status.status).toBe("completed")
     expect(status.progress).toBe(100)
     expect(status.sizeInBytes).toBe(2048)
+    expect(status.outputUrl).toBe("https://r2.sohizi.test/videos/export.mp4")
+    expect(status.fileNodeId).toBe("file-node-1")
     expect(status.finishedAt).not.toBeNull()
     expect(jobs.get(job.id)?.outputKey).toBe(
       `renders/${PROJECT_ID}/${job.id}.mp4`,
     )
+    expect(jobs.get(job.id)?.outputUrl).toBe(
+      "https://r2.sohizi.test/videos/export.mp4",
+    )
+    expect(uploadedToR2).toHaveLength(1)
+    expect(upsertedFolderVideos).toEqual([
+      {
+        projectId: PROJECT_ID,
+        folderId: FOLDER_ID,
+        fileName: "export.mp4",
+        url: "https://r2.sohizi.test/videos/export.mp4",
+        storageKey: "videos/key/export.mp4",
+        sizeInBytes: 2048,
+      },
+    ])
     expect(settledReservations).toEqual([job.id])
     expect(settledInputs).toEqual([
       {

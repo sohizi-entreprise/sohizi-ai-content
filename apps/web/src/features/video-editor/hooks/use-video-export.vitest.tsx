@@ -33,6 +33,7 @@ vi.mock("sonner", () => ({ toast }))
 
 const PROJECT_ID = "project-1"
 const COMPOSITION_ID = "composition-1"
+const FOLDER_ID = "folder-1"
 
 const videoTrack: Track = {
   id: "track-1",
@@ -69,6 +70,9 @@ function job(overrides: Partial<RenderJob> = {}): RenderJob {
     status: "queued",
     progress: 0,
     fileName: "my-video.mp4",
+    folderId: FOLDER_ID,
+    fileNodeId: null,
+    outputUrl: null,
     fps: 30,
     width: 1920,
     height: 1080,
@@ -129,18 +133,22 @@ describe("useVideoExport", () => {
     })
   })
 
-  it("submits the live editor snapshot", async () => {
+  it("submits the live editor snapshot with folderId and fileName", async () => {
     requests.createRender.mockResolvedValue(job())
     requests.getRender.mockResolvedValue(job())
 
     const { result } = renderHook(() => useVideoExport(), { wrapper })
-    await act(() => result.current.start("My Video.mp4"))
+    const ok = await act(() =>
+      result.current.start({ fileName: "My Video.mp4", folderId: FOLDER_ID }),
+    )
 
+    expect(ok).toBe(true)
     expect(requests.createRender).toHaveBeenCalledWith(
       PROJECT_ID,
       COMPOSITION_ID,
       {
         contractVersion: 1,
+        folderId: FOLDER_ID,
         fileName: "My Video.mp4",
         composition: {
           fps: 30,
@@ -155,6 +163,29 @@ describe("useVideoExport", () => {
     expect(result.current.isBusy).toBe(true)
   })
 
+  it("notifies and invalidates folder queries when a cached render completes immediately", async () => {
+    const completedJob = job({
+      status: "completed",
+      progress: 100,
+      fileNodeId: "file-node-1",
+      outputUrl: "https://r2.sohizi.test/videos/my-video.mp4",
+    })
+    requests.createRender.mockResolvedValue(completedJob)
+    requests.getRender.mockResolvedValue(completedJob)
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    const { result } = renderHook(() => useVideoExport(), { wrapper })
+    await act(() =>
+      result.current.start({ fileName: "my-video", folderId: FOLDER_ID }),
+    )
+
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Video exported to folder"),
+    )
+    expect(invalidateSpy).toHaveBeenCalled()
+    expect(result.current.isBusy).toBe(false)
+  })
+
   it("refuses to export a video longer than 20 minutes", async () => {
     useVideoEditorStore.setState({
       fps: 30,
@@ -162,8 +193,11 @@ describe("useVideoExport", () => {
     })
 
     const { result } = renderHook(() => useVideoExport(), { wrapper })
-    await act(() => result.current.start("My Video"))
+    const ok = await act(() =>
+      result.current.start({ fileName: "My Video", folderId: FOLDER_ID }),
+    )
 
+    expect(ok).toBe(false)
     expect(requests.createRender).not.toHaveBeenCalled()
     expect(toast.error).toHaveBeenCalledWith(
       "Exports are limited to 20 minutes.",
@@ -174,8 +208,11 @@ describe("useVideoExport", () => {
     useVideoEditorStore.setState({ tracks: [{ ...videoTrack, clips: [] }] })
 
     const { result } = renderHook(() => useVideoExport(), { wrapper })
-    await act(() => result.current.start("My Video"))
+    const ok = await act(() =>
+      result.current.start({ fileName: "My Video", folderId: FOLDER_ID }),
+    )
 
+    expect(ok).toBe(false)
     expect(requests.createRender).not.toHaveBeenCalled()
     expect(toast.error).toHaveBeenCalledWith(
       "Add something to the timeline before exporting.",
@@ -187,8 +224,11 @@ describe("useVideoExport", () => {
 
     const { result } = renderHook(() => useVideoExport(), { wrapper })
     await waitFor(() => expect(result.current.job?.status).toBe("rendering"))
-    await act(() => result.current.start("My Video"))
+    const ok = await act(() =>
+      result.current.start({ fileName: "My Video", folderId: FOLDER_ID }),
+    )
 
+    expect(ok).toBe(false)
     expect(requests.createRender).not.toHaveBeenCalled()
   })
 

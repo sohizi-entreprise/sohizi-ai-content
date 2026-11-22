@@ -1,7 +1,12 @@
 import { captureConsentedEvent } from "@/features/analytics-consent"
+import { createHash } from "node:crypto"
 import { v4 as uuidv4 } from "uuid"
 import * as defaultRepo from "./repo"
-import type { UpdateRenderJobData } from "./repo"
+import {
+  FileNodeDirectoryConflictError,
+  type UpdateRenderJobData,
+} from "./repo"
+import * as storage from "../media-engine/storage"
 import {
   cancelRemoteRender as defaultCancelRemoteRender,
   createRemoteRender as defaultCreateRemoteRender,
@@ -47,6 +52,14 @@ import {
 import { classifyRenderError } from "@/features/capacity/classify"
 import { rateLimitRetryAfterMs } from "@/features/capacity/retry-after"
 
+async function defaultUploadRenderToR2(
+  sourceUrl: string,
+  fileName: string,
+): Promise<{ url: string; storageKey: string; size: number }> {
+  const destinationPath = storage.buildStoragePath("videos", fileName)
+  return storage.uploadFromUrl(sourceUrl, destinationPath)
+}
+
 type RenderServiceDeps = {
   repo: typeof defaultRepo
   billingService: typeof defaultBillingService
@@ -65,6 +78,7 @@ type RenderServiceDeps = {
   cancelRemoteRender: typeof defaultCancelRemoteRender
   estimateRenderCost: typeof defaultEstimateRenderCost
   presignRenderOutput: typeof defaultPresignRenderOutput
+  uploadRenderToR2: typeof defaultUploadRenderToR2
 }
 
 const defaultRenderServiceDeps: RenderServiceDeps = {
@@ -85,6 +99,7 @@ const defaultRenderServiceDeps: RenderServiceDeps = {
   cancelRemoteRender: defaultCancelRemoteRender,
   estimateRenderCost: defaultEstimateRenderCost,
   presignRenderOutput: defaultPresignRenderOutput,
+  uploadRenderToR2: defaultUploadRenderToR2,
 }
 
 let renderServiceDeps = defaultRenderServiceDeps
@@ -145,10 +160,36 @@ const estimateRenderCost = readFunction(
 const presignRenderOutput = readFunction(
   () => renderServiceDeps.presignRenderOutput,
 )
+const uploadRenderToR2 = readFunction(() => renderServiceDeps.uploadRenderToR2)
+
+function canonicalizeJson(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(canonicalizeJson)
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+    const sortedKeys = Object.keys(record).sort()
+    const result: Record<string, unknown> = {}
+    for (const key of sortedKeys) {
+      const entry = record[key]
+      if (entry !== undefined) {
+        result[key] = canonicalizeJson(entry)
+      }
+    }
+    return result
+  }
+  return value
+}
+
+export function hashRenderComposition(composition: RenderComposition): string {
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalizeJson(composition)))
+    .digest("hex")
+}
 
 /**
  * Render jobs are owned by the API: the editor never talks to Remotion Lambda
- * directly. Finished MP4s stay private in S3 behind a short-lived signed URL.
+ * directly. Finished MP4s are uploaded to R2 and saved into the chosen project folder.
  */
 
 export type RenderJobView = {
@@ -157,6 +198,9 @@ export type RenderJobView = {
   /** Percentage, 0-100. */
   progress: number
   fileName: string
+  folderId: string | null
+  fileNodeId: string | null
+  outputUrl: string | null
   fps: number
   width: number
   height: number
@@ -177,13 +221,50 @@ export const createRender = async (
   analyticsConsentId?: string | null,
 ): Promise<RenderJobView> => {
   const composition = await assertCompositionAccess(compositionId, projectId)
+  await assertFolderAccess(projectId, input.folderId)
   assertMediaHostsAllowed(input.composition)
   assertExportDuration(input.composition)
 
+  const compositionHash = hashRenderComposition(input.composition)
+
   const existing = await repo.getActiveRenderJobForComposition(compositionId)
   if (existing) {
-    const reconciled = await reconcileRenderJob(existing)
+    const patchedExisting =
+      existing.folderId !== input.folderId ||
+      existing.fileName !== input.fileName
+        ? ((await repo.updateRenderJob(existing.id, {
+            folderId: input.folderId,
+            fileName: input.fileName,
+          })) ?? existing)
+        : existing
+    const reconciled = await reconcileRenderJob(patchedExisting)
     if (isActive(reconciled)) return toView(reconciled)
+  }
+
+  const cached = await repo.getCompletedRenderJobByHash(
+    compositionId,
+    compositionHash,
+  )
+  if (cached && cached.outputUrl && cached.outputStorageKey) {
+    const saved = await saveVideoInFolder({
+      projectId,
+      folderId: input.folderId,
+      fileName: input.fileName,
+      url: cached.outputUrl,
+      storageKey: cached.outputStorageKey,
+      sizeInBytes: cached.outputSizeInBytes ?? null,
+    })
+    const updatedCached = (await repo.updateRenderJob(cached.id, {
+      folderId: input.folderId,
+      fileName: input.fileName,
+      fileNodeId: saved.fileNode.id,
+    })) ?? {
+      ...cached,
+      folderId: input.folderId,
+      fileName: input.fileName,
+      fileNodeId: saved.fileNode.id,
+    }
+    return toView(updatedCached)
   }
 
   const jobId = uuidv4()
@@ -256,6 +337,8 @@ export const createRender = async (
       id: jobId,
       projectId,
       compositionId,
+      folderId: input.folderId,
+      compositionHash,
       userId,
       analyticsConsentId,
       compositionVersion: composition.version,
@@ -481,12 +564,47 @@ async function applyRemoteStatus(
       await refundRender(failed, "render-missing-output")
       return failed
     }
+
+    const outputBucket = remote.outputBucket ?? job.outputBucket
+    let outputUrl = job.outputUrl ?? null
+    let outputStorageKey = job.outputStorageKey ?? null
+    let outputSizeInBytes = remote.sizeInBytes ?? job.outputSizeInBytes ?? null
+    let fileNodeId = job.fileNodeId ?? null
+
+    if (!outputUrl || !outputStorageKey) {
+      const presigned = await presignRenderOutput({
+        bucketName: outputBucket ?? "remotion-renders",
+        objectKey: remote.outputKey,
+        fileName: job.fileName,
+        account: renderAccount(job),
+      })
+      const uploaded = await uploadRenderToR2(presigned.url, job.fileName)
+      outputUrl = uploaded.url
+      outputStorageKey = uploaded.storageKey
+      outputSizeInBytes = uploaded.size || outputSizeInBytes
+    }
+
+    if (job.folderId && outputUrl && outputStorageKey) {
+      const saved = await saveVideoInFolder({
+        projectId: job.projectId,
+        folderId: job.folderId,
+        fileName: job.fileName,
+        url: outputUrl,
+        storageKey: outputStorageKey,
+        sizeInBytes: outputSizeInBytes,
+      })
+      fileNodeId = saved.fileNode.id
+    }
+
     const completed = await update(job, {
       status: "completed",
       progress: 100,
       outputKey: remote.outputKey,
-      outputBucket: remote.outputBucket ?? job.outputBucket,
-      outputSizeInBytes: remote.sizeInBytes ?? null,
+      outputBucket,
+      outputUrl,
+      outputStorageKey,
+      outputSizeInBytes,
+      fileNodeId,
       finishedAt: job.finishedAt ?? new Date(),
     })
     await settleRender(completed, remote.accruedCostUsd)
@@ -707,6 +825,25 @@ async function assertCompositionAccess(
   return composition
 }
 
+async function assertFolderAccess(projectId: string, folderId: string) {
+  const folder = await repo.getFolderById(projectId, folderId)
+  if (!folder) {
+    throw new NotFound("Folder not found")
+  }
+  return folder
+}
+
+async function saveVideoInFolder(input: defaultRepo.UpsertExportedVideoInput) {
+  try {
+    return await repo.upsertExportedVideoInFolder(input)
+  } catch (error) {
+    if (error instanceof FileNodeDirectoryConflictError) {
+      throw new Conflict(error.message)
+    }
+    throw error
+  }
+}
+
 function assertExportDuration(composition: RenderComposition): void {
   if (isExportTooLong(composition.durationInFrames, composition.fps)) {
     throw new BadRequest(EXPORT_TOO_LONG_MESSAGE)
@@ -758,6 +895,9 @@ function toView(job: VideoRenderJob): RenderJobView {
     status: job.status,
     progress: job.progress,
     fileName: job.fileName,
+    folderId: job.folderId ?? null,
+    fileNodeId: job.fileNodeId ?? null,
+    outputUrl: job.outputUrl ?? null,
     fps: job.fps,
     width: job.width,
     height: job.height,
