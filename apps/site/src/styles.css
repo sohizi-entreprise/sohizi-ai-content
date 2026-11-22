@@ -5,6 +5,15 @@
 
 @source '../../../packages/ui/src';
 
+.font-display {
+  font-family:
+    "Bricolage Grotesque",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  font-optical-sizing: auto;
+}
+
 .landing-ambient-shell {
   position: relative;
   isolation: isolate;

@@ -23,13 +23,13 @@ export function FinalCtaSection() {
           <div className="pointer-events-none absolute -bottom-[60%] -right-[15%] -z-10 size-[75%] animate-mesh-b rounded-full bg-[#a68770]/20 blur-[110px] motion-reduce:animate-none" />
           <div
             aria-hidden
-            className="pointer-events-none absolute bottom-[2%] left-1/2 z-0 w-max -translate-x-1/2 select-none font-display text-[22vw] font-bold leading-none tracking-[-0.09em] text-white/25 blur-[1px] sm:-bottom-[0.12em] sm:-z-10 sm:text-[19vw] sm:text-white/15 sm:blur-[2px]"
+            className="pointer-events-none absolute bottom-[2%] left-1/2 z-0 w-max -translate-x-1/2 select-none font-display text-[22vw] font-bold leading-none tracking-[-0.05em] text-white/25 blur-[1px] sm:-bottom-[0.12em] sm:-z-10 sm:text-[19vw] sm:text-white/15 sm:blur-[2px]"
           >
             Sohizi Lab
           </div>
           <div className="pointer-events-none absolute inset-0 -z-10 rounded-[inherit] bg-black/10 backdrop-blur-[12px]" />
           <div className="relative z-10 mx-auto max-w-5xl">
-            <h2 className="font-display text-[clamp(3.6rem,7.4vw,8rem)] font-medium leading-[0.95] tracking-[-0.075em]">
+            <h2 className="font-display text-[clamp(3.6rem,7.4vw,8rem)] font-medium leading-[0.95] tracking-[-0.04em]">
               {finalCta.headline}
             </h2>
             <p className="mx-auto mt-7 max-w-lg text-base leading-relaxed text-white/70 sm:text-xl">

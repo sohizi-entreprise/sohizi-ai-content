@@ -100,7 +100,7 @@ function ProblemSection() {
             <p className="text-xs font-medium uppercase tracking-[0.22em] text-black/50">
               01 / Why AI films fall apart
             </p>
-            <h2 className="mt-12 max-w-[11ch] font-display text-[clamp(3.8rem,7.8vw,8rem)] font-medium leading-[0.92] tracking-[-0.08em]">
+            <h2 className="mt-12 max-w-[11ch] font-display text-[clamp(3.8rem,7.8vw,8rem)] font-medium leading-[0.92] tracking-[-0.045em]">
               Your film is one story.
               <br />
               <span className="text-black/35">
@@ -288,7 +288,7 @@ function StepsSection() {
         </div>
         <motion.h2
           style={{ y: titleY }}
-          className="relative z-10 my-16 max-w-[13ch] font-display text-[clamp(3.5rem,8vw,9rem)] font-medium leading-[0.92] tracking-[-0.075em] sm:my-24"
+          className="relative z-10 my-16 max-w-[13ch] font-display text-[clamp(3.5rem,8vw,9rem)] font-medium leading-[0.92] tracking-[-0.04em] sm:my-24"
         >
           Creativity should flow,{" "}
           <span className="text-white/35">not feel like a workflow.</span>
@@ -340,7 +340,7 @@ function MissionSection() {
           <span>03 / The reason we build</span>
         </div>
         <Reveal className="mt-20 grid gap-14 lg:grid-cols-[1.4fr_.6fr] lg:gap-20">
-          <h2 className="font-display text-[clamp(3.5rem,7.5vw,8rem)] font-medium leading-[0.93] tracking-[-0.075em]">
+          <h2 className="font-display text-[clamp(3.5rem,7.5vw,8rem)] font-medium leading-[0.93] tracking-[-0.04em]">
             Making a film should feel like{" "}
             <span className="text-black/35">directing.</span>
           </h2>

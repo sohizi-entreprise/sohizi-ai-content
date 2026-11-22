@@ -89,7 +89,7 @@ export function HeroSection() {
             </span>
             {hero.eyebrow}
           </p>
-          <h1 className="mx-auto max-w-[13ch] font-display text-[clamp(2.25rem,9vw,4rem)] font-medium leading-[0.86] tracking-[-0.085em] sm:text-[clamp(3.25rem,10vw,12rem)]">
+          <h1 className="mx-auto max-w-[13ch] font-display text-[clamp(2.25rem,9vw,4rem)] font-medium leading-[0.88] tracking-[-0.045em] sm:text-[clamp(3.25rem,10vw,12rem)]">
             Stop prompting.
             <br />
             <span className="text-white/90">Start directing.</span>
