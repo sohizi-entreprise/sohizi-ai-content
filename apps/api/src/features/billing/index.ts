@@ -105,7 +105,13 @@ export const billingRoutes = new Elysia({ prefix: "/billing" })
     "/checkout",
     async ({ session, user, body }) => {
       const { organizationId } = await billingContext(user.id, session, true)
-      return checkout(organizationId, body.productId, body.kind, body.units)
+      return checkout(
+        organizationId,
+        body.productId,
+        body.kind,
+        body.units,
+        user.email,
+      )
     },
     {
       body: z.object({

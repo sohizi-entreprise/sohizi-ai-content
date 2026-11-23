@@ -117,16 +117,24 @@ export async function getCatalogProduct(
   return product
 }
 
-async function ensureCustomer(organizationId: string) {
+async function ensureCustomer(organizationId: string, email?: string) {
   const stripe = requireStripe()
   await db
     .insert(organizationWallets)
     .values({ organizationId })
     .onConflictDoNothing()
   const wallet = await getBilling(organizationId)
-  if (wallet?.stripeCustomerId) return wallet.stripeCustomerId
+  if (wallet?.stripeCustomerId) {
+    if (email) {
+      const existing = await stripe.customers.retrieve(wallet.stripeCustomerId)
+      if (!existing.deleted && !existing.email) {
+        await stripe.customers.update(wallet.stripeCustomerId, { email })
+      }
+    }
+    return wallet.stripeCustomerId
+  }
   const customer = await stripe.customers.create(
-    { metadata: { organizationId } },
+    { ...(email ? { email } : {}), metadata: { organizationId } },
     { idempotencyKey: `sohizi:customer:${organizationId}` },
   )
   const [updated] = await db
@@ -139,11 +147,14 @@ async function ensureCustomer(organizationId: string) {
       ),
     )
     .returning({ stripeCustomerId: organizationWallets.stripeCustomerId })
-  return (
+  const customerId =
     updated?.stripeCustomerId ??
     (await getBilling(organizationId))?.stripeCustomerId ??
     customer.id
-  )
+  if (email && customerId === customer.id && !customer.email) {
+    await stripe.customers.update(customerId, { email })
+  }
+  return customerId
 }
 
 function billingUrl() {
@@ -157,6 +168,7 @@ export async function checkout(
   productId: string,
   kind: "plan" | "pack",
   units?: number,
+  email?: string,
 ) {
   const product = await getCatalogProduct(productId, kind)
   const wallet = await getBilling(organizationId)
@@ -174,7 +186,7 @@ export async function checkout(
   )
     throw new BadRequest("Credit quantity is outside the allowed range")
   const stripe = requireStripe()
-  const customer = await ensureCustomer(organizationId)
+  const customer = await ensureCustomer(organizationId, email)
   if (kind === "plan") {
     for await (const sub of stripe.subscriptions.list({
       customer,
