@@ -51,6 +51,13 @@ function envValue(name: string | undefined): string | undefined {
   return value ? value : undefined
 }
 
+function envPositiveInt(name: string, fallback: number): number {
+  const raw = envValue(name)
+  if (!raw) return fallback
+  const parsed = Number(raw)
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : fallback
+}
+
 function remotionConfig(): RemotionAccountConfig | undefined {
   const functionName = envValue("REMOTION_FUNCTION_NAME")
   const serveUrl = envValue("REMOTION_SERVE_URL")
@@ -83,7 +90,12 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
     accounts: [
       account(
         "tavily:primary",
-        { ...DEFAULT_CIRCUIT, rpm: 60, burst: 60, maxConcurrency: 10 },
+        {
+          ...DEFAULT_CIRCUIT,
+          rpm: envPositiveInt("TAVILY_RPM", 60),
+          burst: envPositiveInt("TAVILY_BURST", 60),
+          maxConcurrency: envPositiveInt("TAVILY_MAX_CONCURRENCY", 10),
+        },
         {
           credentialEnv: "TAVILY_API_KEY",
           credentialFallbackEnv: "TRAVELY_API_KEY",
@@ -99,8 +111,23 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
     accounts: [
       account(
         "wavespeed:primary",
-        { ...DEFAULT_CIRCUIT, rpm: 60, burst: 60, maxConcurrency: 10 },
+        {
+          ...DEFAULT_CIRCUIT,
+          rpm: envPositiveInt("WAVESPEED_RPM", 60),
+          burst: envPositiveInt("WAVESPEED_BURST", 60),
+          maxConcurrency: envPositiveInt("WAVESPEED_MAX_CONCURRENCY", 10),
+        },
         { credentialEnv: "WAVESPEED_API_KEY" },
+      ),
+      account(
+        "wavespeed:account-2",
+        {
+          ...DEFAULT_CIRCUIT,
+          rpm: envPositiveInt("WAVESPEED_RPM", 60),
+          burst: envPositiveInt("WAVESPEED_BURST", 60),
+          maxConcurrency: envPositiveInt("WAVESPEED_MAX_CONCURRENCY", 10),
+        },
+        { credentialEnv: "WAVESPEED_API_KEY_ACCOUNT_2" },
       ),
     ],
   },
@@ -112,7 +139,12 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
     accounts: [
       account(
         "replicate:primary",
-        { ...DEFAULT_CIRCUIT, rpm: 600, burst: 100, maxConcurrency: 20 },
+        {
+          ...DEFAULT_CIRCUIT,
+          rpm: envPositiveInt("REPLICATE_RPM", 600),
+          burst: envPositiveInt("REPLICATE_BURST", 100),
+          maxConcurrency: envPositiveInt("REPLICATE_MAX_CONCURRENCY", 20),
+        },
         {
           credentialEnv: "REPLICATE_API_TOKEN",
           credentialFallbackEnv: "REPLICATE_API_KEY",
@@ -128,7 +160,10 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
     accounts: [
       account(
         "openrouter:primary",
-        { ...DEFAULT_CIRCUIT, maxConcurrency: 100 },
+        {
+          ...DEFAULT_CIRCUIT,
+          maxConcurrency: envPositiveInt("OPENROUTER_MAX_CONCURRENCY", 100),
+        },
         { credentialEnv: "OPENROUTER_API_KEY" },
       ),
     ],
@@ -141,7 +176,10 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
     accounts: [
       account(
         "vercel-gateway:primary",
-        { ...DEFAULT_CIRCUIT, maxConcurrency: 100 },
+        {
+          ...DEFAULT_CIRCUIT,
+          maxConcurrency: envPositiveInt("VERCEL_GATEWAY_MAX_CONCURRENCY", 100),
+        },
         { credentialEnv: "VERCEL_GATEWAY_API_KEY" },
       ),
     ],
@@ -154,7 +192,10 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
     accounts: [
       account(
         "remotion:primary",
-        { ...DEFAULT_CIRCUIT, maxConcurrency: 2 },
+        {
+          ...DEFAULT_CIRCUIT,
+          maxConcurrency: envPositiveInt("REMOTION_MAX_CONCURRENCY", 2),
+        },
         { remotion: remotionConfig },
       ),
     ],
@@ -169,7 +210,7 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
         "cloudflare-browser:primary",
         {
           ...DEFAULT_CIRCUIT,
-          maxConcurrency: Number(process.env.YOUTUBE_SCREENSHOT_MAX_TABS ?? 10),
+          maxConcurrency: envPositiveInt("YOUTUBE_SCREENSHOT_MAX_TABS", 10),
         },
         { credentialEnv: "CLOUDFLARE_WORKER_TOKEN" },
       ),
