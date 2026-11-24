@@ -175,7 +175,7 @@ function PreferenceRow({
   return (
     <div
       data-testid={`preference-row-${preference.key}`}
-      className="flex flex-wrap items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 lg:flex-nowrap"
+      className="flex flex-wrap items-center gap-4 rounded-xl border border-white/10 bg-white/3 px-4 py-3 lg:flex-nowrap"
     >
       <div className="w-full shrink-0 lg:w-64">
         <div className="flex items-center gap-2">
@@ -383,13 +383,13 @@ export function AccountPreferencesTabView({
           <TabsList className="flex h-12 w-full items-center justify-start gap-8 rounded-xl bg-background sticky top-4 z-10 px-6 py-0">
             <TabsTrigger
               value="preferences"
-              className="relative h-full flex-none cursor-pointer rounded-none border-none bg-transparent! px-1 py-0 text-sm font-medium text-muted-foreground shadow-none! transition-colors hover:text-foreground data-[state=active]:border-transparent! data-[state=active]:bg-transparent! data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none! dark:data-[state=active]:bg-transparent! dark:data-[state=active]:text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:rounded-t-full after:bg-transparent after:transition-colors data-[state=active]:after:bg-primary"
+              className="relative h-full flex-none cursor-pointer rounded-none border-none bg-transparent! px-1 py-0 text-sm font-medium text-muted-foreground shadow-none! transition-colors hover:text-foreground data-[state=active]:border-transparent! data-[state=active]:bg-transparent! data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none! dark:data-[state=active]:bg-transparent! dark:data-[state=active]:text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.75 after:rounded-t-full after:bg-transparent after:transition-colors data-[state=active]:after:bg-primary"
             >
               Preferences
             </TabsTrigger>
             <TabsTrigger
               value="billing"
-              className="relative h-full flex-none cursor-pointer rounded-none border-none bg-transparent! px-1 py-0 text-sm font-medium text-muted-foreground shadow-none! transition-colors hover:text-foreground data-[state=active]:border-transparent! data-[state=active]:bg-transparent! data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none! dark:data-[state=active]:bg-transparent! dark:data-[state=active]:text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:rounded-t-full after:bg-transparent after:transition-colors data-[state=active]:after:bg-primary"
+              className="relative h-full flex-none cursor-pointer rounded-none border-none bg-transparent! px-1 py-0 text-sm font-medium text-muted-foreground shadow-none! transition-colors hover:text-foreground data-[state=active]:border-transparent! data-[state=active]:bg-transparent! data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none! dark:data-[state=active]:bg-transparent! dark:data-[state=active]:text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.75 after:rounded-t-full after:bg-transparent after:transition-colors data-[state=active]:after:bg-primary"
             >
               Billing
             </TabsTrigger>
