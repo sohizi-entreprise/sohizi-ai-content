@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { modelPreferenceKeys } from "@/catalog/preferences"
 
 const titleSchema = z
   .string()
@@ -40,4 +41,23 @@ export const updateProjectSchema = z.object({
 export const deleteProjectSchema = z.object({
   id: z.uuid("Invalid project id"),
   title: z.string().min(1, "Title is required"),
+})
+
+export const modelPreferenceKeySchema = z.enum(modelPreferenceKeys)
+
+export const modelPreferenceParametersSchema = z
+  .record(z.string(), z.union([z.string().min(1), z.number()]))
+  .optional()
+  .default({})
+
+export const updateModelPreferenceSchema = z.object({
+  key: modelPreferenceKeySchema,
+  modelId: z.string().min(1, "Model ID is required"),
+  parameters: modelPreferenceParametersSchema,
+})
+
+export const estimateModelPreferenceSchema = z.object({
+  key: modelPreferenceKeySchema,
+  modelId: z.string().min(1, "Model ID is required"),
+  parameters: modelPreferenceParametersSchema,
 })

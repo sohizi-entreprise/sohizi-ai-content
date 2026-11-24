@@ -118,4 +118,64 @@ export type CreateTemplateResponse = {
   template: Template
 }
 
+export type ModelPreferenceKey =
+  | "leading-agent"
+  | "text-to-image"
+  | "image-to-image"
+  | "text-to-video"
+  | "image-to-video"
+  | "text-to-speech"
+  | "music-generation"
+
+export type ModelPreferenceType = "system_default" | "project"
+
+export type ModelPreferenceParameters = Record<string, string | number>
+
+export type ModelPreferenceCostParameter = {
+  key: string
+  label: string
+  defaultValue: string | null
+  options: Array<{ value: string; label: string }>
+}
+
+export type ModelPreferenceEstimate =
+  | {
+      kind: "fixed"
+      credits: number
+      unitLabel: string
+    }
+  | {
+      kind: "range"
+      minCredits: number
+      maxCredits: number
+      unitLabel: string
+    }
+
+export type ModelPreferenceModelOption = {
+  id: string
+  name: string
+  provider: string
+}
+
+export type ProjectModelPreference = {
+  key: ModelPreferenceKey
+  label: string
+  description: string
+  category: ModelPreferenceKey
+  type: ModelPreferenceType
+  modelId: string
+  parameters: ModelPreferenceParameters
+  costParameters: Array<ModelPreferenceCostParameter>
+  estimate: ModelPreferenceEstimate | null
+  models: Array<ModelPreferenceModelOption>
+}
+
+export type ModelPreferenceEstimateResponse = {
+  key: ModelPreferenceKey
+  modelId: string
+  parameters: ModelPreferenceParameters
+  costParameters: Array<ModelPreferenceCostParameter>
+  estimate: ModelPreferenceEstimate | null
+}
+
 export type { PaginatedResponse } from "@/lib/pagination"

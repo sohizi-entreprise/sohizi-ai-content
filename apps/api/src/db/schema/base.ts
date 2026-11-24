@@ -58,6 +58,9 @@ import {
   FeedbackMetadata,
   PresetGenerationTarget,
   PresetIllustration,
+  ModelPreferenceType,
+  ModelPreferenceKey,
+  ModelPreferenceParameters,
 } from "@/type"
 import { FileFormat, FileType } from "@/features/file-system/constants"
 
@@ -1373,6 +1376,37 @@ export const feedbacks = pgTable(
   ],
 )
 
+export const modelPreferences = pgTable(
+  "model_preferences",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id").references(() => projects.id, {
+      onDelete: "cascade",
+    }),
+    type: varchar("type", { length: 50 })
+      .notNull()
+      .$type<ModelPreferenceType>(),
+    key: varchar("key", { length: 100 }).notNull().$type<ModelPreferenceKey>(),
+    modelId: varchar("model_id", { length: 50 })
+      .references(() => llmModels.id, { onDelete: "cascade" })
+      .notNull(),
+    parameters: jsonb("parameters")
+      .$type<ModelPreferenceParameters>()
+      .default({})
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("model_preferences_system_key_unique")
+      .on(table.key)
+      .where(sql`${table.projectId} is null`),
+    uniqueIndex("model_preferences_project_id_key_unique")
+      .on(table.projectId, table.key)
+      .where(sql`${table.projectId} is not null`),
+    index("model_preferences_project_id_idx").on(table.projectId),
+  ],
+)
+
 // Type exports for use in app
 export type Project = typeof projects.$inferSelect
 export type FileNode = typeof fileNodes.$inferSelect
@@ -1416,3 +1450,4 @@ export type Preset = typeof presets.$inferSelect
 export type PresetOption = typeof presetOptions.$inferSelect
 export type Command = typeof commands.$inferSelect
 export type Feedback = typeof feedbacks.$inferSelect
+export type ModelPreference = typeof modelPreferences.$inferSelect

@@ -35,6 +35,11 @@ import {
   writeStreamData,
 } from "../generation-request/stream-handler"
 import { getProjectBrief, getProjectById } from "../project/repo"
+import {
+  buildModelPreferencesPrompt,
+  getProjectModelPreferences,
+  type ResolvedModelPreference,
+} from "../project/model-preferences"
 import { getCommands, resolveCatalogCommands } from "@/catalog/commands"
 import { getErrorMessage } from "@/utils/get-error-message"
 import { listSkills } from "../file-system/repo"
@@ -241,6 +246,7 @@ async function runAgent(payload: RunAgentPayload) {
       userPromptText,
       brief,
       commands,
+      modelPreferences,
     ] = await Promise.all([
       getProjectById(projectId),
       repo.getCheckpoint(projectId, conversationId),
@@ -248,6 +254,7 @@ async function runAgent(payload: RunAgentPayload) {
       Promise.resolve(extractTextFromUserMessage(userPrompt)),
       getProjectBrief(projectId),
       getCommands(),
+      getProjectModelPreferences(projectId),
     ])
     const storedCommandId = readStoredCommandId(brief?.additionalSettings)
     const effectiveCommandIds =
@@ -281,6 +288,8 @@ async function runAgent(payload: RunAgentPayload) {
           baseSystemPrompt,
           projectSkills,
           definition.subAgents,
+          undefined,
+          modelPreferences,
         ),
     })
 
@@ -434,6 +443,12 @@ function enrichSystemPrompt(
   }[],
   subAgents: AgentName[],
   editorContext?: EditorContext,
+  modelPreferences: ReadonlyArray<
+    Pick<
+      ResolvedModelPreference,
+      "key" | "label" | "category" | "modelId" | "parameters"
+    >
+  > = [],
 ) {
   let finalPrompt = systemPrompt
 
@@ -471,6 +486,11 @@ Sub-Agents (Name + Description):
 ${subAgentPrompts}
 </sub-agents>
 `
+  }
+
+  const preferencesPrompt = buildModelPreferencesPrompt(modelPreferences)
+  if (preferencesPrompt.length > 0) {
+    finalPrompt += `\n${preferencesPrompt}\n`
   }
 
   const editorContextPrompt = buildEditorContextPrompt(editorContext)

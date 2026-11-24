@@ -8,6 +8,8 @@ import { toProjectFilePath } from "@/lib/file-tag"
 export type ChatChromeContext =
   "file-system" | "video-editor" | "media-generator"
 
+export const ACCOUNT_PREFERENCES_TAB_ID = "account-preferences"
+
 export function getChatChromeContext(pathname: string): ChatChromeContext {
   if (pathname.includes("/video-editor")) return "video-editor"
   if (pathname.includes("/generate")) return "media-generator"
@@ -27,6 +29,7 @@ interface EditorState {
   setSavingStatus: (tabId: string, status: "saving" | "saved" | "error") => void
   initLastSavedAt: (tabId: string, updatedAt: string) => void
   openFile: (node: FileTreeNode) => void
+  openAccountPreferencesTab: () => void
   openFileByPath: (
     path: string,
     options?: { ignoreDirectory?: boolean },
@@ -108,6 +111,31 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       openTabs: [...openTabs, newTab],
       activeTabId: node.id,
       selectedFileId: node.id,
+    })
+  },
+
+  openAccountPreferencesTab: () => {
+    const { openTabs } = get()
+    const existing = openTabs.find((t) => t.id === ACCOUNT_PREFERENCES_TAB_ID)
+    if (existing) {
+      set({
+        activeTabId: existing.id,
+        selectedFileId: null,
+      })
+      return
+    }
+    const newTab: EditorTab = {
+      id: ACCOUNT_PREFERENCES_TAB_ID,
+      name: "Preferences & Billing",
+      path: "",
+      extension: "",
+      type: null,
+      format: null,
+    }
+    set({
+      openTabs: [...openTabs, newTab],
+      activeTabId: newTab.id,
+      selectedFileId: null,
     })
   },
 

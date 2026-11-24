@@ -861,3 +861,16 @@ export type PresetIllustration = {
   url: string | null
   type: "video" | "image"
 }
+
+export type ModelPreferenceType = "system_default" | "project"
+
+export type ModelPreferenceKey =
+  | "leading-agent"
+  | "text-to-image"
+  | "image-to-image"
+  | "text-to-video"
+  | "image-to-video"
+  | "text-to-speech"
+  | "music-generation"
+
+export type ModelPreferenceParameters = Record<string, string | number>

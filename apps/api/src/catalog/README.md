@@ -66,13 +66,13 @@ Do not put `enabled: false` in YAML to hide a model for one environment.
 
 All ids are stable slugs. Changing one is a breaking change.
 
-| Kind      | Pattern                                         | Example                                            | Constraint                                                             |
-| --------- | ----------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------- |
-| Model     | `{provider}/{product}` or WaveSpeed endpoint id | `openai/gpt-5.4`, `openai/gpt-image-2/edit`        | `<= 50` chars. Becomes `llm_models.id`.                                |
-| Category  | kebab-case capability                           | `text-to-image`                                    | Must exist in `categories.yaml`.                                       |
-| Parameter | `parameter_{key}`                               | `parameter_resolution`                             | Must exist in `parameters.yaml`.                                       |
-| Option    | `option_{key}_{value}`                          | `option_resolution_1k`, `option_aspect_ratio_16_9` | Colons become `_`.                                                     |
-| Vendor    | `vendor_{name}`                                 | `vendor_wavespeed`                                 | One file per account. Same adapter can appear on more than one vendor. |
+| Kind      | Pattern                                         | Example                                               | Constraint                                                             |
+| --------- | ----------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------- |
+| Model     | `{provider}/{product}` or WaveSpeed endpoint id | `openai/gpt-5.4`, `x-ai/grok-imagine-image-v2.0/edit` | `<= 50` chars. Becomes `llm_models.id`.                                |
+| Category  | kebab-case capability                           | `text-to-image`                                       | Must exist in `categories.yaml`.                                       |
+| Parameter | `parameter_{key}`                               | `parameter_resolution`                                | Must exist in `parameters.yaml`.                                       |
+| Option    | `option_{key}_{value}`                          | `option_resolution_1k`, `option_aspect_ratio_16_9`    | Colons become `_`.                                                     |
+| Vendor    | `vendor_{name}`                                 | `vendor_wavespeed`                                    | One file per account. Same adapter can appear on more than one vendor. |
 
 Rules:
 
@@ -125,9 +125,9 @@ Never delete or rename an option id. If a value is retired, stop listing it in `
 One file per populated category. Compact flow mappings are preferred for short rows.
 
 ```yaml
-- id: openai/gpt-image-2/text-to-image
-  name: GPT Image 2
-  provider: openai
+- id: x-ai/grok-imagine-image-v2.0/text-to-image
+  name: Grok Imagine 2
+  provider: xai
   description: >
     Routing note for an agent: when to pick this model, what it is worse at,
     and hard limits (duration, refs, quality cost).
@@ -135,15 +135,15 @@ One file per populated category. Compact flow mappings are preferred for short r
   pricing:
     unit: parameter_table
     rate:
-      - { when: { quality: low, resolution: 1k }, usd: 0.01 }
+      - { when: { quality: low, resolution: 1k }, usd: 0.04 }
   categories: [text-to-image]
   parameters:
     - { id: parameter_prompt, required: true }
     - {
         id: parameter_resolution,
         required: true,
-        defaultValue: 1k,
-        allowedValues: [1k, 2k, 4k],
+        defaultValue: 2k,
+        allowedValues: [1k, 2k],
       }
 ```
 
@@ -201,8 +201,8 @@ rateLimit: { rpm: 60, burst: 60, maxConcurrency: 10 }
 circuitConfig: { cooldownMs: 15000, probeTtlMs: 30000 }
 models:
   - {
-      id: openai/gpt-image-2/edit,
-      apiName: openai/gpt-image-2/edit,
+      id: x-ai/grok-imagine-image-v2.0/edit,
+      apiName: x-ai/grok-imagine-image-v2.0/edit,
       priority: 80,
     }
 parametersMapping:

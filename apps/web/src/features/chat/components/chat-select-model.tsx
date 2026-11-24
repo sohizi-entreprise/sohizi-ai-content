@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { Check, ChevronDown } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Spinner } from "@sohizi/ui/spinner"
 import { setChatReasoningEffort, useChatStore } from "../store/chat-store"
 import {
@@ -19,6 +19,7 @@ import {
 } from "../lib/selected-model"
 import { ReasoningEffortSelect } from "./reasoning-effort-select"
 import type { LlmModel } from "../types"
+import { getProjectModelPreferencesQueryOptions } from "@/features/projects/query-mutation"
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -43,6 +44,21 @@ export default function ChatSelectModel({ projectId }: { projectId: string }) {
   const { data: models = [], isLoading } = useQuery(
     listModelsQueryOptions(projectId, ["leading-agent"]),
   )
+  const { data: modelPreferences, isLoading: preferencesLoading } = useQuery(
+    getProjectModelPreferencesQueryOptions(projectId),
+  )
+  const preferredLeadingAgent = useMemo(
+    () =>
+      modelPreferences?.find((item) => item.key === "leading-agent") ?? null,
+    [modelPreferences],
+  )
+  const preferredModelId = preferredLeadingAgent?.modelId ?? null
+  const preferredReasoningEffort =
+    preferredLeadingAgent?.parameters.reasoning_effort != null
+      ? String(preferredLeadingAgent.parameters.reasoning_effort)
+      : null
+  const lastPreferredModelIdRef = useRef<string | null>(null)
+  const lastPreferredReasoningKeyRef = useRef<string | null>(null)
   const { select: _flattenRuns, ...runQueryOptions } =
     listAgentRunsInfiniteQueryOptions(projectId, conversationId ?? "", isNew)
   const {
@@ -58,7 +74,32 @@ export default function ChatSelectModel({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
+    if (!preferredModelId || !preferredReasoningEffort) return
+    const key = `${preferredModelId}:${preferredReasoningEffort}`
+    if (lastPreferredReasoningKeyRef.current === key) return
+    lastPreferredReasoningKeyRef.current = key
+    setChatReasoningEffort(preferredModelId, preferredReasoningEffort)
+  }, [preferredModelId, preferredReasoningEffort])
+
+  useEffect(() => {
     if (models.length === 0) return
+    const storedModelId = readSelectedModelId()
+    if (
+      model &&
+      preferredModelId &&
+      preferredModelId !== lastPreferredModelIdRef.current &&
+      isNew &&
+      !storedModelId
+    ) {
+      lastPreferredModelIdRef.current = preferredModelId
+      const updatedPreferred = models.find(
+        (item) => item.id === preferredModelId,
+      )
+      if (updatedPreferred && updatedPreferred.id !== model.id) {
+        setModel(updatedPreferred)
+        return
+      }
+    }
     if (model) {
       const refreshed = models.find((item) => item.id === model.id)
       if (refreshed && refreshed !== model) setModel(refreshed)
@@ -66,10 +107,13 @@ export default function ChatSelectModel({ projectId }: { projectId: string }) {
     }
     if (!conversationId) return
     if (!isNew && (!runsLoaded || runsArePlaceholder)) return
+    if (!storedModelId && preferencesLoading) return
 
+    lastPreferredModelIdRef.current = preferredModelId
     const next = resolveChatModel(models, {
       runModelId: isNew ? null : latestRunModelId(firstPageRuns),
-      storedModelId: readSelectedModelId(),
+      storedModelId,
+      preferredModelId,
     })
     if (next) setModel(next)
   }, [
@@ -78,6 +122,8 @@ export default function ChatSelectModel({ projectId }: { projectId: string }) {
     isNew,
     model,
     models,
+    preferencesLoading,
+    preferredModelId,
     runsArePlaceholder,
     runsLoaded,
     setModel,

@@ -61,8 +61,19 @@ describe("resolveChatModel", () => {
       resolveChatModel(models, {
         runModelId: null,
         storedModelId: "anthropic/claude",
+        preferredModelId: "google/gemini",
       })?.id,
     ).toBe("anthropic/claude")
+  })
+
+  it("uses the project preferred model when run and local storage are empty", () => {
+    expect(
+      resolveChatModel(models, {
+        runModelId: null,
+        storedModelId: null,
+        preferredModelId: "google/gemini",
+      })?.id,
+    ).toBe("google/gemini")
   })
 
   it("falls back to the first catalog model", () => {

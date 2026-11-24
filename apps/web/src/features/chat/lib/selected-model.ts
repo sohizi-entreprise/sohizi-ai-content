@@ -26,7 +26,11 @@ export function latestRunModelId(
 
 export function resolveChatModel(
   models: ReadonlyArray<LlmModel>,
-  source: { runModelId?: string | null; storedModelId?: string | null },
+  source: {
+    runModelId?: string | null
+    storedModelId?: string | null
+    preferredModelId?: string | null
+  },
 ): LlmModel | null {
   if (models.length === 0) return null
   const runModel = source.runModelId
@@ -37,5 +41,9 @@ export function resolveChatModel(
     ? models.find((model) => model.id === source.storedModelId)
     : undefined
   if (storedModel) return storedModel
+  const preferredModel = source.preferredModelId
+    ? models.find((model) => model.id === source.preferredModelId)
+    : undefined
+  if (preferredModel) return preferredModel
   return models[0] ?? null
 }

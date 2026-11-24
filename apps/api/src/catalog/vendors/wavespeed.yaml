@@ -17,8 +17,8 @@ models:
       priority: 90,
     }
   - {
-      id: openai/gpt-image-2/text-to-image,
-      apiName: openai/gpt-image-2/text-to-image,
+      id: x-ai/grok-imagine-image-v2.0/text-to-image,
+      apiName: x-ai/grok-imagine-image-v2.0/text-to-image,
       priority: 80,
     }
   - {
@@ -32,8 +32,8 @@ models:
       priority: 90,
     }
   - {
-      id: openai/gpt-image-2/edit,
-      apiName: openai/gpt-image-2/edit,
+      id: x-ai/grok-imagine-image-v2.0/edit,
+      apiName: x-ai/grok-imagine-image-v2.0/edit,
       priority: 80,
     }
   - {
@@ -287,6 +287,10 @@ parametersMapping:
       option_aspect_ratio_1_4: { value: "1:4", mappedValue: "1:4" }
       option_aspect_ratio_8_1: { value: "8:1", mappedValue: "8:1" }
       option_aspect_ratio_1_8: { value: "1:8", mappedValue: "1:8" }
+      option_aspect_ratio_19_5_9: { value: "19.5:9", mappedValue: "19.5:9" }
+      option_aspect_ratio_9_19_5: { value: "9:19.5", mappedValue: "9:19.5" }
+      option_aspect_ratio_20_9: { value: "20:9", mappedValue: "20:9" }
+      option_aspect_ratio_9_20: { value: "9:20", mappedValue: "9:20" }
   parameter_resolution:
     vendorParamName: resolution
     optionMapping:

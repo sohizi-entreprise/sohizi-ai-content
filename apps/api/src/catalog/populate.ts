@@ -9,6 +9,7 @@ import {
   llmVendorsAndParameters,
   modelCategories,
   modelParameters,
+  modelPreferences,
   modelsAndCategories,
   modelsAndParameterOptions,
   modelsAndParameters,
@@ -22,10 +23,18 @@ import type {
   ModelParameterUIComponent,
   VendorKind,
 } from "@/type"
-import { notInArray, sql, type SQL, type SQLWrapper } from "drizzle-orm"
+import {
+  and,
+  isNull,
+  notInArray,
+  sql,
+  type SQL,
+  type SQLWrapper,
+} from "drizzle-orm"
 import { resetCommandCache } from "./commands"
 import { presetOptionIdFromKeyValue } from "./ids"
 import { loadCatalog, withInheritedFileType, type Catalog } from "./load"
+import { resetPreferenceCache } from "./preferences"
 import { resetPresetCache } from "./presets"
 import { validateCatalog, validateTrackedModels } from "./validate"
 
@@ -228,6 +237,25 @@ async function deleteMissing(
     modelCategories,
     modelCategories.id,
     catalog.categories.map((category) => category.id),
+  )
+  const preferenceKeys = (catalog.preferences ?? []).map(
+    (preference) => preference.key,
+  )
+  await drop(
+    preferenceKeys.length === 0
+      ? await tx
+          .delete(modelPreferences)
+          .where(isNull(modelPreferences.projectId))
+          .returning()
+      : await tx
+          .delete(modelPreferences)
+          .where(
+            and(
+              isNull(modelPreferences.projectId),
+              notInArray(modelPreferences.key, preferenceKeys),
+            ),
+          )
+          .returning(),
   )
   removed += await deleteMissingIds(
     tx,
@@ -715,6 +743,32 @@ export async function syncCatalog(
       }
     }
 
+    const preferences = catalog.preferences ?? []
+    if (preferences.length > 0) {
+      const query = tx.insert(modelPreferences).values(
+        preferences.map((preference) => ({
+          projectId: null,
+          type: "system_default" as const,
+          key: preference.key,
+          modelId: preference.modelId,
+          parameters: preference.parameters,
+        })),
+      )
+      if (mode === "overwrite") {
+        await query.onConflictDoUpdate({
+          target: modelPreferences.key,
+          targetWhere: sql`${modelPreferences.projectId} is null`,
+          set: touched(mode, {
+            type: excluded("type"),
+            modelId: excluded("model_id"),
+            parameters: excluded("parameters"),
+          }),
+        })
+      } else {
+        await query.onConflictDoNothing()
+      }
+    }
+
     if (mode !== "overwrite") return 0
     return deleteMissing(tx, catalog, {
       categoryRows,
@@ -729,6 +783,7 @@ export async function syncCatalog(
 
   resetPresetCache()
   resetCommandCache()
+  resetPreferenceCache()
 
   return { mode, removed }
 }

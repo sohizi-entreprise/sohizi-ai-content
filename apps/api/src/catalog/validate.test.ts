@@ -99,15 +99,15 @@ describe("validateCatalog", () => {
   it("rejects a vendor without an adapter", () => {
     const errors = validateCatalog(
       catalog({
-        models: [model({ id: "openai/gpt-image-2/text-to-image" })],
+        models: [model({ id: "x-ai/grok-imagine-image-v2.0/text-to-image" })],
         vendors: [
           vendor({
             id: "vendor_wavespeed",
             adapter: "",
             models: [
               {
-                id: "openai/gpt-image-2/text-to-image",
-                apiName: "openai/gpt-image-2/text-to-image",
+                id: "x-ai/grok-imagine-image-v2.0/text-to-image",
+                apiName: "x-ai/grok-imagine-image-v2.0/text-to-image",
               },
             ],
           }),
@@ -126,7 +126,7 @@ describe("validateCatalog", () => {
         parameters: [parameter({ id: "parameter_prompt", key: "prompt" })],
         models: [
           model({
-            id: "openai/gpt-image-2/text-to-image",
+            id: "x-ai/grok-imagine-image-v2.0/text-to-image",
             parameters: [{ id: "parameter_missing", required: true }],
           }),
         ],
@@ -135,8 +135,8 @@ describe("validateCatalog", () => {
             id: "vendor_wavespeed",
             models: [
               {
-                id: "openai/gpt-image-2/text-to-image",
-                apiName: "openai/gpt-image-2/text-to-image",
+                id: "x-ai/grok-imagine-image-v2.0/text-to-image",
+                apiName: "x-ai/grok-imagine-image-v2.0/text-to-image",
               },
             ],
           }),
@@ -147,6 +147,60 @@ describe("validateCatalog", () => {
     expect(
       errors.some((error) =>
         error.includes('references unknown parameter "parameter_missing"'),
+      ),
+    ).toBe(true)
+  })
+
+  it("validates default preferences against model categories and price keys", () => {
+    const errors = validateCatalog(
+      catalog({
+        models: [
+          model({
+            id: "x-ai/grok-imagine-image-v2.0/text-to-image",
+            categories: ["text-to-image"],
+            pricing: {
+              unit: "parameter_table",
+              rate: [
+                {
+                  when: { quality: "medium", resolution: "1k" },
+                  usd: 0.06,
+                },
+              ],
+            },
+          }),
+        ],
+        vendors: [
+          vendor({
+            id: "vendor_wavespeed",
+            models: [
+              {
+                id: "x-ai/grok-imagine-image-v2.0/text-to-image",
+                apiName: "x-ai/grok-imagine-image-v2.0/text-to-image",
+              },
+            ],
+          }),
+        ],
+        preferences: [
+          {
+            key: "text-to-image",
+            label: "Image",
+            description: "Still image",
+            category: "text-to-image",
+            modelId: "x-ai/grok-imagine-image-v2.0/text-to-image",
+            parameters: { quality: "medium", bogus: "1" },
+          },
+        ],
+      }),
+    )
+
+    expect(
+      errors.some((error) =>
+        error.includes('parameter "bogus" is not a price key'),
+      ),
+    ).toBe(true)
+    expect(
+      errors.some((error) =>
+        error.includes('missing price parameter "resolution"'),
       ),
     ).toBe(true)
   })
