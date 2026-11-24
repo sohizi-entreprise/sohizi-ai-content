@@ -1,0 +1,57 @@
+# System-default model preferences seeded into model_preferences (type="system_default").
+preferences:
+  - key: leading-agent
+    label: Main agent
+    description: Default conversational model for new chats when none is stored locally.
+    category: leading-agent
+    modelId: anthropic/claude-sonnet-5-5
+    parameters:
+      reasoning_effort: medium
+
+  - key: text-to-image
+    label: Image
+    description: Generate still images from a text prompt.
+    category: text-to-image
+    modelId: openai/gpt-image-2.5-sunburst/text-to-image
+    parameters:
+      quality: medium
+      resolution: 1k
+
+  - key: image-to-image
+    label: Image edit
+    description: Edit or restyle an existing reference image.
+    category: image-to-image
+    modelId: openai/gpt-image-2.5-sunburst/edit
+    parameters:
+      quality: medium
+      resolution: 1k
+
+  - key: text-to-video
+    label: Draft video
+    description: Low-fidelity text-to-video for rough cuts and previews.
+    category: text-to-video
+    modelId: bytedance/seedance-2.0-fast/text-to-video
+    parameters:
+      resolution: 720p
+
+  - key: image-to-video
+    label: Animate image
+    description: Animate a still image into a video clip.
+    category: image-to-video
+    modelId: bytedance/seedance-2.0-fast/image-to-video
+    parameters:
+      resolution: 720p
+
+  - key: text-to-speech
+    label: Speech
+    description: Synthesize voiceovers and spoken dialogue from text.
+    category: text-to-speech
+    modelId: elevenlabs/eleven-v4
+    parameters: {}
+
+  - key: music-generation
+    label: Music
+    description: Generate songs, instrumental tracks, or background music.
+    category: music-generation
+    modelId: google/lyria-3.5/music
+    parameters: {}

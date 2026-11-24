@@ -3,10 +3,14 @@ import type {
   CreateTemplateResponse,
   DirectoryChildrenPage,
   FileNode,
+  ModelPreferenceEstimateResponse,
+  ModelPreferenceKey,
+  ModelPreferenceParameters,
   PaginatedResponse,
   ProjectAssetFile,
   ProjectGenerationTarget,
   ProjectListItem,
+  ProjectModelPreference,
   ProjectOptions,
   ProjectResponse,
 } from "./type"
@@ -264,4 +268,41 @@ export const createTemplate = async (
 ): Promise<CreateTemplateResponse> => {
   const response = await api.post("/projects/templates", data)
   return response.data
+}
+
+export const getProjectModelPreferences = async (
+  projectId: string,
+): Promise<Array<ProjectModelPreference>> => {
+  const response = await api.get(`/projects/${projectId}/model-preferences`)
+  return response.data.preferences
+}
+
+export const estimateProjectModelPreference = async (
+  projectId: string,
+  data: {
+    key: ModelPreferenceKey
+    modelId: string
+    parameters?: ModelPreferenceParameters
+  },
+): Promise<ModelPreferenceEstimateResponse> => {
+  const response = await api.post(
+    `/projects/${projectId}/model-preferences/estimate`,
+    data,
+  )
+  return response.data
+}
+
+export const updateProjectModelPreference = async (
+  projectId: string,
+  data: {
+    key: ModelPreferenceKey
+    modelId: string
+    parameters?: ModelPreferenceParameters
+  },
+): Promise<ProjectModelPreference> => {
+  const response = await api.patch(
+    `/projects/${projectId}/model-preferences`,
+    data,
+  )
+  return response.data.preference
 }

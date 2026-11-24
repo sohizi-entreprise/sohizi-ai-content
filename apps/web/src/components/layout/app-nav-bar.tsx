@@ -1,5 +1,10 @@
 import { useState } from "react"
-import { Link, useParams, useRouterState } from "@tanstack/react-router"
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useRouterState,
+} from "@tanstack/react-router"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sohizi/ui/tooltip"
 import {
   IconCategoryFilled,
@@ -10,6 +15,10 @@ import {
   // IconVideoPlusFilled,
 } from "@tabler/icons-react"
 import { FeedbackDialog } from "@/features/feedback/components/feedback-dialog"
+import {
+  ACCOUNT_PREFERENCES_TAB_ID,
+  useEditorStore,
+} from "@/features/editor/stores/editor-store"
 import { cn } from "@/lib/utils"
 
 const ITEMS = [
@@ -48,11 +57,32 @@ export function AppNavBar() {
     from: "/_authenticated/projects/$projectId",
   })
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const navigate = useNavigate()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const activeTabId = useEditorStore((s) => s.activeTabId)
+  const openAccountPreferencesTab = useEditorStore(
+    (s) => s.openAccountPreferencesTab,
+  )
 
   const activeItem = ITEMS.find((item) =>
     pathname.startsWith(resolvePathname(item.link, projectId)),
   )?.id
+  const isAccountTabActive =
+    activeItem === "files" && activeTabId === ACCOUNT_PREFERENCES_TAB_ID
+
+  const handleOpenAccountTab = () => {
+    openAccountPreferencesTab()
+    const editorPathname = resolvePathname(
+      "/projects/$projectId/editor",
+      projectId,
+    )
+    if (!pathname.startsWith(editorPathname)) {
+      void navigate({
+        to: "/projects/$projectId/editor",
+        params: { projectId },
+      })
+    }
+  }
 
   return (
     <div className="flex w-12 shrink-0 flex-col items-center justify-between py-2 backdrop-blur-md">
@@ -98,16 +128,24 @@ export function AppNavBar() {
           <TooltipContent side="right">Feedback & bug report</TooltipContent>
         </Tooltip>
 
-        <Link to="/account/profile">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/30 hover:text-foreground">
-                <IconUserFilled className="size-4.5" />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="right">Account profile</TooltipContent>
-          </Tooltip>
-        </Link>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Account profile"
+              onClick={handleOpenAccountTab}
+              className={cn(
+                "flex size-9 items-center justify-center rounded-md transition-colors cursor-pointer",
+                isAccountTabActive
+                  ? "text-primary"
+                  : "text-muted-foreground hover:bg-accent/30 hover:text-foreground",
+              )}
+            >
+              <IconUserFilled className="size-4.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Account profile</TooltipContent>
+        </Tooltip>
       </div>
 
       <FeedbackDialog

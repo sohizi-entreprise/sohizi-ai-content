@@ -442,6 +442,13 @@
       "when": 1795024600000,
       "tag": "0062_catalog_presets_and_commands",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1795111000000,
+      "tag": "0063_model_preferences",
+      "breakpoints": true
     }
   ]
 }

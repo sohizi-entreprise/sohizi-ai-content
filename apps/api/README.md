@@ -40,8 +40,8 @@ rateLimit: { rpm: 60, burst: 60, maxConcurrency: 10 }
 circuitConfig: { cooldownMs: 15000, probeTtlMs: 30000 }
 models:
   - {
-      id: openai/gpt-image-2/text-to-image,
-      apiName: openai/gpt-image-2/text-to-image,
+      id: x-ai/grok-imagine-image-v2.0/text-to-image,
+      apiName: x-ai/grok-imagine-image-v2.0/text-to-image,
       priority: 20,
     }
 ```
@@ -96,8 +96,8 @@ rateLimit: { rpm: 60, burst: 60, maxConcurrency: 10 }
 circuitConfig: { cooldownMs: 15000, probeTtlMs: 30000 }
 models:
   - {
-      id: openai/gpt-image-2/text-to-image,
-      apiName: fal-ai/gpt-image-2,
+      id: x-ai/grok-imagine-image-v2.0/text-to-image,
+      apiName: fal-ai/grok-imagine-2,
       priority: 50,
     }
 parametersMapping:

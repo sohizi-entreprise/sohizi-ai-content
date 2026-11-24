@@ -5,7 +5,12 @@ import {
 } from "@tanstack/react-query"
 import * as requests from "./request"
 import type { z } from "zod"
-import type { CreateTemplateInput, ProjectGenerationTarget } from "./type"
+import type {
+  CreateTemplateInput,
+  ModelPreferenceKey,
+  ModelPreferenceParameters,
+  ProjectGenerationTarget,
+} from "./type"
 import type { createProjectSchema } from "./schema"
 
 const keysFactory = {
@@ -43,6 +48,11 @@ const keysFactory = {
   ],
   projectOptions: () => ["projectOptions"],
   templates: () => ["templates"],
+  modelPreferences: (projectId: string) => [
+    "project",
+    projectId,
+    "model-preferences",
+  ],
 }
 
 export const getListProjectsQueryOptions = ({
@@ -253,3 +263,27 @@ export const createTemplateMutationOptions = mutationOptions({
     invalidateQueries: [keysFactory.templates(), keysFactory.projects()],
   },
 })
+
+// =========== MODEL PREFERENCES ===========
+export const getProjectModelPreferencesQueryOptions = (projectId: string) =>
+  queryOptions({
+    queryKey: keysFactory.modelPreferences(projectId),
+    queryFn: () => requests.getProjectModelPreferences(projectId),
+    enabled: Boolean(projectId),
+  })
+
+export const updateProjectModelPreferenceMutationOptions = (
+  projectId: string,
+) =>
+  mutationOptions({
+    mutationFn: (data: {
+      key: ModelPreferenceKey
+      modelId: string
+      parameters?: ModelPreferenceParameters
+    }) => requests.updateProjectModelPreference(projectId, data),
+    onSuccess: (_data, _variables, _onMutateResult, context) => {
+      void context.client.invalidateQueries({
+        queryKey: keysFactory.modelPreferences(projectId),
+      })
+    },
+  })

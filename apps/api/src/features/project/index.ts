@@ -11,8 +11,15 @@ import {
 import {
   createProjectSchema,
   createTemplateSchema,
+  estimateModelPreferenceSchema,
+  updateModelPreferenceSchema,
   updateProjectSchema,
 } from "./schema"
+import {
+  estimateModelPreferenceSelection,
+  getProjectModelPreferences,
+  updateProjectModelPreference,
+} from "./model-preferences"
 import { assertProjectAccess, requireActiveOrganization } from "@/lib/authorize"
 import { authMiddleware } from "@/lib/auth-middleware"
 
@@ -152,5 +159,48 @@ export const projectRoutes = new Elysia({ prefix: "/projects" })
       query: z.object({
         title: z.string().min(1, "Title is required"),
       }),
+    },
+  )
+  .get(
+    "/:projectId/model-preferences",
+    async ({ params, user }) => {
+      await assertProjectAccess(user.id, params.projectId)
+      const preferences = await getProjectModelPreferences(params.projectId)
+      return { preferences }
+    },
+    {
+      params: z.object({
+        projectId: z.uuid("Invalid project id"),
+      }),
+    },
+  )
+  .post(
+    "/:projectId/model-preferences/estimate",
+    async ({ body, params, user }) => {
+      await assertProjectAccess(user.id, params.projectId)
+      return estimateModelPreferenceSelection(body)
+    },
+    {
+      params: z.object({
+        projectId: z.uuid("Invalid project id"),
+      }),
+      body: estimateModelPreferenceSchema,
+    },
+  )
+  .patch(
+    "/:projectId/model-preferences",
+    async ({ body, params, user }) => {
+      await assertProjectAccess(user.id, params.projectId)
+      const preference = await updateProjectModelPreference(
+        params.projectId,
+        body,
+      )
+      return { preference }
+    },
+    {
+      params: z.object({
+        projectId: z.uuid("Invalid project id"),
+      }),
+      body: updateModelPreferenceSchema,
     },
   )

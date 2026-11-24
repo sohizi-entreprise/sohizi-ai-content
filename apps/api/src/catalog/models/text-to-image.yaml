@@ -1,32 +1,27 @@
-# GPT Image 2 family, Nano Banana, and MAI generate endpoints.
+# Grok Imagine 2, GPT Image 2.5 family, Nano Banana, and MAI generate endpoints.
 models:
-  - id: openai/gpt-image-2/text-to-image
-    name: GPT Image 2
-    provider: openai
+  - id: x-ai/grok-imagine-image-v2.0/text-to-image
+    name: Grok Imagine 2
+    provider: xai
     description: >
-      Default GPT Image 2 generate. Prefer for photoreal scenes, product shots, and readable in-image text when 2.5 quality tiers are unnecessary. Quality and resolution drive price; start at medium / 1k.
+      xAI Grok Imagine Image 2.0 generate. Prefer for stylized scenes, character portraits, and phone/tall-screen aspect ratios at 1k or 2k. Quality (low/medium) and resolution (1k/2k) drive price; defaults to medium / 2k.
     promptingTechnics:
       - Structure prompts as deliverable/use case → subject → scene → composition → lighting/materials → constraints.
       - Enclose exact required in-image text in quotation marks, specify font style and placement, and add "no extra text".
       - Use concrete physical descriptors (light direction, surface texture, camera framing) instead of vague quality adjectives.
       - State explicit exclusions at the end of the prompt to prevent unwanted props, logos, or background clutter.
     selectionGuidance:
-      - Shines at photorealistic lifestyle scenes, e-commerce product shots, and posters or mockups that require accurate, readable in-image text.
-      - Avoid when rapid, high-volume concept exploration is the priority (prefer GPT Image 2.5 Flare or Nano Banana 2 Fast) or when intricate multi-element brand layouts demand 2.5 Sunburst precision.
-      - Medium quality at 1k resolution provides the sweet spot between visual fidelity, generation speed, and budget efficiency; stepping up to high quality or 4k substantially increases latency and credit usage.
+      - Shines at expressive character imagery, lifestyle scenes, and full-bleed mobile formats (including 19.5:9, 9:19.5, 20:9, and 9:20 aspect ratios).
+      - Avoid when you need 4k output or xhigh/max typography precision (prefer GPT Image 2.5 Sunburst or Nano Banana Pro).
+      - Medium quality at 1k or 2k balances speed, visual fidelity, and budget efficiency across general creative generation.
     contextWindow: ~
     pricing:
       unit: parameter_table
       rate:
-        - { when: { quality: low, resolution: 1k }, usd: 0.01 }
-        - { when: { quality: low, resolution: 2k }, usd: 0.02 }
-        - { when: { quality: low, resolution: 4k }, usd: 0.03 }
+        - { when: { quality: low, resolution: 1k }, usd: 0.04 }
         - { when: { quality: medium, resolution: 1k }, usd: 0.06 }
-        - { when: { quality: medium, resolution: 2k }, usd: 0.1 }
-        - { when: { quality: medium, resolution: 4k }, usd: 0.18 }
-        - { when: { quality: high, resolution: 1k }, usd: 0.22 }
-        - { when: { quality: high, resolution: 2k }, usd: 0.4 }
-        - { when: { quality: high, resolution: 4k }, usd: 0.72 }
+        - { when: { quality: low, resolution: 2k }, usd: 0.06 }
+        - { when: { quality: medium, resolution: 2k }, usd: 0.08 }
     categories: [text-to-image]
     parameters:
       - { id: parameter_prompt, required: true }
@@ -37,46 +32,38 @@ models:
           allowedValues:
             [
               1:1,
-              1:2,
-              2:1,
-              1:3,
-              3:1,
-              2:3,
-              3:2,
-              3:4,
-              4:3,
-              4:5,
-              5:4,
-              9:16,
               16:9,
-              9:21,
-              21:9,
+              9:16,
+              4:3,
+              3:4,
+              3:2,
+              2:3,
+              2:1,
+              1:2,
+              19.5:9,
+              9:19.5,
+              20:9,
+              9:20,
             ],
         }
       - {
           id: parameter_resolution,
           required: true,
-          defaultValue: 1k,
-          allowedValues: [1k, 2k, 4k],
+          defaultValue: 2k,
+          allowedValues: [1k, 2k],
         }
       - {
           id: parameter_quality,
           required: true,
           defaultValue: medium,
-          allowedValues: [low, medium, high],
-        }
-      - {
-          id: parameter_output_format,
-          required: false,
-          defaultValue: png,
-          allowedValues: [png, jpeg, webp],
+          allowedValues: [low, medium],
         }
 
   - id: openai/gpt-image-2.5-flare/text-to-image
     name: GPT Image 2.5 Flare
     provider: openai
     description: >
-      Faster GPT Image 2.5 generate. Prefer for drafts and iteration; use xhigh or max only when extra fidelity is worth the jump. Same quality/resolution grid as Sunburst at a lower default cost than GPT Image 2 high.
+      Faster GPT Image 2.5 generate. Prefer for drafts and iteration; use xhigh or max only when extra fidelity is worth the jump. Same quality/resolution grid as Sunburst with faster turnaround.
     promptingTechnics:
       - Lead with the deliverable type (e.g., product photo, UI mockup, poster), then order subject, scene, composition, visual direction, and constraints.
       - Quote exact text strings verbatim and state how many times and where each string should appear.
@@ -85,7 +72,7 @@ models:
     selectionGuidance:
       - Shines at fast daily image generation, storyboard frames, ad variations, and iterative layout drafting where strong prompt adherence and readable text are needed quickly.
       - Avoid for final flagship campaign key art with dense micro-typography or complex spatial hierarchies where GPT Image 2.5 Sunburst is more reliable.
-      - Delivers GPT Image 2-level quality with noticeably lower latency and better budget efficiency at medium/high tiers; reserve xhigh and max tiers only for final passes as they trade speed and economy for peak detail.
+      - Delivers strong quality with low latency and high budget efficiency at medium/high tiers; reserve xhigh and max tiers only for final passes as they trade speed and economy for peak detail.
     contextWindow: ~
     pricing:
       unit: parameter_table

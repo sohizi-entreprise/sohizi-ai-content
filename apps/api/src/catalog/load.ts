@@ -2,6 +2,7 @@ import { readdir } from "node:fs/promises"
 import { join } from "node:path"
 import type { ModelBasePricing } from "@/type"
 import { loadCommands, type CatalogCommand } from "./commands"
+import { loadPreferences, type CatalogPreference } from "./preferences"
 import { loadPresets, type CatalogPreset } from "./presets"
 
 export type CatalogCategory = {
@@ -105,6 +106,7 @@ export type Catalog = {
   vendors: CatalogVendor[]
   presets: CatalogPreset[]
   commands: CatalogCommand[]
+  preferences?: CatalogPreference[]
 }
 
 export type LoadedCatalog = {
@@ -350,6 +352,7 @@ export const loadCatalog = async (
     vendors: [],
     presets: [],
     commands: [],
+    preferences: [],
   }
 
   const readFile = async (relativePath: string) => {
@@ -409,6 +412,14 @@ export const loadCatalog = async (
 
   try {
     catalog.commands = await loadCommands(join(catalogDir, "commands.yaml"))
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error))
+  }
+
+  try {
+    catalog.preferences = await loadPreferences(
+      join(catalogDir, "preferences.yaml"),
+    )
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error))
   }

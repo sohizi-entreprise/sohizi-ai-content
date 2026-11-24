@@ -17,11 +17,6 @@ models:
       priority: 110,
     }
   - {
-      id: openai/gpt-image-2/text-to-image,
-      apiName: openai/gpt-image-2,
-      priority: 100,
-    }
-  - {
       id: openai/gpt-image-2.5-sunburst/edit,
       apiName: openai/gpt-image-2.5-sunburst,
       priority: 120,
@@ -31,7 +26,6 @@ models:
       apiName: openai/gpt-image-2.5-flare,
       priority: 110,
     }
-  - { id: openai/gpt-image-2/edit, apiName: openai/gpt-image-2, priority: 100 }
   - {
       id: google/nano-banana-pro/text-to-image,
       apiName: google/nano-banana-pro,
@@ -291,8 +285,6 @@ modelParameterOverrides:
   openai/gpt-image-2.5-sunburst/edit:
     parameter_images: { vendorParamName: input_images }
   openai/gpt-image-2.5-flare/edit:
-    parameter_images: { vendorParamName: input_images }
-  openai/gpt-image-2/edit:
     parameter_images: { vendorParamName: input_images }
   google/nano-banana-pro/edit:
     parameter_images: { vendorParamName: image_input }

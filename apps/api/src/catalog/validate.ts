@@ -246,6 +246,96 @@ export const validateCatalog = (catalog: Catalog): string[] => {
     }
   }
 
+  const preferences = catalog.preferences ?? []
+  addDuplicateErrors(
+    errors,
+    "preference",
+    preferences.map((preference) => ({
+      id: preference.key,
+      source: "preferences.yaml",
+    })),
+  )
+  const modelsById = new Map(catalog.models.map((model) => [model.id, model]))
+  for (const preference of preferences) {
+    const source = `preferences.yaml preference "${preference.key}"`
+    if (!categoryIds.has(preference.category)) {
+      errors.push(
+        `${source} references unknown category "${preference.category}"`,
+      )
+    }
+    const model = modelsById.get(preference.modelId)
+    if (!model) {
+      errors.push(`${source} references unknown model "${preference.modelId}"`)
+      continue
+    }
+    if (!model.categories.includes(preference.category)) {
+      errors.push(
+        `${source} model "${preference.modelId}" is not in category "${preference.category}"`,
+      )
+    }
+    const priceKeys = new Set<string>()
+    if (model.pricing?.unit === "parameter_table") {
+      for (const row of model.pricing.rate) {
+        for (const key of Object.keys(row.when)) {
+          if (key !== "duration") {
+            priceKeys.add(key)
+          }
+        }
+      }
+    }
+    const reasoningBinding =
+      preference.category === "leading-agent"
+        ? model.parameters.find(
+            (param) => param.id === "parameter_reasoning_effort",
+          )
+        : undefined
+    if (reasoningBinding) {
+      priceKeys.add("reasoning_effort")
+    }
+    const storedParams = preference.parameters ?? {}
+    for (const key of Object.keys(storedParams)) {
+      if (!priceKeys.has(key)) {
+        errors.push(
+          `${source} parameter "${key}" is not a price key on model "${preference.modelId}"`,
+        )
+      }
+    }
+    for (const key of priceKeys) {
+      if (!(key in storedParams)) {
+        errors.push(
+          `${source} is missing price parameter "${key}" for model "${preference.modelId}"`,
+        )
+      }
+    }
+    if (reasoningBinding && "reasoning_effort" in storedParams) {
+      const allowedReasoning = reasoningBinding.allowedValues
+        ? new Set(reasoningBinding.allowedValues.map(String))
+        : (optionValuesByParam.get("parameter_reasoning_effort") ?? new Set())
+      const value = String(storedParams.reasoning_effort)
+      if (allowedReasoning.size > 0 && !allowedReasoning.has(value)) {
+        errors.push(
+          `${source} parameter "reasoning_effort" value "${value}" is not allowed on model "${preference.modelId}"`,
+        )
+      }
+    }
+    if (
+      model.pricing?.unit === "parameter_table" &&
+      priceKeys.size > 0 &&
+      Array.from(priceKeys).every((key) => key in storedParams)
+    ) {
+      const hasMatch = model.pricing.rate.some((row) =>
+        Array.from(priceKeys).every(
+          (key) => String(row.when[key]) === String(storedParams[key]),
+        ),
+      )
+      if (!hasMatch) {
+        errors.push(
+          `${source} parameters ${JSON.stringify(storedParams)} do not match any price row on model "${preference.modelId}"`,
+        )
+      }
+    }
+  }
+
   return errors
 }
 

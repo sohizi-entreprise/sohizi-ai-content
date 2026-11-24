@@ -13,6 +13,7 @@ import {
   FileSpreadsheet,
   Image,
   Music,
+  SlidersHorizontal,
   Video,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -22,6 +23,9 @@ export function getFileIcon(
   format?: string | null,
   name?: string,
 ) {
+  if (name === "Preferences & Billing" || name === "account-preferences") {
+    return <SlidersHorizontal className="size-4 shrink-0 text-primary" />
+  }
   switch (type) {
     case "document":
       if (name === "context") {

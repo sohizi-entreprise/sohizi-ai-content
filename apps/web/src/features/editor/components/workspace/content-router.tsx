@@ -4,11 +4,15 @@ import { useParams } from "@tanstack/react-router"
 import { AssetSkeleton, TextSkeleton } from "@sohizi/ui/content-skeletons"
 import { TextEditorView } from "../content/text-editor-view"
 import { getFileContentQueryOptions } from "../../query-mutations"
-import { useEditorStore } from "../../stores/editor-store"
+import {
+  ACCOUNT_PREFERENCES_TAB_ID,
+  useEditorStore,
+} from "../../stores/editor-store"
 import AssetViewer from "../content/asset-viewer"
 import { SkillEditorView } from "../content/skill-editor-view"
 import { StoryboardEditorView } from "../content/storyboard-editor-view"
 import type { EditorTab } from "../../types"
+import { AccountPreferencesTabView } from "@/features/account/components/account-preferences-dialog"
 import { FileSystemVideoEditor } from "@/features/video-editor"
 import { MediaGenerator } from "@/features/media-generator"
 
@@ -20,6 +24,10 @@ export function ContentRouter({ tab }: ContentRouterProps) {
   const { projectId } = useParams({
     from: "/_authenticated/projects/$projectId/editor",
   })
+
+  if (tab.id === ACCOUNT_PREFERENCES_TAB_ID) {
+    return <AccountPreferencesTabView projectId={projectId} />
+  }
 
   const isMediaGenerator = tab.name === "media-generator"
 

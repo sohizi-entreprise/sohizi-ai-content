@@ -54,6 +54,10 @@ parameters:
       - { id: option_aspect_ratio_1_4, value: "1:4", label: "1:4" }
       - { id: option_aspect_ratio_8_1, value: "8:1", label: "8:1" }
       - { id: option_aspect_ratio_1_8, value: "1:8", label: "1:8" }
+      - { id: option_aspect_ratio_19_5_9, value: "19.5:9", label: "19.5:9" }
+      - { id: option_aspect_ratio_9_19_5, value: "9:19.5", label: "9:19.5" }
+      - { id: option_aspect_ratio_20_9, value: "20:9", label: "20:9" }
+      - { id: option_aspect_ratio_9_20, value: "9:20", label: "9:20" }
 
   - id: parameter_resolution
     key: resolution
