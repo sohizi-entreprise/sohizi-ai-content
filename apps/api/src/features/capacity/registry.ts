@@ -12,6 +12,7 @@ export type RemotionAccountConfig = {
   region: string
   functionName: string
   serveUrl: string
+  concurrency?: number
   memorySizeInMb?: number
   diskSizeInMb?: number
 }
@@ -64,10 +65,39 @@ function remotionConfig(): RemotionAccountConfig | undefined {
   if (!functionName || !serveUrl) return undefined
   const memory = Number(process.env.REMOTION_FUNCTION_MEMORY_MB)
   const disk = Number(process.env.REMOTION_FUNCTION_DISK_MB)
+  const concurrency = Number(process.env.REMOTION_CONCURRENCY)
   return {
     region: envValue("REMOTION_AWS_REGION") ?? "us-east-1",
     functionName,
     serveUrl,
+    concurrency:
+      Number.isFinite(concurrency) && concurrency > 0 ? concurrency : undefined,
+    memorySizeInMb: Number.isFinite(memory) && memory > 0 ? memory : undefined,
+    diskSizeInMb: Number.isFinite(disk) && disk > 0 ? disk : undefined,
+  }
+}
+
+function remotionSecondaryConfig(): RemotionAccountConfig | undefined {
+  const functionName = envValue("REMOTION_FUNCTION_NAME_2")
+  const serveUrl = envValue("REMOTION_SERVE_URL_2")
+  if (!functionName || !serveUrl) return undefined
+  const memory = Number(
+    process.env.REMOTION_FUNCTION_MEMORY_MB_2 ??
+      process.env.REMOTION_FUNCTION_MEMORY_MB,
+  )
+  const disk = Number(
+    process.env.REMOTION_FUNCTION_DISK_MB_2 ??
+      process.env.REMOTION_FUNCTION_DISK_MB,
+  )
+  const concurrency = Number(
+    process.env.REMOTION_CONCURRENCY_2 ?? process.env.REMOTION_CONCURRENCY,
+  )
+  return {
+    region: envValue("REMOTION_AWS_REGION_2") ?? "us-east-2",
+    functionName,
+    serveUrl,
+    concurrency:
+      Number.isFinite(concurrency) && concurrency > 0 ? concurrency : undefined,
     memorySizeInMb: Number.isFinite(memory) && memory > 0 ? memory : undefined,
     diskSizeInMb: Number.isFinite(disk) && disk > 0 ? disk : undefined,
   }
@@ -197,6 +227,17 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
           maxConcurrency: envPositiveInt("REMOTION_MAX_CONCURRENCY", 2),
         },
         { remotion: remotionConfig },
+      ),
+      account(
+        "remotion:us-east-2",
+        {
+          ...DEFAULT_CIRCUIT,
+          maxConcurrency: envPositiveInt(
+            "REMOTION_MAX_CONCURRENCY_2",
+            envPositiveInt("REMOTION_MAX_CONCURRENCY", 2),
+          ),
+        },
+        { remotion: remotionSecondaryConfig },
       ),
     ],
   },

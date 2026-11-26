@@ -5,8 +5,10 @@
   "private": true,
   "scripts": {
     "studio": "remotion studio src/index.ts",
-    "lambda:functions": "remotion lambda functions deploy --timeout=900 --memory=2048 --disk=2048",
-    "lambda:site": "remotion lambda sites create src/index.ts --site-name=sohizi-video"
+    "lambda:functions": "remotion lambda functions deploy --timeout=900 --memory=2048 --disk=10240",
+    "lambda:site": "remotion lambda sites create src/index.ts --site-name=sohizi-video",
+    "lambda:quotas": "remotion lambda quotas",
+    "lambda:quotas:increase": "remotion lambda quotas increase"
   },
   "devDependencies": {
     "@types/bun": "latest",

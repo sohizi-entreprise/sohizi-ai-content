@@ -19,6 +19,10 @@
     "docker:build:api": "docker build -f apps/api/Dockerfile -t sohizi-api .",
     "docker:build:web": "docker build -f apps/web/Dockerfile -t sohizi-web .",
     "docker:build:site": "docker build -f apps/site/Dockerfile -t sohizi-site .",
+    "env:sync:common": "gh variable set ENV_FILE_COMMON < .env.ready.git-common",
+    "env:sync:rc": "gh variable set ENV_FILE_RC < .env.ready.git-rc",
+    "env:sync:prod": "gh variable set ENV_FILE_PROD < .env.ready.git-prod",
+    "env:sync:all": "bun run env:sync:common && bun run env:sync:rc && bun run env:sync:prod",
     "prepare": "husky"
   },
   "devDependencies": {
