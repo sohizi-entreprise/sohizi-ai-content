@@ -120,7 +120,14 @@ export function parseAllowedMediaHosts(): string[] {
     .filter((host) => host.length > 0)
 }
 
-function getRenderConcurrency(): number {
+function getRenderConcurrency(account?: RemotionAccountConfig): number {
+  if (
+    account?.concurrency !== undefined &&
+    Number.isFinite(account.concurrency) &&
+    account.concurrency > 0
+  ) {
+    return clampRenderConcurrency(account.concurrency)
+  }
   const raw = process.env.REMOTION_CONCURRENCY
   if (raw === undefined || raw.trim() === "") return DEFAULT_RENDER_CONCURRENCY
   return clampRenderConcurrency(Number(raw))
@@ -131,7 +138,7 @@ export async function estimateRenderCost(
   account?: RemotionAccountConfig,
 ): Promise<RenderCostEstimate> {
   const spec = await getFunctionSpec(account)
-  const concurrency = getRenderConcurrency()
+  const concurrency = getRenderConcurrency(account)
   const framesPerLambda = framesPerLambdaForDuration(
     composition.durationInFrames,
     concurrency,

@@ -27,7 +27,7 @@ export const MAX_RENDER_CONCURRENCY = 200
 /** Matches Remotion's minimum frames per Lambda function. */
 export const MIN_FRAMES_PER_LAMBDA = 5
 export const DEFAULT_LAMBDA_MEMORY_MB = 2048
-export const DEFAULT_LAMBDA_DISK_MB = 2048
+export const DEFAULT_LAMBDA_DISK_MB = 10240
 export const DEFAULT_LAMBDA_REGION = "us-east-1"
 export const RENDER_RESERVATION_TTL_MS = 60 * 60 * 1000
 

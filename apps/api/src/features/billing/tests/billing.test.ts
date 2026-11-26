@@ -30,7 +30,8 @@ import {
 } from "../index"
 import type { Billable, BillableAsync, BillableStream } from "../types"
 import { billingContext } from "../index"
-import { hasPaidAccess } from "../stripe"
+import { hasPaidAccess, stripeWebhookRoutes } from "../stripe"
+import Stripe from "stripe"
 
 const billing = new BillingService()
 
@@ -789,6 +790,60 @@ describe("GET /billing/balance", () => {
     )
     expect(res.status).toBe(401)
     // Stop sweeper started by the module singleton if any.
+  })
+})
+
+describe("POST /billing/stripe/webhook", () => {
+  test("verifies valid Stripe signature asynchronously and rejects invalid signatures", async () => {
+    const prevKey = process.env.STRIPE_SECRET_KEY
+    const prevSecret = process.env.STRIPE_WEBHOOK_SECRET
+    process.env.STRIPE_SECRET_KEY = "sk_test_webhook_verification"
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_webhook_secret"
+
+    try {
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+      const payload = JSON.stringify({
+        id: "evt_test_webhook",
+        object: "event",
+        type: "ping",
+        livemode: false,
+      })
+      const validSig = await stripe.webhooks.generateTestHeaderStringAsync({
+        payload,
+        secret: process.env.STRIPE_WEBHOOK_SECRET,
+      })
+
+      const app = new Elysia().use(stripeWebhookRoutes)
+      const okRes = await app.handle(
+        new Request("http://localhost/billing/stripe/webhook", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "stripe-signature": validSig,
+          },
+          body: payload,
+        }),
+      )
+      expect(okRes.status).toBe(200)
+      expect(await okRes.json()).toEqual({ received: true })
+
+      const badRes = await app.handle(
+        new Request("http://localhost/billing/stripe/webhook", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "stripe-signature": "t=123,v1=invalidsignature",
+          },
+          body: payload,
+        }),
+      )
+      expect(badRes.status).toBe(400)
+    } finally {
+      if (prevKey === undefined) delete process.env.STRIPE_SECRET_KEY
+      else process.env.STRIPE_SECRET_KEY = prevKey
+      if (prevSecret === undefined) delete process.env.STRIPE_WEBHOOK_SECRET
+      else process.env.STRIPE_WEBHOOK_SECRET = prevSecret
+    }
   })
 })
 

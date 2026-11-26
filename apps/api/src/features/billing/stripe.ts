@@ -523,7 +523,7 @@ export const stripeWebhookRoutes = new Elysia({ prefix: "/billing" }).post(
     if (!signature) throw new BadRequest("Missing Stripe signature")
     let event: Stripe.Event
     try {
-      event = requireStripe().webhooks.constructEvent(
+      event = await requireStripe().webhooks.constructEventAsync(
         await request.text(),
         signature,
         secret,
